@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' media: data: blob: https: http:; media-src 'self' media: blob: http: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self' media:">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mire</title>
+  <link rel="stylesheet" href="fonts/archivo.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-section="home">
+  <div class="app">
+    <nav class="rail" id="rail" aria-label="Menu principal">
+      <div class="brand">
+        <span class="bars7 brand-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="brand-name">Mire</span>
+      </div>
+      <button class="rail-arrow prev" data-rail-scroll="-1" aria-label="Défiler vers la gauche" data-icon="chevL" tabindex="-1"></button>
+      <div class="rail-items" id="rail-items">
+        <button class="rail-item focusable" data-go="search" style="--c:var(--text)"><span class="lead"><span class="ri-ico" data-icon="search"></span></span><span class="lbl">Rechercher</span></button>
+        <button class="rail-item focusable" data-go="home" style="--c:var(--bar-white)"><span class="lead"><span class="chip"></span></span><span class="lbl">Accueil</span></button>
+        <button class="rail-item focusable" data-go="videos" style="--c:var(--bar-yellow)"><span class="lead"><span class="chip"></span></span><span class="lbl">Vidéos</span></button>
+        <button class="rail-item focusable" data-go="music" style="--c:var(--bar-cyan)"><span class="lead"><span class="chip"></span></span><span class="lbl">Musique</span></button>
+        <button class="rail-item focusable" data-go="images" style="--c:var(--bar-green)"><span class="lead"><span class="chip"></span></span><span class="lbl">Images</span></button>
+        <button class="rail-item focusable" data-go="streaming" style="--c:var(--bar-magenta)"><span class="lead"><span class="chip"></span></span><span class="lbl">Streaming</span></button>
+        <div class="rail-sessions" id="rail-sessions" aria-label="Sites ouverts"></div>
+        <button class="rail-item focusable" data-go="tv" style="--c:var(--bar-red)"><span class="lead"><span class="chip"></span></span><span class="lbl">Télévision</span></button>
+        <button class="rail-item focusable" data-go="games" style="--c:var(--bar-blue)"><span class="lead"><span class="chip"></span></span><span class="lbl">Jeux</span></button>
+        <div class="rail-sessions" id="rail-sessions-games" aria-label="Sites de jeux ouverts"></div>
+        <div class="rail-spacer"></div>
+        <button class="rail-item focusable" data-go="downloads" style="--c:var(--muted)"><span class="lead"><span class="ri-ico" data-icon="download"></span></span><span class="lbl">Téléchargements</span><span class="rail-badge" id="dl-badge" hidden></span></button>
+        <button class="rail-item focusable" data-open-file style="--c:var(--muted)"><span class="lead"><span class="ri-ico" data-icon="folder"></span></span><span class="lbl">Ouvrir un fichier</span></button>
+        <button class="rail-item focusable" data-go="settings" style="--c:var(--muted)"><span class="lead"><span class="ri-ico" data-icon="gear"></span></span><span class="lbl">Réglages</span></button>
+        <button class="rail-item focusable" data-quit style="--c:var(--muted)"><span class="lead"><span class="ri-ico" data-icon="power"></span></span><span class="lbl">Quitter</span></button>
+      </div>
+      <button class="rail-arrow next" data-rail-scroll="1" aria-label="Défiler vers la droite" data-icon="chevR" tabindex="-1"></button>
+    </nav>
+    <div class="rail-handle" id="rail-handle" aria-hidden="true"></div>
+
+    <main class="main">
+      <div class="backdrop" id="backdrop" aria-hidden="true"><div class="bd"></div><div class="bd"></div></div>
+      <header class="topbar">
+        <h1 id="title">Accueil</h1>
+        <div class="header-tools" id="header-tools"></div>
+        <input class="search focusable" id="search" type="search" placeholder="Rechercher" aria-label="Rechercher dans cette section">
+        <div class="header-tools" id="header-tools-right"></div>
+        <button class="icon-btn gear focusable" id="page-gear" data-icon="gear" aria-label="Réglages de cette page" title="Réglages de cette page"></button>
+        <time class="clock" id="clock"></time>
+      </header>
+      <div class="view" id="view"></div>
+    </main>
+  </div>
+
+  <!-- Mini-lecteur de musique -->
+  <div class="mini" id="mini" hidden>
+    <div class="mini-meta">
+      <img class="mini-cover" id="mini-cover" alt="">
+      <div class="mini-txt">
+        <div class="mini-title" id="mini-title"></div>
+        <div class="mini-sub" id="mini-sub"></div>
+      </div>
+    </div>
+    <div class="mini-ctrl">
+      <button class="icon-btn focusable" id="mini-prev" data-icon="prev" aria-label="Morceau précédent"></button>
+      <button class="icon-btn big focusable" id="mini-play" data-icon="pause" aria-label="Lecture ou pause"></button>
+      <button class="icon-btn focusable" id="mini-next" data-icon="next" aria-label="Morceau suivant"></button>
+    </div>
+    <div class="mini-seek">
+      <span id="mini-cur">0:00</span>
+      <input class="range" id="mini-range" type="range" min="0" max="1000" value="0" aria-label="Position dans le morceau">
+      <span id="mini-dur">0:00</span>
+    </div>
+    <div class="mini-vol">
+      <span class="vol-ico" data-icon="volume"></span>
+      <input class="range" id="mini-vol" type="range" min="0" max="1" step="0.05" aria-label="Volume">
+    </div>
+    <button class="icon-btn focusable" id="mini-close" data-icon="close" aria-label="Arrêter la musique"></button>
+  </div>
+
+  <!-- Lecteur vidéo -->
+  <div class="layer video-layer" id="video-layer" tabindex="-1" hidden>
+    <video id="video" preload="metadata"></video>
+    <div class="osd" id="vp-osd"></div>
+    <div class="vp-ui">
+      <div class="vp-top">
+        <button class="icon-btn" data-act="close" data-icon="close" aria-label="Fermer le lecteur"></button>
+        <div class="vp-heading">
+          <div class="vp-title" id="vp-title"></div>
+          <div class="vp-sub" id="vp-sub"></div>
+        </div>
+        <button class="text-btn" data-act="external"><span data-icon="external"></span>Lecteur externe</button>
+      </div>
+      <div class="vp-bottom">
+        <input class="range vp-seek" id="vp-seek" type="range" min="0" max="1000" value="0" aria-label="Position dans la vidéo">
+        <div class="vp-row">
+          <button class="icon-btn" data-act="prev" id="vp-prev" data-icon="prev" aria-label="Vidéo précédente"></button>
+          <button class="icon-btn big" data-act="play" id="vp-play" data-icon="pause" aria-label="Lecture ou pause"></button>
+          <button class="icon-btn" data-act="next" id="vp-next" data-icon="next" aria-label="Vidéo suivante"></button>
+          <span class="vp-time" id="vp-time">0:00 / 0:00</span>
+          <span class="vp-spacer"></span>
+          <button class="text-btn" data-act="subs" id="vp-subs" hidden><span data-icon="subs"></span><span id="vp-subs-lbl">Sous-titres</span></button>
+          <span class="vol-ico" data-icon="volume"></span>
+          <input class="range vp-vol" id="vp-vol" type="range" min="0" max="1" step="0.05" aria-label="Volume">
+          <button class="icon-btn" data-act="fs" data-icon="fullscreen" aria-label="Plein écran"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visionneuse d'images -->
+  <div class="layer image-layer" id="image-layer" tabindex="-1" hidden>
+    <img class="iv-img" id="iv-img" alt="">
+    <div class="vp-ui">
+      <div class="vp-top">
+        <button class="icon-btn" data-act="close" data-icon="close" aria-label="Fermer la visionneuse"></button>
+        <div class="vp-heading">
+          <div class="vp-title" id="iv-title"></div>
+          <div class="vp-sub" id="iv-count"></div>
+        </div>
+        <button class="text-btn" data-act="slideshow" id="iv-slide"><span data-icon="play"></span><span id="iv-slide-lbl">Diaporama</span></button>
+      </div>
+      <button class="iv-nav iv-prev" data-act="prev" data-icon="chevL" aria-label="Image précédente"></button>
+      <button class="iv-nav iv-next" data-act="next" data-icon="chevR" aria-label="Image suivante"></button>
+    </div>
+  </div>
+
+  <dialog class="panel" id="panel" aria-labelledby="panel-title">
+    <div class="panel-head">
+      <h2 class="panel-title" id="panel-title"></h2>
+      <button class="icon-btn focusable" data-panel-close data-icon="close" aria-label="Fermer"></button>
+    </div>
+    <div class="panel-tabs" id="panel-tabs" role="tablist"></div>
+    <div class="panel-body" id="panel-body"></div>
+  </dialog>
+
+  <dialog class="dlg wide pick" id="pick" aria-labelledby="pick-title">
+    <h2 class="dlg-title" id="pick-title">Choisir la bonne fiche</h2>
+    <p class="dlg-help" id="pick-help"></p>
+    <div class="pick-grid" id="pick-grid"></div>
+    <div class="dlg-actions"><button class="btn btn-ghost focusable" data-pick-cancel>Annuler</button></div>
+  </dialog>
+
+  <dialog class="dlg" id="dlg">
+    <form method="dialog" id="dlg-form">
+      <h2 class="dlg-title" id="dlg-title"></h2>
+      <p class="dlg-help" id="dlg-help"></p>
+      <div class="dlg-fields" id="dlg-fields"></div>
+      <div class="dlg-actions" id="dlg-actions"></div>
+    </form>
+  </dialog>
+
+  <div class="padbar" id="padbar" hidden aria-hidden="true"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="drop" id="drop" hidden><span>Déposez vos fichiers pour les lire</span></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

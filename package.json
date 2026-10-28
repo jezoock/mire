@@ -1,0 +1,77 @@
+{
+  "name": "mire",
+  "productName": "Mire",
+  "version": "1.0.0",
+  "description": "Lecteur multimédia, frontend de streaming intégré, de télévision Freebox et de jeux",
+  "main": "main.js",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "electron .",
+    "drm:compte": "node scripts/drm.js compte",
+    "drm:connexion": "node scripts/drm.js connexion",
+    "drm:signer": "node scripts/drm.js signer",
+    "dist": "node -e \"require('electron')\" && npx --yes electron-builder@26.17.0 --publish never"
+  },
+  "dependencies": {
+    "7zip-bin": "5.2.0",
+    "@ghostery/adblocker-electron": "2.20.1",
+    "webtorrent": "3.0.21"
+  },
+  "devDependencies": {
+    "electron": "https://github.com/castlabs/electron-releases#v44.5.1+wvcus"
+  },
+  "overrides": {
+    "@ghostery/adblocker": "2.20.1",
+    "@ghostery/adblocker-content": "2.20.1",
+    "@ghostery/adblocker-electron-preload": "2.20.1",
+    "@ghostery/adblocker-extended-selectors": "2.20.1",
+    "tldts-experimental": "7.4.16",
+    "bufferutil": "file:vendor/bufferutil-4.0.9-mire.1.tgz",
+    "ip": "file:vendor/ip-2.0.1-mire.1.tgz",
+    "ip-set": "file:vendor/ip-set-3.0.0-mire.1.tgz",
+    "node-domexception": "file:vendor/node-domexception-1.0.0-mire.1.tgz",
+    "utf-8-validate": "file:vendor/utf-8-validate-6.0.5-mire.1.tgz",
+    "utp-native": "file:vendor/utp-native-2.5.3-mire.1.tgz",
+    "webrtc-polyfill": "file:vendor/webrtc-polyfill-1.2.2-mire.1.tgz"
+  },
+  "build": {
+    "appId": "fr.mire.app",
+    "productName": "Mire",
+    "files": [
+      "main.js",
+      "preload.js",
+      "web-preload.js",
+      "scraper.js",
+      "romsites.js",
+      "downloads.js",
+      "discfiles.js",
+      "store.js",
+      "adblock.js",
+      "renderer/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/7zip-bin/**"
+    ],
+    "electronDist": "node_modules/electron/dist",
+    "afterPack": "./scripts/drm.js",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.entertainment"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "AudioVideo"
+    }
+  }
+}
