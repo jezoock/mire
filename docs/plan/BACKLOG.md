@@ -19,8 +19,8 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | --- | --- | --- | --- | --- | --- | --- |
 | P0-01 | Outillage : lint, formatage, éditeur | S | — | | faite | [#2](https://github.com/jezoock/mire/pull/2) |
 | P0-02 | Tests des modules déjà testables | M | P0-01 | | faite | [#3](https://github.com/jezoock/mire/pull/3) |
-| P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | en revue | [#4](https://github.com/jezoock/mire/pull/4) |
-| P0-04 | Intégration continue | S | P0-02, P0-03 | | à faire | |
+| P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | faite | [#4](https://github.com/jezoock/mire/pull/4) |
+| P0-04 | Intégration continue | S | P0-02, P0-03 | | en revue | [#7](https://github.com/jezoock/mire/pull/7) |
 | P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | à faire | |
 | P0-06 | Correctif : contrôle du chemin avant suppression d'un jeu | S | P0-03 | | à faire | |
 | P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
