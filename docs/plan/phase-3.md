@@ -148,6 +148,25 @@ qui est nécessaire au fonctionnement sans addon, tests de validation du contenu
 
 🧑 pour P3-23 (torrents réels), P3-24 (YouTube sans publicité), P3-26 (installations réelles).
 
+## Packs de langue
+
+### P3-29 — Packs de langue
+
+- **Dépend de** : P1-28, P3-04, P3-06 · **Taille** : M
+- **Objectif** : le français et l'anglais restent intégrés ; toute autre langue s'installe comme un addon de
+  données (décision D-11).
+- **À faire**
+  - point d'extension `LanguagePack` dans le SDK : catalogue au format de P1-28 et métadonnées (code BCP 47, nom
+    dans la langue, version de l'application visée, taux de couverture) ;
+  - l'hôte charge les packs installés ; le sélecteur de langue (P2-23) les propose ; les clés manquantes
+    s'affichent en anglais (repli) ; la langue des métadonnées suit le pack quand la source la connaît ;
+  - outils du SDK : `mire-addon i18n init <code>` (pack vide généré depuis le catalogue anglais) et
+    `mire-addon i18n check` (couverture, variables d'interpolation) ;
+  - dans `jezoock/mire-addons` : la CI valide chaque pack contre les clés de la version visée de l'application ;
+    un premier pack d'exemple pour éprouver la chaîne complète (la langue est à choisir au point G3).
+- **Critères d'acceptation** : installer un pack depuis le dépôt fait basculer l'interface sans redémarrage ;
+  le désinstaller ramène à la langue de repli ; un pack incomplet affiche en anglais les textes manquants.
+
 **Reste dans le cœur** : fenêtre, sécurité, configuration, stockage, IPC, protocoles, lecteurs intégrés, vue web
 et Widevine (liés au binaire Electron castLabs, non extractibles), bibliothèque locale, téléchargements HTTP,
 installateurs génériques de la boutique, extraction d'archives, navigation et manette, thème par défaut, hôte

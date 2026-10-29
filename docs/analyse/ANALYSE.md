@@ -176,6 +176,13 @@ des mécanismes de restauration du focus (`focusSelectorOf`) et des recalculs co
 Pas de tests, pas de lint, pas de types, pas de CI. Le seul export « de test » (`scraper._test`) n'est utilisé
 nulle part. Toute refacto sans tests de caractérisation préalables est risquée.
 
+### 4.8 Une seule langue, écrite en dur
+
+Tous les textes destinés à l'utilisateur sont en français, écrits directement dans le code du processus principal
+(messages d'erreur, boîtes de dialogue, boutique, tables de genres) et de l'interface. Les formats aussi sont
+figés (`fr-FR`, `Intl.Collator('fr')`, règle de pluriel française), comme la langue des métadonnées (TMDB, Steam).
+La localisation (décision D-11) demande un socle de catalogues avant de traduire quoi que ce soit.
+
 ## 5. Anomalies relevées
 
 | # | Constat | Où | Gravité | Tâche |
@@ -322,6 +329,7 @@ Validées au point d'étape G0 (29 octobre 2026), sauf D-05, reportée au point 
 | D-08 | Sources d'addons | **Dépôt officiel signé, et dépôts tiers** : l'architecture gère dès le départ plusieurs dépôts, chacun avec sa clé de signature et un niveau de confiance affiché ; les dépôts tiers sont ajoutés explicitement par l'utilisateur (tâche P3-08). ✅ validé |
 | D-09 | Dépôt d'addons | **`jezoock/mire-addons`**, déjà créé (public). ✅ |
 | D-10 | Mode de travail | **Une tâche = une branche = une PR vers `main`**, suivi dans `docs/plan/BACKLOG.md` ; issues GitHub en option. ✅ validé |
+| D-11 | Langues | **Français et anglais intégrés comme langues de base** ; les autres langues sont des packs de langue installables (addons de données). Socle et processus principal en phase 1 (P1-28, P1-29), interface en phase 2 (critère commun + P2-23), packs en phase 3 (P3-29). ✅ demandé le 29/10/2026 |
 
 ## 11. Risques
 
