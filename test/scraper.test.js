@@ -54,8 +54,24 @@ test('parseVideo : film sans année', () => {
   });
 });
 
-test('parseVideo : titre fait uniquement d’une année', { todo: 'bogue : le titre devient « 1 » (voir la PR P0-02)' }, () => {
+test('parseVideo : titre fait uniquement d’une année', () => {
   assert.deepEqual(parseVideo({ name: '1917' }), { type: 'movie', title: '1917', year: '' });
+});
+
+test('parseVideo : titre qui commence par une année, sans autre année', () => {
+  assert.deepEqual(parseVideo({ name: "2001 L'Odyssée de l'espace" }), {
+    type: 'movie',
+    title: "2001 L'Odyssée de l'espace",
+    year: '',
+  });
+});
+
+test('parseVideo : titre qui commence par une année, suivi de l’année de sortie', () => {
+  assert.deepEqual(parseVideo({ name: "2001 L'Odyssée de l'espace (1968)" }), {
+    type: 'movie',
+    title: "2001 L'Odyssée de l'espace",
+    year: '1968',
+  });
 });
 
 test('parseVideo : épisode S01E03 seul dans « Série/Saison 1 »', () => {

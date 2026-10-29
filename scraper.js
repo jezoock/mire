@@ -80,7 +80,8 @@ function parseVideo(item) {
   let title = name;
   if (years.length) {
     const last = years[years.length - 1];
-    const before = name.slice(0, last.index + 1);
+    // Le séparateur capturé devant l'année est absent quand l'année ouvre le nom.
+    const before = name.slice(0, last.index + last[0].length - last[1].length);
     if (cleanTitle(before)) { year = last[1]; title = before; }
   }
   return { type: 'movie', title: cleanTitle(title), year };

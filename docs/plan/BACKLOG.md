@@ -26,7 +26,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
 | P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | à faire | |
-| P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | à faire | |
+| P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | en revue | [#6](https://github.com/jezoock/mire/pull/6) |
 | P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | à faire | |
 | **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
 
