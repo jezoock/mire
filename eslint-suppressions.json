@@ -1,0 +1,47 @@
+{
+  "discfiles.js": {
+    "no-useless-assignment": {
+      "count": 2
+    }
+  },
+  "downloads.js": {
+    "no-control-regex": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "main.js": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 2
+    },
+    "preserve-caught-error": {
+      "count": 1
+    }
+  },
+  "renderer/app.js": {
+    "no-duplicate-case": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 6
+    },
+    "no-useless-assignment": {
+      "count": 1
+    }
+  },
+  "scraper.js": {
+    "no-useless-escape": {
+      "count": 1
+    }
+  },
+  "store.js": {
+    "preserve-caught-error": {
+      "count": 1
+    }
+  }
+}

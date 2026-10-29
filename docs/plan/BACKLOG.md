@@ -17,7 +17,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P0-01 | Outillage : lint, formatage, éditeur | S | — | | à faire | |
+| P0-01 | Outillage : lint, formatage, éditeur | S | — | | en revue | [#2](https://github.com/jezoock/mire/pull/2) |
 | P0-02 | Tests des modules déjà testables | M | P0-01 | | à faire | |
 | P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | à faire | |
 | P0-04 | Intégration continue | S | P0-02, P0-03 | | à faire | |
