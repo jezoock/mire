@@ -19,6 +19,12 @@ const { defaultRomSites, GAME_FILE_RE } = require('./romsites.js');
 const { createDownloads } = require('./downloads.js');
 const disc = require('./discfiles.js');
 const { guessSystem, parseVideo } = require('./scraper.js');
+const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('./lib/formats.js');
+const { THEME_BG, DEFAULT_CONFIG, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('./lib/config.js');
+const { parseM3U, groupChannels } = require('./lib/m3u.js');
+const { resolveLocation } = require('./lib/location.js');
+const { substitute, isUrlTarget } = require('./lib/args.js');
+const { decodeText, srtToVtt, foldText, providerMatches, episodeNumbers, cleanRomName, similarity } = require('./lib/text.js');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -60,305 +66,19 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 /* ------------------------------------------------------------------ */
-/* Formats                                                             */
-/* ------------------------------------------------------------------ */
-
-const EXT = {
-  video: ['.mp4', '.m4v', '.mkv', '.webm', '.mov', '.ogv', '.avi', '.wmv', '.flv', '.ts', '.m2ts', '.mts', '.mpg', '.mpeg', '.vob', '.3gp', '.divx', '.rmvb'],
-  audio: ['.mp3', '.flac', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.wma', '.aiff', '.aif', '.ape', '.mka'],
-  image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.svg', '.ico', '.tif', '.tiff', '.heic'],
-};
-const KIND = {};
-for (const [kind, list] of Object.entries(EXT)) for (const e of list) KIND[e] = kind;
-
-// Ce que le lecteur intégré (Chromium) lit directement. Le reste part dans mpv ou VLC.
-const NATIVE = new Set([
-  '.mp4', '.m4v', '.mkv', '.webm', '.mov', '.ogv',
-  '.mp3', '.flac', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac',
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.svg', '.ico',
-]);
-
-const MIME = {
-  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.mov': 'video/quicktime', '.ogv': 'video/ogg',
-  '.mp3': 'audio/mpeg', '.flac': 'audio/flac', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.m4a': 'audio/mp4', '.aac': 'audio/aac',
-  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-};
-
-// Pochettes d'album et affiches de dossier.
-const COVER_RE = /^(cover|folder|front|poster|album|albumart)\.(jpe?g|png|webp)$/i;
-// Illustrations à ne pas montrer dans la galerie d'images (pochettes, fonds façon Kodi…).
-const ART_RE = /^(cover|folder|front|poster|album|albumart|fanart|backdrop|background|banner|clearlogo|clearart|landscape|logo|thumb|disc)\.(jpe?g|png|webp)$/i;
-// Fonds d'écran (convention Kodi) : fanart.jpg dans le dossier, ou film-fanart.jpg à côté du film.
-const FANART_RE = /^(fanart|backdrop|background)\.(jpe?g|png|webp)$/i;
-const MEDIA_KINDS = ['video', 'audio', 'image'];
-
-/* ------------------------------------------------------------------ */
 /* Configuration                                                       */
 /* ------------------------------------------------------------------ */
-
-const CONFIG_VERSION = 5;
-
-// Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
-const HOME_BARS = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
-const THEMES = ['auto', 'ecran', 'jour', 'minuit', 'velours', 'contraste'];
-const THEME_BG = { ecran: '#1F2321', jour: '#F1EFE8', minuit: '#0F1524', velours: '#1C1513', contraste: '#000000' };
-
-// Sites proposés d'office. mode "integrated" : vue web dans Mire ; "browser" : navigateur externe (secours).
-// search : adresse de recherche ({q} = mots cherchés). Vide : à apprendre avec « Mémoriser la recherche ».
-// providers : noms utilisés par TMDB/JustWatch pour ce service ("=nom" : correspondance exacte).
-// background : la lecture continue quand on quitte le site (musique). group : rangement dans Streaming.
-// Services pour regarder la télévision, proposés d'office (ils ne sont pas vidés à l'installation).
-// kind "playlist" : liste M3U lue dans Mire ; kind "web" : portail du fournisseur dans la vue intégrée.
-// detect : adresse jointe sur le réseau local au premier lancement pour reconnaître le service en place.
-const DEFAULT_TV = [
-  { id: 'freebox', name: 'Freebox TV', kind: 'playlist', url: 'http://mafreebox.freebox.fr/freeboxtv/playlist.m3u', detect: 'http://mafreebox.freebox.fr/', quality: 'hd' },
-  { id: 'orange', name: 'Orange TV', kind: 'playlist', url: 'http://lafibre.info/images/orange/TV_sur_PC_Orange.m3u', detect: 'http://livebox.home/' },
-  { id: 'sfr', name: 'SFR TV', kind: 'web', url: 'https://tv.sfr.fr/', detect: 'http://192.168.1.1/' },
-  { id: 'bouygues', name: 'B.tv (Bouygues)', kind: 'web', url: 'https://www.bouyguestelecom.fr/tv-direct/', detect: 'http://mabbox.bytel.fr/' },
-  { id: 'molotov', name: 'Molotov', kind: 'web', url: 'https://www.molotov.tv/', detect: '' },
-];
-
-const DEFAULT_WEB = [
-  { id: 'netflix', group: 'video', name: 'Netflix', url: 'https://www.netflix.com/browse', color: '#E50914', search: 'https://www.netflix.com/search?q={q}', providers: ['netflix'] },
-  { id: 'prime', group: 'video', name: 'Prime Video', url: 'https://www.primevideo.com', color: '#1A98FF', search: 'https://www.primevideo.com/search/ref=atv_nb_sug?ie=UTF8&phrase={q}', providers: ['prime video'] },
-  { id: 'disney', group: 'video', name: 'Disney+', url: 'https://www.disneyplus.com/fr-fr', color: '#1A3FD8', search: '', providers: ['disney plus', 'disney+'] },
-  { id: 'canal', group: 'video', name: 'Canal+', url: 'https://www.canalplus.com', color: '#2B2B2B', search: '', providers: ['canal+', 'canal plus'] },
-  { id: 'hbomax', group: 'video', name: 'HBO Max', url: 'https://play.hbomax.com', color: '#4B2BD6', search: '', providers: ['hbo max', '=max'] },
-  { id: 'appletv', group: 'video', name: 'Apple TV', url: 'https://tv.apple.com/fr', color: '#DADADF', search: 'https://tv.apple.com/fr/search?term={q}', providers: ['apple tv'] },
-  { id: 'paramount', group: 'video', name: 'Paramount+', url: 'https://www.paramountplus.com/fr/', color: '#0064FF', search: '', providers: ['paramount'] },
-  { id: 'crunchyroll', group: 'video', name: 'Crunchyroll', url: 'https://www.crunchyroll.com/fr', color: '#F47521', search: 'https://www.crunchyroll.com/fr/search?q={q}', providers: ['crunchyroll'] },
-  { id: 'youtube', group: 'video', name: 'YouTube', url: 'https://www.youtube.com', color: '#FF0033', search: 'https://www.youtube.com/results?search_query={q}', providers: ['youtube'] },
-  { id: 'francetv', group: 'video', name: 'france.tv', url: 'https://www.france.tv', color: '#3046F0', search: '', providers: ['france tv', 'france.tv'] },
-  { id: 'amazon-music', group: 'music', name: 'Amazon Music', url: 'https://music.amazon.fr', color: '#25D1DA', search: 'https://music.amazon.fr/search/{q}', background: true },
-  { id: 'spotify', group: 'music', name: 'Spotify', url: 'https://open.spotify.com', color: '#1ED760', search: 'https://open.spotify.com/search/{q}', background: true },
-  { id: 'deezer', group: 'music', name: 'Deezer', url: 'https://www.deezer.com/fr/', color: '#A238FF', search: 'https://www.deezer.com/search/{q}', background: true },
-  { id: 'juststream', name: 'JustStream', url: 'https://juststream.now/', color: '#8E6CF0', search: '' },
-  { id: 'voir-anime', name: 'Voir-Anime', url: 'https://voir-anime.to/', color: '#F28C28', search: '' },
-].map((w) => ({ mode: 'integrated', ...w }));
-
-// Services de streaming connus : ils ne sont PAS installés d'office, mais servent de modèles
-// (adresse, recherche, correspondance TMDB) quand l'utilisateur ajoute l'un d'eux.
-const KNOWN_WEB = DEFAULT_WEB;
-
-const DEFAULT_CONFIG = {
-  version: CONFIG_VERSION,
-  // Sources de la bibliothèque : dossier, partage réseau (\\NAS\Films ou smb://nas/films) ou adresse web.
-  library: { sources: [] },
-  // Dossiers contenant des jeux PC (exécutables ou raccourcis).
-  gameSources: [],
-  externalPlayer: { path: '', args: [] },
-  browser: { path: '', args: [] },
-  // Télévision : services proposés d'office ; "active" = celui choisi (détecté au premier lancement).
-  tv: { services: structuredClone(DEFAULT_TV), active: '', detected: false },
-  ui: {
-    fullscreen: false,
-    theme: 'ecran',
-    backdrop: true,
-    // Menu principal : à gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable ou non.
-    menu: { position: 'left', autohide: false },
-    start: 'home',
-    home: { clock: true, recent: true, bars: [...HOME_BARS], services: [] },
-  },
-  search: { tmdbToken: '', region: 'FR', language: 'fr-FR' },
-  scrape: { auto: true },
-  // Jeux : autoOnline affiche d'emblée les jeux en ligne en ouvrant une console.
-  games: [],
-  gamesOpts: { autoOnline: false },
-  // Sites pour télécharger des jeux PC (aucun d'office). name, url, search avec {q}.
-  pcSites: [],
-  // Bloqueur de publicités des sites : sites où il est désactivé, listes de filtres en plus.
-  adblock: { enabled: true, allowlist: [], customLists: [] },
-  // Téléchargements : dossier (vide = Téléchargements/Mire), client torrent (mire = intégré, system = logiciel installé), partage après téléchargement.
-  downloads: { dir: '', torrentClient: 'mire', seed: false },
-  store: { romsRoot: '' },
-  // Pages de streaming mises en marque-page : elles apparaissent dans les Vidéos et rouvrent le site.
-  bookmarks: [],
-  // Jeux mis en marque-page depuis un site de téléchargement (fiche, lien direct ou .torrent),
-  // en attente de téléchargement. Ils apparaissent dans la liste des jeux avec un bouton Télécharger.
-  gameBookmarks: [],
-  // Rien n'est installé d'office : ni sites de streaming, ni jeux, ni consoles, ni sources. Tout s'ajoute
-  // ensuite, à la main ou par un fichier de configuration (Réglages → Importer une configuration).
-  web: [],
-  emulators: [],
-};
-const NESTED = ['library', 'externalPlayer', 'browser', 'tv', 'ui', 'search', 'scrape', 'gamesOpts', 'store', 'adblock', 'downloads'];
 
 let config = structuredClone(DEFAULT_CONFIG);
 let mainWindow = null;
 let pendingFiles = [];
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
-function slug(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-// Import « compléter » : ajoute au présent ce qui vient du fichier, sans doublon ni perte de l'existant.
-function mergeConfig(current, incoming) {
-  const out = structuredClone(current);
-  const inc = incoming && typeof incoming === 'object' ? incoming : {};
-  const byKey = (arr, key) => new Set((arr || []).map(key));
-  // Sites de streaming (par id).
-  if (Array.isArray(inc.web)) {
-    const have = byKey(out.web, (w) => w.id);
-    for (const w of inc.web) if (w && w.id && !have.has(w.id)) out.web.push(w);
-  }
-  // Consoles et jeux PC (par chemin), sources de la bibliothèque et dossiers de jeux (par emplacement).
-  if (Array.isArray(inc.emulators)) {
-    const have = byKey(out.emulators, (e) => e.path);
-    for (const e of inc.emulators) if (e && e.path && !have.has(e.path)) out.emulators.push(e);
-  }
-  if (Array.isArray(inc.games)) {
-    const have = byKey(out.games, (g) => g.path);
-    for (const g of inc.games) if (g && g.path && !have.has(g.path)) out.games.push(g);
-  }
-  if (inc.library && Array.isArray(inc.library.sources)) {
-    const have = byKey(out.library.sources, (x) => `${x.kind}:${x.location}`);
-    for (const x of inc.library.sources) if (x && x.location && !have.has(`${x.kind}:${x.location}`)) out.library.sources.push(x);
-  }
-  if (Array.isArray(inc.gameSources)) {
-    const have = byKey(out.gameSources, (x) => x.location);
-    for (const x of inc.gameSources) if (x && x.location && !have.has(x.location)) out.gameSources.push(x);
-  }
-  if (inc.tv && Array.isArray(inc.tv.services)) {
-    const have = byKey(out.tv.services, (t) => t.id);
-    for (const t of inc.tv.services) if (t && t.id && !have.has(t.id)) out.tv.services.push(t);
-  }
-  return out;
-}
-
-function normalizeConfig(raw) {
-  const src = raw && typeof raw === 'object' ? raw : {};
-  const c = { ...structuredClone(DEFAULT_CONFIG), ...src };
-  for (const k of NESTED) c[k] = { ...DEFAULT_CONFIG[k], ...(src[k] && typeof src[k] === 'object' ? src[k] : {}) };
-  for (const k of ['web', 'games', 'emulators', 'gameSources']) if (!Array.isArray(c[k])) c[k] = structuredClone(DEFAULT_CONFIG[k]);
-  const validLocation = (x) => x && typeof x === 'object' && typeof x.location === 'string' && x.location.trim();
-  c.library.sources = (Array.isArray(c.library.sources) ? c.library.sources : [])
-    .filter((x) => validLocation(x) && MEDIA_KINDS.includes(x.kind))
-    .map((x) => ({ id: String(x.id || newId()), kind: x.kind, location: x.location.trim() }));
-  delete c.library.folders;
-  c.gameSources = c.gameSources.filter(validLocation).map((x) => ({ id: String(x.id || newId()), location: x.location.trim() }));
-  c.web = c.web
-    .filter((w) => w && typeof w === 'object' && w.url)
-    .map((w, i) => ({ ...w, id: String(w.id || slug(w.name) || `site-${i}`), mode: w.mode === 'browser' ? 'browser' : 'integrated', search: typeof w.search === 'string' ? w.search : '' }));
-  c.version = CONFIG_VERSION;
-  const home = { ...DEFAULT_CONFIG.ui.home, ...(src.ui?.home && typeof src.ui.home === 'object' ? src.ui.home : {}) };
-  home.clock = home.clock !== false;
-  home.recent = home.recent !== false;
-  home.bars = [...new Set(Array.isArray(home.bars) ? home.bars : [])].filter((b) => HOME_BARS.includes(b));
-  home.services = [...new Set(Array.isArray(home.services) ? home.services : [])].filter((id) => c.web.some((w) => w.id === id));
-  c.ui.home = home;
-  if (!THEMES.includes(c.ui.theme)) c.ui.theme = 'ecran';
-  if (typeof c.ui.start !== 'string') c.ui.start = 'home';
-  c.games = c.games.filter((g) => g && typeof g === 'object' && g.path);
-  c.gameBookmarks = (Array.isArray(c.gameBookmarks) ? c.gameBookmarks : []).filter((b) => b && typeof b === 'object' && b.source).map((b) => ({
-    id: String(b.id || newId()),
-    source: String(b.source),
-    kind: b.kind === 'torrent' ? 'torrent' : 'http',
-    title: String(b.title || ''),
-    console: b.console == null ? null : (b.console === 'pc' ? 'pc' : Number(b.console)),
-    system: String(b.system || ''),
-    downloadId: b.downloadId || null,
-    done: b.done === true,
-    added: b.added || Date.now(),
-  }));
-  c.bookmarks = (Array.isArray(c.bookmarks) ? c.bookmarks : []).filter((b) => b && typeof b.url === 'string' && /^https?:\/\//i.test(b.url)).map((b) => ({
-    id: String(b.id || newId()),
-    url: b.url,
-    title: String(b.title || ''),
-    type: b.type === 'tv' ? 'tv' : 'movie',
-    season: b.season || null,
-    episode: b.episode || null,
-    site: String(b.site || ''),
-    added: b.added || Date.now(),
-  }));
-  c.pcSites = (Array.isArray(c.pcSites) ? c.pcSites : []).filter((x) => x && typeof x.url === 'string' && /^https?:\/\//i.test(x.url)).map((x) => ({ name: String(x.name || x.url), url: x.url, search: typeof x.search === 'string' ? x.search : '' }));
-  c.gamesOpts = { autoOnline: (c.gamesOpts && c.gamesOpts.autoOnline) === true };
-  c.emulators = c.emulators
-    .filter((e) => e && typeof e === 'object' && e.path)
-    .map((e) => {
-      const out = { ...e, sources: Array.isArray(e.sources) ? e.sources.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()) : [] };
-      if (Array.isArray(e.romSites)) out.romSites = e.romSites.filter((x) => x && typeof x.url === 'string' && /^https?:\/\//i.test(x.url)).map((x) => ({ name: String(x.name || x.url), url: x.url, search: typeof x.search === 'string' ? x.search : '' }));
-      else delete out.romSites;
-      return out;
-    });
-  c.ui.backdrop = c.ui.backdrop !== false;
-  const menu = { ...DEFAULT_CONFIG.ui.menu, ...(src.ui?.menu && typeof src.ui.menu === 'object' ? src.ui.menu : {}) };
-  if (!['left', 'right', 'top', 'bottom'].includes(menu.position)) menu.position = 'left';
-  menu.autohide = menu.autohide === true;
-  c.ui.menu = menu;
-  // Télévision : on garde les services proposés par défaut, complétés par ceux de l'utilisateur.
-  const tvSrc = src.tv && typeof src.tv === 'object' ? src.tv : {};
-  const userServices = Array.isArray(tvSrc.services) ? tvSrc.services : [];
-  const byId = new Map(DEFAULT_TV.map((t) => [t.id, structuredClone(t)]));
-  for (const t of userServices) {
-    if (!t || typeof t !== 'object' || !t.url) continue;
-    const id = String(t.id || slug(t.name) || newId());
-    byId.set(id, { ...(byId.get(id) || {}), ...t, id, kind: t.kind === 'web' ? 'web' : 'playlist' });
-  }
-  c.tv = { services: [...byId.values()], active: typeof tvSrc.active === 'string' ? tvSrc.active : '', detected: tvSrc.detected === true };
-  if (c.tv.active && !c.tv.services.some((t) => t.id === c.tv.active)) c.tv.active = '';
-  delete c.freebox;
-  return c;
-}
-
-const newId = () => crypto.randomBytes(5).toString('hex');
-
 function saveConfig(next) {
   config = normalizeConfig(next);
   fs.mkdirSync(path.dirname(configPath()), { recursive: true });
   fs.writeFileSync(configPath(), JSON.stringify(config, null, 2), 'utf8');
   return config;
-}
-
-// Version 1 → 2 : les sites passent dans la vue intégrée et reçoivent leur adresse de recherche.
-function migrateConfig(raw) {
-  if (!raw || typeof raw !== 'object') return { raw, changed: false };
-  const v = Number(raw.version) || 1;
-  if (v >= CONFIG_VERSION) return { raw, changed: false };
-  if (v < 2 && Array.isArray(raw.web)) {
-    raw.web = raw.web.map((w) => {
-      if (!w || typeof w !== 'object') return w;
-      const def = DEFAULT_CONFIG.web.find((d) => d.id === w.id) || {};
-      const next = { ...w, mode: 'integrated' };
-      if (!next.search && def.search) next.search = def.search;
-      if (next.background == null && def.background) next.background = true;
-      if (!next.providers && def.providers) next.providers = def.providers;
-      return next;
-    });
-  }
-  if (raw.ui) delete raw.ui.webFullscreen;
-  // Version 4 : chaque dossier de la bibliothèque devient une source par type de média.
-  if (v < 4 && raw.library && Array.isArray(raw.library.folders)) {
-    raw.library.sources = raw.library.folders
-      .filter((f) => typeof f === 'string' && f.trim())
-      .flatMap((f) => MEDIA_KINDS.map((kind) => ({ id: newId(), kind, location: f })));
-    delete raw.library.folders;
-  }
-  // Version 3 : ajout des grands services de streaming, rangés dans l'ordre par défaut ;
-  // les sites ajoutés par l'utilisateur restent à la fin.
-  if (v < 3 && Array.isArray(raw.web)) {
-    const mine = new Map(raw.web.filter((w) => w && w.id).map((w) => [w.id, w]));
-    const ordered = DEFAULT_WEB.map((d) => (mine.has(d.id) ? { ...d, ...mine.get(d.id) } : d));
-    const custom = raw.web.filter((w) => w && !DEFAULT_WEB.some((d) => d.id === w.id));
-    raw.web = [...ordered, ...custom];
-  }
-  // Version 5 : la télé devient une liste de services ; l'ancienne playlist Freebox est conservée.
-  if (v < 5) {
-    const services = structuredClone(DEFAULT_TV);
-    if (raw.freebox && typeof raw.freebox === 'object') {
-      const fb = services.find((t) => t.id === 'freebox');
-      if (raw.freebox.playlist) fb.url = raw.freebox.playlist;
-      if (raw.freebox.quality) fb.quality = raw.freebox.quality;
-    }
-    // Avant la v5, les sites étaient installés d'office : on garde ceux que l'utilisateur a réellement,
-    // mais ceux qu'il a ajoutés lui-même (hors liste connue) restent, les autres ne sont gardés que s'ils existaient.
-    raw.tv = { services, active: 'freebox', detected: true };
-    delete raw.freebox;
-    if (raw.ui && raw.ui.home && Array.isArray(raw.ui.home.services)) { /* conservés tels quels, filtrés plus tard */ }
-  }
-  raw.version = CONFIG_VERSION;
-  return { raw, changed: true };
 }
 
 function loadConfig() {
@@ -390,29 +110,6 @@ let store = null;
 let adblock = null;
 let downloads = null;
 let adblockReady = Promise.resolve(false);
-
-/**
- * Emplacement d'une source :
- *   D:\\Films, /home/moi/Films        dossier
- *   \\\\NAS\\Films, //NAS/Films        partage réseau (Windows le lit directement)
- *   smb://nas/films                  partage réseau : chemin Windows, /Volumes (macOS) ou gvfs (Linux)
- *   http(s)://…/films/ ou …/liste.m3u  page d'index d'un serveur web, ou liste de lecture M3U
- */
-function resolveLocation(loc) {
-  const s = String(loc || '').trim();
-  if (/^https?:\/\//i.test(s)) return { type: 'url', url: s };
-  const smb = /^smb:\/\/([^/]+)\/([^/]+)(\/.*)?$/i.exec(s);
-  if (smb) {
-    const [, host, share, rest = ''] = smb;
-    const tail = rest.split('/').filter(Boolean).map((x) => { try { return decodeURIComponent(x); } catch { return x; } });
-    if (IS_WIN) return { type: 'path', path: `\\\\${host}\\${share}${tail.length ? `\\${tail.join('\\')}` : ''}`, network: true };
-    if (IS_MAC) return { type: 'path', path: path.join('/Volumes', share, ...tail), network: true };
-    const uid = typeof process.getuid === 'function' ? process.getuid() : 1000;
-    return { type: 'path', path: path.join(`/run/user/${uid}/gvfs`, `smb-share:server=${host.toLowerCase()},share=${share.toLowerCase()}`, ...tail), network: true };
-  }
-  if (IS_WIN && /^\/\/[^/]/.test(s)) return { type: 'path', path: s.replace(/\//g, '\\'), network: true };
-  return { type: 'path', path: s, network: /^\\\\/.test(s) };
-}
 
 const metaDir = () => path.join(app.getPath('userData'), 'meta');
 const romCacheDir = () => path.join(app.getPath('userData'), 'cache', 'roms');
@@ -642,11 +339,6 @@ async function crawlLibraryUrl(url, kinds, out) {
 }
 
 // Analyse de toutes les sources ; renvoie aussi l'état de chacune (nombre d'éléments, erreur).
-// Numéros de saison et d'épisode d'après le nom du fichier (S01E03, 1x03…).
-function episodeNumbers(name) {
-  const m = /\bS(\d{1,2})\s*E(\d{1,3})\b/i.exec(name) || /\b(\d{1,2})x(\d{2})\b/.exec(name);
-  return m ? { season: Number(m[1]), episode: Number(m[2]) } : { season: null, episode: null };
-}
 
 async function scanLibrary() {
   const items = [];
@@ -727,15 +419,6 @@ async function itemFromPath(p) {
 
 /* ---------- Sous-titres .srt / .vtt à côté de la vidéo ---------- */
 
-function decodeText(buf) {
-  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^\uFEFF/, ''); }
-  catch { return new TextDecoder('windows-1252').decode(buf); } // vieux .srt français
-}
-
-function srtToVtt(s) {
-  return 'WEBVTT\n\n' + s.replace(/\r/g, '').replace(/(\d{1,2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
-}
-
 async function findSubtitles(videoPath) {
   if (/^https?:\/\//i.test(videoPath)) {
     const out = [];
@@ -778,69 +461,6 @@ async function findSubtitles(videoPath) {
 /* ------------------------------------------------------------------ */
 /* Freebox TV (playlist M3U)                                           */
 /* ------------------------------------------------------------------ */
-
-function parseM3U(text) {
-  const out = [];
-  let cur = null;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    if (line.startsWith('#EXTINF')) {
-      // Le titre suit la première virgule hors guillemets.
-      let inQuotes = false;
-      let comma = -1;
-      for (let i = 0; i < line.length; i++) {
-        if (line[i] === '"') inQuotes = !inQuotes;
-        else if (line[i] === ',' && !inQuotes) { comma = i; break; }
-      }
-      const head = comma >= 0 ? line.slice(0, comma) : line;
-      const attrs = {};
-      head.replace(/([\w-]+)="([^"]*)"/g, (_, k, v) => { attrs[k.toLowerCase()] = v; return ''; });
-      cur = {
-        title: comma >= 0 ? line.slice(comma + 1).trim() : '',
-        logo: attrs['tvg-logo'] || '',
-        group: attrs['group-title'] || '',
-        chno: attrs['tvg-chno'] || '',
-      };
-    } else if (!line.startsWith('#')) {
-      if (cur) { out.push({ ...cur, url: line }); cur = null; }
-      else out.push({ title: line, url: line, logo: '', group: '', chno: '' });
-    }
-  }
-  return out;
-}
-
-function qualityOf(label, url) {
-  const s = `${label} ${url}`.toLowerCase();
-  if (/flavour=hd|\b(hd|fhd|uhd|4k)\b/.test(s)) return 'hd';
-  if (/flavour=ld|bas d[ée]bit|\bld\b/.test(s)) return 'ld';
-  if (/flavour=sd|\bsd\b|standard/.test(s)) return 'sd';
-  return 'other';
-}
-
-function groupChannels(entries) {
-  const map = new Map();
-  for (const e of entries) {
-    let num = e.chno;
-    let name = e.title || e.url;
-    const m = /^(\d+)\s*[-.]\s*(.+)$/.exec(name);
-    if (m) { num = num || m[1]; name = m[2]; }
-    let label = '';
-    const v = /\s*\(([^)]*)\)\s*$/.exec(name);
-    if (v) { label = v[1].trim(); name = name.slice(0, v.index).trim(); }
-    const key = `${num || ''}|${name.toLowerCase()}`;
-    if (!map.has(key)) {
-      map.set(key, { number: num ? Number.parseInt(num, 10) : null, name, logo: e.logo, group: e.group, variants: [] });
-    }
-    map.get(key).variants.push({ label, url: e.url, q: qualityOf(label, e.url) });
-  }
-  return [...map.values()].sort((a, b) => {
-    if (a.number != null && b.number != null) return a.number - b.number;
-    if (a.number != null) return -1;
-    if (b.number != null) return 1;
-    return a.name.localeCompare(b.name, 'fr');
-  });
-}
 
 // Repère le service de télé en place en joignant brièvement chaque box sur le réseau local.
 async function detectTvService() {
@@ -892,25 +512,6 @@ async function fetchChannels() {
 /* ------------------------------------------------------------------ */
 /* Lancement de programmes (jeux, émulateurs, lecteur externe)         */
 /* ------------------------------------------------------------------ */
-
-// Remplace {rom}, {url}, {title}, {start}. Un argument dont la variable est vide est retiré.
-function substitute(args, vars) {
-  const out = [];
-  for (const a of args || []) {
-    const s = String(a);
-    let drop = false;
-    const v = s.replace(/\{(\w+)\}/g, (m, k) => {
-      if (!(k in vars)) return m;
-      const val = vars[k];
-      if (val === '' || val == null) drop = true;
-      return String(val ?? '');
-    });
-    if (!drop) out.push(v);
-  }
-  return out;
-}
-
-const isUrlTarget = (t) => /^[a-z][\w+.-]*:\/\//i.test(t); // steam://, http://… (pas C:\)
 
 function launchProcess(cmd, args = [], { cwd, hideWhileRunning = false } = {}) {
   return new Promise((resolve) => {
@@ -1449,8 +1050,6 @@ function setupWebSession() {
 
 /* ---------- Recherche dans les catalogues de streaming (TMDB + JustWatch) ---------- */
 
-const foldText = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-
 async function tmdbFetch(pathname, params = {}) {
   const token = String(config.search.tmdbToken || '').trim();
   const url = new URL(`https://api.themoviedb.org/3${pathname}`);
@@ -1465,14 +1064,6 @@ async function tmdbFetch(pathname, params = {}) {
   if (res.status === 401) throw new Error('Clé TMDB refusée. Vérifiez-la dans Réglages.');
   if (!res.ok) throw new Error(`TMDB a répondu avec le code ${res.status}.`);
   return res.json();
-}
-
-// « Disney Plus » correspond à Disney+, « Paramount+ Amazon Channel » à Paramount+…
-// Un alias précédé de « = » doit correspondre exactement (« =max » ne doit pas attraper « Action Max »).
-function providerMatches(provider, alias) {
-  if (alias.startsWith('=')) return provider === alias.slice(1);
-  const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(provider);
 }
 
 function sourceForProvider(providerName) {
@@ -1534,15 +1125,6 @@ async function launchGame(i) {
 const JUNK_EXE = /unins|setup|install|crash|report|redist|vcredist|vc_redist|dxsetup|directx|dotnet|update|patch|helper|prereq|easyanticheat|battleye|cleanup|config|launcherhelper|cefprocess|webhelper|unitycrash/i;
 const GAME_FILES = IS_WIN ? ['.exe', '.lnk', '.url', '.bat'] : IS_MAC ? ['.app'] : ['.desktop', '.sh', '.appimage', '.x86_64'];
 
-function similarity(a, b) {
-  const x = foldText(a).replace(/[^a-z0-9]/g, '');
-  const y = foldText(b).replace(/[^a-z0-9]/g, '');
-  if (!x || !y) return 0;
-  if (x === y) return 1;
-  if (x.includes(y) || y.includes(x)) return 0.8;
-  return 0;
-}
-
 async function bestExecutable(dir, folderName, depth = 0) {
   const found = [];
   async function walk(d, level) {
@@ -1595,11 +1177,6 @@ async function launchGamePath(target) {
   if (typeof target !== 'string' || !isAllowed(target)) return { ok: false, error: 'Ce jeu ne fait pas partie de vos dossiers de jeux.' };
   if (!fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
   return openTarget(target, [], { cwd: path.dirname(target), hideWhileRunning: true });
-}
-
-function cleanRomName(name) {
-  // « Super Mario World (Europe) (En,Fr) [!] » → « Super Mario World »
-  return name.replace(/\s*[([][^)\]]*[)\]]/g, '').replace(/_/g, ' ').trim() || name;
 }
 
 // Les emplacements d'une console : local (dossier principal) et distants (sources web ou réseau).

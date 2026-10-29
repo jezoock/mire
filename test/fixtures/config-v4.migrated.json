@@ -1,0 +1,69 @@
+{
+  "raw": {
+    "version": 5,
+    "web": [
+      {
+        "id": "mon-site",
+        "name": "Mon site",
+        "url": "https://exemple.fr/",
+        "mode": "integrated",
+        "search": ""
+      }
+    ],
+    "library": {
+      "sources": [
+        {
+          "id": "a1",
+          "kind": "video",
+          "location": "/home/moi/Films"
+        }
+      ]
+    },
+    "ui": {
+      "theme": "minuit"
+    },
+    "tv": {
+      "services": [
+        {
+          "id": "freebox",
+          "name": "Freebox TV",
+          "kind": "playlist",
+          "url": "http://box.local/playlist.m3u",
+          "detect": "http://mafreebox.freebox.fr/",
+          "quality": "hd"
+        },
+        {
+          "id": "orange",
+          "name": "Orange TV",
+          "kind": "playlist",
+          "url": "http://lafibre.info/images/orange/TV_sur_PC_Orange.m3u",
+          "detect": "http://livebox.home/"
+        },
+        {
+          "id": "sfr",
+          "name": "SFR TV",
+          "kind": "web",
+          "url": "https://tv.sfr.fr/",
+          "detect": "http://192.168.1.1/"
+        },
+        {
+          "id": "bouygues",
+          "name": "B.tv (Bouygues)",
+          "kind": "web",
+          "url": "https://www.bouyguestelecom.fr/tv-direct/",
+          "detect": "http://mabbox.bytel.fr/"
+        },
+        {
+          "id": "molotov",
+          "name": "Molotov",
+          "kind": "web",
+          "url": "https://www.molotov.tv/",
+          "detect": ""
+        }
+      ],
+      "active": "freebox",
+      "detected": true
+    }
+  },
+  "changed": true
+}

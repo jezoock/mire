@@ -1,0 +1,11 @@
+{
+  "web": [
+    { "id": "netflix", "name": "Netflix", "url": "https://www.netflix.com/browse", "mode": "browser" },
+    { "id": "spotify", "name": "Spotify", "url": "https://open.spotify.com", "mode": "browser" },
+    { "id": "mon-site", "name": "Mon site", "url": "https://exemple.fr/", "mode": "browser" },
+    null
+  ],
+  "library": { "folders": ["/home/moi/Films", "  ", 42] },
+  "freebox": { "playlist": "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u?flavour=sd", "quality": "sd" },
+  "ui": { "fullscreen": true, "webFullscreen": true }
+}

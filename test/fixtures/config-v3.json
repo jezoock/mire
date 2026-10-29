@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "web": [
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "url": "https://www.youtube.com",
+      "mode": "integrated",
+      "search": "https://www.youtube.com/results?search_query={q}"
+    },
+    { "id": "mon-site", "name": "Mon site", "url": "https://exemple.fr/", "mode": "integrated", "search": "" }
+  ],
+  "library": { "folders": ["smb://nas/films"] },
+  "freebox": { "quality": "ld" },
+  "ui": { "home": { "services": ["youtube"] } }
+}

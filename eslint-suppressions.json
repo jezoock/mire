@@ -12,10 +12,12 @@
       "count": 1
     }
   },
-  "main.js": {
+  "lib/config.js": {
     "no-unused-vars": {
       "count": 1
-    },
+    }
+  },
+  "main.js": {
     "no-useless-assignment": {
       "count": 2
     },

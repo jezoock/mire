@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "web": [
+    { "id": "netflix", "name": "Netflix", "url": "https://www.netflix.com/browse", "mode": "integrated", "search": "https://www.netflix.com/search?q={q}" },
+    { "id": "mon-site", "name": "Mon site", "url": "https://exemple.fr/", "mode": "integrated", "search": "" }
+  ],
+  "library": { "folders": ["D:\\Films", "\\\\NAS\\Musique"] },
+  "freebox": { "playlist": "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u" },
+  "ui": { "theme": "jour" }
+}
