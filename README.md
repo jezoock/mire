@@ -1,5 +1,7 @@
 # Mire
 
+[![CI](https://github.com/jezoock/mire/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jezoock/mire/actions/workflows/ci.yml)
+
 Lecteur multimédia et frontend de salon : vos fichiers du disque dur, Netflix, Prime Video, Amazon Music et vos autres sites de streaming affichés directement dans l’application, la télévision de la Freebox, vos jeux PC et vos émulateurs. Une recherche unique couvre toutes ces sources, qui peuvent être des dossiers, des partages réseau ou des serveurs web. Mire va chercher en ligne affiches, genres et fonds d’écran ; chaque média ou jeu se modifie à la main ; sa Boutique installe vos émulateurs en un clic. L’accueil se personnalise, cinq thèmes sont proposés, et tout se pilote au clavier, à la souris ou à la manette.
 
 ![Accueil de Mire](docs/apercu.png)
