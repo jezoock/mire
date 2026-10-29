@@ -14,6 +14,10 @@
     "drm:compte": "node scripts/drm.js compte",
     "drm:connexion": "node scripts/drm.js connexion",
     "drm:signer": "node scripts/drm.js signer",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "dist": "node -e \"require('electron')\" && npx --yes electron-builder@26.17.0 --publish never"
   },
   "dependencies": {
@@ -22,7 +26,11 @@
     "webtorrent": "3.0.21"
   },
   "devDependencies": {
-    "electron": "https://github.com/castlabs/electron-releases#v44.5.1+wvcus"
+    "@eslint/js": "10.0.1",
+    "electron": "https://github.com/castlabs/electron-releases#v44.5.1+wvcus",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.10"
   },
   "overrides": {
     "@ghostery/adblocker": "2.20.1",
