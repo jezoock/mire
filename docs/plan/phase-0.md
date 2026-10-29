@@ -5,6 +5,7 @@ des captures, on corrige les anomalies urgentes. Aucune réorganisation de l'arc
 
 Ordre conseillé : P0-01 → P0-02 et P0-03 (en parallèle) → P0-04 → P0-09 ; les correctifs P0-05 à P0-07
 peuvent démarrer dès que P0-03 est fusionnée (ils s'appuient sur ses modules et ses tests). P0-08 est datée.
+Les correctifs P0-10 et P0-11, révélés par les tests de P0-02, peuvent démarrer tout de suite.
 
 ---
 
@@ -248,3 +249,48 @@ peuvent démarrer dès que P0-03 est fusionnée (ils s'appuient sur ses modules 
   - [ ] Aucune requête réseau sortante pendant le test, hors téléchargement de Widevine (à vérifier et noter).
   - [ ] Les captures montrent des sections remplies (pas seulement des états vides).
 - **Vérification** : `npm run test:e2e`, artefacts de la CI.
+
+---
+
+## P0-10 — Correctif : titre de film qui commence par une année
+
+- **Dépend de** : P0-02 · **Taille** : S
+- **Objectif** : un film dont le nom commence par une année garde son vrai titre.
+- **Constat** (révélé par P0-02) : dans `parseVideo` (`scraper.js`), `name.slice(0, last.index + 1)` suppose
+  un séparateur devant l'année. Quand l'année est en tête du nom, le premier chiffre est pris pour le titre :
+  `1917` → titre « 1 », année 1917 ; `2001 L'Odyssée de l'espace` → titre « 2 », année 2001. Le titre sert à
+  la recherche des fiches et au regroupement : ces films ne sont pas reconnus.
+- **À faire**
+  1. Ne retenir une année que si elle est précédée d'un titre (un séparateur ne compte pas) ; sinon le nom
+     entier est le titre et l'année reste vide.
+  2. Retirer la marque `todo` du test correspondant dans `test/scraper.test.js` et ajouter les cas
+     `2001 L'Odyssée de l'espace` (titre complet, sans année) et `2001 L'Odyssée de l'espace (1968)`
+     (titre complet, année 1968).
+- **Hors périmètre** : les autres heuristiques de `parseVideo` (par exemple `Blade Runner 2049` sans autre
+  année, compris comme « Blade Runner » de 2049 : voir les pistes du BACKLOG).
+- **Critères d'acceptation**
+  - [ ] Plus aucun test `todo` dans `test/scraper.test.js` ; les autres cas de `parseVideo` sont inchangés.
+- **Vérification** : `npm test`.
+
+---
+
+## P0-11 — Correctif : adresses complètes dans un `.m3u` distant
+
+- **Dépend de** : P0-02 · **Taille** : S
+- **Objectif** : une liste `.m3u` qui cite ses disques par leur adresse complète est comprise correctement.
+- **Constat** (révélé par P0-02) : `parseRefs` traite chaque ligne comme un chemin relatif.
+  `https://autre.org/x/Disc 1.cue` devient le chemin `https:/autre.org/x/Disc 1.cue`, que `resolveRemote`
+  demande sur le site de l'index (échec assuré) et qui créerait un dossier `https:` dans le dossier du jeu. Le
+  contrôle d'origine de `resolveRemote` ne se déclenche jamais, puisqu'aucune adresse complète ne lui parvient.
+- **À faire**
+  1. `parseRefs` ignore les lignes qui sont des adresses complètes (`schéma:`), pour tous les index.
+  2. `resolveRemote` : pour un `.m3u`, une adresse complète du même site et sous le dossier de l'index est suivie
+     comme une référence relative ; une adresse vers un autre site ou hors de ce dossier est ignorée (le
+     contrôle d'origine existant sert enfin).
+  3. `missingLocal` : une adresse complète dans un `.m3u` local n'est pas signalée comme fichier manquant.
+  4. Mettre à jour le test `resolveRemote : ne quitte jamais le site ni le dossier de l'index` de
+     `test/discfiles.test.js` (il fige aujourd'hui le chemin `https:/…`) et ajouter les cas ci-dessus.
+- **Critères d'acceptation**
+  - [ ] Aucun fichier rendu par `resolveRemote` n'a de `rel` commençant par un schéma.
+  - [ ] Une adresse complète du même dossier est suivie ; une autre origine est ignorée, sans requête.
+- **Vérification** : `npm test`.
