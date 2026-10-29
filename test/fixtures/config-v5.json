@@ -1,0 +1,7 @@
+{
+  "version": 5,
+  "web": [{ "id": "mon-site", "name": "Mon site", "url": "https://exemple.fr/", "mode": "integrated", "search": "" }],
+  "library": { "sources": [{ "id": "a1", "kind": "video", "location": "/home/moi/Films" }] },
+  "tv": { "services": [], "active": "", "detected": false },
+  "ui": { "theme": "ecran", "webFullscreen": true }
+}

@@ -1,0 +1,7 @@
+{
+  "version": 4,
+  "web": [{ "id": "mon-site", "name": "Mon site", "url": "https://exemple.fr/", "mode": "integrated", "search": "" }],
+  "library": { "sources": [{ "id": "a1", "kind": "video", "location": "/home/moi/Films" }] },
+  "freebox": { "playlist": "http://box.local/playlist.m3u", "quality": "hd" },
+  "ui": { "theme": "minuit", "webFullscreen": false }
+}

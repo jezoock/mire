@@ -60,6 +60,7 @@
       "discfiles.js",
       "store.js",
       "adblock.js",
+      "lib/**/*",
       "renderer/**/*"
     ],
     "asarUnpack": [

@@ -19,7 +19,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | --- | --- | --- | --- | --- | --- | --- |
 | P0-01 | Outillage : lint, formatage, éditeur | S | — | | faite | [#2](https://github.com/jezoock/mire/pull/2) |
 | P0-02 | Tests des modules déjà testables | M | P0-01 | | faite | [#3](https://github.com/jezoock/mire/pull/3) |
-| P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | à faire | |
+| P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | en revue | [#4](https://github.com/jezoock/mire/pull/4) |
 | P0-04 | Intégration continue | S | P0-02, P0-03 | | à faire | |
 | P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | à faire | |
 | P0-06 | Correctif : contrôle du chemin avant suppression d'un jeu | S | P0-03 | | à faire | |
@@ -138,3 +138,8 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Ignorer une année postérieure à l'année en cours + 1 ; à arbitrer (changement de comportement) |
 | `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | À traiter dans P1-18 (catalogue en données) |
 | `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. À garder en tête dans P1-12 |
+| Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Dans P0-04 : lancer la CI avec Node ≥ 24 (ou le Node d'Electron) pour que ce test s'exécute |
+| `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Chercher dans `DEFAULT_WEB` (ou `KNOWN_WEB`) ; à arbitrer (changement de comportement), avec mise à jour des fixtures de migration |
+| `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Décider du comportement voulu ; les résultats figés dans `test/fixtures/config-v*.migrated.json` décrivent l'actuel |
+| `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | À retirer dans P0-07 (code mort) |
+| `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Utiliser `path.posix` pour les branches macOS et Linux, dans la phase 1 (rangement de `lib/location.js`) |
