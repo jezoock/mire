@@ -367,6 +367,8 @@ les dépendances et fusionner une à une.
   - `src/main/archive/` : 7-Zip (copie exécutable si besoin), `extract` — utilisé par la boutique et les téléchargements ;
   - `src/main/store/catalog/` : émulateurs, cœurs RetroArch par système, jeux libres, indications de BIOS —
     **uniquement des données** ;
+    les systèmes RetroArch y sont exportés (aujourd'hui `test/store-catalog.test.js` les retrouve à travers
+    l'émulateur RetroArch) ;
   - `store/installers/` : `github-release`, `download-page` (Dolphin), `retroarch` (buildbot + cœurs) ;
   - `store/bios.ts` : dossiers de BIOS décrits par des données (marqueur de mode portable, chemins Windows et
     Linux par émulateur) au lieu du `switch` actuel ;

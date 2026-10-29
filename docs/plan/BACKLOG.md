@@ -18,7 +18,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | P0-01 | Outillage : lint, formatage, éditeur | S | — | | faite | [#2](https://github.com/jezoock/mire/pull/2) |
-| P0-02 | Tests des modules déjà testables | M | P0-01 | | en revue | [#3](https://github.com/jezoock/mire/pull/3) |
+| P0-02 | Tests des modules déjà testables | M | P0-01 | | faite | [#3](https://github.com/jezoock/mire/pull/3) |
 | P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | à faire | |
 | P0-04 | Intégration continue | S | P0-02, P0-03 | | à faire | |
 | P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | à faire | |
@@ -26,7 +26,9 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
 | P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | à faire | |
-| **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-09 | | | |
+| P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | à faire | |
+| P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | à faire | |
+| **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
 
 ## Phase 1 — Refacto modulaire
 
@@ -126,3 +128,13 @@ set de composants). Cette phase sera réécrite avant d'être lancée ; les lign
 | P3-26 | Catalogue d'émulateurs | L | P3-06 | 🧑 | à faire | |
 | P3-27 | Scanner de jeux PC | M | P3-06 | | à faire | |
 | P3-28 | Lecteurs externes mpv et VLC | S | P3-06 | | à faire | |
+
+## Pistes repérées en cours de route
+
+Améliorations notées dans les PR, à arbitrer (une piste retenue devient une tâche ou rejoint une fiche).
+
+| Piste | Origine | Proposition |
+| --- | --- | --- |
+| `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Ignorer une année postérieure à l'année en cours + 1 ; à arbitrer (changement de comportement) |
+| `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | À traiter dans P1-18 (catalogue en données) |
+| `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. À garder en tête dans P1-12 |
