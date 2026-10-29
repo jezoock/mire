@@ -279,7 +279,8 @@ mire-addons/                         nouveau dépôt (phase 3)
 3. **Vue web native** : la `WebContentsView` est posée par-dessus la fenêtre ; le composant d'emplacement doit
    continuer à transmettre sa position (ResizeObserver) au processus principal.
 4. **Contrat de skin** : avec Shadow DOM, un thème ne peut modifier que ce que les jetons et les `part` exposent.
-   C'est voulu (contrat stable pour les thèmes-addons) mais demande de concevoir ce contrat (décision D-05).
+   C'est voulu (contrat stable pour les thèmes-addons) mais demande de concevoir ce contrat (décision D-05,
+   reportée : à revoir avec ton toolkit et ton set de composants).
 5. **Outillage** : le renderer, aujourd'hui sans build, en aura un ; prévoir un mode « watch » confortable.
 
 **Stratégie recommandée** : migration progressive (« étrangleur »). On découpe d'abord `app.js` en modules
@@ -298,25 +299,29 @@ restant fonctionnelle et testable après chaque tâche.
   `Theme`, `InputProfile`, contributions UI (widgets d'accueil, onglets de réglages).
 - **API asynchrone par messages dès le départ**, pour pouvoir isoler plus tard le code des addons dans un
   `utilityProcess` sans changer leur code (décision D-07).
-- **Confiance** : index signé du dépôt officiel, empreinte sha256 de chaque paquet vérifiée à l'installation
-  (décision D-08).
+- **Confiance** : plusieurs dépôts possibles (décision D-08). Le dépôt officiel `jezoock/mire-addons` est connu
+  de l'application (clé publique intégrée) ; un dépôt tiers est ajouté explicitement par l'utilisateur, avec sa
+  propre clé. Chaque index est signé, l'empreinte sha256 de chaque paquet est vérifiée à l'installation, et
+  l'origine (officiel ou tiers) est toujours affichée avec les permissions demandées.
 - **Rétrocompatibilité** : une installation existante active automatiquement les addons correspondant à sa
   configuration (une clé TMDB présente → addon TMDB actif, etc.).
 
-## 10. Décisions à prendre
+## 10. Décisions
 
-| # | Question | Recommandation |
+Validées au point d'étape G0 (29 octobre 2026), sauf D-05, reportée au point G2.
+
+| # | Question | Décision |
 | --- | --- | --- |
-| D-01 | Langage | **TypeScript partout**, compilé par esbuild en CommonJS pour main et preload (le preload sandboxé ne charge pas d'ESM) ; Stencil impose TS côté UI ; contrat IPC et SDK d'addons typés |
-| D-02 | Organisation du dépôt | **Paquet racine = l'application, code dans `src/`, plus des espaces de travail npm** pour `packages/shared`, `packages/ui`, `packages/plugin-sdk` (le dépôt d'addons consommera `shared` et `plugin-sdk`). Garder l'application à la racine évite les pièges d'electron-builder avec les espaces de travail et laisse `overrides`/`vendor/` en place |
-| D-03 | Tests | **`node:test`** (aucune dépendance) pour la logique ; **Playwright `_electron`** pour un test de fumée et des captures de référence des écrans ; runner Stencil pour les composants |
-| D-04 | Style et lint | ESLint (config « flat ») + Prettier calés sur le style actuel ; un seul commit de reformatage, isolé |
-| D-05 | Stencil : encapsulation | **Shadow DOM + jetons + `::part`** (vrai contrat de skin pour les thèmes-addons), avec service de focus dédié |
-| D-06 | « Reprendre », positions de reprise, volume, recherches | **Passer du `localStorage` au processus principal** (inclus dans l'export de configuration) |
-| D-07 | Exécution du code des addons | **Dans le processus principal au début** pour les addons officiels signés, via une API par messages qui permettra l'isolation en `utilityProcess` ensuite |
-| D-08 | Sources d'addons | **Dépôt officiel signé uniquement** dans un premier temps ; dépôts tiers éventuellement plus tard |
-| D-09 | Dépôt d'addons | `jezoock/mire-addons`, à créer (action de ta part, ou autorisation de le créer) |
-| D-10 | Mode de travail | **Une tâche = une branche = une PR vers `main`**, suivi dans `docs/plan/BACKLOG.md` ; issues GitHub en option |
+| D-01 | Langage | **TypeScript partout**, compilé par esbuild en CommonJS pour main et preload (le preload sandboxé ne charge pas d'ESM) ; contrat IPC et SDK d'addons typés. ✅ validé |
+| D-02 | Organisation du dépôt | **Paquet racine = l'application, code dans `src/`, plus des espaces de travail npm** pour `packages/shared`, `packages/ui`, `packages/plugin-sdk` (le dépôt d'addons consommera `shared` et `plugin-sdk`). Garder l'application à la racine évite les pièges d'electron-builder avec les espaces de travail et laisse `overrides`/`vendor/` en place. ✅ validé |
+| D-03 | Tests | **`node:test`** (aucune dépendance) pour la logique ; **Playwright `_electron`** pour un test de fumée et des captures de référence des écrans. **Consigne : minimiser les dépendances** — toute nouvelle dépendance (même de développement) est justifiée dans la PR. ✅ validé |
+| D-04 | Style et lint | ESLint (config « flat ») + Prettier calés sur le style actuel ; pas de reformatage des fichiers historiques : le formatage s'applique aux fichiers nouveaux ou déplacés. ✅ validé |
+| D-05 | Frontend : approche Stencil | ⏸ **Reportée au point G2.** Tu as une approche qui s'appuie sur un toolkit et un set de composants existants : on la détaille avant la phase 2, qui sera réécrite en conséquence. Les tâches de la phase 1 qui préparent l'interface (P1-25, P1-26) attendent cette discussion |
+| D-06 | « Reprendre », positions de reprise, volume, recherches | **Passer du `localStorage` au processus principal** (inclus dans l'export de configuration). ✅ validé |
+| D-07 | Exécution du code des addons | **Dans le processus principal au début** pour les addons officiels signés, via une API par messages qui permettra l'isolation en `utilityProcess` ensuite. ✅ validé |
+| D-08 | Sources d'addons | **Dépôt officiel signé, et dépôts tiers** : l'architecture gère dès le départ plusieurs dépôts, chacun avec sa clé de signature et un niveau de confiance affiché ; les dépôts tiers sont ajoutés explicitement par l'utilisateur (tâche P3-08). ✅ validé |
+| D-09 | Dépôt d'addons | **`jezoock/mire-addons`**, déjà créé (public). ✅ |
+| D-10 | Mode de travail | **Une tâche = une branche = une PR vers `main`**, suivi dans `docs/plan/BACKLOG.md` ; issues GitHub en option. ✅ validé |
 
 ## 11. Risques
 

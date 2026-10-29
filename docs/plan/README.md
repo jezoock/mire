@@ -9,7 +9,7 @@ dans une conversation indépendante. L'analyse qui justifie ce plan est dans `do
 | --- | --- | --- |
 | 0 — Filet de sécurité | Outillage, tests de caractérisation, test de fumée, CI, correctifs urgents. Aucun changement d'architecture. | `phase-0.md` |
 | 1 — Refacto modulaire | Découper `main.js` et `app.js` par domaine, séparer données et code, poser les interfaces qui serviront aux addons. Comportement identique. | `phase-1.md` |
-| 2 — Frontend StencilJS | Remplacer l'interface, vue par vue, par des composants Stencil ; thèmes par jetons et `::part`. | `phase-2.md` |
+| 2 — Frontend StencilJS | Remplacer l'interface, vue par vue, par des composants ; thèmes par jetons. Approche à définir au point G2 (toolkit et set de composants existants). | `phase-2.md` (provisoire) |
 | 3 — Addons | Hôte d'addons, SDK, dépôt `mire-addons`, extraction des catalogues et fournisseurs en addons. | `phase-3.md` |
 
 ## Les points d'étape
@@ -18,10 +18,10 @@ On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est
 
 | Point | Quand | Ce qu'on valide |
 | --- | --- | --- |
-| **G0** | Maintenant | L'analyse, les décisions D-01 à D-10 (`ANALYSE.md` § 10), le découpage en tâches |
+| **G0** | ✅ 29/10/2026 | L'analyse, les décisions D-01 à D-10 (`ANALYSE.md` § 10), le découpage en tâches |
 | **G1** | Fin de la phase 0 | CI verte, tests de caractérisation et captures de référence en place, correctifs livrés → feu vert phase 1 |
-| **G2** | Fin de la phase 1 | Bilan de la refacto (arborescence, contrats), puis lancement de P2-01 à P2-03 (prototype Stencil) |
-| **G2b** | Après P2-03 | Revue de l'ADR Stencil et du service de focus avant de migrer les vues |
+| **G2** | Fin de la phase 1 | Bilan de la refacto (arborescence, contrats) ; décision D-05 (approche frontend avec ton toolkit et ton set de composants) et réécriture de la phase 2 |
+| **G2b** | Après le prototype de la phase 2 | Revue de l'ADR frontend et de la navigation au focus avant de migrer les vues |
 | **G3** | Fin de la phase 2 | ADR des addons (P3-01) et création du dépôt `mire-addons` |
 
 Les fiches des phases 2 et 3 sont volontairement un peu moins détaillées que celles des phases 0 et 1 : elles

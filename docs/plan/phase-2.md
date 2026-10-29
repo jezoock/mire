@@ -1,5 +1,11 @@
 # Phase 2 — Frontend StencilJS
 
+> **⏸ Fiches provisoires — décision D-05 reportée.** L'approche retenue s'appuiera sur un toolkit et un set de
+> composants que tu as déjà créés. On en parle en détail au point G2 ; cette phase sera alors réécrite (périmètre,
+> découpage, dépendances). Les fiches ci-dessous décrivent l'approche initialement proposée et ne doivent pas
+> être lancées en l'état. Ce qui reste vrai quelle que soit l'approche : migration progressive, thèmes par jetons,
+> navigation au focus compatible avec les composants encapsulés, captures de P0-09 comme référence.
+
 But : remplacer l'interface rendue en chaînes HTML par des composants web Stencil (TypeScript + JSX), et faire
 du thème un véritable contrat de « skin » (jetons CSS + `::part`), réutilisable par des thèmes-addons.
 

@@ -5,13 +5,13 @@ une vraie machine nécessaire. Tailles : S, M, L (voir `README.md`).
 
 Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut, et lien vers la PR).
 
-## Point d'étape G0 — à valider avant de commencer
+## Point d'étape G0 — validé
 
 | Élément | Statut |
 | --- | --- |
-| Analyse (`docs/analyse/ANALYSE.md`) | en revue |
-| Décisions D-01 à D-10 (`ANALYSE.md` § 10) | en revue |
-| Découpage en tâches (ce fichier et les fiches) | en revue |
+| Analyse (`docs/analyse/ANALYSE.md`) | faite (validée le 29/10/2026) |
+| Décisions D-01 à D-10 (`ANALYSE.md` § 10) | faite, sauf D-05 (frontend) reportée au point G2 |
+| Découpage en tâches (ce fichier et les fiches) | faite ; phase 2 à réécrire au point G2 |
 
 ## Phase 0 — Filet de sécurité
 
@@ -56,14 +56,17 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | à faire | |
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | à faire | |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
-| P1-25 | Renderer : vues et actions par domaine | L | P1-23, P1-24 | | à faire | |
-| P1-26 | Réglages déclaratifs | M | P1-25, P1-06 | | à faire | |
-| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
+| P1-25 | Renderer : vues et actions par domaine | L | P1-23, P1-24, D-05 | | bloquée (D-05) | |
+| P1-26 | Réglages déclaratifs | M | P1-25, P1-06, D-05 | | bloquée (D-05) | |
+| P1-27 | Documentation d'architecture | S | P1-21 (P1-26 si lancée) | | à faire | |
 | **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-27 | | | |
 
 Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-25).
 
 ## Phase 2 — Frontend StencilJS
+
+**Fiches provisoires** : la décision D-05 est reportée au point G2 (approche fondée sur ton toolkit et ton
+set de composants). Cette phase sera réécrite avant d'être lancée ; les lignes ci-dessous sont indicatives.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -103,6 +106,7 @@ Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et rende
 | P3-05 | Dépôt `mire-addons` | M | P3-02, D-09 | | à faire | |
 | P3-06 | Client de registre et page « Modules » | L | P3-03, P3-04, P3-05 | 🧑 | à faire | |
 | P3-07 | Continuité pour les installations existantes | M | P3-06 | | à faire | |
+| P3-08 | Dépôts tiers | M | P3-06 | 🧑 | à faire | |
 | P3-10 | Addons de thèmes | S | P3-04, P3-06 | | à faire | |
 | P3-11 | Pack « Services de streaming » | S | P3-06 | | à faire | |
 | P3-12 | Pack « Télévision en France » | S | P3-06 | | à faire | |

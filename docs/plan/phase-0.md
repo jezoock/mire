@@ -234,7 +234,8 @@ peuvent démarrer dès que P0-03 est fusionnée (ils s'appuient sur ses modules 
      et une petite bibliothèque factice (quelques fichiers vides `.mkv`, `.mp3`, une image PNG de 1 px, un
      dossier `Série/Saison 1/S01E01.mkv`). Les chemins de la config sont réécrits au lancement du test vers le
      dossier temporaire.
-  3. `test/e2e/smoke.spec.js` avec Playwright (`_electron.launch`) : l'accueil s'affiche ; navigation clavier
+  3. `test/e2e/smoke.test.js` avec `playwright-core` (`_electron.launch`), exécuté par `node:test` : une seule
+     dépendance ajoutée (ni `@playwright/test`, ni navigateurs à télécharger), conformément à D-03. Le scénario : l'accueil s'affiche ; navigation clavier
      vers chaque section (Rechercher, Vidéos, Musique, Images, Streaming, Télévision, Jeux, Téléchargements,
      Réglages) ; ouverture du rouage d'une page ; capture d'écran de chaque section, plus l'accueil dans les
      cinq thèmes. Captures enregistrées dans `test/e2e/__screenshots__/` (versionnées).

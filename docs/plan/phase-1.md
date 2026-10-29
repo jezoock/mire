@@ -448,7 +448,7 @@ les dépendances et fusionner une à une.
 ## P1-23 — Renderer : logique de domaine testée
 
 - **Dépend de** : P1-22, P1-03 · **Taille** : M
-- **Objectif** : extraire la logique pure de l'interface (réutilisée telle quelle par les composants Stencil).
+- **Objectif** : extraire la logique pure de l'interface (réutilisée telle quelle par la future interface de la phase 2).
 - **À faire** : `src/renderer/domain/` — fonctions qui reçoivent leurs données en paramètre au lieu de lire `S` :
   - `items` : `labelOf`, `scrapeKey`, `metaKey`, `withScrape` (**mémoïsé** : recalculé seulement quand les infos
     changent), `genresOf`, `folderLabel`, `cleanTrack` ;
@@ -476,7 +476,10 @@ les dépendances et fusionner une à une.
 
 ## P1-25 — Renderer : vues et actions par domaine
 
-- **Dépend de** : P1-23, P1-24 · **Taille** : L (découpage possible : vues, puis actions et boîtes de dialogue)
+> **⏸ En attente de la décision D-05.** Selon le toolkit et le set de composants retenus pour la phase 2, découper
+> les vues historiques peut être inutile (elles seront remplacées). À rediscuter avant de lancer cette tâche.
+
+- **Dépend de** : P1-23, P1-24, D-05 · **Taille** : L (découpage possible : vues, puis actions et boîtes de dialogue)
 - **À faire**
   - `views/` : un fichier par section (accueil, recherche, vidéos, séries, musique, images, streaming, web, TV,
     jeux, ROMs, téléchargements, réglages) et `views/bricks` (art, tuiles, grilles, « Afficher plus », états vides) ;
@@ -491,7 +494,10 @@ les dépendances et fusionner une à une.
 
 ## P1-26 — Réglages déclaratifs
 
-- **Dépend de** : P1-25, P1-06 · **Taille** : M
+> **⏸ En attente de la décision D-05.** Le schéma des réglages reste utile dans tous les cas (réglages fournis par
+> les addons) ; son rendu dépend de l'approche retenue pour la phase 2. À rediscuter avant de lancer cette tâche.
+
+- **Dépend de** : P1-25, P1-06, D-05 · **Taille** : M
 - **Objectif** : décrire chaque réglage une seule fois et l'afficher dans la page Réglages comme dans les
   panneaux de page (base des réglages fournis par les addons, P3-04).
 - **Constat** : clé TMDB, pays, bloqueur (×2), accueil (×2), lecteur externe (×3) écrits plusieurs fois ;
@@ -508,7 +514,7 @@ les dépendances et fusionner une à une.
 
 ## P1-27 — Documentation d'architecture
 
-- **Dépend de** : P1-21, P1-26 · **Taille** : S
+- **Dépend de** : P1-21 (et P1-26 si elle est lancée, voir D-05) · **Taille** : S
 - **À faire** : compléter `docs/architecture.md` (modules, responsabilités, flux principaux, contrat IPC,
   stockage, interfaces d'extension) ; section « Développer Mire » dans le README (arborescence, scripts,
   `MIRE_USER_DATA`, tests) ; mettre à jour les commandes de `CLAUDE.md`.
