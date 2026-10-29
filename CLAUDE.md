@@ -30,7 +30,8 @@ ne se commence pas : signale-le.
 
 - `npm install` puis `npm start` : lancer l'application (télécharge le moteur Electron au premier lancement).
 - `npm run lint` : ESLint ; `npm run format:check` : vérifie le formatage Prettier (`npm run format` le corrige).
-- `npm test` : tests unitaires (`node:test`). Utiliser Node 24 : sous Node 22, un test de décodage Windows-1252 est sauté.
+- `npm test` : tests unitaires (`node:test`). Un test de décodage Windows-1252 est sauté si le Node utilisé décode mal
+  ce jeu de caractères (constaté avec un Node 22 compilé avec l'ICU du système) ; les Node officiels 22 et 24 le passent.
 - La CI (`.github/workflows/ci.yml`) lance ces trois commandes à chaque push et à chaque PR (tests sous Node 22 et 24).
 
 ## Points sensibles

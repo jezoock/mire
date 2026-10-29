@@ -33,8 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 22 : minimum annoncé par engines.node ; 24 : version du Node d'Electron 44, où le décodage
-        # Windows-1252 est correct (le test concerné est sauté sous Node 22).
+        # 22 : minimum annoncé par engines.node ; 24 : version majeure du Node d'Electron 44.
         node: [22, 24]
     steps:
       - uses: actions/checkout@v4
