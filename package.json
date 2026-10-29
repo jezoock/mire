@@ -18,6 +18,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "node --test \"test/**/*.test.js\"",
     "dist": "node -e \"require('electron')\" && npx --yes electron-builder@26.17.0 --publish never"
   },
   "dependencies": {
