@@ -53,6 +53,13 @@ test('parseRefs .cue : références dangereuses ignorées, texte vide', () => {
   assert.deepEqual(parseRefs('Jeu.cue', undefined), []);
 });
 
+test('parseRefs : les adresses complètes sont écartées, quel que soit l’index', () => {
+  const m3u = 'https://ex.org/a/Disc 1.cue\n"http://ex.org/a/Disc 2.cue"\nfile:///jeux/Disc 3.cue\nDisc 4.cue';
+  assert.deepEqual(parseRefs('Jeu.m3u', m3u), ['Disc 4.cue']);
+  assert.deepEqual(parseRefs('Jeu.cue', 'FILE "https://ex.org/a/piste.bin" BINARY\nFILE "piste.bin" BINARY'), ['piste.bin']);
+  assert.deepEqual(parseRefs('Jeu.gdi', '1\n1 0 4 2352 "https://ex.org/a/track01.bin" 0'), []);
+});
+
 test('parseRefs .toc : lignes DATAFILE et FILE', () => {
   assert.deepEqual(parseRefs('Jeu.toc', 'CD_ROM\nDATAFILE "data.bin"\nFILE "audio.bin" 0'), ['data.bin', 'audio.bin']);
 });
@@ -133,10 +140,58 @@ test('resolveRemote : ne quitte jamais le site ni le dossier de l’index', asyn
   for (const { url } of [...files, ...asked.map((url) => ({ url }))]) {
     assert.ok(url.startsWith('https://ex.org/jeux/a/'), url);
   }
-  assert.ok(files.some((f) => f.rel === 'Disc 4.cue'));
-  assert.ok(!files.some((f) => f.rel.includes('Disc 2') || f.rel.includes('Disc 3')));
-  // Une adresse complète vers un autre site devient un chemin relatif du même site (voir la PR P0-02).
-  assert.ok(files.some((f) => f.rel === 'https:/autre.org/jeux/a/Disc 1.cue'));
+  assert.deepEqual(
+    files.map((f) => f.rel),
+    ['Jeu.m3u', 'Disc 4.cue'],
+  );
+  assert.deepEqual(asked, ['https://ex.org/jeux/a/Jeu.m3u', 'https://ex.org/jeux/a/Disc%204.cue']);
+});
+
+test('resolveRemote : un .m3u peut citer ses disques par leur adresse complète dans le même dossier', async () => {
+  const base = 'https://ex.org/jeux/a/';
+  const { fetchText, asked } = fakeSite({
+    [`${base}Jeu.m3u`]: `${base}Disc 1.cue\n"${base}CD/Disc%202.cue"\nDisc 1.cue\nDisc 3.cue`,
+    [`${base}Disc%201.cue`]: 'FILE "Disc 1.bin" BINARY',
+    [`${base}CD/Disc%202.cue`]: 'FILE "Disc 2.bin" BINARY',
+  });
+  assert.deepEqual(await resolveRemote(`${base}Jeu.m3u`, fetchText), [
+    { url: `${base}Jeu.m3u`, rel: 'Jeu.m3u' },
+    { url: `${base}Disc%201.cue`, rel: 'Disc 1.cue' },
+    { url: `${base}Disc%201.bin`, rel: 'Disc 1.bin' },
+    { url: `${base}CD/Disc%202.cue`, rel: 'CD/Disc 2.cue' },
+    { url: `${base}CD/Disc%202.bin`, rel: 'CD/Disc 2.bin' },
+    { url: `${base}Disc%203.cue`, rel: 'Disc 3.cue' },
+  ]);
+  // L'ordre des disques est celui de la liste ; la même adresse, écrite de deux façons, n'est lue qu'une fois.
+  assert.deepEqual(asked, [`${base}Jeu.m3u`, `${base}Disc%201.cue`, `${base}CD/Disc%202.cue`, `${base}Disc%203.cue`]);
+});
+
+test('resolveRemote : une adresse complète hors du dossier de l’index ou vers un autre site est ignorée, sans requête', async () => {
+  const { fetchText, asked } = fakeSite({
+    'https://ex.org/jeux/a/Jeu.m3u': [
+      'https://autre.org/jeux/a/Disc 1.cue',
+      'http://ex.org/jeux/a/Disc 2.cue',
+      'https://ex.org/jeux/b/Disc 3.cue',
+      'https://ex.org/jeux/a/../b/Disc 4.cue',
+      'ftp://ex.org/jeux/a/Disc 5.cue',
+      'https://[invalide/Disc 6.cue',
+    ].join('\n'),
+  });
+  assert.deepEqual(await resolveRemote('https://ex.org/jeux/a/Jeu.m3u', fetchText), [{ url: 'https://ex.org/jeux/a/Jeu.m3u', rel: 'Jeu.m3u' }]);
+  assert.deepEqual(asked, ['https://ex.org/jeux/a/Jeu.m3u']);
+});
+
+test('resolveRemote : aucun chemin rendu ne commence par un schéma', async () => {
+  const { fetchText } = fakeSite({
+    'https://ex.org/a/Jeu.m3u': 'https://ex.org/a/Disc 1.cue\nhttps://autre.org/a/Disc 2.cue\nfile:///etc/Disc 3.cue',
+    'https://ex.org/a/Disc%201.cue': 'FILE "https://ex.org/a/piste.bin" BINARY\nFILE "Disc 1.bin" BINARY',
+  });
+  const files = await resolveRemote('https://ex.org/a/Jeu.m3u', fetchText);
+  assert.deepEqual(
+    files.map((f) => f.rel),
+    ['Jeu.m3u', 'Disc 1.cue', 'Disc 1.bin'],
+  );
+  for (const { rel } of files) assert.ok(!/^[a-z][a-z0-9+.-]*:/i.test(rel), rel);
 });
 
 test('resolveRemote : un index illisible est gardé sans être suivi', async () => {
@@ -167,6 +222,13 @@ test('missingLocal : fichiers manquants, récursif à travers un .m3u', (t) => {
   fs.writeFileSync(path.join(dir, 'CD', 'Disc 2.cue'), 'FILE "Disc 2.bin" BINARY');
   fs.writeFileSync(path.join(dir, 'CD', 'Disc 2.bin'), '');
   assert.deepEqual(missingLocal(path.join(dir, 'Jeu.m3u')), ['CD/Disc 1 (Track 2).bin', 'Disc 3.cue']);
+});
+
+test('missingLocal : une adresse complète dans un .m3u local n’est pas un fichier manquant', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-disc-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'Jeu.m3u'), 'https://ex.org/a/Disc 1.cue\nDisc 2.cue');
+  assert.deepEqual(missingLocal(path.join(dir, 'Jeu.m3u')), ['Disc 2.cue']);
 });
 
 test('missingLocal : index complet, ou fichier introuvable → liste vide', (t) => {

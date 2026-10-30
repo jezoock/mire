@@ -35,12 +35,18 @@ function safeRel(ref) {
 }
 
 const unquote = (s) => s.replace(/^"(.*)"$/, '$1');
+const textLines = (text) => String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+const m3uEntries = (text) => textLines(text).filter((l) => !l.startsWith('#')).map(unquote);
 
-// Fichiers cités par un index (chemins relatifs à son dossier).
+// Adresse complète (« https:… », « file:… ») : un schéma d'au moins deux lettres, pour ne pas confondre avec « C: ».
+const isAbsoluteUrl = (ref) => /^[a-z][a-z0-9+.-]+:/i.test(String(ref).trim());
+
+// Fichiers cités par un index (chemins relatifs à son dossier). Les adresses complètes ne sont pas des chemins :
+// elles sont écartées ici, et seul resolveRemote les suit, quand elles restent dans le dossier de l'index.
 function parseRefs(name, text) {
   const ext = path.extname(name).toLowerCase();
   const base = path.basename(name, path.extname(name));
-  const lines = String(text || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const lines = textLines(text);
   let refs = [];
   if (ext === '.cue' || ext === '.toc') {
     for (const l of lines) {
@@ -54,13 +60,13 @@ function parseRefs(name, text) {
       if (m) refs.push(m[2] || m[3]);
     }
   } else if (ext === '.m3u') {
-    refs = lines.filter((l) => !l.startsWith('#')).map(unquote);
+    refs = m3uEntries(text);
   } else if (ext === '.ccd') {
     refs = [`${base}.img`, `${base}.sub`];
   } else if (ext === '.mds') {
     refs = [`${base}.mdf`];
   }
-  return [...new Set(refs.map(safeRel).filter(Boolean))];
+  return [...new Set(refs.filter((r) => !isAbsoluteUrl(r)).map(safeRel).filter(Boolean))];
 }
 
 // Adresse d'un fichier cité, relative à celle de l'index (chaque partie du chemin encodée).
@@ -68,9 +74,23 @@ function refUrl(ref, baseUrl) {
   return new URL(ref.split('/').map(encodeURIComponent).join('/'), baseUrl).href;
 }
 
+// Adresse complète normalisée comme celles de refUrl (espaces encodés…), ou null si elle est invalide.
+function absoluteUrl(ref) {
+  try { return new URL(ref).href; } catch { return null; }
+}
+
+// Adresses citées par un index distant ; un .m3u peut aussi citer ses disques par leur adresse complète,
+// gardées à leur place dans la liste pour respecter l'ordre des disques.
+function citedUrls(rel, text, indexUrl) {
+  if (path.extname(rel).toLowerCase() !== '.m3u') return parseRefs(rel, text).map((ref) => refUrl(ref, indexUrl));
+  const urls = m3uEntries(text).map((l) => (isAbsoluteUrl(l) ? absoluteUrl(l) : safeRel(l) && refUrl(safeRel(l), indexUrl)));
+  return [...new Set(urls.filter(Boolean))];
+}
+
 /**
  * Tous les fichiers d'un jeu distant : l'index lui-même puis, récursivement, ce qu'il cite.
- * fetchText(url) → texte de l'index. Seuls les fichiers du même site sont suivis.
+ * fetchText(url) → texte de l'index. Seuls les fichiers du même site et sous le dossier de l'index sont suivis,
+ * y compris ceux qu'un .m3u cite par leur adresse complète.
  * Retour : [{ url, rel }] où rel est le chemin à reproduire dans le dossier du jeu.
  */
 async function resolveRemote(url, fetchText, { maxFiles = 200 } = {}) {
@@ -86,9 +106,8 @@ async function resolveRemote(url, fetchText, { maxFiles = 200 } = {}) {
     if (depth > 3 || !isDescriptor(u)) return;
     let text = '';
     try { text = await fetchText(u); } catch { return; }
-    for (const ref of parseRefs(rel, text)) {
-      const next = refUrl(ref, u);
-      if (new URL(next).origin === origin && next.startsWith(rootDir)) await visit(next, depth + 1);
+    for (const n of citedUrls(rel, text, u)) {
+      if (new URL(n).origin === origin && n.startsWith(rootDir)) await visit(n, depth + 1);
     }
   }
   await visit(url, 0);
