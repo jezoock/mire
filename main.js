@@ -25,6 +25,7 @@ const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = re
 const { THEME_BG, DEFAULT_CONFIG, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('./lib/config.js');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
+const { isInside } = require('./lib/paths.js');
 const { substitute, isUrlTarget } = require('./lib/args.js');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, foldText, providerMatches, episodeNumbers, cleanRomName, similarity } = require('./lib/text.js');
@@ -1489,15 +1490,21 @@ function registerIpc() {
       return { ok: false, error: 'Ce jeu est trouvé automatiquement dans un dossier : retirez le dossier dans les réglages, ou supprimez le jeu sur le disque.' };
     }
     // Jeu de console local : on supprime son fichier (et les fichiers voisins d'un jeu sur disque).
-    if (!ref.path || /^https?:\/\//i.test(ref.path)) return { ok: false, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
+    if (typeof ref.path !== 'string' || !ref.path || /^https?:\/\//i.test(ref.path)) return { ok: false, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
+    const emu = ref.kind === 'rom' && Number.isInteger(ref.emuIndex) ? config.emulators[ref.emuIndex] : null;
+    if (!emu) return { ok: false, error: 'Ce jeu n’est rattaché à aucune console : il n’a pas été supprimé.' };
+    // Le renderer n'est pas cru sur parole : le fichier doit être dans un dossier local de cette console.
+    const roots = consoleLocations(emu).filter((p) => !p.remote).map((p) => resolveLocation(p.location)).filter((l) => l.type === 'path').map((l) => l.path);
+    if (!isInside(ref.path, roots)) return { ok: false, error: `Ce fichier ne se trouve pas dans les dossiers de ${emu.name} : il n’a pas été supprimé.` };
     try {
       const st = await fsp.stat(ref.path);
+      if (!st.isFile()) return { ok: false, error: 'Seul un fichier de jeu peut être supprimé ici, pas un dossier.' };
       if (disc.isDescriptor(ref.path)) {
         const dir = path.dirname(ref.path);
         const refs = disc.missingLocal(ref.path).length === 0 ? disc.parseRefs(ref.path, disc.decode(await fsp.readFile(ref.path))) : [];
         for (const r of refs) await fsp.rm(path.join(dir, ...r.split('/')), { force: true }).catch(() => {});
       }
-      await fsp.rm(ref.path, { force: true, recursive: st.isDirectory() });
+      await fsp.rm(ref.path, { force: true });
       return { ok: true };
     } catch (err) { return { ok: false, error: `Suppression impossible : ${err.message}` }; }
   });
