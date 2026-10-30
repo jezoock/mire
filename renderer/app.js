@@ -443,16 +443,6 @@ function headerToolsRight(sec) {
   return '';
 }
 
-// Genres présents, pour le menu déroulant de l'en-tête (console ouverte, ou liste unifiée).
-function gameGenrePool(inConsole) {
-  const items = inConsole ? (S.roms || []).map((r) => withScrape({ ...r, kind: 'rom' })) : allLocalGames();
-  const counts = new Map();
-  for (const it of items) for (const g of genresOf(it)) counts.set(g, (counts.get(g) || 0) + 1);
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || collator.compare(a[0], b[0])).map(([g]) => g);
-  if (S.genre && !counts.has(S.genre)) top.push(S.genre);
-  return top;
-}
-
 function render({ resetScroll = false } = {}) {
   const active = document.activeElement;
   const hadFocus = viewEl.contains(active);
@@ -528,16 +518,6 @@ function withScrape(it) {
 
 const genresOf = (it) => String(it.sGenre || '').split(',').map((g) => g.trim()).filter(Boolean);
 
-// Rangée de filtres par genre (n'apparaît que si des genres sont connus).
-function genreBar(items) {
-  const counts = new Map();
-  for (const it of items) for (const g of genresOf(it)) counts.set(g, (counts.get(g) || 0) + 1);
-  if (!counts.size) return '';
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || collator.compare(a[0], b[0])).slice(0, 14);
-  if (S.genre && !counts.has(S.genre)) top.push([S.genre, 0]);
-  const chip = (id, label, n) => `<button class="chip-g focusable" data-action="genre" data-id="${esc(id)}" aria-pressed="${S.genre === id}">${esc(label)}${n ? `<span class="chip-n">${n}</span>` : ''}</button>`;
-  return `<div class="genres" role="group" aria-label="Filtrer par genre">${chip('', 'Tous les genres', 0)}${top.map(([g, n]) => chip(g, g, n)).join('')}</div>`;
-}
 const byGenre = (items) => (S.genre ? items.filter((it) => genresOf(it).includes(S.genre)) : items);
 
 function art(it, ratio, extra = '') {
@@ -1046,7 +1026,6 @@ function pcGameEntries() {
   const auto = S.autoGames.filter((g) => !known.has(g.path)).map((g) => ({ ...g, image: null, dir: g.path, kind: 'game', auto: true }));
   return [...manual, ...auto].map(withScrape).sort((a, b) => collator.compare(labelOf(a), labelOf(b)));
 }
-const gameEntries = pcGameEntries; // compatibilité (recherche globale, éditeur)
 
 // Systèmes présents dans la liste (pour le filtre), jeux PC d'abord puis les consoles.
 function gameSystems(all) {
@@ -1606,7 +1585,7 @@ async function bookmarkCurrentGame() {
   if (res?.action !== 'add') { if (S.section === 'web') syncWeb(); return; }
   const v = res.values;
   if (!v.source.trim()) { toast('Indiquez un lien.'); if (S.section === 'web') syncWeb(); return; }
-  toast('Ajout du jeu et recherche des infos…', { duration: 3000 });
+  toast('Ajout du jeu…', { duration: 3000 });
   const r = await api.gameBookmarkAdd({ source: v.source.trim(), title: v.title.trim(), console: curConsole });
   if (!r?.ok) { toast(r?.error || 'Ajout impossible.', { duration: 7000 }); if (S.section === 'web') syncWeb(); return; }
   S.config = r.config;
@@ -1615,7 +1594,7 @@ async function bookmarkCurrentGame() {
   // Système non déterminé : on le demande (console ouverte par défaut).
   if (r.needSystem) await askBookmarkConsole(r.bookmark.id, curConsole);
   if (S.section === 'web') syncWeb();
-  toast(`Jeu ajouté à la liste${r.scraped ? ' (infos récupérées)' : ''}. Téléchargez-le quand vous voulez.`, { duration: 6000 });
+  toast('Jeu ajouté à la liste. Téléchargez-le quand vous voulez.', { duration: 6000 });
 }
 
 // Demande à quel système rattacher un jeu bookmarké (console ouverte par défaut).
@@ -1901,12 +1880,10 @@ async function saveSettings() {
   if (!saved || saved.ok === false) { toast(saved?.error || 'Enregistrement impossible.'); return; }
   S.config = saved;
 
-  const foldersChanged = false;
   S.romsCache = {};
   S.tmdb = { q: '', status: 'idle', results: [] };
   $('#set-adv').value = JSON.stringify({ web: saved.web, games: saved.games, emulators: saved.emulators }, null, 2);
-  toast(foldersChanged ? 'Réglages enregistrés. Analyse de la bibliothèque…' : 'Réglages enregistrés');
-  if (foldersChanged) { S.scanned = false; scan(); }
+  toast('Réglages enregistrés');
 }
 
 /* ------------------------------------------------------------------ */
@@ -2143,7 +2120,7 @@ function localResults(q) {
     tracks: S.tracks.filter((t) => match(`${t.name} ${folderText(t)}`)).slice(0, 12),
     images: S.images.filter((i) => match(`${i.name} ${i.folder}`)).slice(0, 24),
     channels: (S.channels || []).filter((c) => match(`${c.number ?? ''} ${c.name}`)).slice(0, 12),
-    games: gameEntries().filter((g) => match(`${g.name} ${g.sTitle || ''} ${g.sGenre}`)).slice(0, 12),
+    games: pcGameEntries().filter((g) => match(`${g.name} ${g.sTitle || ''} ${g.sGenre}`)).slice(0, 12),
     roms: allRoms().map((r) => withScrape({ ...r, kind: 'rom' })).filter((r) => match(`${r.displayName} ${r.emuName}`)).slice(0, 24),
   };
 }
@@ -2347,7 +2324,7 @@ function scrapeJobs(kinds) {
     kinds,
     videos: kinds.includes('videos') ? S.videos.map((v) => ({ path: v.path, name: v.name, dir: v.dir })) : [],
     albums: kinds.includes('music') ? albums : [],
-    pcGames: kinds.includes('games') ? gameEntries().map((g) => ({ name: g.name, path: g.path })) : [],
+    pcGames: kinds.includes('games') ? pcGameEntries().map((g) => ({ name: g.name, path: g.path })) : [],
   };
 }
 
@@ -2369,18 +2346,13 @@ async function reloadScrape() {
   }
 }
 
+// Seule la fin est signalée : le suivi du téléchargement se fait dans le gestionnaire.
 api.onRomDownload((p) => {
-  const pct = p.total ? ` : ${Math.round(((p.received || 0) / p.total) * 100)} %` : '…';
-  if (p.phase === 'start' || p.phase === 'progress') toast(`Téléchargement de ${p.name} pour ${p.consoleName}${p.phase === 'start' ? '…' : pct}`, { duration: 5000 });
-  else if (p.phase === 'extract') toast(`Décompression de ${p.name}…`, { duration: 5000 });
-  else if (p.phase === 'cancelled') toast(`Téléchargement de ${p.name} annulé`);
-  else if (p.phase === 'error') toast(p.message || `Le téléchargement de ${p.name} a échoué.`, { duration: 8000 });
-  else if (p.phase === 'done') {
-    delete S.romsCache[p.console];
-    const detail = [p.files > 1 ? `${p.files} fichiers` : '', p.extracted ? 'archive décompressée' : ''].filter(Boolean).join(', ');
-    toast(`${p.name} ajouté à ${p.consoleName}${detail ? ` (${detail})` : ''}. Il apparaît dans la liste des jeux de la console.`, { duration: 7000 });
-    if (S.section === 'games' && S.romsOf === p.console) openEmu(p.console);
-  }
+  if (p.phase !== 'done') return;
+  delete S.romsCache[p.console];
+  const detail = [p.files > 1 ? `${p.files} fichiers` : '', p.extracted ? 'archive décompressée' : ''].filter(Boolean).join(', ');
+  toast(`${p.name} ajouté à ${p.consoleName}${detail ? ` (${detail})` : ''}. Il apparaît dans la liste des jeux de la console.`, { duration: 7000 });
+  if (S.section === 'games' && S.romsOf === p.console) openEmu(p.console);
 });
 
 api.onRomProgress((p) => {
@@ -2766,7 +2738,7 @@ const FIELD_LABELS = { title: 'Titre', artist: 'Artiste', year: 'Année', genre:
 
 // Genres déjà utilisés, proposés dans la liste du champ Genre.
 function knownGenres(kind) {
-  const pool = kind === 'video' ? S.videos : kind === 'album' || kind === 'track' ? S.tracks : kind === 'image' ? S.images : kind === 'game' ? gameEntries() : (S.roms || Object.values(S.localRoms).flat()).map((r) => ({ ...r, kind: 'rom' }));
+  const pool = kind === 'video' ? S.videos : kind === 'album' || kind === 'track' ? S.tracks : kind === 'image' ? S.images : kind === 'game' ? pcGameEntries() : (S.roms || Object.values(S.localRoms).flat()).map((r) => ({ ...r, kind: 'rom' }));
   const set = new Set();
   for (const it of pool) for (const g of genresOf(withScrape(it))) set.add(g);
   return [...set].sort(collator.compare);
@@ -3291,7 +3263,6 @@ async function onActionClick(e) {
       render();
       break;
     }
-    case 'games-cleanup': cleanupGames(); break;
     case 'src-add-folder': addSourceFolder(t.dataset.kind); break;
     case 'src-add-url': askSourceAddress(t.dataset.kind); break;
     case 'src-remove': removeSource(t.dataset.kind, t.dataset.id); break;
@@ -3320,7 +3291,7 @@ async function onActionClick(e) {
     case 'reveal-config': api.revealConfig(); break;
     case 'open-store': openPageSettings('store'); break;
     case 'rom-sites': openRomBrowser(i); break;
-    case 'pc-sites': case 'games-download': {
+    case 'games-download': {
       if (t.dataset.id && t.dataset.id !== 'pc') { openRomBrowser(Number(t.dataset.id)); break; }
       if (!(S.config.pcSites || []).length) { toast('Ajoutez d’abord un site dans les réglages de la page Jeux, onglet Jeux PC.', { duration: 7000 }); openPageSettings('pc'); break; }
       openRomBrowser('pc');
@@ -3354,7 +3325,6 @@ async function onActionClick(e) {
       break;
     }
     case 'rom-dl-all': {
-      const online = S.list.filter((r) => r.remote);
       const all = (S.roms || []).filter((r) => r.remote);
       const fileOf = (r) => decodeURIComponent(String(r.path).split('/').pop().split('?')[0]).toLowerCase();
       const localNames = new Set((S.roms || []).filter((r) => !r.remote).map((r) => String(r.path).split(/[\\/]/).pop().toLowerCase()));
@@ -3364,7 +3334,6 @@ async function onActionClick(e) {
       if (!ok) break;
       let n = 0;
       for (const r of todo) { const res = await api.romDownload(S.romsOf, r.path); if (res?.ok) n++; }
-      void online;
       toast(`${plural(n, 'téléchargement ajouté', 'téléchargements ajoutés')}. Suivez-les dans Téléchargements.`, { duration: 6000 });
       break;
     }
@@ -3447,7 +3416,6 @@ async function onActionClick(e) {
       toast(`${name} ajouté dans Streaming`);
       break;
     }
-    case 'scrape-fix': editRef({ kind: 'video', item: S.list.find((x) => x.path === t.dataset.id) }); break;
     case 'ra-pick': {
       const id = t.dataset.id;
       if (S.raPick.has(id)) S.raPick.delete(id); else S.raPick.add(id);

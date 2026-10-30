@@ -12,11 +12,6 @@
       "count": 1
     }
   },
-  "lib/config.js": {
-    "no-unused-vars": {
-      "count": 1
-    }
-  },
   "main.js": {
     "no-useless-assignment": {
       "count": 2
@@ -26,11 +21,8 @@
     }
   },
   "renderer/app.js": {
-    "no-duplicate-case": {
-      "count": 1
-    },
     "no-unused-vars": {
-      "count": 6
+      "count": 4
     },
     "no-useless-assignment": {
       "count": 1
