@@ -322,7 +322,7 @@ function go(section, { focus = 'keep' } = {}) {
   }
   S.section = section;
   document.body.dataset.section = section;
-  const railKey = section === 'web' ? (String(S.webActive || '').startsWith('rom:') ? 'games' : 'streaming') : section;
+  const railKey = section === 'web' ? webHome() : section;
   for (const b of $$('#rail [data-go]')) {
     if (b.dataset.go === railKey) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -345,7 +345,7 @@ function go(section, { focus = 'keep' } = {}) {
 
 function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
-  if (S.section === 'web') { go('streaming', { focus: 'content' }); return; }
+  if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
   if (S.section !== 'home') {
     go('home');
     $('.mire-bar')?.focus();
@@ -1694,8 +1694,8 @@ async function openWeb(id, url) {
 
 // Service de télé par portail web (SFR, Bouygues, Molotov) : ouvert dans la vue intégrée.
 async function openTvWeb(web) {
-  const id = 'tv:web';
-  const res = await api.webOpen(id, web.url, { name: web.name, color: '#E23B3B' });
+  const id = `tv:${web.id}`;
+  const res = await api.webOpen(id);
   if (!res?.ok) { toast(res?.error || 'Ouverture impossible.', { duration: 7000 }); return; }
   audio.pause();
   S.webActive = id;
@@ -1926,14 +1926,25 @@ function renderRailSessions() {
   if (games) games.innerHTML = S.webSessions.filter(isRom).map(item).join('');
 }
 
+// Page d'où vient une vue web : Jeux pour les sites de jeux, Télévision pour les portails TV, sinon Streaming.
+function webHome(id = S.webActive) {
+  const s = String(id || '');
+  if (s.startsWith('rom:')) return 'games';
+  if (s.startsWith('tv:')) return 'tv';
+  return 'streaming';
+}
+
 function viewWeb() {
   const st = S.webStates[S.webActive] || {};
   const rom = String(S.webActive || '').startsWith('rom:') ? st.rom : null;
   const site = rom ? rom.sites[rom.site] : null;
   // Un marque-page n'est pas un site enregistré : on reconstitue son entrée depuis la configuration.
   const bm = String(S.webActive || '').startsWith('bm:') ? (S.config.bookmarks || []).find((b) => `bm:${b.id}` === S.webActive) : null;
+  // Portail TV (SFR, B.tv, Molotov) : entrée reconstituée depuis les services de télévision.
+  const tv = String(S.webActive || '').startsWith('tv:') ? S.config.tv.services.find((t) => `tv:${t.id}` === S.webActive) : null;
   const w = rom ? { name: rom.consoleName, color: '#6E88F7', search: site?.search || '' }
     : bm ? { name: bm.title || bm.site, color: '#9B6CF7', search: '' }
+    : tv ? { name: tv.name, color: '#E23B3B', search: '' }
     : S.config.web.find((x) => x.id === S.webActive);
   if (!w) return emptyBlock('Aucun site ouvert', 'Choisissez un service dans Streaming.', '<button class="btn focusable" data-action="go" data-go="streaming">Ouvrir Streaming</button>');
   const color = safeColor(w.color);
@@ -2064,8 +2075,9 @@ api.onWebSessions((list) => {
 api.onWebClosed(({ id }) => {
   delete S.webStates[id];
   if (S.webActive === id) {
+    const home = webHome(id);
     S.webActive = null;
-    if (S.section === 'web') go('streaming', { focus: 'content' });
+    if (S.section === 'web') go(home, { focus: 'content' });
   }
 });
 api.onWebError(({ message }) => toast(message, { duration: 8000 }));
@@ -3610,7 +3622,12 @@ viewEl.addEventListener('submit', (e) => { e.preventDefault(); saveSettings(); }
 
 $('#rail').addEventListener('click', (e) => {
   const sub = e.target.closest('.rail-sub');
-  if (sub) { openWeb(sub.dataset.web); return; }
+  if (sub) {
+    const id = sub.dataset.web;
+    if (id.startsWith('tv:')) openTvWeb({ id: id.slice(3) });
+    else openWeb(id);
+    return;
+  }
   const b = e.target.closest('.rail-item');
   if (!b) return;
   if (b.hasAttribute('data-quit')) { api.quit(); return; }
