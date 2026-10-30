@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "id": "demo-termine",
+      "kind": "http",
+      "createdAt": 1793260800000,
+      "doneAt": 1793260860000,
+      "name": "Manuel de démonstration.pdf",
+      "source": "https://exemple.invalid/manuel.pdf",
+      "file": "@FIXTURES@/bibliotheque/Manuel de démonstration.pdf",
+      "dir": "@FIXTURES@/bibliotheque",
+      "console": null,
+      "consoleName": "",
+      "state": "done",
+      "received": 1048576,
+      "total": 1048576,
+      "speed": 0,
+      "error": "",
+      "installers": []
+    },
+    {
+      "id": "demo-interrompu",
+      "kind": "http",
+      "createdAt": 1793260900000,
+      "name": "Course de karts (Europe).sfc",
+      "source": "https://exemple.invalid/course.sfc",
+      "file": "@FIXTURES@/bibliotheque/Jeux/Super Nintendo/Course de karts (Europe).sfc",
+      "dir": "@FIXTURES@/bibliotheque/Jeux/Super Nintendo",
+      "console": 0,
+      "consoleName": "Super Nintendo",
+      "state": "paused",
+      "received": 262144,
+      "total": 524288,
+      "speed": 0,
+      "error": "",
+      "installers": []
+    },
+    {
+      "id": "demo-erreur",
+      "kind": "http",
+      "createdAt": 1793261000000,
+      "name": "Bande-annonce.mkv",
+      "source": "https://exemple.invalid/bande-annonce.mkv",
+      "file": "@FIXTURES@/bibliotheque/Bande-annonce.mkv",
+      "dir": "@FIXTURES@/bibliotheque",
+      "console": null,
+      "consoleName": "",
+      "state": "error",
+      "received": 0,
+      "total": 0,
+      "speed": 0,
+      "error": "Le téléchargement a été interrompu (connexion perdue ou fichier indisponible).",
+      "installers": []
+    }
+  ]
+}

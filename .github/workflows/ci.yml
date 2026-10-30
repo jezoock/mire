@@ -43,3 +43,37 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+
+  e2e:
+    name: Test de fumée Electron
+    runs-on: ubuntu-latest
+    env:
+      # Ce job a besoin du moteur Electron : la variable globale du workflow est annulée pour lui, au cas où
+      # une version future du paquet la lirait (l'install.js actuel l'ignore).
+      ELECTRON_SKIP_BINARY_DOWNLOAD: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Le paquet castLabs ne télécharge son moteur qu'au premier require('electron') : on le déclenche ici,
+      # avec de nouvelles tentatives en cas d'échec réseau.
+      - name: Téléchargement du moteur Electron
+        run: |
+          for i in 1 2 3 4; do
+            node node_modules/electron/install.js && exit 0
+            echo "Échec du téléchargement (tentative $i), nouvel essai dans $((i * 10)) s"
+            sleep $((i * 10))
+          done
+          exit 1
+      - name: Test de fumée
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e
+      - name: Captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-e2e
+          path: test/e2e/__screenshots__/
+          if-no-files-found: warn

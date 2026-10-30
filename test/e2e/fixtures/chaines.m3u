@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:-1 tvg-chno="1" group-title="Démonstration",Chaîne Une
+http://127.0.0.1:9/une.ts
+#EXTINF:-1 tvg-chno="2" group-title="Démonstration",Chaîne Deux
+http://127.0.0.1:9/deux.ts
+#EXTINF:-1 tvg-chno="3" group-title="Démonstration",Chaîne Trois
+http://127.0.0.1:9/trois.ts
