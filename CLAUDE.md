@@ -18,8 +18,9 @@ ne se commence pas : signale-le.
 
 ## Conventions
 
-- Langue : interface, messages d'erreur, commentaires et documentation en français. Les messages destinés à
-  l'utilisateur restent simples, sans jargon (voir le ton des messages existants).
+- Langue : commentaires et documentation en français. Textes destinés à l'utilisateur : simples, sans jargon
+  (voir le ton des messages existants) ; en français tant que la localisation n'existe pas, puis, dès la tâche
+  P1-28 faite, uniquement par les catalogues, en français **et** en anglais (décision D-11).
 - Style : 2 espaces, guillemets simples, points-virgules, fonctions courtes. Commentaires seulement pour le « pourquoi ».
 - Pas de changement de comportement dans une tâche de refacto, sauf si la fiche le demande explicitement.
 - Toute logique déplacée ou dédoublonnée est couverte par un test (voir la fiche pour le runner).

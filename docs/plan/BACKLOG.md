@@ -61,7 +61,9 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-25 | Renderer : vues et actions par domaine | L | P1-23, P1-24, D-05 | | bloquée (D-05) | |
 | P1-26 | Réglages déclaratifs | M | P1-25, P1-06, D-05 | | bloquée (D-05) | |
 | P1-27 | Documentation d'architecture | S | P1-21 (P1-26 si lancée) | | à faire | |
-| **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-27 | | | |
+| P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | à faire | |
+| P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | à faire | |
+| **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 | | | |
 
 Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-25).
 
@@ -95,7 +97,8 @@ set de composants). Cette phase sera réécrite avant d'être lancée ; les lign
 | P2-20 | Éditeurs | M | P2-06, P2-10, P2-16 | | à faire | |
 | P2-21 | Retrait de l'interface historique et audits | M | P2-08…P2-20 | 🧑 | à faire | |
 | P2-22 | Guide « Créer un thème » | S | P2-02, P2-21 | | à faire | |
-| **G3** | **Point d'étape : fin de la phase 2, ADR addons, dépôt `mire-addons`** | | P2-01…P2-22 | | | |
+| P2-23 | Sélecteur de langue et finitions de la localisation | S | P2-19, P1-28, P1-29 | | à faire | |
+| **G3** | **Point d'étape : fin de la phase 2, ADR addons, dépôt `mire-addons`** | | P2-01…P2-23 | | | |
 
 ## Phase 3 — Addons
 
@@ -128,6 +131,7 @@ set de composants). Cette phase sera réécrite avant d'être lancée ; les lign
 | P3-26 | Catalogue d'émulateurs | L | P3-06 | 🧑 | à faire | |
 | P3-27 | Scanner de jeux PC | M | P3-06 | | à faire | |
 | P3-28 | Lecteurs externes mpv et VLC | S | P3-06 | | à faire | |
+| P3-29 | Packs de langue | M | P1-28, P3-04, P3-06 | | à faire | |
 
 ## Pistes repérées en cours de route
 

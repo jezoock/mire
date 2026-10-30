@@ -521,3 +521,62 @@ les dépendances et fusionner une à une.
   stockage, interfaces d'extension) ; section « Développer Mire » dans le README (arborescence, scripts,
   `MIRE_USER_DATA`, tests) ; mettre à jour les commandes de `CLAUDE.md`.
 - **Critères d'acceptation** : relu au point d'étape G2.
+
+---
+
+## P1-28 — Localisation : socle (catalogues, langue de l'interface)
+
+- **Dépend de** : P1-01, P1-06, D-11 · **Taille** : M
+- **Objectif** : rendre l'application traduisible, avec le français et l'anglais comme langues de base intégrées ;
+  le format des catalogues est celui que reprendront les packs de langue (addons, P3-29).
+- **Constat** : tous les textes sont écrits en dur en français, dans le processus principal (messages d'erreur,
+  titres des boîtes de dialogue, descriptions de la boutique, tables de genres) comme dans l'interface ; les
+  formats sont figés (`toLocaleDateString('fr-FR')`, `Intl.Collator('fr')`, `plural()` qui ne connaît que la règle
+  française) ; la langue des métadonnées est fixée (`fr-FR` pour TMDB, `l=french&cc=FR` pour Steam).
+- **À faire**
+  1. `@mire/shared/i18n` : catalogues JSON par langue (`locales/fr.json`, `locales/en.json`), clés hiérarchiques
+     par domaine (`library.errors.folderNotFound`), interpolation (`{nom}`), pluriels par `Intl.PluralRules`,
+     formats par `Intl` (dates, heures, tailles, durées, tri) ; `createI18n({ locale, catalogs, fallback })` ;
+     chaîne de repli : langue choisie → anglais → français ; une clé absente est signalée en développement et
+     affiche la clé, jamais un texte vide.
+  2. Configuration : `ui.language` (`auto` par défaut : langue du système, par `app.getPreferredSystemLanguages()`,
+     ramenée à une langue disponible ; sinon un code BCP 47), normalisée et migrée par le mécanisme de P1-06 ;
+     canaux IPC pour lire la langue courante et ses catalogues ; événement de changement de langue (bascule à chaud).
+  3. Contrat des catalogues, préparé pour les packs : métadonnées (code, nom dans la langue, version de l'application
+     visée), même format JSON ; documenté dans `docs/i18n.md` (conventions de clés, ton des textes, pluriels).
+  4. `npm run i18n:check` : mêmes clés en français et en anglais, mêmes variables d'interpolation de part et
+     d'autre, aucun texte vide ; ajouté à la CI.
+  5. Convention mise à jour dans `CLAUDE.md` : à partir de cette tâche, tout nouveau texte destiné à l'utilisateur
+     passe par les catalogues et est fourni en français et en anglais.
+- **Hors périmètre** : extraire les textes existants (P1-29 pour le processus principal, phase 2 pour
+  l'interface), sélecteur de langue dans l'interface (P2-23), packs de langue (P3-29).
+- **Critères d'acceptation**
+  - [ ] Tests du moteur : interpolation, pluriels français et anglais (0, 1, 2), repli, formats de date et de taille.
+  - [ ] `npm run i18n:check` passe et tourne dans la CI ; il échoue si une clé manque en anglais (démonstration dans la PR).
+  - [ ] `ui.language` : `auto` choisit l'anglais sur un système anglais, le français sur un système français,
+        l'anglais sur un système dans une autre langue.
+
+---
+
+## P1-29 — Localisation du processus principal (français et anglais)
+
+- **Dépend de** : P1-28, P1-21 · **Taille** : L (découpage possible par domaine)
+- **Objectif** : tous les textes produits par le processus principal existent en français et en anglais.
+- **À faire**
+  1. Extraire dans les catalogues tous les textes destinés à l'utilisateur de `src/main` : messages d'erreur
+     renvoyés à l'interface, titres et filtres des boîtes de dialogue système, annonces (téléchargements, boutique,
+     télévision détectée…), descriptions de la boutique et indications de BIOS, menu macOS. Les messages sont
+     traduits dans le processus principal avec la langue courante (pas de codes d'erreur à traduire côté
+     interface : choix de simplicité, à signaler dans la PR si un cas l'empêche).
+  2. Tables de genres (libretro, MusicBrainz) : deviennent des clés de catalogue (l'anglais reprend les valeurs
+     d'origine des sources).
+  3. Langue des métadonnées : TMDB (`language`), Steam (`l`, `cc`) suivent la langue de l'interface, sauf si
+     l'utilisateur a fixé `search.language` ; la région des disponibilités (`search.region`) reste un réglage à part.
+  4. Rédiger la version anglaise de chaque texte (ton simple et direct, comme les textes français existants).
+- **Hors périmètre** : textes de l'interface (phase 2), README.
+- **Critères d'acceptation**
+  - [ ] Plus aucun texte destiné à l'utilisateur écrit en dur dans `src/main` (recherche dans le code, et règle de
+        lint si elle est simple à écrire).
+  - [ ] `npm run i18n:check` passe ; les tests existants vérifient les messages par leur clé ou dans les deux langues.
+  - [ ] Avec `ui.language: "en"`, une erreur (dossier introuvable, clé TMDB refusée) arrive en anglais dans
+        l'interface, et les fiches TMDB sont récupérées en anglais.

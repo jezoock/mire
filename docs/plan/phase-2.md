@@ -120,7 +120,9 @@ Ces fiches seront affinées au point G2 (versions exactes, choix confirmés par 
 
 Chaque tâche remplace une vue historique par ses composants, supprime le code correspondant de
 `src/renderer/views` et `actions`, garde le comportement et ajoute des tests de composants. Critères communs :
-capture identique (ou écart justifié), parcours clavier et manette, aucune régression du test de fumée.
+capture identique (ou écart justifié), parcours clavier et manette, aucune régression du test de fumée,
+**aucun texte écrit en dur : tout passe par les catalogues de P1-28, en français et en anglais** (exigence à
+conserver quelle que soit l'approche retenue au point G2).
 
 | Tâche | Section | Contenu | Taille |
 | --- | --- | --- | --- |
@@ -173,3 +175,15 @@ P2-11 et P2-13 partagent le volume (P1-24). 🧑 pour P2-13 et P2-14 (lecture r�
 - **Dépend de** : P2-02, P2-21 · **Taille** : S
 - **À faire** : `docs/themes.md` complet (jetons, `part`, métadonnées, exemples), un thème d'exemple
   (par exemple « Néon ») livré comme futur addon de thème, captures.
+
+---
+
+## P2-23 — Sélecteur de langue et finitions de la localisation
+
+- **Dépend de** : P2-19, P1-28, P1-29 · **Taille** : S
+- **À faire** : choix de la langue dans Réglages (« Automatique », français, anglais, puis les packs installés en
+  phase 3) avec bascule immédiate ; attribut `lang` du document ; vérification des mises en page avec les textes
+  anglais (souvent plus courts, parfois plus longs : boutons, en-têtes, menu en carrousel) ; captures de
+  référence en anglais ajoutées au test de bout en bout ; `npm run i18n:check` vert.
+- **Critères d'acceptation** : toute l'application est utilisable en anglais sans redémarrage ; aucun texte
+  français ne reste visible avec l'anglais choisi (parcours de toutes les sections).
