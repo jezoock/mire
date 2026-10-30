@@ -24,6 +24,11 @@ module.exports = [
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
+    // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.
+    files: ['test/e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     // `api` est exposé par preload.js (contextBridge).
     files: ['renderer/app.js'],
     languageOptions: { globals: { api: 'readonly' } },

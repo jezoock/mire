@@ -20,13 +20,13 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-01 | Outillage : lint, formatage, éditeur | S | — | | faite | [#2](https://github.com/jezoock/mire/pull/2) |
 | P0-02 | Tests des modules déjà testables | M | P0-01 | | faite | [#3](https://github.com/jezoock/mire/pull/3) |
 | P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | faite | [#4](https://github.com/jezoock/mire/pull/4) |
-| P0-04 | Intégration continue | S | P0-02, P0-03 | | en revue | [#7](https://github.com/jezoock/mire/pull/7) |
+| P0-04 | Intégration continue | S | P0-02, P0-03 | | faite | [#7](https://github.com/jezoock/mire/pull/7) |
 | P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | en revue | [#9](https://github.com/jezoock/mire/pull/9) |
 | P0-06 | Correctif : contrôle du chemin avant suppression d'un jeu | S | P0-03 | | à faire | |
 | P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
-| P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | à faire | |
-| P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | en revue | [#6](https://github.com/jezoock/mire/pull/6) |
+| P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | en revue | [#10](https://github.com/jezoock/mire/pull/10) |
+| P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | faite | [#6](https://github.com/jezoock/mire/pull/6) |
 | P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | à faire | |
 | **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
 
@@ -147,3 +147,6 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Décider du comportement voulu ; les résultats figés dans `test/fixtures/config-v*.migrated.json` décrivent l'actuel |
 | `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | À retirer dans P0-07 (code mort) |
 | `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Utiliser `path.posix` pour les branches macOS et Linux, dans la phase 1 (rangement de `lib/location.js`) |
+| `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Attendre l'activation du bloqueur pour télécharger les listes ; à arbitrer (changement de comportement). À voir dans P1-13 |
+| Le test de fumée ne tourne que sous Linux (Xvfb) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | L'ajouter à des runners CI Windows et macOS quand la phase 1 sera avancée ; Widevine reste à vérifier à la main |
+| Les captures de référence varient de quelques pixels d'une exécution à l'autre (lissage des bords, écart de 16/255 au plus) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Comparaison automatique avec seuil de tolérance, dans P2-21 |

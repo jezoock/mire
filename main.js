@@ -6,6 +6,8 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, dialog, protocol, shell, session, Menu, nativeTheme, webContents } = require('electron');
 // API propre à castLabs Electron (Widevine). Absente d'Electron standard : on la teste avant usage.
 const { components } = require('electron');
+// Dossier de données isolé (tests de bout en bout, essais) : fixé avant toute lecture de config ou de cache.
+if (process.env.MIRE_USER_DATA) app.setPath('userData', process.env.MIRE_USER_DATA);
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');

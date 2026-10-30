@@ -31,6 +31,12 @@ npm run dist
 
 L’outil de fabrication (electron-builder) est téléchargé à la demande, uniquement pour cette commande. Il affiche quelques avertissements « deprecated » venant de ses propres dépendances : ils sont sans effet sur l’installateur produit. L’installateur apparaît dans le dossier `dist`.
 
+### Pour les développeurs
+
+- `npm run lint`, `npm run format:check` et `npm test` : vérifications rapides, sans Electron.
+- `npm run test:e2e` : test de fumée. Mire démarre avec la configuration de démonstration de `test/e2e/fixtures/`, chaque section est ouverte au clavier et les captures de référence sont enregistrées dans `test/e2e/__screenshots__/` (à regarder à chaque changement d’interface). Sous Linux sans écran : `xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e`.
+- Variable d’environnement `MIRE_USER_DATA` : dossier de données à utiliser à la place de celui de Mire (configuration, caches, sessions des sites). Pratique pour essayer une configuration sans toucher à la vôtre, par exemple `MIRE_USER_DATA=/tmp/mire-essai npm start`.
+
 ## Rien n’est installé d’office
 
 À l’installation, Mire est vide : aucun service de streaming, aucun jeu, aucune console, aucune source. Tout s’ajoute ensuite, à la main dans les réglages de chaque page, ou d’un coup en important une configuration (Réglages → Configuration → Importer). Seule exception : la télévision, livrée avec les services existants (voir plus bas).

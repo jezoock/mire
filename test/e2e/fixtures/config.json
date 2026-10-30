@@ -1,0 +1,45 @@
+{
+  "version": 5,
+  "library": {
+    "sources": [
+      { "id": "demo-videos", "kind": "video", "location": "@FIXTURES@/bibliotheque/Vidéos" },
+      { "id": "demo-musique", "kind": "audio", "location": "@FIXTURES@/bibliotheque/Musique" },
+      { "id": "demo-images", "kind": "image", "location": "@FIXTURES@/bibliotheque/Images" }
+    ]
+  },
+  "gameSources": [],
+  "tv": {
+    "services": [{ "id": "demo", "name": "Télé de démonstration", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" }],
+    "active": "demo",
+    "detected": true
+  },
+  "ui": { "theme": "ecran", "start": "home" },
+  "scrape": { "auto": false },
+  "adblock": { "enabled": false, "allowlist": [], "customLists": [] },
+  "web": [
+    { "id": "arte", "group": "video", "name": "Arte", "url": "https://www.arte.tv/fr/", "color": "#FA481C", "search": "https://www.arte.tv/fr/search/?q={q}" },
+    {
+      "id": "radio-france",
+      "group": "music",
+      "name": "Radio France",
+      "url": "https://www.radiofrance.fr/",
+      "color": "#E2001A",
+      "search": "",
+      "background": true
+    }
+  ],
+  "emulators": [
+    {
+      "name": "Super Nintendo",
+      "path": "@FIXTURES@/bibliotheque/Jeux/emulateur.sh",
+      "args": ["{rom}"],
+      "romsDir": "@FIXTURES@/bibliotheque/Jeux/Super Nintendo",
+      "extensions": [".sfc", ".smc"],
+      "system": "Nintendo - Super Nintendo Entertainment System"
+    }
+  ],
+  "games": [
+    { "name": "Aventure de démonstration", "path": "@FIXTURES@/bibliotheque/Jeux/PC/aventure.sh", "args": [] },
+    { "name": "Puzzle de démonstration", "path": "@FIXTURES@/bibliotheque/Jeux/PC/puzzle.sh", "args": [] }
+  ]
+}
