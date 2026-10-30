@@ -27,7 +27,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
 | P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | faite | [#10](https://github.com/jezoock/mire/pull/10) |
 | P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | faite | [#6](https://github.com/jezoock/mire/pull/6) |
-| P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | à faire | |
+| P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | en revue | [#13](https://github.com/jezoock/mire/pull/13) |
 | **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
 
 ## Phase 1 — Refacto modulaire
