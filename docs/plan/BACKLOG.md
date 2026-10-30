@@ -23,9 +23,9 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-04 | Intégration continue | S | P0-02, P0-03 | | faite | [#7](https://github.com/jezoock/mire/pull/7) |
 | P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | faite | [#9](https://github.com/jezoock/mire/pull/9) |
 | P0-06 | Correctif : contrôle du chemin avant suppression d'un jeu | S | P0-03 | | en revue | [#12](https://github.com/jezoock/mire/pull/12) |
-| P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
+| P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | en revue | [#11](https://github.com/jezoock/mire/pull/11) |
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
-| P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | en revue | [#10](https://github.com/jezoock/mire/pull/10) |
+| P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | faite | [#10](https://github.com/jezoock/mire/pull/10) |
 | P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | faite | [#6](https://github.com/jezoock/mire/pull/6) |
 | P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | à faire | |
 | **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
@@ -145,7 +145,7 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Dans P0-04 : lancer la CI avec Node ≥ 24 (ou le Node d'Electron) pour que ce test s'exécute |
 | `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Chercher dans `DEFAULT_WEB` (ou `KNOWN_WEB`) ; à arbitrer (changement de comportement), avec mise à jour des fixtures de migration |
 | `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Décider du comportement voulu ; les résultats figés dans `test/fixtures/config-v*.migrated.json` décrivent l'actuel |
-| `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | À retirer dans P0-07 (code mort) |
+| `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Traitée dans P0-07 ([#11](https://github.com/jezoock/mire/pull/11)) |
 | `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Utiliser `path.posix` pour les branches macOS et Linux, dans la phase 1 (rangement de `lib/location.js`) |
 | `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Attendre l'activation du bloqueur pour télécharger les listes ; à arbitrer (changement de comportement). À voir dans P1-13 |
 | Le test de fumée ne tourne que sous Linux (Xvfb) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | L'ajouter à des runners CI Windows et macOS quand la phase 1 sera avancée ; Widevine reste à vérifier à la main |

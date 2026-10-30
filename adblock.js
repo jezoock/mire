@@ -65,7 +65,6 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
   function wrap(engine) {
     const before = engine.onBeforeRequest;
     const headers = engine.onHeadersReceived;
-    const cosmetic = engine.onInjectCosmeticFilters;
     engine.onBeforeRequest = (details, callback) => {
       if (pageAllowed(pageUrlOf(details.webContentsId, details.referrer))) { callback({}); return; }
       before(details, callback);
@@ -100,7 +99,6 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
       event.sender.insertCSS(styles, { cssOrigin: 'user' }).catch(() => {});
       return undefined;
     };
-    void cosmetic;
     engine.on('request-blocked', (request) => {
       const id = request.tabId;
       if (id == null || id < 0) return;

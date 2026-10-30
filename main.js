@@ -1519,8 +1519,6 @@ function registerIpc() {
     }
     for (let i = 0; i < config.emulators.length; i++) {
       const emu = config.emulators[i];
-      const local = await listRoms(i).catch(() => null); // fichiers locaux présents
-      if (local?.ok) { /* les fichiers listés existent par construction */ }
       if (online) {
         for (const p of consoleLocations(emu).filter((x) => x.remote)) {
           try {
@@ -1666,7 +1664,7 @@ function registerIpc() {
   // Rouvre la page d'un marque-page dans la vue intégrée.
   handle('bookmarks:open', (id) => webOpen(`bm:${id}`, null));
 
-  // Marque-page d'un jeu depuis un site de téléchargement : fiche à scraper, lien direct, ou .torrent.
+  // Marque-page d'un jeu depuis un site de téléchargement : page du jeu, lien direct, ou .torrent.
   // data : { source, title?, console? (console ouverte), kind? }
   handle('gameBookmarks:add', async (data) => {
     const source = String(data?.source || '').trim();
@@ -1680,18 +1678,7 @@ function registerIpc() {
     let title = String(data?.title || '').trim();
     if (!title) { try { title = decodeURIComponent(path.basename(new URL(source).pathname)).replace(/\.[a-z0-9]+$/i, '') || source; } catch { title = path.basename(source) || source; } }
 
-    // Scraping : on cherche la fiche du jeu pour en tirer le système, le genre, la jaquette.
-    let system = curEmu ? guessSystem(curEmu) : '';
-    let scraped = false;
-    try {
-      const scrapeKind = curConsole === 'pc' ? 'pc' : 'rom';
-      const item = curConsole === 'pc' ? { name: title, path: source } : { name: title, path: source, displayName: title, emu: curConsole };
-      const found = await scraper.candidates({ kind: scrapeKind, item, query: title });
-      if (found?.ok && found.items.length) {
-        // On retient la 1re fiche et on enregistre ses infos sous la clé du futur jeu.
-        scraped = true;
-      }
-    } catch (err) { console.error('Marque-page jeu, scraping :', err.message); }
+    const system = curEmu ? guessSystem(curEmu) : '';
 
     // Système non déterminé : on le signale, l'interface demandera (console ouverte par défaut).
     const needSystem = typeof curConsole !== 'number' && !system;
@@ -1702,7 +1689,7 @@ function registerIpc() {
     const pending = downloads.addPending(source, dlCtx);
     bm.downloadId = pending.id;
     config = saveConfig({ ...config, gameBookmarks: [...(config.gameBookmarks || []), bm] });
-    return { ok: true, bookmark: bm, scraped, needSystem, config };
+    return { ok: true, bookmark: bm, needSystem, config };
   });
   handle('gameBookmarks:setConsole', (id, consoleIdx) => {
     const idx = consoleIdx === 'pc' ? 'pc' : Number(consoleIdx);
