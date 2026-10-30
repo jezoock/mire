@@ -21,7 +21,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-02 | Tests des modules déjà testables | M | P0-01 | | faite | [#3](https://github.com/jezoock/mire/pull/3) |
 | P0-03 | Extraction mécanique des fonctions pures de `main.js` + tests | M | P0-01 | | faite | [#4](https://github.com/jezoock/mire/pull/4) |
 | P0-04 | Intégration continue | S | P0-02, P0-03 | | en revue | [#7](https://github.com/jezoock/mire/pull/7) |
-| P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | à faire | |
+| P0-05 | Correctif : portails TV web (SFR, B.tv, Molotov) | S | P0-03 | 🧑 | en revue | [#9](https://github.com/jezoock/mire/pull/9) |
 | P0-06 | Correctif : contrôle du chemin avant suppression d'un jeu | S | P0-03 | | à faire | |
 | P0-07 | Nettoyage du code mort et petites incohérences | S | P0-01, P0-03 | | à faire | |
 | P0-08 | Mise à jour de sécurité d'Electron castLabs (pas avant le 5 nov. 2026) | S | — | 🧑 | à faire | |
