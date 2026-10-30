@@ -470,7 +470,6 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
   function list() {
     return [...items.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }
-  const activeCount = () => [...items.values()].filter((it) => ACTIVE.has(it.state)).length;
 
   // Au démarrage : les torrents qui étaient en cours reprennent.
   async function start() {
@@ -485,7 +484,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     if (client) await new Promise((resolve) => { client.destroy(() => resolve()); setTimeout(resolve, 3000); });
   }
 
-  return { start, stop, addUrl, addTorrent, addPending, startPending, fetchText, handleWebDownload, pause, resume, cancel, remove, clearFinished, reveal, runInstaller, list, activeCount, settings };
+  return { start, stop, addUrl, addTorrent, addPending, startPending, fetchText, handleWebDownload, pause, resume, cancel, remove, clearFinished, reveal, runInstaller, list, settings };
 }
 
 module.exports = { createDownloads };
