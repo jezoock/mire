@@ -26,6 +26,7 @@ const { THEME_BG, DEFAULT_CONFIG, slug, newId, mergeConfig, normalizeConfig, mig
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
 const { substitute, isUrlTarget } = require('./lib/args.js');
+const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, foldText, providerMatches, episodeNumbers, cleanRomName, similarity } = require('./lib/text.js');
 
 const IS_WIN = process.platform === 'win32';
@@ -491,7 +492,7 @@ function activeTvService() {
 async function fetchChannels() {
   const svc = activeTvService();
   if (!svc) return { ok: false, error: 'Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision.' };
-  if (svc.kind === 'web') return { ok: true, web: { url: svc.url, name: svc.name } };
+  if (svc.kind === 'web') return { ok: true, web: { id: svc.id, url: svc.url, name: svc.name } };
   const src = (svc.url || '').trim();
   if (!src) return { ok: false, error: `Aucune adresse de playlist pour ${svc.name}.` };
   let text;
@@ -819,30 +820,13 @@ function consoleSites(i) {
 }
 
 function romEntry(i, siteIndex = 0) {
-  const sites = consoleSites(i);
-  if (!sites.length) return null;
-  const name = i === 'pc' ? 'Jeux PC' : config.emulators[i]?.name;
-  if (name == null) return null;
-  const si = Math.max(0, Math.min(Number(siteIndex) || 0, sites.length - 1));
-  return { id: `rom:${i}`, name: `Jeux : ${name}`, url: sites[si].url, search: sites[si].search || '', color: '#6E88F7', mode: 'integrated', romConsole: i, romSite: si };
+  return romEntryOf(config, i, consoleSites(i), siteIndex);
 }
 
 async function webOpen(id, url, opts = {}) {
-  let entry;
-  if (String(id).startsWith('rom:')) {
-    const raw = String(id).slice(4);
-    const i = raw === 'pc' ? 'pc' : Number(raw);
-    const current = webViews.get(id)?.entry.romSite;
-    entry = romEntry(i, opts.site != null ? opts.site : current || 0);
-    if (!entry) return { ok: false, error: 'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».' };
-  } else if (String(id).startsWith('bm:')) {
-    const bm = (config.bookmarks || []).find((b) => `bm:${b.id}` === id);
-    if (!bm) return { ok: false, error: 'Marque-page introuvable.' };
-    entry = { id, name: bm.title || bm.site, url: bm.url, mode: 'integrated', color: '#9B6CF7', search: '' };
-  } else {
-    entry = config.web.find((w) => w.id === id);
-  }
-  if (!entry) return { ok: false, error: 'Ce site n’existe plus dans la configuration.' };
+  const site = opts.site != null ? opts.site : webViews.get(id)?.entry.romSite || 0;
+  const { entry, error } = resolveWebEntry(id, config, { romSites: consoleSites, site });
+  if (!entry) return { ok: false, error };
   const target = typeof url === 'string' && /^https?:\/\//i.test(url) ? url : entry.url;
   if (entry.mode === 'browser') {
     const r = await openInBrowser(target);
