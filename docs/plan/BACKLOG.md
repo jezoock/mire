@@ -41,7 +41,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-05 | Stockage JSON atomique | M | P1-01 | | à faire | |
 | P1-06 | Service de configuration | L | P1-02, P1-05 | | à faire | |
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | à faire | |
-| P1-08 | Contrat IPC typé | M | P1-01 | | en revue | |
+| P1-08 | Contrat IPC typé | M | P1-01 | | en revue | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | à faire | |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
