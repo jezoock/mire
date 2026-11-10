@@ -11,10 +11,8 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const os = require('node:os');
 const { spawn } = require('node:child_process');
-const { Readable } = require('node:stream');
-const { pipeline } = require('node:stream/promises');
+const http = require('./net/http.ts');
 
-const UA = 'Mire/1.0 (lecteur multimédia personnel)';
 const PLATFORM = process.platform === 'win32' ? 'win32' : process.platform === 'linux' ? 'linux' : 'other';
 
 /* ------------------------------------------------------------------ */
@@ -135,25 +133,13 @@ const FREE_GAMES = [
 /* Outils                                                              */
 /* ------------------------------------------------------------------ */
 
-// fetch avec un message compréhensible quand le site ne répond pas.
-async function get(url, opts = {}) {
-  try {
-    return await fetch(url, { ...opts, headers: { 'user-agent': UA, ...(opts.headers || {}) } });
-  } catch (err) {
-    const host = (() => { try { return new URL(url).hostname; } catch { return url; } })();
-    throw new Error(err.name === 'TimeoutError' ? `${host} met trop de temps à répondre.` : `Impossible de joindre ${host}. Vérifiez la connexion Internet.`);
-  }
-}
-
-async function fetchText(url) {
-  const res = await get(url, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`${new URL(url).hostname} a répondu avec le code ${res.status}`);
-  return res.text();
+function fetchText(url) {
+  return http.getText(url, { timeout: 20000 });
 }
 
 // Dernière version d'un dépôt GitHub, sans l'API (limitée à 60 appels par heure).
 async function githubLatest(repo) {
-  const res = await get(`https://github.com/${repo}/releases/latest`, { redirect: 'manual', signal: AbortSignal.timeout(20000) });
+  const res = await http.request(`https://github.com/${repo}/releases/latest`, { redirect: 'manual', timeout: 20000 });
   const loc = res.headers.get('location') || '';
   const m = /\/releases\/tag\/([^/?#]+)/.exec(loc);
   if (!m) throw new Error(`Aucune version publiée pour ${repo}.`);
@@ -187,24 +173,9 @@ async function resolveSource(emu) {
   throw new Error('Source inconnue.');
 }
 
-async function download(url, dest, onProgress) {
-  const res = await get(url, { signal: AbortSignal.timeout(30 * 60 * 1000) });
-  if (!res.ok || !res.body) throw new Error(`Téléchargement impossible : ${new URL(url).hostname} a répondu avec le code ${res.status}.`);
-  const total = Number(res.headers.get('content-length')) || 0;
-  let received = 0;
-  let last = 0;
-  const counter = new (require('node:stream').Transform)({
-    transform(chunk, _enc, cb) {
-      received += chunk.length;
-      const now = Date.now();
-      if (now - last > 200) { last = now; onProgress?.(received, total); }
-      cb(null, chunk);
-    },
-  });
-  await fsp.mkdir(path.dirname(dest), { recursive: true });
-  await pipeline(Readable.fromWeb(res.body), counter, fs.createWriteStream(dest));
-  onProgress?.(received, total || received);
-  return dest;
+// Gros fichier (émulateur, cœur, jeu) : jusqu'à 30 minutes.
+function download(url, dest, onProgress) {
+  return http.downloadToFile(url, dest, { onProgress, timeout: 30 * 60 * 1000 });
 }
 
 async function findFile(dir, pattern, depth = 0) {
@@ -491,4 +462,4 @@ function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgre
   return { catalog, install, uninstall, getGame, importFiles, romsRoot, emuRoot, extract, biosDir, biosInfo, addBios };
 }
 
-module.exports = { createStore, EMULATORS, FREE_GAMES, githubLatest, download };
+module.exports = { createStore, EMULATORS, FREE_GAMES, githubLatest };

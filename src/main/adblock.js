@@ -11,6 +11,7 @@ const fsp = require('node:fs/promises');
 const { webContents } = require('electron');
 const { ElectronBlocker, adsAndTrackingLists, fetchResources, Request } = require('@ghostery/adblocker-electron');
 const { parse: parseDomain } = require('tldts-experimental');
+const http = require('./net/http.ts');
 
 // Liste FR : la liste qu'Adblock Plus ajoute à EasyList pour les sites français.
 const EXTRA_LISTS = ['https://easylist-downloads.adblockplus.org/liste_fr.txt'];
@@ -135,10 +136,8 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     if (ses && settings().enabled !== false) { blocker.enableBlockingInSession(ses); attached = true; }
   }
 
-  async function fetchText(url) {
-    const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
-    if (!res.ok) throw new Error(`code ${res.status}`);
-    return res.text();
+  function fetchText(url) {
+    return http.getText(url, { timeout: 30000 });
   }
 
   // Télécharge les listes ; une liste indisponible n'empêche pas les autres de servir.

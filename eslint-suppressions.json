@@ -32,10 +32,5 @@
     "no-useless-escape": {
       "count": 1
     }
-  },
-  "src/main/store.js": {
-    "preserve-caught-error": {
-      "count": 1
-    }
   }
 }
