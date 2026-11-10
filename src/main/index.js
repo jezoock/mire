@@ -23,14 +23,14 @@ const { createDownloads } = require('./downloads.js');
 const disc = require('./discfiles.js');
 const { guessSystem, parseVideo } = require('./scraper.js');
 const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('./lib/formats.js');
-const { THEME_BG, DEFAULT_CONFIG, mergeConfig, normalizeConfig, migrateConfig } = require('./lib/config.js');
+const { THEME_BG, DEFAULT_CONFIG, normalizeConfig, migrateConfig } = require('./lib/config.js');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
-const { isInside } = require('./lib/paths.js');
 const { substitute } = require('./lib/args.js');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
-const { fold, slug, safeFileName, cleanRomName, parseEpisode, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget, newId } = require('@mire/shared');
+const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
+const { fold, slug, safeFileName, cleanRomName, parseEpisode, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -1444,333 +1444,33 @@ function filesFromArgv(argv) {
     .filter((a) => { try { return fs.statSync(a).isFile(); } catch { return false; } });
 }
 
+// Les handlers IPC (src/main/ipc/handlers/) accèdent à l'état de ce fichier par ce contexte : accesseurs pour ce qui
+// change (configuration, fenêtre, services créés au démarrage), fonctions pour le reste.
+const ipcContext = {
+  electron: { app, dialog, shell },
+  get config() { return config; },
+  set config(next) { config = next; },
+  get mainWindow() { return mainWindow; },
+  get pendingFiles() { return pendingFiles; },
+  set pendingFiles(next) { pendingFiles = next; },
+  get userMeta() { return userMeta; },
+  webViews,
+  web,
+  get scraper() { return scraper; },
+  get store() { return store; },
+  get downloads() { return downloads; },
+  get adblock() { return adblock; },
+  saveConfig, configPath, themeBackground,
+  scanLibrary, findSubtitles, openMediaDialog, itemFromPath, locationError, pickFolder, pickFile,
+  metaDir, saveMeta, setMeta, pickMetaImage,
+  playExternal, detectTvService, fetchChannels,
+  webOpen, webShow, webHide, webBounds, webNav, webClose, webFocus, webKey, webLearnSearch, webSessions,
+  drmStatus, searchStreaming,
+  scanGameSources, launchGamePath, launchGame, addGame, listRoms, launchRom, consoleSites, consoleLocations,
+};
+
 function registerIpc() {
-  const handle = (channel, fn) => ipcMain.handle(channel, async (_event, ...args) => {
-    try { return await fn(...args); } catch (err) { console.error(channel, err); return { ok: false, error: err.message }; }
-  });
-
-  handle('config:get', () => ({ config, configPath: configPath(), platform: process.platform }));
-  handle('config:save', (next) => {
-    if (!next || typeof next !== 'object') throw new Error('Configuration invalide.');
-    const wasFullscreen = config.ui.fullscreen;
-    const saved = saveConfig(next);
-    if (mainWindow && saved.ui.fullscreen !== wasFullscreen) mainWindow.setFullScreen(!!saved.ui.fullscreen);
-    for (const w of webViews.values()) w.entry = saved.web.find((e) => e.id === w.entry.id) || w.entry;
-    if (mainWindow) mainWindow.setBackgroundColor(themeBackground());
-    return saved;
-  });
-  handle('config:reveal', () => { shell.showItemInFolder(configPath()); return true; });
-  // Export : copie du fichier de configuration là où l'utilisateur veut.
-  handle('config:export', async () => {
-    const r = await dialog.showSaveDialog(mainWindow, { title: 'Exporter la configuration', defaultPath: `mire-config-${new Date().toISOString().slice(0, 10)}.json`, filters: [{ name: 'Configuration Mire', extensions: ['json'] }] });
-    if (r.canceled || !r.filePath) return { ok: false, canceled: true };
-    await fsp.writeFile(r.filePath, JSON.stringify(config, null, 2), 'utf8');
-    return { ok: true, path: r.filePath };
-  });
-  // Import : remplace entièrement, ou complète (fusionne sites, consoles, jeux, sources sans doublon).
-  handle('config:import', async (mode) => {
-    const r = await dialog.showOpenDialog(mainWindow, { title: 'Importer une configuration', properties: ['openFile'], filters: [{ name: 'Configuration Mire', extensions: ['json'] }] });
-    if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
-    let data;
-    try { data = JSON.parse(await fsp.readFile(r.filePaths[0], 'utf8')); } catch { return { ok: false, error: 'Ce fichier n’est pas une configuration Mire valide (JSON illisible).' }; }
-    const { raw } = migrateConfig(data);
-    config = saveConfig(mode === 'merge' ? mergeConfig(config, raw) : raw);
-    return { ok: true, config };
-  });
-  handle('tv:detect', async () => { const id = await detectTvService(); if (id) config = saveConfig({ ...config, tv: { ...config.tv, active: id, detected: true } }); return { id, name: config.tv.services.find((t) => t.id === id)?.name || '' }; });
-  handle('tv:setActive', (id) => { config = saveConfig({ ...config, tv: { ...config.tv, active: String(id || ''), detected: true } }); return config; });
-
-  handle('library:scan', scanLibrary);
-  handle('games:scanSources', scanGameSources);
-  handle('roms:listSource', (i, only) => listRoms(i, { online: true, only }));
-  // Supprime un jeu : fichier local effacé, ou jeu PC manuel retiré de la configuration.
-  handle('games:delete', async (ref) => {
-    if (ref.kind === 'game') {
-      if (ref.manualIndex != null && config.games[ref.manualIndex]) {
-        const next = structuredClone(config); next.games.splice(ref.manualIndex, 1); config = saveConfig(next);
-        return { ok: true, config };
-      }
-      return { ok: false, error: 'Ce jeu est trouvé automatiquement dans un dossier : retirez le dossier dans les réglages, ou supprimez le jeu sur le disque.' };
-    }
-    // Jeu de console local : on supprime son fichier (et les fichiers voisins d'un jeu sur disque).
-    if (typeof ref.path !== 'string' || !ref.path || isHttpUrl(ref.path)) return { ok: false, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
-    const emu = ref.kind === 'rom' && Number.isInteger(ref.emuIndex) ? config.emulators[ref.emuIndex] : null;
-    if (!emu) return { ok: false, error: 'Ce jeu n’est rattaché à aucune console : il n’a pas été supprimé.' };
-    // Le renderer n'est pas cru sur parole : le fichier doit être dans un dossier local de cette console.
-    const roots = consoleLocations(emu).filter((p) => !p.remote).map((p) => resolveLocation(p.location)).filter((l) => l.type === 'path').map((l) => l.path);
-    if (!isInside(ref.path, roots)) return { ok: false, error: `Ce fichier ne se trouve pas dans les dossiers de ${emu.name} : il n’a pas été supprimé.` };
-    try {
-      const st = await fsp.stat(ref.path);
-      if (!st.isFile()) return { ok: false, error: 'Seul un fichier de jeu peut être supprimé ici, pas un dossier.' };
-      if (disc.isDescriptor(ref.path)) {
-        const dir = path.dirname(ref.path);
-        const refs = disc.missingLocal(ref.path).length === 0 ? disc.parseRefs(ref.path, disc.decode(await fsp.readFile(ref.path))) : [];
-        for (const r of refs) await fsp.rm(path.join(dir, ...r.split('/')), { force: true }).catch(() => {});
-      }
-      await fsp.rm(ref.path, { force: true });
-      return { ok: true };
-    } catch (err) { return { ok: false, error: `Suppression impossible : ${err.message}` }; }
-  });
-  // Nettoyage : vérifie que chaque jeu existe encore (fichier local présent, adresse en ligne joignable).
-  handle('games:cleanup', async (online) => {
-    const result = { missingLocal: [], missingRemote: [], removedManual: 0, checked: 0 };
-    const nextGames = [];
-    for (const g of config.games) {
-      result.checked++;
-      if (/^[a-z]+:\/\//i.test(g.path) || fs.existsSync(g.path)) nextGames.push(g);
-      else { result.removedManual++; result.missingLocal.push(g.name); }
-    }
-    for (let i = 0; i < config.emulators.length; i++) {
-      const emu = config.emulators[i];
-      if (online) {
-        for (const p of consoleLocations(emu).filter((x) => x.remote)) {
-          try {
-            const res = await http.head(p.location, { timeout: 6000 });
-            if (!res.ok) result.missingRemote.push(`${emu.name} : ${p.location}`);
-          } catch { result.missingRemote.push(`${emu.name} : ${p.location}`); }
-          result.checked++;
-        }
-      }
-    }
-    if (result.removedManual) { const next = structuredClone(config); next.games = nextGames; config = saveConfig(next); result.config = config; }
-    return { ok: true, ...result };
-  });
-  handle('games:launchPath', launchGamePath);
-  handle('meta:all', () => userMeta);
-  handle('meta:set', setMeta);
-  handle('meta:pickImage', pickMetaImage);
-  handle('meta:reset', (key) => { delete userMeta[key]; saveMeta(); return true; });
-  // Image choisie sur le disque (bannière d'une console…) : copiée dans les données de Mire.
-  handle('image:pick', async (title) => {
-    const r = await dialog.showOpenDialog(mainWindow, {
-      title: title || 'Choisir une image',
-      properties: ['openFile'],
-      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'] }],
-    });
-    if (r.canceled || !r.filePaths[0]) return null;
-    const src = r.filePaths[0];
-    const dest = path.join(metaDir(), 'img', `${crypto.createHash('sha1').update(`${src}|${Date.now()}`).digest('hex')}${path.extname(src).toLowerCase()}`);
-    await fsp.mkdir(path.dirname(dest), { recursive: true });
-    await fsp.copyFile(src, dest);
-    return dest;
-  });
-  handle('location:check', async (loc) => {
-    const r = resolveLocation(loc);
-    if (r.type === 'url') {
-      try { const res = await http.request(r.url, { timeout: 10000 }); return { ok: res.ok, error: res.ok ? null : `Le serveur a répondu avec le code ${res.status}.` }; }
-      catch { return { ok: false, error: 'Adresse injoignable.' }; }
-    }
-    try { await fsp.access(r.path); return { ok: true }; } catch { return { ok: false, error: locationError(loc, r) }; }
-  });
-  handle('media:subtitles', findSubtitles);
-  handle('media:openDialog', openMediaDialog);
-  handle('media:fromPaths', async (paths) => (await Promise.all((paths || []).map(itemFromPath))).filter(Boolean));
-  handle('app:pendingFiles', async () => {
-    const items = (await Promise.all(pendingFiles.map(itemFromPath))).filter(Boolean);
-    pendingFiles = [];
-    return items;
-  });
-
-  handle('dialog:folder', pickFolder);
-  handle('dialog:file', pickFile);
-
-  handle('player:external', playExternal);
-  handle('web:open', webOpen);
-  handle('web:show', webShow);
-  handle('web:hide', webHide);
-  handle('web:bounds', webBounds);
-  handle('web:nav', webNav);
-  handle('web:close', webClose);
-  handle('web:focus', webFocus);
-  handle('web:key', webKey);
-  handle('web:learnSearch', webLearnSearch);
-  handle('web:sessions', webSessions);
-  handle('downloads:list', () => ({ items: downloads.list(), settings: downloads.settings() }));
-  handle('downloads:addUrl', (url, ctx) => {
-    const u = String(url || '').trim();
-    if (/^magnet:\?/i.test(u)) return downloads.addTorrent(u, ctx || {});
-    return downloads.addUrl(u, ctx || {});
-  });
-  handle('downloads:addTorrentFile', async (ctx) => {
-    const r = await dialog.showOpenDialog(mainWindow, { title: 'Choisir un fichier .torrent', properties: ['openFile'], filters: [{ name: 'Torrents', extensions: ['torrent'] }] });
-    if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true };
-    return downloads.addTorrent(r.filePaths[0], ctx || {});
-  });
-  handle('downloads:pause', (id) => downloads.pause(id));
-  handle('downloads:resume', (id) => downloads.resume(id));
-  handle('downloads:cancel', (id, removeFiles) => downloads.cancel(id, removeFiles !== false));
-  handle('downloads:remove', (id) => downloads.remove(id));
-  handle('downloads:clear', () => downloads.clearFinished());
-  handle('downloads:reveal', (id) => downloads.reveal(id));
-  handle('downloads:runInstaller', (id, file) => downloads.runInstaller(id, file));
-  handle('downloads:pickDir', async () => {
-    const r = await dialog.showOpenDialog(mainWindow, { title: 'Dossier des téléchargements', properties: ['openDirectory', 'createDirectory'] });
-    return r.canceled ? null : r.filePaths[0];
-  });
-  // Jeu d'une source web : copie locale dans le dossier principal de la console.
-  handle('roms:download', async (i, url) => {
-    const emu = config.emulators[i];
-    if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
-    if (!emu.romsDir) return { ok: false, error: `Indiquez d’abord le dossier principal de ${emu.name} (Modifier la console).` };
-    const u = String(url || '');
-    if (!disc.isDescriptor(u)) return { ...downloads.addUrl(u, { console: i }), count: 1 };
-    // Jeu sur disque : l'index et tous les fichiers qu'il cite, dans un dossier au nom du jeu.
-    let files;
-    try { files = await disc.resolveRemote(u, (x) => downloads.fetchText(x)); } catch (err) { return { ok: false, error: `Index du jeu illisible (${err.message}).` }; }
-    const base = safeFileName(path.basename(files[0].rel, path.extname(files[0].rel)), { max: Infinity, fallback: '' });
-    const folder = path.join(emu.romsDir, base);
-    const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
-    for (const f of todo) downloads.addUrl(f.url, { console: i, saveAs: path.join(folder, ...f.rel.split('/')), group: base, companionsQueued: true });
-    return { ok: true, count: todo.length, total: files.length };
-  });
-  handle('store:biosAdd', async (id) => {
-    const r = await dialog.showOpenDialog(mainWindow, { title: 'Choisir le ou les fichiers BIOS', properties: ['openFile', 'multiSelections'] });
-    if (r.canceled || !r.filePaths.length) return { ok: false, canceled: true };
-    return store.addBios(id, r.filePaths);
-  });
-  handle('store:biosOpen', async (id) => {
-    const dir = store.biosDir(id);
-    if (!dir) return { ok: false };
-    await fsp.mkdir(dir, { recursive: true });
-    const err = await shell.openPath(dir);
-    return err ? { ok: false, error: err } : { ok: true };
-  });
-  // Marque-page d'une page de streaming : crée une entrée vidéo et la scrape aussitôt.
-  handle('bookmarks:add', async (data) => {
-    const url = String(data?.url || '').trim();
-    if (!isHttpUrl(url)) return { ok: false, error: 'Adresse de page invalide.' };
-    const title = String(data?.title || '').trim();
-    if (!title) return { ok: false, error: 'Donnez un titre à chercher (nom du film ou de la série).' };
-    const type = data?.type === 'tv' ? 'tv' : 'movie';
-    const site = hostOf(url).replace(/^www\./, '');
-    const bm = {
-      id: newId(), url, title, type,
-      season: type === 'tv' && data.season ? Number(data.season) : null,
-      episode: type === 'tv' && data.episode ? Number(data.episode) : null,
-      site, added: Date.now(),
-    };
-    config = saveConfig({ ...config, bookmarks: [...(config.bookmarks || []), bm] });
-    // Scraping immédiat : on récupère la fiche TMDB à partir du titre (et du type choisi).
-    let scraped = false;
-    try {
-      const item = { path: url, name: title, dir: site, kind: 'video' };
-      const r = await scraper.one({ kind: 'video', item, override: { type, title, year: data.year || '' } });
-      scraped = !!r?.ok;
-    } catch (err) { console.error('Marque-page, scraping :', err.message); }
-    return { ok: true, bookmark: bm, scraped, config };
-  });
-  handle('bookmarks:remove', (id) => {
-    config = saveConfig({ ...config, bookmarks: (config.bookmarks || []).filter((b) => b.id !== id) });
-    return { ok: true, config };
-  });
-  // Rouvre la page d'un marque-page dans la vue intégrée.
-  handle('bookmarks:open', (id) => webOpen(`bm:${id}`, null));
-
-  // Marque-page d'un jeu depuis un site de téléchargement : page du jeu, lien direct, ou .torrent.
-  // data : { source, title?, console? (console ouverte), kind? }
-  handle('gameBookmarks:add', async (data) => {
-    const source = String(data?.source || '').trim();
-    const isMagnet = /^magnet:\?/i.test(source);
-    if (!isMagnet && !isHttpUrl(source) && !source.toLowerCase().endsWith('.torrent')) return { ok: false, error: 'Lien ou fichier invalide.' };
-    const kind = isMagnet || source.toLowerCase().endsWith('.torrent') ? 'torrent' : 'http';
-    const curConsole = data?.console === 'pc' ? 'pc' : (data?.console != null ? Number(data.console) : null);
-    const curEmu = typeof curConsole === 'number' ? config.emulators[curConsole] : null;
-
-    // Titre : fourni, sinon déduit du lien.
-    let title = String(data?.title || '').trim();
-    if (!title) { try { title = decodeURIComponent(path.basename(new URL(source).pathname)).replace(/\.[a-z0-9]+$/i, '') || source; } catch { title = path.basename(source) || source; } }
-
-    const system = curEmu ? guessSystem(curEmu) : '';
-
-    // Système non déterminé : on le signale, l'interface demandera (console ouverte par défaut).
-    const needSystem = typeof curConsole !== 'number' && !system;
-
-    const bm = { id: newId(), source, kind, title, console: curConsole, system, downloadId: null, done: false, added: Date.now() };
-    // Entrée « en attente de téléchargement » dans le gestionnaire.
-    const dlCtx = { name: title, gameBookmark: bm.id, console: typeof curConsole === 'number' ? curConsole : undefined };
-    const pending = downloads.addPending(source, dlCtx);
-    bm.downloadId = pending.id;
-    config = saveConfig({ ...config, gameBookmarks: [...(config.gameBookmarks || []), bm] });
-    return { ok: true, bookmark: bm, needSystem, config };
-  });
-  handle('gameBookmarks:setConsole', (id, consoleIdx) => {
-    const idx = consoleIdx === 'pc' ? 'pc' : Number(consoleIdx);
-    config = saveConfig({ ...config, gameBookmarks: (config.gameBookmarks || []).map((b) => (b.id === id ? { ...b, console: idx } : b)) });
-    return { ok: true, config };
-  });
-  handle('gameBookmarks:remove', (id) => {
-    const bm = (config.gameBookmarks || []).find((b) => b.id === id);
-    if (bm?.downloadId) downloads.remove(bm.downloadId);
-    config = saveConfig({ ...config, gameBookmarks: (config.gameBookmarks || []).filter((b) => b.id !== id) });
-    return { ok: true, config };
-  });
-  handle('gameBookmarks:download', (id) => {
-    const bm = (config.gameBookmarks || []).find((b) => b.id === id);
-    if (!bm) return { ok: false, error: 'Marque-page introuvable.' };
-    downloads.startPending(bm.downloadId);
-    return { ok: true };
-  });
-  handle('roms:sites', (i) => ({ sites: consoleSites(i), custom: i === 'pc' ? true : Array.isArray(config.emulators[i]?.romSites), defaults: i === 'pc' ? [] : (config.emulators[i] ? defaultRomSites(guessSystem(config.emulators[i])) : []) }));
-  handle('drm:status', drmStatus);
-  handle('adblock:status', () => (adblock ? adblock.status() : null));
-  handle('adblock:setEnabled', (on) => {
-    const st = adblock.setEnabled(on);
-    for (const w of webViews.values()) w.view.webContents.reload();
-    return st;
-  });
-  handle('adblock:toggleSite', () => {
-    const w = webViews.get(web.activeId);
-    if (!w) return null;
-    const st = adblock.toggleSite(w.view.webContents.getURL());
-    w.view.webContents.reload();
-    return { ...st, adOn: adblock.status().enabled && !adblock.pageAllowed(w.view.webContents.getURL()) };
-  });
-  handle('adblock:setLists', (lists) => adblock.setLists(lists || {}));
-  handle('adblock:update', async () => { await adblock.refresh(); return adblock.status(); });
-
-  handle('scrape:data', () => scraper.data());
-  handle('scrape:run', (opts) => scraper.run(opts || {}));
-  handle('scrape:one', (job) => scraper.one(job || {}));
-  handle('scrape:candidates', (job) => scraper.candidates(job || {}));
-  handle('scrape:cancel', () => scraper.cancel());
-  handle('scrape:forget', (key) => scraper.forget(key));
-  handle('scrape:clear', () => scraper.clear());
-
-  handle('store:catalog', () => store.catalog());
-  handle('store:install', (id, systems) => store.install(id, systems));
-  handle('store:uninstall', (id) => store.uninstall(id));
-  handle('store:game', (id) => store.getGame(id));
-  handle('store:import', async (emuIndex) => {
-    const emu = config.emulators[emuIndex];
-    if (!emu) return { ok: false, error: 'Console inconnue.' };
-    const exts = (emu.extensions || []).map((e) => String(e).replace(/^\./, ''));
-    const r = await dialog.showOpenDialog(mainWindow, {
-      title: `Importer des jeux pour ${emu.name}`,
-      properties: ['openFile', 'multiSelections'],
-      filters: [...(exts.length ? [{ name: emu.name, extensions: exts }] : []), { name: 'Tous les fichiers', extensions: ['*'] }],
-    });
-    if (r.canceled) return { ok: true, count: 0 };
-    return store.importFiles(emuIndex, r.filePaths);
-  });
-  handle('store:pickRoot', async () => {
-    const p = await pickFolder();
-    if (!p) return null;
-    return saveConfig({ ...config, store: { ...config.store, romsRoot: p } });
-  });
-  handle('search:streaming', searchStreaming);
-  handle('tv:channels', fetchChannels);
-
-  handle('games:launch', launchGame);
-  handle('games:add', addGame);
-  handle('emu:roms', listRoms);
-  handle('emu:launch', launchRom);
-
-  handle('window:fullscreen', () => {
-    if (!mainWindow) return false;
-    mainWindow.setFullScreen(!mainWindow.isFullScreen());
-    return mainWindow.isFullScreen();
-  });
-  handle('app:quit', () => { app.quit(); return true; });
+  registerIpcHandlers(ipcMain, ipcContext);
 }
 
 /* ------------------------------------------------------------------ */
