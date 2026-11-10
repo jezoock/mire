@@ -3,11 +3,14 @@
  * - Lecture tolérante : fichier absent → valeurs par défaut ; fichier illisible → `onCorrupt`, puis valeurs par défaut.
  * - Écriture atomique : le JSON est écrit dans un fichier temporaire, mis sur le disque, puis renommé
  *   par-dessus l'ancien. Une coupure en pleine écriture laisse l'ancien fichier intact (anomalie A5).
- * - Écriture différée optionnelle (`debounceMs`) : les modifications rapprochées donnent une seule écriture ;
- *   `flush()` écrit tout de suite ce qui attend (fermeture de l'application).
- * Les écritures sont synchrones : un `flush()` à la fermeture ne peut pas croiser une écriture en cours.
+ * - Écriture immédiate (par défaut) : synchrone, une erreur remonte à l'appelant.
+ * - Écriture différée (`debounceMs`) : asynchrone, pour ne pas bloquer le processus principal sur un gros fichier
+ *   ou un disque lent. Les modifications rapprochées donnent une seule écriture ; une seule écriture est en cours
+ *   à la fois, et la dernière valeur est réécrite si elle a changé entre-temps. `flush()` écrit tout de suite ce
+ *   qui attend et se résout quand tout est sur le disque (fermeture de l'application).
  */
 import fs from 'node:fs';
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 
 export interface JsonStoreOptions<T> {
@@ -33,8 +36,8 @@ export interface JsonStore<T> {
   set(value: T): void;
   /** Enregistre la valeur courante après une modification en place. */
   save(): void;
-  /** Écrit tout de suite l'écriture en attente, s'il y en a une. */
-  flush(): void;
+  /** Écrit tout de suite ce qui attend ; se résout quand l'écriture en cours et celle-ci sont terminées. */
+  flush(): Promise<void>;
 }
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -43,6 +46,8 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeo
 const RETRY_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
 const RENAME_TRIES = 5;
 const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const retryable = (err: unknown) => RETRY_CODES.has((err as NodeJS.ErrnoException).code ?? '');
 
 function renameWithRetry(from: string, to: string): void {
   for (let i = 1; ; i++) {
@@ -50,7 +55,7 @@ function renameWithRetry(from: string, to: string): void {
       fs.renameSync(from, to);
       return;
     } catch (err) {
-      if (i >= RENAME_TRIES || !RETRY_CODES.has((err as NodeJS.ErrnoException).code ?? '')) throw err;
+      if (i >= RENAME_TRIES || !retryable(err)) throw err;
       pause(20 * i);
     }
   }
@@ -71,6 +76,33 @@ export function writeFileAtomic(file: string, text: string): void {
     renameWithRetry(tmp, file);
   } catch (err) {
     fs.rmSync(tmp, { force: true });
+    throw err;
+  }
+}
+
+/** Comme `writeFileAtomic`, sans bloquer le processus principal. */
+export async function writeFileAtomicAsync(file: string, text: string): Promise<void> {
+  await fsp.mkdir(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    const handle = await fsp.open(tmp, 'w');
+    try {
+      await handle.writeFile(text, 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    for (let i = 1; ; i++) {
+      try {
+        await fsp.rename(tmp, file);
+        break;
+      } catch (err) {
+        if (i >= RENAME_TRIES || !retryable(err)) throw err;
+        await sleep(20 * i);
+      }
+    }
+  } catch (err) {
+    await fsp.rm(tmp, { force: true });
     throw err;
   }
 }
@@ -101,12 +133,11 @@ export function createJsonStore<T extends object>(file: string, options: JsonSto
 
   let value: T = defaults();
   let timer: ReturnType<typeof setTimeout> | null = null;
+  // Écriture différée en cours, et nouvelle demande arrivée pendant celle-ci.
+  let writing: Promise<void> | null = null;
+  let again = false;
 
-  function write(): void {
-    if (timer) clearTimeout(timer);
-    timer = null;
-    writeFileAtomic(file, JSON.stringify(value, null, space));
-  }
+  const text = () => JSON.stringify(value, null, space);
 
   function load(): T {
     try {
@@ -120,22 +151,35 @@ export function createJsonStore<T extends object>(file: string, options: JsonSto
     return value;
   }
 
-  // Écriture différée : personne n'attend son résultat, une erreur est donc signalée à `onError`.
-  function writePending(): void {
-    try {
-      write();
-    } catch (err) {
-      onError(err as Error, file);
+  // Personne n'attend le résultat d'une écriture différée : une erreur va à `onError`, et les suivantes continuent.
+  function writeLater(): Promise<void> {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    if (writing) {
+      again = true;
+      return writing;
     }
+    writing = (async () => {
+      do {
+        again = false;
+        try {
+          await writeFileAtomicAsync(file, text());
+        } catch (err) {
+          onError(err as Error, file);
+        }
+      } while (again);
+      writing = null;
+    })();
+    return writing;
   }
 
   function save(): void {
     if (debounceMs <= 0) {
-      write();
+      writeFileAtomic(file, text());
       return;
     }
     if (timer) clearTimeout(timer);
-    timer = setTimeout(writePending, debounceMs);
+    timer = setTimeout(writeLater, debounceMs);
   }
 
   return {
@@ -147,8 +191,24 @@ export function createJsonStore<T extends object>(file: string, options: JsonSto
       save();
     },
     save,
-    flush() {
-      if (timer) writePending();
-    },
+    flush: () => (timer ? writeLater() : (writing ?? Promise.resolve())),
   };
+}
+
+/**
+ * Attend la fin des écritures (`flush()` de chaque stockage), `ms` millisecondes au plus :
+ * à la fermeture, un disque bloqué ne doit pas empêcher Mire de quitter.
+ * Se résout à `true` si tout a été écrit à temps.
+ */
+export async function flushWithin(flushes: Array<() => Promise<void>>, ms: number): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<boolean>((resolve) => {
+    timeout = setTimeout(() => resolve(false), ms);
+  });
+  const done = Promise.allSettled(flushes.map((f) => f())).then(() => true);
+  try {
+    return await Promise.race([done, late]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }

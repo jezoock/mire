@@ -28,7 +28,7 @@ const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
 const { isInside } = require('./lib/paths.js');
 const { substitute } = require('./lib/args.js');
-const { createJsonStore } = require('./storage/json-store.ts');
+const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
@@ -1869,11 +1869,15 @@ if (!app.requestSingleInstanceLock()) {
     app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createMainWindow(); });
   });
 
-  app.on('before-quit', () => {
-    // Écritures différées encore en attente.
-    scraper?.flush();
-    downloads?.flush();
+  // Avant de quitter, on attend les écritures différées (deux secondes au plus), puis on quitte pour de bon.
+  let flushedBeforeQuit = false;
+  app.on('before-quit', (event) => {
+    if (flushedBeforeQuit) return;
+    flushedBeforeQuit = true;
+    event.preventDefault();
     downloads?.stop().catch(() => {});
+    const flushes = [scraper, downloads].filter(Boolean).map((m) => () => m.flush());
+    flushWithin(flushes, 2000).finally(() => app.quit());
   });
 
 app.on('window-all-closed', () => { if (!IS_MAC) app.quit(); });

@@ -26,7 +26,7 @@ const write = (file, text) => {
 };
 const read = (file) => fs.readFileSync(file, 'utf8');
 
-test('scrape/db.json : JSON compact, comme JSON.stringify(db)', () => {
+test('scrape/db.json : JSON compact, comme JSON.stringify(db)', async () => {
   const dataDir = freshDir();
   const file = path.join(dataDir, 'scrape', 'db.json');
   const db = {
@@ -37,7 +37,7 @@ test('scrape/db.json : JSON compact, comme JSON.stringify(db)', () => {
   write(file, JSON.stringify(db));
   const scraper = createScraper({ dataDir, getConfig: () => ({}), listRoms: () => [], onProgress: () => {} });
   scraper.forget('movie:inconnu');
-  scraper.flush();
+  await scraper.flush();
   delete db.misses['movie:inconnu'];
   assert.equal(read(file), JSON.stringify(db));
 });
@@ -57,7 +57,7 @@ test('telechargements.json : indentation 1, installers toujours présent', async
   });
   await downloads.start();
   downloads.addPending('https://exemple.fr/Jeu%20d%C3%A9mo.zip', { name: 'Jeu démo' });
-  downloads.flush();
+  await downloads.flush();
   // Ce qu'écrivait l'ancien code, à partir des mêmes fiches.
   const list = [...downloads.list()].reverse().map(({ installers, ...rest }) => ({ ...rest, installers: installers || [] }));
   assert.equal(list.length, 2);

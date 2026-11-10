@@ -43,10 +43,15 @@ par Electron.
 - **écriture atomique** : le JSON est écrit dans `<fichier>.<pid>.tmp`, mis sur le disque (`fsync`), puis renommé
   par-dessus l'ancien. Une coupure pendant l'écriture laisse l'ancien fichier intact. Sous Windows, un renommage
   refusé un instant (antivirus, indexation) est réessayé ;
-- **écriture différée** (`debounceMs`) : les modifications rapprochées donnent une seule écriture ; un échec est
-  signalé à `onError` (journal par défaut). Sans délai, l'écriture est immédiate et une erreur remonte à l'appelant ;
-- **`flush()`** écrit tout de suite l'écriture en attente ; `index.js` l'appelle à la fermeture de l'application
-  (`before-quit`) pour `scrape/db.json` et `telechargements.json` ;
+- **écriture immédiate** (sans `debounceMs`) : synchrone, une erreur remonte à l'appelant. Réservée aux petits
+  fichiers dont l'appelant attend l'enregistrement ;
+- **écriture différée** (`debounceMs`) : asynchrone, pour ne pas bloquer le processus principal (et donc les
+  réponses à l'interface) sur un gros fichier ou un disque lent. Les modifications rapprochées donnent une seule
+  écriture ; une seule écriture est en cours à la fois par fichier, et si la valeur a été modifiée pendant ce temps,
+  elle est réécrite ensuite. Un échec est signalé à `onError` (journal par défaut) et n'empêche pas les suivantes ;
+- **`flush()`** écrit tout de suite ce qui attend et se résout quand tout est sur le disque. À la fermeture
+  (`before-quit`), `index.js` suspend la sortie, attend `flush()` de `scrape/db.json` et `telechargements.json`
+  deux secondes au plus (`flushWithin`), puis quitte ;
 - le format est celui d'avant : `JSON.stringify(valeur, null, space)`, en UTF-8, sans saut de ligne final.
 
 | Fichier | Indentation | Écriture |
@@ -57,5 +62,6 @@ par Electron.
 | `meta/meta.json` | 2 | immédiate |
 | `adblock/listes.json` | aucune | immédiate |
 
-Les écritures sont synchrones : elles sont petites et rares, et un `flush()` à la fermeture ne peut pas croiser
-une écriture en cours.
+Ordre de grandeur (mesuré sous Linux, SSD) : un `scrape/db.json` de 5 000 fiches pèse 3,6 Mo ; `JSON.stringify`
+prend environ 13 ms (toujours sur le processus principal), l'écriture sur le disque environ 11 ms (hors du
+processus principal grâce à l'écriture différée asynchrone).
