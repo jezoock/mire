@@ -10,7 +10,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { createScraper, guessSystem, parseVideo } = require('../scraper');
+const { createScraper, guessSystem, parseVideo } = require('../src/main/scraper');
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-scraper-'));
 test.after(() => fs.rmSync(dataDir, { recursive: true, force: true }));

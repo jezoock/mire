@@ -31,9 +31,11 @@ ne se commence pas : signale-le.
 
 - `npm install` puis `npm start` : lancer l'application (télécharge le moteur Electron au premier lancement).
 - `npm run lint` : ESLint ; `npm run format:check` : vérifie le formatage Prettier (`npm run format` le corrige).
+- `npm run build` : construit `dist/` (esbuild) ; `npm run dev` : reconstruit en continu et lance Mire ;
+  `npm run typecheck` : TypeScript. L'installateur de `npm run dist` sort dans `release/`.
 - `npm test` : tests unitaires (`node:test`). Un test de décodage Windows-1252 est sauté si le Node utilisé décode mal
   ce jeu de caractères (constaté avec un Node 22 compilé avec l'ICU du système) ; les Node officiels 22 et 24 le passent.
-- La CI (`.github/workflows/ci.yml`) lance ces trois commandes à chaque push et à chaque PR (tests sous Node 22 et 24).
+- La CI (`.github/workflows/ci.yml`) lance lint, formatage, types et tests à chaque push et à chaque PR (tests sous Node 22 et 24).
 
 ## Points sensibles
 

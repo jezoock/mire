@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    // @types/node vient du paquet electron, qui le déclare comme dépendance.
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "test/**/*.ts", "scripts/**/*.mjs"]
+}

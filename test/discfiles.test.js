@@ -10,7 +10,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { isDescriptor, decode, safeRel, parseRefs, refUrl, resolveRemote, missingLocal } = require('../discfiles');
+const { isDescriptor, decode, safeRel, parseRefs, refUrl, resolveRemote, missingLocal } = require('../src/main/discfiles');
 
 test('isDescriptor : index de disque reconnus, sans tenir compte de la casse ni de la requête', () => {
   assert.equal(isDescriptor('Jeu.CUE'), true);

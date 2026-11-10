@@ -3,7 +3,7 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 module.exports = [
-  { ignores: ['dist/', 'node_modules/', 'vendor/'] },
+  { ignores: ['dist/', 'release/', 'node_modules/', 'vendor/'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],
@@ -15,13 +15,18 @@ module.exports = [
     },
   },
   {
-    files: ['renderer/**/*.js'],
+    files: ['src/renderer/**/*.js'],
     languageOptions: { sourceType: 'script', globals: globals.browser },
   },
   {
     // Les preloads tournent dans une page web mais ont accès à `require`.
-    files: ['preload.js', 'web-preload.js'],
+    files: ['src/preload/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
+    // Scripts de construction en modules ES (esbuild).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
   },
   {
     // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.
@@ -29,8 +34,8 @@ module.exports = [
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
-    // `api` est exposé par preload.js (contextBridge).
-    files: ['renderer/app.js'],
+    // `api` est exposé par src/preload/preload.js (contextBridge).
+    files: ['src/renderer/app.js'],
     languageOptions: { globals: { api: 'readonly' } },
   },
 ];

@@ -7,7 +7,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { EMULATORS, FREE_GAMES } = require('../store');
+const { EMULATORS, FREE_GAMES } = require('../src/main/store');
 
 // RETROARCH_SYSTEMS n'est pas exporté : c'est la liste des systèmes de l'émulateur RetroArch.
 const RETROARCH_SYSTEMS = EMULATORS.find((e) => e.id === 'retroarch').systems;

@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - run: npm run typecheck
 
   test:
     name: Tests (Node ${{ matrix.node }})
@@ -68,6 +69,7 @@ jobs:
             sleep $((i * 10))
           done
           exit 1
+      # test:e2e construit dist/ (esbuild) puis lance Electron sur cette construction.
       - name: Test de fumée
         run: xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e
       - name: Captures

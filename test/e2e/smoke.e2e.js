@@ -2,7 +2,7 @@
 /**
  * Test de fumée : Mire démarre avec une configuration de démonstration, chaque section s'affiche,
  * et des captures de référence sont enregistrées dans test/e2e/__screenshots__/.
- * Lancement : npm run test:e2e (sous Linux sans écran : xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e).
+ * Lancement : npm run test:e2e, qui construit d'abord dist/ (sous Linux sans écran : xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e).
  */
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -143,7 +143,7 @@ describe('Test de fumée de Mire', () => {
     app = await electron.launch({
       cwd: ROOT,
       // --no-sandbox : le bac à sable de Chromium n'est pas disponible sous root ni dans les conteneurs de CI.
-      // -r : le journal réseau est chargé avant main.js, comme le chargeur de Playwright.
+      // -r : le journal réseau est chargé avant le processus principal (dist/main/index.js), comme le chargeur de Playwright.
       args: ['-r', path.join(__dirname, 'net-guard.js'), ROOT, '--no-sandbox', `--proxy-server=http://127.0.0.1:${proxy.address().port}`],
       env: {
         ...process.env,
