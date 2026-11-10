@@ -504,7 +504,7 @@ WebTorrent tire quelques modules natifs ou fragiles qui n’ont pas leur place d
 
 Résultat : `npm install` n’exécute aucun script d’installation venant de ces dépendances, n’installe aucun paquet obsolète et ne signale aucune faille venant d’elles. Le seul script d’installation est celui d’esbuild (outil de construction) : il vérifie son exécutable, et la construction fonctionne aussi sans lui (`npm install --ignore-scripts`).
 
-**Electron.** L’audit signale une faille d’Electron 44.0 à 44.9.0 (certificats intermédiaires compromis, GHSA-jr5w-w6x2-84p9), corrigée dans la version castLabs `v44.9.3+wvcus` publiée le 22 octobre 2026. Par prudence envers les versions toutes neuves, Mire reste pour l’instant en `v44.5.1+wvcus` ; à partir du 5 novembre 2026, remplacez dans `package.json` la fin de la ligne `electron` par `#v44.9.3+wvcus`, puis relancez `npm install` et `npm run drm:signer`.
+**Electron.** Mire utilise la version castLabs `v44.9.3+wvcus` (publiée le 22 octobre 2026), qui corrige la faille d’Electron 44.0 à 44.9.0 (certificats intermédiaires compromis, GHSA-jr5w-w6x2-84p9) : l’audit ne la signale plus. Comme après chaque changement de version d’Electron, relancez `npm install` puis `npm run drm:signer`.
 
 ## Bon à savoir
 
