@@ -3,22 +3,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('../../src/main/lib/config.js');
+const { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, mergeConfig, normalizeConfig, migrateConfig } = require('../../src/main/lib/config.js');
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures');
 const readFixture = (name) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
 const ID_RE = /^[0-9a-f]{10}$/;
-
-test('slug : minuscules, sans accents, tirets', () => {
-  assert.equal(slug('  Ma Vidéothèque — Été 2024 ! '), 'ma-videotheque-ete-2024');
-  assert.equal(slug(null), '');
-});
-
-test('newId : 10 caractères hexadécimaux, différents à chaque appel', () => {
-  const a = newId();
-  assert.match(a, ID_RE);
-  assert.notEqual(a, newId());
-});
 
 test.describe('normalizeConfig', () => {
   test('config vide : valeurs par défaut', () => {

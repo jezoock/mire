@@ -10,6 +10,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { hostOf } from '@mire/shared';
 
 export const USER_AGENT = 'Mire/1.0 (lecteur multimédia personnel)';
 
@@ -42,22 +43,16 @@ export class HttpError extends Error {
     this.name = 'HttpError';
     this.kind = kind;
     this.url = url;
-    this.host = hostOf(url);
+    this.host = hostOrUrl(url);
     this.status = status;
   }
 }
 
-// Copie locale : la version partagée arrive avec @mire/shared (P1-02).
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}
+// Pour une adresse invalide, les messages citent l'adresse telle quelle.
+const hostOrUrl = (url: string): string => hostOf(url) || url;
 
 /** Erreur « code de réponse » avec le message habituel (« exemple.fr a répondu avec le code 500 »). */
-export function statusError(url: string, status: number, message = `${hostOf(url)} a répondu avec le code ${status}`): HttpError {
+export function statusError(url: string, status: number, message = `${hostOrUrl(url)} a répondu avec le code ${status}`): HttpError {
   return new HttpError('status', url, message, { status });
 }
 
@@ -72,7 +67,7 @@ interface Call {
 // et l'annulation sont traduits : une autre erreur (JSON invalide, disque plein…) est rendue telle quelle.
 function failure(call: Call, err: unknown, reading = false): unknown {
   if (err instanceof HttpError) return err;
-  const host = hostOf(call.url);
+  const host = hostOrUrl(call.url);
   if (call.timeoutSignal?.aborted) return new HttpError('timeout', call.url, `${host} met trop de temps à répondre.`, { cause: err });
   if (call.external?.aborted) return new HttpError('aborted', call.url, 'Requête annulée.', { cause: err });
   if (reading) return err;
@@ -169,7 +164,7 @@ export async function downloadToFile(url: string, dest: string, opts: DownloadOp
   const call = prepare(url, opts);
   const res = await send(call, opts);
   if (!res.ok || !res.body) {
-    throw statusError(url, res.status, `Téléchargement impossible : ${hostOf(url)} a répondu avec le code ${res.status}.`);
+    throw statusError(url, res.status, `Téléchargement impossible : ${hostOrUrl(url)} a répondu avec le code ${res.status}.`);
   }
   const total = Number(res.headers.get('content-length')) || 0;
   let received = 0;

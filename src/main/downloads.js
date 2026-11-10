@@ -15,8 +15,8 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
-const crypto = require('node:crypto');
 const disc = require('./discfiles.js');
+const { safeFileName, newId, isHttpUrl } = require('@mire/shared');
 const http = require('./net/http.ts');
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
@@ -30,8 +30,6 @@ const INSTALLER = {
   linux: (n) => /\.appimage$/i.test(n) || /^(setup|install|installer)[^/]*\.(sh|run)$/i.test(n),
 };
 
-const safeName = (s) => String(s || 'fichier').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').slice(0, 200) || 'fichier';
-const newId = () => crypto.randomBytes(6).toString('hex');
 
 function createDownloads({ dataDir, getConfig, getSession, extract, shell, defaultDir, onChange, onFinished }) {
   const listFile = path.join(dataDir, 'telechargements.json');
@@ -81,7 +79,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
 
   // Téléchargement demandé par Mire (jeu d'une source web, lien collé).
   function addUrl(url, ctx = {}) {
-    if (!/^https?:\/\//i.test(url)) return { ok: false, error: 'Adresse invalide : elle doit commencer par http:// ou https://.' };
+    if (!isHttpUrl(url)) return { ok: false, error: 'Adresse invalide : elle doit commencer par http:// ou https://.' };
     pendingUrls.set(url, ctx);
     getSession().downloadURL(url);
     return { ok: true };
@@ -94,7 +92,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     const key = chain.find((u) => pendingUrls.has(u));
     const ctx = key ? pendingUrls.get(key) : ctxFromView || {};
     if (key) pendingUrls.delete(key);
-    const filename = safeName(dl.getFilename());
+    const filename = safeFileName(dl.getFilename());
 
     // Un fichier .torrent devient un téléchargement torrent.
     if (/\.torrent$/i.test(filename) || dl.getMimeType() === 'application/x-bittorrent') {
@@ -120,7 +118,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     dl.setSavePath(file);
 
     const retry = ctx.retryOf ? items.get(ctx.retryOf) : null;
-    const it = retry || { id: newId(), kind: 'http', createdAt: Date.now() };
+    const it = retry || { id: newId(6), kind: 'http', createdAt: Date.now() };
     Object.assign(it, {
       name: path.basename(file), source: chain[0] || url, file, dir: path.dirname(file), console: dest.console, consoleName: dest.consoleName,
       state: 'downloading', received: 0, total: dl.getTotalBytes(), speed: 0, error: '', installers: [], extracted: false,
@@ -201,7 +199,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
       } catch (err) {
         return { ok: false, error: `Aucun logiciel de torrent ne s'est ouvert (${err.message}). Installez-en un (qBittorrent, Transmission…) ou choisissez le client intégré dans les réglages de Téléchargements.` };
       }
-      const it = { id: newId(), kind: 'torrent', createdAt: Date.now(), name: torrentLabel(source), source, dir: '', console: null, consoleName: '', state: 'external', received: 0, total: 0, speed: 0, peers: 0, error: '', installers: [] };
+      const it = { id: newId(6), kind: 'torrent', createdAt: Date.now(), name: torrentLabel(source), source, dir: '', console: null, consoleName: '', state: 'external', received: 0, total: 0, speed: 0, peers: 0, error: '', installers: [] };
       items.set(it.id, it);
       update(it);
       return { ok: true, id: it.id, external: true };
@@ -227,7 +225,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     }
     const dest = existing ? { dir: existing.dir, console: existing.console, consoleName: existing.consoleName } : destFor(ctx);
     fs.mkdirSync(dest.dir, { recursive: true });
-    const it = existing || { id: newId(), kind: 'torrent', createdAt: Date.now() };
+    const it = existing || { id: newId(6), kind: 'torrent', createdAt: Date.now() };
     Object.assign(it, {
       name: it.name || torrentLabel(source), source, dir: dest.dir, console: dest.console, consoleName: dest.consoleName,
       state: 'waiting', speed: 0, peers: 0, error: '', installers: it.installers || [], infoHash: hash || it.infoHash,
@@ -323,7 +321,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
   // Index de jeu sur disque (.cue, .m3u…) téléchargé seul depuis une page : on va chercher, à côté de
   // lui sur le même site, les fichiers qu'il cite et qui manquent (pistes .bin, autres disques).
   function queueCompanions(it) {
-    if (!it.file || !disc.isDescriptor(it.file) || !/^https?:\/\//i.test(it.source || '')) return;
+    if (!it.file || !disc.isDescriptor(it.file) || !isHttpUrl(it.source || '')) return;
     const missing = disc.missingLocal(it.file);
     if (!missing.length) return;
     const origin = new URL(it.source).origin;
@@ -382,7 +380,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     const name = ctx.name || (isMagnet ? torrentLabel(src) : (() => { try { return decodeURIComponent(path.basename(new URL(src).pathname)) || src; } catch { return path.basename(src) || src; } })());
     const dest = destFor(ctx);
     const it = {
-      id: newId(), kind, createdAt: Date.now(), name, source: src,
+      id: newId(6), kind, createdAt: Date.now(), name, source: src,
       dir: dest.dir, console: dest.console, consoleName: dest.consoleName,
       state: PENDING, received: 0, total: 0, speed: 0, error: '', installers: [],
       torrentFile: isTorrentFile ? src : null, gameBookmark: ctx.gameBookmark || null,

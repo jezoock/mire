@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { substitute, isUrlTarget } = require('../../src/main/lib/args.js');
+const { substitute } = require('../../src/main/lib/args.js');
 
 test.describe('substitute', () => {
   test('remplace les variables connues', () => {
@@ -17,12 +17,4 @@ test.describe('substitute', () => {
     assert.deepEqual(substitute(['{autre}', 3], { rom: 'r' }), ['{autre}', '3']);
     assert.deepEqual(substitute(undefined, {}), []);
   });
-});
-
-test('isUrlTarget', () => {
-  assert.equal(isUrlTarget('steam://rungameid/1'), true);
-  assert.equal(isUrlTarget('https://exemple.fr'), true);
-  assert.equal(isUrlTarget('com.epicgames.launcher://apps/x'), true);
-  assert.equal(isUrlTarget('C:\\Jeux\\jeu.exe'), false);
-  assert.equal(isUrlTarget('/usr/bin/jeu'), false);
 });
