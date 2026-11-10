@@ -28,7 +28,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P0-09 | Test de fumée Electron et captures de référence | M | P0-03, P0-04 | | faite | [#10](https://github.com/jezoock/mire/pull/10) |
 | P0-10 | Correctif : titre de film qui commence par une année | S | P0-02 | | faite | [#6](https://github.com/jezoock/mire/pull/6) |
 | P0-11 | Correctif : adresses complètes dans un `.m3u` distant | S | P0-02 | | en revue | [#13](https://github.com/jezoock/mire/pull/13) |
-| **G1** | **Point d'étape : fin de la phase 0** | | P0-01…P0-11 | | | |
+| **G1** | **Point d'étape : fin de la phase 0** — ✅ validé le 10/11/2026 (P0-08 menée en parallèle de la phase 1) | | P0-01…P0-11 | | | |
 
 ## Phase 1 — Refacto modulaire
 
@@ -139,14 +139,14 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 
 | Piste | Origine | Proposition |
 | --- | --- | --- |
-| `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Ignorer une année postérieure à l'année en cours + 1 ; à arbitrer (changement de comportement) |
-| `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | À traiter dans P1-18 (catalogue en données) |
-| `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. À garder en tête dans P1-12 |
-| Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Dans P0-04 : lancer la CI avec Node ≥ 24 (ou le Node d'Electron) pour que ce test s'exécute |
-| `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Chercher dans `DEFAULT_WEB` (ou `KNOWN_WEB`) ; à arbitrer (changement de comportement), avec mise à jour des fixtures de migration |
-| `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Décider du comportement voulu ; les résultats figés dans `test/fixtures/config-v*.migrated.json` décrivent l'actuel |
+| `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Retenue au point G1 : intégrée à P1-16 |
+| `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Intégrée à P1-18 (catalogue en données) |
+| `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. Notée dans P1-12 |
+| Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Close : la CI (P0-04) exécute ce test sous Node 22 et 24 ; le défaut venait du Node du conteneur de développement |
+| `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : intégrée à P1-06 |
+| `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : ne plus ajouter de sites ; intégrée à P1-06 |
 | `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Traitée dans P0-07 ([#11](https://github.com/jezoock/mire/pull/11)) |
-| `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Utiliser `path.posix` pour les branches macOS et Linux, dans la phase 1 (rangement de `lib/location.js`) |
-| `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Attendre l'activation du bloqueur pour télécharger les listes ; à arbitrer (changement de comportement). À voir dans P1-13 |
+| `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Intégrée à P1-14 |
+| `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | ✅ Retenue au point G1 : intégrée à P1-13 |
 | Le test de fumée ne tourne que sous Linux (Xvfb) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | L'ajouter à des runners CI Windows et macOS quand la phase 1 sera avancée ; Widevine reste à vérifier à la main |
 | Les captures de référence varient de quelques pixels d'une exécution à l'autre (lissage des bords, écart de 16/255 au plus) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Comparaison automatique avec seuil de tolérance, dans P2-21 |
