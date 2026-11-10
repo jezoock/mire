@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { resolveLocation } = require('../../lib/location.js');
+const { resolveLocation } = require('../../src/main/lib/location.js');
 
 const WIN = { platform: 'win32' };
 const MAC = { platform: 'darwin' };

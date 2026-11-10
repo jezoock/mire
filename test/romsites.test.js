@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { defaultRomSites, GAME_FILE_RE } = require('../romsites');
+const { defaultRomSites, GAME_FILE_RE } = require('../src/main/romsites');
 
 const names = (system) => defaultRomSites(system).map((s) => s.name);
 

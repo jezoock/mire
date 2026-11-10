@@ -29,12 +29,13 @@ Pour fabriquer un installateur (un `.exe` sous Windows, un `.dmg` sous macOS, un
 npm run dist
 ```
 
-L’outil de fabrication (electron-builder) est téléchargé à la demande, uniquement pour cette commande. Il affiche quelques avertissements « deprecated » venant de ses propres dépendances : ils sont sans effet sur l’installateur produit. L’installateur apparaît dans le dossier `dist`.
+L’outil de fabrication (electron-builder) est téléchargé à la demande, uniquement pour cette commande. Il affiche quelques avertissements « deprecated » venant de ses propres dépendances : ils sont sans effet sur l’installateur produit. L’installateur apparaît dans le dossier `release`.
 
 ### Pour les développeurs
 
-- `npm run lint`, `npm run format:check` et `npm test` : vérifications rapides, sans Electron.
-- `npm run test:e2e` : test de fumée. Mire démarre avec la configuration de démonstration de `test/e2e/fixtures/`, chaque section est ouverte au clavier et les captures de référence sont enregistrées dans `test/e2e/__screenshots__/` (à regarder à chaque changement d’interface). Sous Linux sans écran : `xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e`.
+- Le code est dans `src/` (`main/` : processus principal, `preload/`, `renderer/` : interface) et les paquets partagés dans `packages/` (espaces de travail npm). `npm run build` construit l’application dans `dist/` avec esbuild ; `npm start` construit puis lance Mire ; `npm run dev` reconstruit à chaque modification et lance Mire (relancez Mire après un changement du processus principal, actualisez la fenêtre avec Ctrl+R après un changement de l’interface).
+- `npm run lint`, `npm run format:check`, `npm run typecheck` (TypeScript) et `npm test` : vérifications rapides, sans Electron. Les tests en TypeScript (`*.test.ts`) s’exécutent directement grâce à la suppression des types intégrée à Node (Node 22.18 ou plus récent).
+- `npm run test:e2e` : test de fumée. Mire est construit, puis démarre avec la configuration de démonstration de `test/e2e/fixtures/`, chaque section est ouverte au clavier et les captures de référence sont enregistrées dans `test/e2e/__screenshots__/` (à regarder à chaque changement d’interface). Sous Linux sans écran : `xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e`.
 - Variable d’environnement `MIRE_USER_DATA` : dossier de données à utiliser à la place de celui de Mire (configuration, caches, sessions des sites). Pratique pour essayer une configuration sans toucher à la vôtre, par exemple `MIRE_USER_DATA=/tmp/mire-essai npm start`.
 
 ## Rien n’est installé d’office
@@ -501,7 +502,7 @@ WebTorrent tire quelques modules natifs ou fragiles qui n’ont pas leur place d
 | `ip-set` | le code d’origine (licence MIT), sans son script d’installation qui imposait pnpm |
 | `node-domexception` | le `DOMException` intégré à Node |
 
-Résultat : `npm install` n’exécute aucun script d’installation, n’installe aucun paquet obsolète et ne signale aucune faille venant de ces dépendances.
+Résultat : `npm install` n’exécute aucun script d’installation venant de ces dépendances, n’installe aucun paquet obsolète et ne signale aucune faille venant d’elles. Le seul script d’installation est celui d’esbuild (outil de construction) : il vérifie son exécutable, et la construction fonctionne aussi sans lui (`npm install --ignore-scripts`).
 
 **Electron.** L’audit signale une faille d’Electron 44.0 à 44.9.0 (certificats intermédiaires compromis, GHSA-jr5w-w6x2-84p9), corrigée dans la version castLabs `v44.9.3+wvcus` publiée le 22 octobre 2026. Par prudence envers les versions toutes neuves, Mire reste pour l’instant en `v44.5.1+wvcus` ; à partir du 5 novembre 2026, remplacez dans `package.json` la fin de la ligne `electron` par `#v44.9.3+wvcus`, puis relancez `npm install` et `npm run drm:signer`.
 

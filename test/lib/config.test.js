@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('../../lib/config.js');
+const { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('../../src/main/lib/config.js');
 
 const FIXTURES = path.join(__dirname, '..', 'fixtures');
 const readFixture = (name) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { isInside } = require('../../lib/paths.js');
+const { isInside } = require('../../src/main/lib/paths.js');
 
 const posix = { platform: 'linux' };
 const win = { platform: 'win32' };

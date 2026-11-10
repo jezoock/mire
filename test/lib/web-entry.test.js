@@ -1,8 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { romEntry, resolveWebEntry } = require('../../lib/web-entry.js');
-const { DEFAULT_TV } = require('../../lib/config.js');
+const { romEntry, resolveWebEntry } = require('../../src/main/lib/web-entry.js');
+const { DEFAULT_TV } = require('../../src/main/lib/config.js');
 
 const SITES = [
   { name: 'Site A', url: 'https://a.example/', search: 'https://a.example/?q={q}' },

@@ -3,14 +3,19 @@
   "productName": "Mire",
   "version": "1.0.0",
   "description": "Lecteur multimédia, frontend de streaming intégré, de télévision Freebox et de jeux",
-  "main": "main.js",
+  "main": "dist/main/index.js",
   "license": "MIT",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "start": "electron .",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs && electron .",
+    "dev": "node scripts/build.mjs --watch --electron",
     "drm:compte": "node scripts/drm.js compte",
     "drm:connexion": "node scripts/drm.js connexion",
     "drm:signer": "node scripts/drm.js signer",
@@ -18,22 +23,25 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test \"test/**/*.test.js\"",
-    "test:e2e": "node --test --test-concurrency=1 test/e2e/smoke.e2e.js",
-    "dist": "node -e \"require('electron')\" && npx --yes electron-builder@26.17.0 --publish never"
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/shared/tsconfig.json",
+    "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.ts\"",
+    "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/smoke.e2e.js",
+    "dist": "node -e \"require('electron')\" && node scripts/build.mjs && npx --yes electron-builder@26.17.0 --publish never"
   },
   "dependencies": {
-    "7zip-bin": "5.2.0",
     "@ghostery/adblocker-electron": "2.20.1",
+    "7zip-bin": "5.2.0",
     "webtorrent": "3.0.21"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "electron": "https://github.com/castlabs/electron-releases#v44.5.1+wvcus",
+    "esbuild": "0.28.2",
     "eslint": "10.13.0",
     "globals": "17.13.0",
     "playwright-core": "1.64.1",
-    "prettier": "3.9.10"
+    "prettier": "3.9.10",
+    "typescript": "6.0.3"
   },
   "overrides": {
     "@ghostery/adblocker": "2.20.1",
@@ -52,18 +60,12 @@
   "build": {
     "appId": "fr.mire.app",
     "productName": "Mire",
+    "directories": {
+      "output": "release"
+    },
     "files": [
-      "main.js",
-      "preload.js",
-      "web-preload.js",
-      "scraper.js",
-      "romsites.js",
-      "downloads.js",
-      "discfiles.js",
-      "store.js",
-      "adblock.js",
-      "lib/**/*",
-      "renderer/**/*"
+      "dist/**/*",
+      "!dist/**/*.map"
     ],
     "asarUnpack": [
       "node_modules/7zip-bin/**"

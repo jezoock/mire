@@ -1026,7 +1026,7 @@ function setupWebSession() {
     callback({ requestHeaders: details.requestHeaders });
   });
   // Et la même identité pour ce que voit la page en JavaScript (navigator.userAgent).
-  ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, 'web-preload.js') });
+  ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, '..', 'preload', 'web-preload.js') });
   // Scripts correcteurs du bloqueur, demandés par web-preload.js au tout début de chaque page.
   ipcMain.on('mire:scriptlets', (event, url) => { event.returnValue = adblock ? adblock.scriptletsFor(String(url || '')) : ''; });
   ipcMain.on('mire:signin-ua', (event) => {
@@ -1406,7 +1406,7 @@ function createMainWindow() {
     autoHideMenuBar: true,
     fullscreen: !!config.ui.fullscreen,
     show: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(__dirname, '..', 'preload', 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -1431,7 +1431,7 @@ function createMainWindow() {
     webViews.clear();
     if (!IS_MAC) app.quit();
   });
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
 
 function filesFromArgv(argv) {

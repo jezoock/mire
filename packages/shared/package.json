@@ -1,0 +1,9 @@
+{
+  "name": "@mire/shared",
+  "version": "1.0.0",
+  "description": "Fonctions pures, types et contrats partagés par les processus de Mire",
+  "license": "MIT",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

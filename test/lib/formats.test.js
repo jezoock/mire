@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('../../lib/formats.js');
+const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('../../src/main/lib/formats.js');
 
 test('KIND : chaque extension rangée sous son type', () => {
   assert.deepEqual(MEDIA_KINDS, Object.keys(EXT));

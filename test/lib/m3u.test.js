@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseM3U, qualityOf, groupChannels } = require('../../lib/m3u.js');
+const { parseM3U, qualityOf, groupChannels } = require('../../src/main/lib/m3u.js');
 
 test.describe('parseM3U', () => {
   test('titre après la première virgule hors guillemets, attributs', () => {

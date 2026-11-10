@@ -1,23 +1,24 @@
 # Fichiers historiques : pas de reformatage complet, ils seront découpés en phase 1.
-main.js
-renderer/app.js
-renderer/styles.css
-scraper.js
-store.js
-downloads.js
-adblock.js
-preload.js
-discfiles.js
-romsites.js
+src/main/index.js
+src/renderer/app.js
+src/renderer/styles.css
+src/main/scraper.js
+src/main/store.js
+src/main/downloads.js
+src/main/adblock.js
+src/preload/preload.js
+src/main/discfiles.js
+src/main/romsites.js
 scripts/drm.js
-renderer/index.html
-renderer/fonts/
+src/renderer/index.html
+src/renderer/fonts/
 
 # Documentation rédigée à la main (tableaux alignés, coupures de lignes choisies).
 *.md
 
 # Fichiers générés ou tiers.
 dist/
+release/
 vendor/
 package-lock.json
 eslint-suppressions.json
