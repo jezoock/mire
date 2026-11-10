@@ -23,15 +23,16 @@ const { createDownloads } = require('./downloads.js');
 const disc = require('./discfiles.js');
 const { guessSystem, parseVideo } = require('./scraper.js');
 const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('./lib/formats.js');
-const { THEME_BG, DEFAULT_CONFIG, slug, newId, mergeConfig, normalizeConfig, migrateConfig } = require('./lib/config.js');
+const { THEME_BG, DEFAULT_CONFIG, mergeConfig, normalizeConfig, migrateConfig } = require('./lib/config.js');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
 const { isInside } = require('./lib/paths.js');
-const { substitute, isUrlTarget } = require('./lib/args.js');
+const { substitute } = require('./lib/args.js');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
-const { decodeText, srtToVtt, foldText, providerMatches, episodeNumbers, cleanRomName, similarity } = require('./lib/text.js');
+const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
+const { fold, slug, safeFileName, cleanRomName, parseEpisode, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget, newId } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -63,7 +64,7 @@ function nativeUserAgent(ua) {
 }
 const NATIVE_UA = nativeUserAgent(app.userAgentFallback);
 const SIGNIN_HOSTS = new Set(['accounts.google.com']);
-const isSigninPage = (u) => { try { return SIGNIN_HOSTS.has(new URL(u).hostname); } catch { return false; } };
+const isSigninPage = (u) => SIGNIN_HOSTS.has(hostOf(u));
 
 app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback);
 
@@ -246,7 +247,7 @@ async function walkLibrary(dir, out, seen, depth, kinds = new Set(MEDIA_KINDS)) 
     if (kind === 'image' && (ART_RE.test(e.name) || isPosterOfVideo(b))) continue;
 
     const item = { path: path.join(dir, e.name), name, ext, kind, folder: path.basename(dir), dir, native: NATIVE.has(ext), cover: null, fanart: null };
-    if (kind === 'video') { const p = parseVideo({ name, dir }); if (p.type === 'tv') { item.seriesTitle = p.title; Object.assign(item, episodeNumbers(name)); } }
+    if (kind === 'video') { const p = parseVideo({ name, dir }); if (p.type === 'tv') { item.seriesTitle = p.title; const { season, episode } = parseEpisode(name); Object.assign(item, { season, episode }); } }
     if (kind === 'video') {
       item.cover = imagesByBase.get(b) || imagesByBase.get(`${b}-poster`) || folderCover;
       item.fanart = imagesByBase.get(`${b}-fanart`) || folderFanart;
@@ -264,7 +265,6 @@ async function walkLibrary(dir, out, seen, depth, kinds = new Set(MEDIA_KINDS)) 
 
 /* ---------- Sources web : page d'index d'un serveur, ou liste M3U ---------- */
 
-const safeDecode = (x) => { try { return decodeURIComponent(x); } catch { return x; } };
 const urlSubs = new Map(); // vidéo en ligne → sous-titres trouvés à côté
 
 // Raison affichée quand la première page d'index ne se charge pas.
@@ -339,7 +339,7 @@ async function crawlLibraryUrl(url, kinds, out) {
       const b = baseOf(f.name);
       if (kind === 'image' && (ART_RE.test(f.name) || videoBases.has(b) || videoBases.has(b.replace(/-(poster|fanart|thumb)$/, '')))) continue;
       const item = { path: f.u.href, name: path.basename(f.name, path.extname(f.name)), ext, kind, folder: dirName, dir: dirUrl, native: NATIVE.has(ext), cover: null, fanart: null, remote: true };
-      if (kind === 'video') { const p = parseVideo({ name: item.name, dir: dirUrl }); if (p.type === 'tv') { item.seriesTitle = p.title; Object.assign(item, episodeNumbers(item.name)); } }
+      if (kind === 'video') { const p = parseVideo({ name: item.name, dir: dirUrl }); if (p.type === 'tv') { item.seriesTitle = p.title; const { season, episode } = parseEpisode(item.name); Object.assign(item, { season, episode }); } }
       if (kind === 'video') {
         item.cover = images.get(b) || images.get(`${b}-poster`) || folderCover;
         item.fanart = images.get(`${b}-fanart`) || folderFanart;
@@ -434,7 +434,7 @@ async function itemFromPath(p) {
 /* ---------- Sous-titres .srt / .vtt à côté de la vidéo ---------- */
 
 async function findSubtitles(videoPath) {
-  if (/^https?:\/\//i.test(videoPath)) {
+  if (isHttpUrl(videoPath)) {
     const out = [];
     for (const sub of urlSubs.get(videoPath) || []) {
       try {
@@ -505,7 +505,7 @@ async function fetchChannels() {
   const src = (svc.url || '').trim();
   if (!src) return { ok: false, error: `Aucune adresse de playlist pour ${svc.name}.` };
   let text;
-  if (/^https?:\/\//i.test(src)) {
+  if (isHttpUrl(src)) {
     try {
       text = await http.getText(src, { timeout: 8000 });
     } catch (err) {
@@ -719,8 +719,6 @@ function pauseVideos(w) {
   } catch { /* page en cours de chargement */ }
 }
 
-const siteOf = (u) => { try { return new URL(u).hostname.split('.').slice(-2).join('.'); } catch { return ''; } };
-
 function setImmersive(on) {
   if (!mainWindow) return;
   web.immersive = on;
@@ -783,7 +781,7 @@ function createWebView(entry) {
     if (event.isMainFrame === false) return;
     if (adblock?.blocksNavigation(url, wc.getURL())) {
       event.preventDefault();
-      toUi('web-adblocked', { id: entry.id, host: (() => { try { return new URL(url).hostname; } catch { return ''; } })() });
+      toUi('web-adblocked', { id: entry.id, host: hostOf(url) });
     }
   };
   wc.on('will-navigate', guard);
@@ -835,7 +833,7 @@ async function webOpen(id, url, opts = {}) {
   const site = opts.site != null ? opts.site : webViews.get(id)?.entry.romSite || 0;
   const { entry, error } = resolveWebEntry(id, config, { romSites: consoleSites, site });
   if (!entry) return { ok: false, error };
-  const target = typeof url === 'string' && /^https?:\/\//i.test(url) ? url : entry.url;
+  const target = typeof url === 'string' && isHttpUrl(url) ? url : entry.url;
   if (entry.mode === 'browser') {
     const r = await openInBrowser(target);
     return { ...r, integrated: false };
@@ -1061,9 +1059,9 @@ async function tmdbFetch(pathname, params = {}) {
 }
 
 function sourceForProvider(providerName) {
-  const p = foldText(providerName);
+  const p = fold(providerName).trim();
   return config.web.find((w) => {
-    const names = [w.name, ...(Array.isArray(w.providers) ? w.providers : [])].map(foldText).filter(Boolean);
+    const names = [w.name, ...(Array.isArray(w.providers) ? w.providers : [])].map((n) => fold(n).trim()).filter(Boolean);
     return names.some((n) => providerMatches(p, n));
   }) || null;
 }
@@ -1181,7 +1179,7 @@ async function launchGamePath(target) {
 // Les emplacements d'une console : local (dossier principal) et distants (sources web ou réseau).
 function consoleLocations(emu) {
   const main = emu.romsDir ? [{ location: emu.romsDir, remote: false }] : [];
-  const extra = (emu.sources || []).map((loc) => ({ location: loc, remote: /^https?:\/\//i.test(loc) }));
+  const extra = (emu.sources || []).map((loc) => ({ location: loc, remote: isHttpUrl(loc) }));
   return [...main, ...extra];
 }
 
@@ -1240,7 +1238,7 @@ async function listRoms(i, opts = {}) {
   // Jeux à plusieurs disques : la liste .m3u représente le jeu ; ses disques ne sont pas listés à part.
   const m3us = roms.filter((r) => /\.m3u$/i.test(String(r.path).split('?')[0]));
   if (m3us.length) {
-    const keyOf = (p) => (/^https?:\/\//i.test(p) ? safeDecode(new URL(p).pathname) : path.resolve(p));
+    const keyOf = (p) => (isHttpUrl(p) ? safeDecode(new URL(p).pathname) : path.resolve(p));
     const hidden = new Set();
     await Promise.all(m3us.map(async (r) => {
       let text = '';
@@ -1274,10 +1272,10 @@ async function launchRom(i, romPath) {
   const emu = config.emulators[i];
   if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
   let target = romPath;
-  if (/^https?:\/\//i.test(romPath)) {
-    const fromSource = (emu.sources || []).some((x) => /^https?:\/\//i.test(x) && romPath.startsWith(x.endsWith('/') ? x : `${x}/`));
+  if (isHttpUrl(romPath)) {
+    const fromSource = (emu.sources || []).some((x) => isHttpUrl(x) && romPath.startsWith(x.endsWith('/') ? x : `${x}/`));
     if (!fromSource) return { ok: false, error: 'Ce jeu ne provient pas d’une source de cette console.' };
-    const fileName = safeDecode(new URL(romPath).pathname.split('/').pop()).replace(/[<>:"/\\|?*]/g, '_');
+    const fileName = safeFileName(safeDecode(new URL(romPath).pathname.split('/').pop()), { max: Infinity, fallback: '' });
     target = path.join(romCacheDir(), slug(emu.name) || 'console', fileName);
     if (disc.isDescriptor(fileName)) {
       // Jeu sur disque : l'index et ses pistes (ou ses disques) vont ensemble dans un dossier du cache.
@@ -1498,7 +1496,7 @@ function registerIpc() {
       return { ok: false, error: 'Ce jeu est trouvé automatiquement dans un dossier : retirez le dossier dans les réglages, ou supprimez le jeu sur le disque.' };
     }
     // Jeu de console local : on supprime son fichier (et les fichiers voisins d'un jeu sur disque).
-    if (typeof ref.path !== 'string' || !ref.path || /^https?:\/\//i.test(ref.path)) return { ok: false, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
+    if (typeof ref.path !== 'string' || !ref.path || isHttpUrl(ref.path)) return { ok: false, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
     const emu = ref.kind === 'rom' && Number.isInteger(ref.emuIndex) ? config.emulators[ref.emuIndex] : null;
     if (!emu) return { ok: false, error: 'Ce jeu n’est rattaché à aucune console : il n’a pas été supprimé.' };
     // Le renderer n'est pas cru sur parole : le fichier doit être dans un dossier local de cette console.
@@ -1622,7 +1620,7 @@ function registerIpc() {
     // Jeu sur disque : l'index et tous les fichiers qu'il cite, dans un dossier au nom du jeu.
     let files;
     try { files = await disc.resolveRemote(u, (x) => downloads.fetchText(x)); } catch (err) { return { ok: false, error: `Index du jeu illisible (${err.message}).` }; }
-    const base = path.basename(files[0].rel, path.extname(files[0].rel)).replace(/[<>:"/\\|?*]/g, '_');
+    const base = safeFileName(path.basename(files[0].rel, path.extname(files[0].rel)), { max: Infinity, fallback: '' });
     const folder = path.join(emu.romsDir, base);
     const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
     for (const f of todo) downloads.addUrl(f.url, { console: i, saveAs: path.join(folder, ...f.rel.split('/')), group: base, companionsQueued: true });
@@ -1643,12 +1641,11 @@ function registerIpc() {
   // Marque-page d'une page de streaming : crée une entrée vidéo et la scrape aussitôt.
   handle('bookmarks:add', async (data) => {
     const url = String(data?.url || '').trim();
-    if (!/^https?:\/\//i.test(url)) return { ok: false, error: 'Adresse de page invalide.' };
+    if (!isHttpUrl(url)) return { ok: false, error: 'Adresse de page invalide.' };
     const title = String(data?.title || '').trim();
     if (!title) return { ok: false, error: 'Donnez un titre à chercher (nom du film ou de la série).' };
     const type = data?.type === 'tv' ? 'tv' : 'movie';
-    let site = '';
-    try { site = new URL(url).hostname.replace(/^www\./, ''); } catch { /* adresse sans hôte */ }
+    const site = hostOf(url).replace(/^www\./, '');
     const bm = {
       id: newId(), url, title, type,
       season: type === 'tv' && data.season ? Number(data.season) : null,
@@ -1677,7 +1674,7 @@ function registerIpc() {
   handle('gameBookmarks:add', async (data) => {
     const source = String(data?.source || '').trim();
     const isMagnet = /^magnet:\?/i.test(source);
-    if (!isMagnet && !/^https?:\/\//i.test(source) && !source.toLowerCase().endsWith('.torrent')) return { ok: false, error: 'Lien ou fichier invalide.' };
+    if (!isMagnet && !isHttpUrl(source) && !source.toLowerCase().endsWith('.torrent')) return { ok: false, error: 'Lien ou fichier invalide.' };
     const kind = isMagnet || source.toLowerCase().endsWith('.torrent') ? 'torrent' : 'http';
     const curConsole = data?.console === 'pc' ? 'pc' : (data?.console != null ? Number(data.console) : null);
     const curEmu = typeof curConsole === 'number' ? config.emulators[curConsole] : null;

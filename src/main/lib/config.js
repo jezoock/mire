@@ -1,5 +1,5 @@
 'use strict';
-const crypto = require('node:crypto');
+const { slug, newId, isHttpUrl } = require('@mire/shared');
 const { MEDIA_KINDS } = require('./formats.js');
 
 const CONFIG_VERSION = 5;
@@ -164,15 +164,6 @@ const DEFAULT_CONFIG = {
 };
 const NESTED = ['library', 'externalPlayer', 'browser', 'tv', 'ui', 'search', 'scrape', 'gamesOpts', 'store', 'adblock', 'downloads'];
 
-function slug(s) {
-  return String(s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
 // Import « compléter » : ajoute au présent ce qui vient du fichier, sans doublon ni perte de l'existant.
 function mergeConfig(current, incoming) {
   const out = structuredClone(current);
@@ -250,7 +241,7 @@ function normalizeConfig(raw) {
       added: b.added || Date.now(),
     }));
   c.bookmarks = (Array.isArray(c.bookmarks) ? c.bookmarks : [])
-    .filter((b) => b && typeof b.url === 'string' && /^https?:\/\//i.test(b.url))
+    .filter((b) => b && typeof b.url === 'string' && isHttpUrl(b.url))
     .map((b) => ({
       id: String(b.id || newId()),
       url: b.url,
@@ -262,7 +253,7 @@ function normalizeConfig(raw) {
       added: b.added || Date.now(),
     }));
   c.pcSites = (Array.isArray(c.pcSites) ? c.pcSites : [])
-    .filter((x) => x && typeof x.url === 'string' && /^https?:\/\//i.test(x.url))
+    .filter((x) => x && typeof x.url === 'string' && isHttpUrl(x.url))
     .map((x) => ({ name: String(x.name || x.url), url: x.url, search: typeof x.search === 'string' ? x.search : '' }));
   c.gamesOpts = { autoOnline: (c.gamesOpts && c.gamesOpts.autoOnline) === true };
   c.emulators = c.emulators
@@ -271,7 +262,7 @@ function normalizeConfig(raw) {
       const out = { ...e, sources: Array.isArray(e.sources) ? e.sources.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()) : [] };
       if (Array.isArray(e.romSites))
         out.romSites = e.romSites
-          .filter((x) => x && typeof x.url === 'string' && /^https?:\/\//i.test(x.url))
+          .filter((x) => x && typeof x.url === 'string' && isHttpUrl(x.url))
           .map((x) => ({ name: String(x.name || x.url), url: x.url, search: typeof x.search === 'string' ? x.search : '' }));
       else delete out.romSites;
       return out;
@@ -295,8 +286,6 @@ function normalizeConfig(raw) {
   delete c.freebox;
   return c;
 }
-
-const newId = () => crypto.randomBytes(5).toString('hex');
 
 // Version 1 → 2 : les sites passent dans la vue intégrée et reçoivent leur adresse de recherche.
 function migrateConfig(raw) {
@@ -356,8 +345,6 @@ module.exports = {
   DEFAULT_WEB,
   DEFAULT_CONFIG,
   NESTED,
-  slug,
-  newId,
   mergeConfig,
   normalizeConfig,
   migrateConfig,

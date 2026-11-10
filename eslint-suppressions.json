@@ -5,9 +5,6 @@
     }
   },
   "src/main/downloads.js": {
-    "no-control-regex": {
-      "count": 1
-    },
     "no-useless-assignment": {
       "count": 1
     }

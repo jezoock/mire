@@ -1,2 +1,4 @@
-// Point d'entrée de @mire/shared : les fonctions pures arrivent avec la tâche P1-02.
-export {};
+// Point d'entrée de @mire/shared : fonctions pures partagées par les processus de Mire.
+export * from './text.ts';
+export * from './url.ts';
+export * from './id.ts';

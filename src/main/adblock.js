@@ -11,6 +11,7 @@ const fsp = require('node:fs/promises');
 const { webContents } = require('electron');
 const { ElectronBlocker, adsAndTrackingLists, fetchResources, Request } = require('@ghostery/adblocker-electron');
 const { parse: parseDomain } = require('tldts-experimental');
+const { hostOf, siteOf } = require('@mire/shared');
 const http = require('./net/http.ts');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
@@ -36,9 +37,6 @@ function engineVersion() {
   return '';
 }
 const ENGINE_VERSION = engineVersion();
-
-const hostOf = (u) => { try { return new URL(u).hostname.toLowerCase(); } catch { return ''; } };
-const siteOf = (u) => hostOf(u).split('.').slice(-2).join('.');
 
 function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
   const { adblockDir: dir, adblockEngine: engineFile, adblockLists } = dataPaths(dataDir);

@@ -13,6 +13,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
+const { fold, cleanTitle, GENERIC_DIR, titleKey, bigramDice, rankByTitle, stripTags, parseEpisode } = require('@mire/shared');
 const http = require('./net/http.ts');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
@@ -40,33 +41,17 @@ const MUSIC_GENRES = {
 const capitalize = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
 const INDEX_TTL_MS = 30 * 24 * 3600 * 1000;
 
-const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /* ------------------------------------------------------------------ */
 /* Analyse des noms de fichiers                                        */
 /* ------------------------------------------------------------------ */
 
-const JUNK = /\b(2160p|1080p|1080i|720p|576p|480p|4k|uhd|hdr10?|dv|bluray|blu-ray|brrip|bdrip|webrip|web-dl|webdl|web|hdtv|dvdrip|dvd|remux|x264|x265|h264|h265|hevc|avc|aac|ac3|eac3|dts|truehd|atmos|10bit|multi|vff|vfq|vfi|vf2|vf|vostfr|vost|truefrench|french|subfrench|custom|proper|repack|extended|unrated|remastered|imax|internal|complete|integrale|intégrale)\b.*$/i;
-
-function cleanTitle(s) {
-  return String(s)
-    .replace(/\[[^\]]*\]/g, ' ')
-    .replace(/[._]+/g, ' ')
-    .replace(JUNK, ' ')
-    .replace(/\(\s*\)/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[\s([{-]+$/, '')
-    .trim();
-}
-
-const GENERIC_DIR = /^(saison|season|s\d{1,2}|disc|disque|cd|dvd|partie|part|volume|vol)\b/i;
-
 // « Le.Fabuleux.Destin.2001.1080p.mkv » → film « Le Fabuleux Destin », 2001
 // « S01E03.mkv » dans « Le Bureau des légendes/Saison 1 » → série « Le Bureau des légendes »
 function parseVideo(item) {
   const name = item.name;
-  const ep = /\bS(\d{1,2})\s*E(\d{1,3})\b/i.exec(name) || /\b(\d{1,2})x(\d{2})\b/.exec(name);
-  if (ep) {
+  const ep = parseEpisode(name);
+  if (ep.index >= 0) {
     let title = cleanTitle(name.slice(0, ep.index));
     if (!title) {
       const parts = String(item.dir || '').split(/[\\/]/).filter(Boolean);
@@ -89,7 +74,7 @@ function parseVideo(item) {
 }
 
 // « Super Mario World (Europe) (En,Fr) [!] » → « super mario world »
-const romKey = (s) => fold(s).replace(/\s*[([][^)\]]*[)\]]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+const romKey = (s) => titleKey(stripTags(fold(s)));
 const REGION_PREF = ['france', 'fr', 'europe', 'world', 'usa, europe', 'usa', 'japan'];
 
 function regionScore(file) {
@@ -97,36 +82,6 @@ function regionScore(file) {
   const joined = tags.join(' ');
   const i = REGION_PREF.findIndex((r) => joined.includes(r));
   return i < 0 ? REGION_PREF.length : i;
-}
-
-function bigramDice(a, b) {
-  if (a === b) return 1;
-  if (a.length < 2 || b.length < 2) return 0;
-  const grams = new Map();
-  for (let i = 0; i < a.length - 1; i++) { const g = a.slice(i, i + 2); grams.set(g, (grams.get(g) || 0) + 1); }
-  let hits = 0;
-  for (let i = 0; i < b.length - 1; i++) {
-    const g = b.slice(i, i + 2);
-    const n = grams.get(g) || 0;
-    if (n > 0) { grams.set(g, n - 1); hits += 1; }
-  }
-  return (2 * hits) / (a.length + b.length - 2);
-}
-
-// Classe des résultats d'après leur titre : identique > commence par > contient, l'ordre d'origine départage.
-// (« Replaced » doit donner REPLACED, pas « The Farmer Was Replaced », même s'il arrive en second.)
-const titleKey = (s) => fold(s).replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
-function rankByTitle(list, query, getTitle, getYear, year) {
-  const q = titleKey(query);
-  return list
-    .map((x, i) => {
-      const t = titleKey(getTitle(x));
-      let score = t === q ? 3 : t.startsWith(`${q} `) || q.startsWith(`${t} `) ? 1.5 : t.includes(q) ? 1 : 0;
-      if (year && getYear && String(getYear(x) || '').slice(0, 4) === String(year)) score += 2;
-      return { x, score, i };
-    })
-    .sort((a, b) => b.score - a.score || a.i - b.i)
-    .map((r) => r.x);
 }
 
 // Devine le système libretro d'une console d'après son nom, ses extensions ou son programme.
@@ -500,7 +455,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
       if (matched) image = await saveImage(boxartUrl(system, matched), key);
     } else {
       // Sans liste : on essaie le nom tel quel puis avec les régions courantes.
-      const base = name.replace(/\s*[([][^)\]]*[)\]]/g, '').trim();
+      const base = stripTags(name);
       const candidates = [name, `${base} (Europe)`, `${base} (France)`, `${base} (USA, Europe)`, `${base} (USA)`, `${base} (World)`, `${base} (Japan)`];
       for (const c of [...new Set(candidates)]) {
         if (state.cancel) return false;
@@ -510,7 +465,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
     }
     const facts = (await romFacts(system)).get(romKey(matched || name)) || {};
     if (!image && !facts.genre) { miss(key); return false; }
-    if (matched) title = matched.replace(/\s*[([][^)\]]*[)\]]/g, '').trim() || title;
+    if (matched) title = stripTags(matched) || title;
     // Capture d'écran du jeu en guise de fond (à défaut, l'écran titre).
     let backdrop = null;
     if (matched) {
@@ -706,7 +661,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
         ok: true,
         items: scored.map(({ n }) => ({
           id: n,
-          title: n.replace(/\s*[([][^)\]]*[)\]]/g, '').trim() || n,
+          title: stripTags(n) || n,
           year: '',
           sub: (n.match(/\(([^)]*)\)/g) || []).map((x) => x.slice(1, -1)).join(', '),
           image: boxartUrl(system, n),
