@@ -21,7 +21,7 @@ Les interfaces des futurs points d'extension (`SourceProvider`, `MetadataProvide
 `src/main/<domaine>/types.ts` ; elles seront promues dans le SDK des addons en P3-02.
 
 Parallélisme : après P1-01, les tâches du processus principal (P1-02 à P1-20) et celles du renderer (P1-22 à
-P1-25) touchent des fichiers différents et peuvent avancer en parallèle. Entre tâches d'un même côté, respecter
+P1-24) touchent des fichiers différents et peuvent avancer en parallèle. Entre tâches d'un même côté, respecter
 les dépendances et fusionner une à une.
 
 ---
@@ -475,7 +475,8 @@ les dépendances et fusionner une à une.
 - **Dépend de** : P1-22 · **Taille** : M
 - **À faire**
   - `nav/spatial` (le calcul du voisin devient une fonction pure `pickNeighbor(rect, candidats, direction)`
-    testée), `nav/keyboard`, `nav/gamepad` (familles et glyphes en données, barre de rappel) ;
+    testée ; elle travaille sur tout élément focalisable, pas sur la seule classe `.focusable`, pour servir
+    telle quelle aux composants dot-stash de la phase 2, `ds-trigger` compris), `nav/keyboard`, `nav/gamepad` (familles et glyphes en données, barre de rappel) ;
   - `players/audio`, `players/video`, `players/images`, `players/volume`.
 - **Critères d'acceptation**
   - [ ] Tests de `pickNeighbor` (grille, rangées décalées, éléments masqués).
@@ -485,45 +486,32 @@ les dépendances et fusionner une à une.
 
 ## P1-25 — Renderer : vues et actions par domaine
 
-> **⏸ En attente de la décision D-05.** Selon le toolkit et le set de composants retenus pour la phase 2, découper
-> les vues historiques peut être inutile (elles seront remplacées). À rediscuter avant de lancer cette tâche.
-
-- **Dépend de** : P1-23, P1-24, D-05 · **Taille** : L (découpage possible : vues, puis actions et boîtes de dialogue)
-- **À faire**
-  - `views/` : un fichier par section (accueil, recherche, vidéos, séries, musique, images, streaming, web, TV,
-    jeux, ROMs, téléchargements, réglages) et `views/bricks` (art, tuiles, grilles, « Afficher plus », états vides) ;
-  - `actions/` : le `switch` de 120 cas devient un registre `{ 'play-video': fonction, … }` réparti par domaine ;
-  - `ui/dialogs` (`openForm`, `confirmDialog`, `pickCandidate`, pile des fenêtres), `ui/panel`, `ui/editors`,
-    `ui/backdrop`, `ui/rail`, `ui/header`.
-- **Critères d'acceptation**
-  - [ ] Test : chaque `data-action` présent dans les gabarits a une action enregistrée, et inversement.
-  - [ ] Captures identiques ; `app.js` n'existe plus.
+> **Abandonnée (décision D-05, 10/11/2026).** Découper les vues historiques serait du travail jeté : elles sont
+> remplacées en phase 2 par les composants dot-stash et `mire-*`, et le registre d'actions prévu ici est remplacé
+> par les méthodes des contrôleurs appelées par `ds-trigger` (P2-04).
 
 ---
 
-## P1-26 — Réglages déclaratifs
+## P1-26 — Schéma des réglages
 
-> **⏸ En attente de la décision D-05.** Le schéma des réglages reste utile dans tous les cas (réglages fournis par
-> les addons) ; son rendu dépend de l'approche retenue pour la phase 2. À rediscuter avant de lancer cette tâche.
-
-- **Dépend de** : P1-25, P1-06, D-05 · **Taille** : M
-- **Objectif** : décrire chaque réglage une seule fois et l'afficher dans la page Réglages comme dans les
-  panneaux de page (base des réglages fournis par les addons, P3-04).
+- **Dépend de** : P1-06 · **Taille** : M
+- **Objectif** : décrire chaque réglage une seule fois, dans un schéma qui servira au rendu de la phase 2 (P2-19,
+  avec `ds-field`, `ds-select`, `ds-toggle`) et aux réglages fournis par les addons (P3-04). Le rendu actuel
+  n'est pas réécrit (décision D-05).
 - **Constat** : clé TMDB, pays, bloqueur (×2), accueil (×2), lecteur externe (×3) écrits plusieurs fois ;
   certains champs s'enregistrent dès qu'ils changent, d'autres au clic sur « Enregistrer ».
-- **À faire** : `settings/schema` (blocs, champs typés : texte, secret, liste de choix, case, chemin, liste,
-  bloc personnalisé), rendu commun ; les blocs riches (thèmes, listes ordonnables, sources, boutique, consoles)
-  restent des rendus personnalisés référencés par identifiant.
-- **Changement visible à valider en revue** : tous les champs s'enregistrent dès qu'ils changent ; seul l'éditeur
-  JSON « Sites, jeux et consoles » garde son bouton « Enregistrer ».
-- **Critères d'acceptation** : plus aucun réglage décrit deux fois ; test : chaque chemin de config du schéma
-  existe dans `DEFAULT_CONFIG`.
+- **À faire** : `settings/schema` dans `@mire/shared` (blocs, champs typés : texte, secret, liste de choix, case,
+  chemin, liste, bloc personnalisé ; chemin de config, valeur par défaut, libellés par clé de catalogue quand
+  P1-28 est faite) ; les blocs riches (thèmes, listes ordonnables, sources, boutique, consoles) sont des blocs
+  personnalisés référencés par identifiant ; documenter le schéma pour les addons (`docs/settings-schema.md`).
+- **Critères d'acceptation** : chaque réglage existant figure une fois dans le schéma ; test : chaque chemin de
+  config du schéma existe dans `DEFAULT_CONFIG`, chaque type de champ est valide ; aucun changement visible.
 
 ---
 
 ## P1-27 — Documentation d'architecture
 
-- **Dépend de** : P1-21 (et P1-26 si elle est lancée, voir D-05) · **Taille** : S
+- **Dépend de** : P1-21, P1-26 · **Taille** : S
 - **À faire** : compléter `docs/architecture.md` (modules, responsabilités, flux principaux, contrat IPC,
   stockage, interfaces d'extension) ; section « Développer Mire » dans le README (arborescence, scripts,
   `MIRE_USER_DATA`, tests) ; mettre à jour les commandes de `CLAUDE.md`.
