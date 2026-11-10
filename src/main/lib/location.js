@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { safeDecode, isHttpUrl } = require('@mire/shared');
 
 /**
  * Emplacement d'une source :
@@ -12,20 +13,11 @@ function resolveLocation(loc, { platform = process.platform, uid = typeof proces
   const IS_WIN = platform === 'win32';
   const IS_MAC = platform === 'darwin';
   const s = String(loc || '').trim();
-  if (/^https?:\/\//i.test(s)) return { type: 'url', url: s };
+  if (isHttpUrl(s)) return { type: 'url', url: s };
   const smb = /^smb:\/\/([^/]+)\/([^/]+)(\/.*)?$/i.exec(s);
   if (smb) {
     const [, host, share, rest = ''] = smb;
-    const tail = rest
-      .split('/')
-      .filter(Boolean)
-      .map((x) => {
-        try {
-          return decodeURIComponent(x);
-        } catch {
-          return x;
-        }
-      });
+    const tail = rest.split('/').filter(Boolean).map(safeDecode);
     if (IS_WIN) return { type: 'path', path: `\\\\${host}\\${share}${tail.length ? `\\${tail.join('\\')}` : ''}`, network: true };
     if (IS_MAC) return { type: 'path', path: path.join('/Volumes', share, ...tail), network: true };
     return {

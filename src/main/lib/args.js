@@ -17,6 +17,4 @@ function substitute(args, vars) {
   return out;
 }
 
-const isUrlTarget = (t) => /^[a-z][\w+.-]*:\/\//i.test(t); // steam://, http://… (pas C:\)
-
-module.exports = { substitute, isUrlTarget };
+module.exports = { substitute };

@@ -4,6 +4,7 @@
   "description": "Fonctions pures, types et contrats partagés par les processus de Mire",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts"
 }
