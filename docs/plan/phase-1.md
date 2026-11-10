@@ -158,6 +158,7 @@ les dépendances et fusionner une à une.
   - types de la configuration dans `@mire/shared` (`Config`, `Emulator`, `WebSite`, `TvService`…) ;
   - remplacer tous les `config = saveConfig(...)` et les lectures de `config.` par le service ; les modules
     `scraper`, `store`, `downloads`, `adblock` reçoivent `config.get` au lieu de `() => config`.
+- **Validé au point G1 (changement de comportement)** : la migration des configurations v1 et v2 n'ajoute plus les 15 sites de `DEFAULT_WEB` (cohérent avec « rien n'est installé d'office ») ; elle complète les sites existants (adresse de recherche, lecture en fond, alias de fournisseurs) à partir de `DEFAULT_WEB` et non plus de `DEFAULT_CONFIG.web`, vide. Mettre à jour les fixtures `test/fixtures/config-v*.migrated.json` en conséquence, et le dire dans la PR.
 - **Critères d'acceptation**
   - [ ] Tests de P0-03 (normalisation, migrations, fusion) repris et verts sans changement des attendus.
   - [ ] Plus de variable globale `config` ; un abonné à `onChange` est appelé une fois par modification.
@@ -234,6 +235,7 @@ les dépendances et fusionner une à une.
   - `src/main/media-protocol/` : enregistrement de `media://` ; analyse des plages en fonction pure
     `parseRange(entête, taille)` testée (plage simple, suffixe `bytes=-500`, invalide, 416) ;
   - utiliser la politique partout : sous-titres, lecteur externe, lancement d'un jeu PC ou d'une ROM, suppression.
+- **Pistes à intégrer** : `isAllowed` et `allowedRoots` réutilisent `isInside` (`lib/paths.js`, P0-06) au lieu de leur propre comparaison par préfixe ; évaluer la comparaison des chemins réels (`fs.realpath`) contre les liens symboliques placés dans un dossier autorisé (à valider sous Windows : lecteurs réseau, `subst`).
 - **Critères d'acceptation**
   - [ ] Tests de `parseRange` et de la politique (racines, fichiers ouverts, Windows insensible à la casse).
   - [ ] Test : 1 000 requêtes `media://` → les racines ne sont calculées qu'une fois.
@@ -272,6 +274,7 @@ les dépendances et fusionner une à une.
   - `shortcuts.ts` : correspondance touche → action (F11, F9, F5, Ctrl+W, Alt+flèches), fonction pure testée ;
   - `learn-search.ts` : calcul du modèle de recherche à partir de l'adresse (« mire » → `{q}`), testé ;
   - `drm.ts` : démarrage et état de Widevine.
+- **Validé au point G1** : un clic sur un site de jeux (`rom:`) ou un marque-page (`bm:`) ouvert dans le menu le réaffiche (aujourd'hui il ne fait rien, comme c'était le cas pour les portails TV avant P0-05). **Pistes à intégrer** : la session d'un portail TV est rangée sous Télévision dans le menu ; LB/RB à la manette depuis une vue web part de la section d'origine (jeux, télévision) et non toujours de Streaming ; `GAME_FILE_RE` ne reconnaît pas une adresse avec paramètres (`jeu.zip?dl=1`) : tester le chemin de l'adresse, comme aujourd'hui.
 - **Critères d'acceptation**
   - [ ] Tests des fonctions pures (identité, raccourcis, modèle de recherche, résolution des entrées).
   - [ ] 🧑 Parcours : ouvrir deux services, passer de l'un à l'autre, plein écran F11, F9, fermer avec Ctrl+W,
@@ -292,6 +295,7 @@ les dépendances et fusionner une à une.
   - `adblock` devient une extension (compteurs, liste d'exceptions, scriptlets) ; l'identité Google aussi ;
   - `web-preload.js` demande au processus principal **le** script d'avant-page agrégé (un seul canal synchrone
     au lieu de `mire:scriptlets` et `mire:signin-ua`).
+- **Validé au point G1 (changement de comportement)** : les listes de filtres ne sont téléchargées qu'une fois le bloqueur activé (aujourd'hui `adblock.start()` les télécharge même quand il est désactivé) ; le test de fumée n'a alors plus besoin de déposer un moteur vide.
 - **Critères d'acceptation**
   - [ ] Tests du compositeur (deux extensions sur le même événement, ordre, annulation).
   - [ ] 🧑 YouTube sans publicité avec vidéo lisible ; compteur du bouclier ; désactivation par site ;
@@ -311,6 +315,7 @@ les dépendances et fusionner une à une.
   - `subtitles.ts` : sous-titres locaux et distants (la table `urlSubs` devient une donnée du résultat d'analyse) ;
   - `item-from-path.ts` ; un parcours de dossiers générique `src/main/fs/walk.ts`, réutilisé ensuite par les jeux,
     la boutique et les téléchargements.
+- **Piste à intégrer** : `resolveLocation` utilise `path.posix` pour les branches macOS et Linux (aujourd'hui `path.join`, qui produit des barres obliques inverses quand on simule ces systèmes depuis Windows).
 - **Critères d'acceptation**
   - [ ] Tests sur dossier temporaire (affiches, fanart, épisodes, images d'illustration ignorées, profondeur,
         dossiers cachés) et sur serveur HTTP local (index de style Apache et nginx, sous-titres, M3U).
@@ -343,6 +348,7 @@ les dépendances et fusionner une à une.
   - `providers/tmdb.ts`, `providers/musicbrainz.ts` (débit limité), `providers/libretro.ts`,
     `providers/steam.ts` ;
   - `src/main/net/tmdb.ts` : client TMDB unique (jeton long ou clé courte), aussi utilisé par P1-17.
+- **Validé au point G1 (changement de comportement)** : `parseVideo` ignore une année postérieure à l'année prochaine (« Blade Runner 2049 » seul garde son titre complet, sans année) ; ajouter les cas au test.
 - **Critères d'acceptation**
   - [ ] Tests de chaque fournisseur avec réponses HTTP enregistrées (fixtures JSON), sans réseau.
   - [ ] Tests du moteur (concurrence, annulation, nouvel essai après échec).
@@ -412,6 +418,7 @@ les dépendances et fusionner une à une.
   - `disc/` (ex-`discfiles.js`), `cleanup.ts`, `delete.ts` (P0-06), `bookmarks.ts` ;
   - marque-page de jeu (A4, suite de P0-07) : enregistrer la première fiche trouvée sous la clé du marque-page
     et l'afficher sur sa carte ; après téléchargement, la reporter sur le jeu si le fichier est identifiable.
+- **Pistes à intégrer** : un disque cité par adresse complète dans un `.m3u` distant est masqué de la liste comme les autres (exposer `citedUrls` de `discfiles`, P0-11) ; `gameBookmarks:add` n'a plus besoin d'être `async` après P0-07, sauf pour la reprise des infos prévue ici.
 - **Critères d'acceptation**
   - [ ] Tests sur dossiers temporaires (jeux PC, ROMs, multi-disques masqués, nettoyage).
   - [ ] 🧑 Lancer un jeu PC, une ROM locale, une ROM en ligne (visible et annulable dans Téléchargements).

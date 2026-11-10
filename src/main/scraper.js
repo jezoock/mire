@@ -14,8 +14,8 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
 const { fold, cleanTitle, GENERIC_DIR, titleKey, bigramDice, rankByTitle, stripTags, parseEpisode } = require('@mire/shared');
+const http = require('./net/http.ts');
 
-const UA = 'Mire/1.0 (lecteur multimédia personnel)';
 const MISS_RETRY_MS = 14 * 24 * 3600 * 1000; // un titre introuvable est réessayé au bout de 14 jours
 const REV = 2; // révision des données : les fiches plus anciennes (sans genre ni fond) sont complétées
 
@@ -39,7 +39,6 @@ const MUSIC_GENRES = {
 const capitalize = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
 const INDEX_TTL_MS = 30 * 24 * 3600 * 1000;
 
-const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 /* ------------------------------------------------------------------ */
 /* Analyse des noms de fichiers                                        */
@@ -149,21 +148,27 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
 
   const state = { running: false, cancel: false };
 
+  // Un code d'erreur garde le message habituel du scraper (« api.themoviedb.org : code 500 »).
   async function getJson(url, headers = {}) {
-    const res = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json', ...headers }, signal: AbortSignal.timeout(12000) });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`${new URL(url).hostname} : code ${res.status}`);
-    return res.json();
+    try {
+      return await http.getJson(url, { headers, timeout: 12000, notFoundAsNull: true });
+    } catch (err) {
+      if (err.kind === 'status') throw new Error(`${err.host} : code ${err.status}`, { cause: err });
+      throw err;
+    }
   }
 
   async function getText(url) {
-    const res = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return null;
-    return res.text();
+    try {
+      return await http.getText(url, { timeout: 15000 });
+    } catch (err) {
+      if (err.kind === 'status') return null;
+      throw err;
+    }
   }
 
   async function saveImage(url, key) {
-    const res = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) });
+    const res = await http.request(url, { timeout: 20000 });
     if (!res.ok) return null;
     const type = res.headers.get('content-type') || '';
     if (!type.startsWith('image/')) return null;
@@ -298,12 +303,9 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
 
   /* ---------- MusicBrainz + Cover Art Archive ---------- */
 
-  let lastMb = 0;
-  async function mb(url) {
-    const wait = 1100 - (Date.now() - lastMb); // 1 requête par seconde au plus
-    if (wait > 0) await sleep(wait);
-    lastMb = Date.now();
-    return getJson(url);
+  const mbLimit = http.rateLimited('musicbrainz', 1100); // 1 requête par seconde au plus
+  function mb(url) {
+    return mbLimit(() => getJson(url));
   }
 
   async function scrapeAlbum(album, override) {

@@ -17,6 +17,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const disc = require('./discfiles.js');
 const { safeFileName, newId, isHttpUrl } = require('@mire/shared');
+const http = require('./net/http.ts');
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const PENDING = 'pending'; // bookmark de téléchargement : en attente, ne démarre qu'à la demande
@@ -152,11 +153,16 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     });
   }
 
-  // Texte d'un petit fichier distant (index de jeu sur disque), par la session des pages.
+  // Texte d'un petit fichier distant (index de jeu sur disque), par la session des pages : ses cookies et
+  // son identité de navigateur, pas celle de Mire.
   async function fetchText(url) {
-    const res = await getSession().fetch(url, { signal: AbortSignal.timeout(20000) });
-    if (!res.ok) throw new Error(`code ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    let buf;
+    try {
+      buf = await http.getBuffer(url, { timeout: 20000, userAgent: null, fetch: (u, init) => getSession().fetch(u, init) });
+    } catch (err) {
+      if (err.kind === 'status') throw new Error(`code ${err.status}`, { cause: err });
+      throw err;
+    }
     if (buf.length > 2 * 1024 * 1024) throw new Error('fichier trop gros pour un index');
     return disc.decode(buf);
   }

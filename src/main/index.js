@@ -15,7 +15,8 @@ const { spawn } = require('node:child_process');
 const { Readable } = require('node:stream');
 const crypto = require('node:crypto');
 const { createScraper } = require('./scraper.js');
-const { createStore, download } = require('./store.js');
+const { createStore } = require('./store.js');
+const http = require('./net/http.ts');
 const { createAdblock } = require('./adblock.js');
 const { defaultRomSites, GAME_FILE_RE } = require('./romsites.js');
 const { createDownloads } = require('./downloads.js');
@@ -263,6 +264,14 @@ async function walkLibrary(dir, out, seen, depth, kinds = new Set(MEDIA_KINDS)) 
 
 const urlSubs = new Map(); // vidéo en ligne → sous-titres trouvés à côté
 
+// Raison affichée quand la première page d'index ne se charge pas.
+function crawlError(err) {
+  if (err.kind === 'timeout') return 'délai dépassé';
+  if (err.kind === 'unreachable') return 'serveur injoignable';
+  if (err.kind === 'status') return `le serveur a répondu avec le code ${err.status}`;
+  return err.message;
+}
+
 // Parcourt les pages d'index (Apache, nginx, NAS…) sans sortir du dossier de départ.
 async function crawlHttp(startUrl, onDir, maxDirs = 400) {
   const base = new URL(startUrl.endsWith('/') ? startUrl : `${startUrl}/`);
@@ -275,11 +284,9 @@ async function crawlHttp(startUrl, onDir, maxDirs = 400) {
     seen.add(dirUrl);
     let html;
     try {
-      const res = await fetch(dirUrl, { headers: { 'user-agent': 'Mire/1.0' }, signal: AbortSignal.timeout(15000) });
-      if (!res.ok) throw new Error(`le serveur a répondu avec le code ${res.status}`);
-      html = await res.text();
+      html = await http.getText(dirUrl, { timeout: 15000 });
     } catch (err) {
-      if (first) throw new Error(`Adresse inaccessible (${err.name === 'TimeoutError' ? 'délai dépassé' : err.message.replace(/^fetch failed$/, 'serveur injoignable')}).`);
+      if (first) throw new Error(`Adresse inaccessible (${crawlError(err)}).`);
       continue;
     }
     first = false;
@@ -299,11 +306,11 @@ async function crawlHttp(startUrl, onDir, maxDirs = 400) {
 
 async function crawlLibraryUrl(url, kinds, out) {
   if (/\.m3u8?$/i.test(new URL(url).pathname)) {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) }).catch(() => null);
-    if (!res || !res.ok) throw new Error('Liste de lecture inaccessible.');
+    let text;
+    try { text = await http.getText(url, { timeout: 15000 }); } catch { throw new Error('Liste de lecture inaccessible.'); }
     const listName = safeDecode(new URL(url).pathname.split('/').pop()).replace(/\.m3u8?$/i, '');
     const fallbackKind = kinds.has('video') ? 'video' : kinds.has('audio') ? 'audio' : 'image';
-    for (const e of parseM3U(await res.text())) {
+    for (const e of parseM3U(text)) {
       let u;
       try { u = new URL(e.url, url).href; } catch { continue; }
       const ext = path.extname(new URL(u).pathname).toLowerCase();
@@ -428,9 +435,7 @@ async function findSubtitles(videoPath) {
     const out = [];
     for (const sub of urlSubs.get(videoPath) || []) {
       try {
-        const res = await fetch(sub.url, { signal: AbortSignal.timeout(15000) });
-        if (!res.ok) continue;
-        let text = decodeText(Buffer.from(await res.arrayBuffer()));
+        let text = decodeText(await http.getBuffer(sub.url, { timeout: 15000 }));
         if (sub.name.toLowerCase().endsWith('.srt')) text = srtToVtt(text);
         const rest = path.basename(sub.name, path.extname(sub.name)).slice(sub.base.length).replace(/^[._\-\s]+/, '');
         const lang = (rest.split(/[._\s-]/)[0] || '').toLowerCase();
@@ -471,7 +476,7 @@ async function detectTvService() {
   for (const svc of config.tv.services) {
     if (!svc.detect) continue;
     try {
-      await fetch(svc.detect, { signal: AbortSignal.timeout(1500) });
+      await http.request(svc.detect, { timeout: 1500 });
       return svc.id; // la box a répondu : ce service est disponible
     } catch { /* box absente, on essaie la suivante */ }
   }
@@ -499,10 +504,9 @@ async function fetchChannels() {
   let text;
   if (isHttpUrl(src)) {
     try {
-      const res = await fetch(src, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) return { ok: false, error: `${svc.name} a répondu avec le code ${res.status}. Vérifiez l’adresse de la playlist dans les réglages de la page.` };
-      text = await res.text();
-    } catch {
+      text = await http.getText(src, { timeout: 8000 });
+    } catch (err) {
+      if (err.kind === 'status') return { ok: false, error: `${svc.name} a répondu avec le code ${err.status}. Vérifiez l’adresse de la playlist dans les réglages de la page.` };
       return { ok: false, error: `${svc.name} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).` };
     }
   } else {
@@ -1158,6 +1162,11 @@ async function scanGameSources() {
   return { games, status };
 }
 
+// Jeu en ligne copié dans le cache avant son lancement (gros fichier : jusqu'à 30 minutes).
+function downloadRom(url, dest, onProgress) {
+  return http.downloadToFile(url, dest, { onProgress, timeout: 30 * 60 * 1000 });
+}
+
 async function launchGamePath(target) {
   if (typeof target !== 'string' || !isAllowed(target)) return { ok: false, error: 'Ce jeu ne fait pas partie de vos dossiers de jeux.' };
   if (!fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
@@ -1277,10 +1286,8 @@ async function launchRom(i, romPath) {
         await fsp.mkdir(path.dirname(dest), { recursive: true });
         toUi('rom-progress', { name: label, phase: 'download' });
         try {
-          await download(f.url, `${dest}.part`, (received, total) => toUi('rom-progress', { name: label, phase: 'download', received, total }));
-          await fsp.rename(`${dest}.part`, dest);
+          await downloadRom(f.url, dest, (received, total) => toUi('rom-progress', { name: label, phase: 'download', received, total }));
         } catch (err) {
-          await fsp.unlink(`${dest}.part`).catch(() => {});
           return { ok: false, error: `${path.basename(dest)} : ${err.message}` };
         }
       }
@@ -1289,10 +1296,8 @@ async function launchRom(i, romPath) {
     } else if (!fs.existsSync(target)) {
       toUi('rom-progress', { name: fileName, phase: 'download' });
       try {
-        await download(romPath, `${target}.part`, (received, total) => toUi('rom-progress', { name: fileName, phase: 'download', received, total }));
-        await fsp.rename(`${target}.part`, target);
+        await downloadRom(romPath, target, (received, total) => toUi('rom-progress', { name: fileName, phase: 'download', received, total }));
       } catch (err) {
-        await fsp.unlink(`${target}.part`).catch(() => {});
         return { ok: false, error: err.message };
       }
       toUi('rom-progress', { name: fileName, phase: 'done' });
@@ -1520,7 +1525,7 @@ function registerIpc() {
       if (online) {
         for (const p of consoleLocations(emu).filter((x) => x.remote)) {
           try {
-            const res = await fetch(p.location, { method: 'HEAD', signal: AbortSignal.timeout(6000) });
+            const res = await http.head(p.location, { timeout: 6000 });
             if (!res.ok) result.missingRemote.push(`${emu.name} : ${p.location}`);
           } catch { result.missingRemote.push(`${emu.name} : ${p.location}`); }
           result.checked++;
@@ -1552,7 +1557,7 @@ function registerIpc() {
   handle('location:check', async (loc) => {
     const r = resolveLocation(loc);
     if (r.type === 'url') {
-      try { const res = await fetch(r.url, { method: 'GET', signal: AbortSignal.timeout(10000) }); return { ok: res.ok, error: res.ok ? null : `Le serveur a répondu avec le code ${res.status}.` }; }
+      try { const res = await http.request(r.url, { timeout: 10000 }); return { ok: res.ok, error: res.ok ? null : `Le serveur a répondu avec le code ${res.status}.` }; }
       catch { return { ok: false, error: 'Adresse injoignable.' }; }
     }
     try { await fsp.access(r.path); return { ok: true }; } catch { return { ok: false, error: locationError(loc, r) }; }
