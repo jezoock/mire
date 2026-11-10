@@ -37,7 +37,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-01 | Squelette : arborescence, TypeScript, build | L | G1, D-01, D-02 | | en revue | [#16](https://github.com/jezoock/mire/pull/16) |
 | P1-02 | `@mire/shared` : texte, URL, identifiants | M | P1-01 | | à faire | |
 | P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | à faire | |
-| P1-04 | Client HTTP unique | M | P1-01 | | à faire | |
+| P1-04 | Client HTTP unique | M | P1-01 | | en revue | [#17](https://github.com/jezoock/mire/pull/17) |
 | P1-05 | Stockage JSON atomique | M | P1-01 | | à faire | |
 | P1-06 | Service de configuration | L | P1-02, P1-05 | | à faire | |
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | à faire | |
