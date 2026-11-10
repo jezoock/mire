@@ -14,6 +14,8 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
 const http = require('./net/http.ts');
+const { createJsonStore } = require('./storage/json-store.ts');
+const { dataPaths } = require('./storage/paths.ts');
 
 const MISS_RETRY_MS = 14 * 24 * 3600 * 1000; // un titre introuvable est réessayé au bout de 14 jours
 const REV = 2; // révision des données : les fiches plus anciennes (sans genre ni fond) sont complétées
@@ -175,21 +177,14 @@ function guessSystem(emu) {
 /* ------------------------------------------------------------------ */
 
 function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
-  const root = path.join(dataDir, 'scrape');
-  const imgDir = path.join(root, 'img');
-  const dbFile = path.join(root, 'db.json');
-  const cacheDir = path.join(root, 'cache');
+  const { scrapeImg: imgDir, scrapeDb: dbFile, scrapeCache: cacheDir } = dataPaths(dataDir);
   fs.mkdirSync(imgDir, { recursive: true });
   fs.mkdirSync(cacheDir, { recursive: true });
 
-  let db = { items: {}, misses: {} };
-  try { db = { items: {}, misses: {}, ...JSON.parse(fs.readFileSync(dbFile, 'utf8')) }; } catch { /* première fois */ }
-
-  let saveTimer = null;
-  function save() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => { fs.writeFile(dbFile, JSON.stringify(db), () => {}); }, 400);
-  }
+  // Fichier illisible : on repart de zéro, comme avant (les infos seront récupérées de nouveau).
+  const dbStore = createJsonStore(dbFile, { defaults: { items: {}, misses: {} }, debounceMs: 400 });
+  let db = dbStore.load();
+  const save = () => dbStore.set(db);
 
   const state = { running: false, cancel: false };
 
@@ -749,6 +744,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
       for (const f of await fsp.readdir(imgDir).catch(() => [])) await fsp.unlink(path.join(imgDir, f)).catch(() => {});
       return true;
     },
+    flush: () => dbStore.flush(),
     _test: { parseVideo, romKey, bestMatch, guessSystem, cleanTitle, rankByTitle },
   };
 }
