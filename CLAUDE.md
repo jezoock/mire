@@ -5,7 +5,8 @@ frontend de streaming, télévision et jeux, pilotable au clavier, à la souris 
 
 ## Où en est le projet
 
-Le projet est en cours de refonte, en trois phases : refacto modulaire, frontend StencilJS, extraction d'addons.
+Le projet est en cours de refonte, en trois phases : refacto modulaire, frontend avec la librairie de composants
+dot-stash (`jezoock/dot-stash`), extraction d'addons.
 
 - Analyse du code existant : `docs/analyse/ANALYSE.md`
 - Mode d'emploi du plan (phases, points d'étape, lancer une tâche) : `docs/plan/README.md`

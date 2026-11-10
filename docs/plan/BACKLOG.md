@@ -58,47 +58,63 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | à faire | |
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | à faire | |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
-| P1-25 | Renderer : vues et actions par domaine | L | P1-23, P1-24, D-05 | | bloquée (D-05) | |
-| P1-26 | Réglages déclaratifs | M | P1-25, P1-06, D-05 | | bloquée (D-05) | |
-| P1-27 | Documentation d'architecture | S | P1-21 (P1-26 si lancée) | | à faire | |
+| P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
+| P1-26 | Schéma des réglages | M | P1-06 | | à faire | |
+| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
 | P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | à faire | |
 | P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | à faire | |
-| **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 | | | |
+| **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 (sauf P1-25) | | | |
 
-Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-25).
+Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-24).
 
-## Phase 2 — Frontend StencilJS
+## Phase 2 — Frontend avec dot-stash
 
-**Fiches provisoires** : la décision D-05 est reportée au point G2 (approche fondée sur ton toolkit et ton
-set de composants). Cette phase sera réécrite avant d'être lancée ; les lignes ci-dessous sont indicatives.
+Approche décidée le 10/11/2026 (D-05, `docs/analyse/D-05-dot-stash.md`) ; fiches dans `phase-2.md`.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P2-01 | Prototype et ADR : Stencil dans Electron | M | G2 | | à faire | |
-| P2-02 | Jetons de design et thèmes en fichiers | M | P2-01 | | à faire | |
-| P2-03 | Service de focus, clavier et manette compatibles Shadow DOM | L | P2-01, P1-24 | 🧑 | à faire | |
-| **G2b** | **Point d'étape : ADR Stencil et service de focus** | | P2-01…P2-03 | | | |
-| P2-04 | Primitives d'action et de formulaire | M | P2-02, P2-03 | | à faire | |
-| P2-05 | Composants médias | M | P2-04 | | à faire | |
-| P2-06 | Boîtes de dialogue et panneau de réglages | M | P2-04 | | à faire | |
+| P2-01 | Intégration de dot-stash et `@mire/ui` | M | G2, DS-01, DS-02 | | à faire | |
+| P2-02 | Habillage Mire et thèmes en jeux de jetons | M | P2-01 | | à faire | |
+| P2-03 | Navigation clavier et manette sur les composants | L | P2-01, P1-24 | 🧑 | à faire | |
+| P2-04 | Contrôleurs et actions (`ds-trigger`) | M | P2-01, P1-22, P1-23 | | à faire | |
+| **G2b** | **Point d'étape : intégration, thèmes, navigation, contrôleurs** | | P2-01…P2-04 | | | |
+| P2-05 | Composants médias | M | P2-02, P2-03, P2-04, DS-04, DS-05 | | à faire | |
+| P2-06 | Boîtes de dialogue et formulaires | M | P2-02, P2-03 | | à faire | |
 | P2-07 | Coquille de l'application | L | P2-05, P2-06 | | à faire | |
 | P2-08 | Section Accueil | S | P2-07 | | à faire | |
 | P2-09 | Section Recherche globale | M | P2-07 | | à faire | |
 | P2-10 | Section Vidéos | M | P2-07, P2-13 | | à faire | |
 | P2-11 | Section Musique + mini-lecteur | M | P2-07 | | à faire | |
 | P2-12 | Section Images + visionneuse | S | P2-07 | | à faire | |
-| P2-13 | Lecteur vidéo | M | P2-07 | 🧑 | à faire | |
+| P2-13 | Lecteur vidéo | M | P2-07, DS-03 | 🧑 | à faire | |
 | P2-14 | Streaming et vue web | M | P2-07 | 🧑 | à faire | |
 | P2-15 | Section Télévision | S | P2-07 | | à faire | |
 | P2-16 | Section Jeux | L | P2-07 | | à faire | |
 | P2-17 | Boutique | M | P2-07 | | à faire | |
 | P2-18 | Section Téléchargements | S | P2-07 | | à faire | |
-| P2-19 | Réglages | M | P2-07, P1-26 | | à faire | |
+| P2-19 | Réglages | M | P2-07, P1-26, DS-06 | | à faire | |
 | P2-20 | Éditeurs | M | P2-06, P2-10, P2-16 | | à faire | |
 | P2-21 | Retrait de l'interface historique et audits | M | P2-08…P2-20 | 🧑 | à faire | |
 | P2-22 | Guide « Créer un thème » | S | P2-02, P2-21 | | à faire | |
 | P2-23 | Sélecteur de langue et finitions de la localisation | S | P2-19, P1-28, P1-29 | | à faire | |
 | **G3** | **Point d'étape : fin de la phase 2, ADR addons, dépôt `mire-addons`** | | P2-01…P2-23 | | | |
+
+### Dans dot-stash (dépôt `jezoock/dot-stash`)
+
+Pull requests sur le dépôt de dot-stash, chacune validée par toi, au contrat de dot-stash (habillage du thème
+`default`, accessibilité, textes traduisibles, tests unitaires et navigateur, readme, CHANGELOG). Elles peuvent
+avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash » donne la tâche du backlog de dot-stash.
+
+| ID | Tâche | Taille | Dépend de | dot-stash | Statut | PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| DS-00 | Poser le tag `v0.1.0` sur le commit de fusion de la 0.1.0 (action de ta part) | XS | — | B-117 | à faire | |
+| DS-01 | Release : archive construite attachée à la release GitHub, installation par adresse | S | DS-00 | B-119, B-120 | à faire | |
+| DS-02 | Moteur SCSS dans le paquet (`scss/` dans `files` et `exports`) | XS | — | à créer | à faire | |
+| DS-03 | `ds-range` : curseur habillé, remplissage jusqu'à la valeur | M | — | à créer | à faire | |
+| DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | à faire | |
+| DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | à faire | |
+| DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | à faire | |
+| DS-07 | Imports par composant (`dist-custom-elements`), si P2-01 en a besoin | S | — | B-122, B-123 | selon P2-01 | |
 
 ## Phase 3 — Addons
 

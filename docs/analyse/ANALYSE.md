@@ -286,8 +286,8 @@ mire-addons/                         nouveau dépôt (phase 3)
 3. **Vue web native** : la `WebContentsView` est posée par-dessus la fenêtre ; le composant d'emplacement doit
    continuer à transmettre sa position (ResizeObserver) au processus principal.
 4. **Contrat de skin** : avec Shadow DOM, un thème ne peut modifier que ce que les jetons et les `part` exposent.
-   C'est voulu (contrat stable pour les thèmes-addons) mais demande de concevoir ce contrat (décision D-05,
-   reportée : à revoir avec ton toolkit et ton set de composants).
+   C'est voulu (contrat stable pour les thèmes-addons) mais demande de concevoir ce contrat. **Levé par D-05**
+   (10/11/2026) : les composants dot-stash sont en light DOM, un thème est un jeu de jetons appliqué à l'exécution.
 5. **Outillage** : le renderer, aujourd'hui sans build, en aura un ; prévoir un mode « watch » confortable.
 
 **Stratégie recommandée** : migration progressive (« étrangleur »). On découpe d'abord `app.js` en modules
@@ -315,7 +315,7 @@ restant fonctionnelle et testable après chaque tâche.
 
 ## 10. Décisions
 
-Validées au point d'étape G0 (29 octobre 2026), sauf D-05, reportée au point G2.
+Validées au point d'étape G0 (29 octobre 2026), sauf D-05, décidée le 10 novembre 2026.
 
 | # | Question | Décision |
 | --- | --- | --- |
@@ -323,7 +323,7 @@ Validées au point d'étape G0 (29 octobre 2026), sauf D-05, reportée au point 
 | D-02 | Organisation du dépôt | **Paquet racine = l'application, code dans `src/`, plus des espaces de travail npm** pour `packages/shared`, `packages/ui`, `packages/plugin-sdk` (le dépôt d'addons consommera `shared` et `plugin-sdk`). Garder l'application à la racine évite les pièges d'electron-builder avec les espaces de travail et laisse `overrides`/`vendor/` en place. ✅ validé |
 | D-03 | Tests | **`node:test`** (aucune dépendance) pour la logique ; **Playwright `_electron`** pour un test de fumée et des captures de référence des écrans. **Consigne : minimiser les dépendances** — toute nouvelle dépendance (même de développement) est justifiée dans la PR. ✅ validé |
 | D-04 | Style et lint | ESLint (config « flat ») + Prettier calés sur le style actuel ; pas de reformatage des fichiers historiques : le formatage s'applique aux fichiers nouveaux ou déplacés. ✅ validé |
-| D-05 | Frontend : approche Stencil | 🗣 **En discussion** : intégrer la librairie `jezoock/dot-stash` (composants `ds-*` en light DOM, thèmes par jetons), toutes les actions passant par `ds-trigger` (consigne du 10/11/2026). Proposition et questions : `docs/analyse/D-05-dot-stash.md`. P1-25 et P1-26 attendent cette décision |
+| D-05 | Frontend : approche | ✅ **Décidée le 10/11/2026** : la librairie `jezoock/dot-stash` (composants `ds-*` en light DOM, livrée par une archive attachée à ses releases) ; les composants génériques manquants sont ajoutés à dot-stash, ceux propres à Mire sont des `mire-*` construits avec dot-stash comme toolkit ; un habillage compilé et cinq jeux de jetons ; un contrôleur par section plus `mire-app`, toutes les actions par `ds-trigger`. Détails : `docs/analyse/D-05-dot-stash.md`. P1-25 abandonnée, P1-26 réduite au schéma des réglages |
 | D-06 | « Reprendre », positions de reprise, volume, recherches | **Passer du `localStorage` au processus principal** (inclus dans l'export de configuration). ✅ validé |
 | D-07 | Exécution du code des addons | **Dans le processus principal au début** pour les addons officiels signés, via une API par messages qui permettra l'isolation en `utilityProcess` ensuite. ✅ validé |
 | D-08 | Sources d'addons | **Dépôt officiel signé, et dépôts tiers** : l'architecture gère dès le départ plusieurs dépôts, chacun avec sa clé de signature et un niveau de confiance affiché ; les dépôts tiers sont ajoutés explicitement par l'utilisateur (tâche P3-08). ✅ validé |
