@@ -18,6 +18,8 @@ const fsp = require('node:fs/promises');
 const disc = require('./discfiles.js');
 const { safeFileName, newId, isHttpUrl } = require('@mire/shared');
 const http = require('./net/http.ts');
+const { createJsonStore } = require('./storage/json-store.ts');
+const { dataPaths } = require('./storage/paths.ts');
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const PENDING = 'pending'; // bookmark de téléchargement : en attente, ne démarre qu'à la demande
@@ -32,35 +34,31 @@ const INSTALLER = {
 
 
 function createDownloads({ dataDir, getConfig, getSession, extract, shell, defaultDir, onChange, onFinished }) {
-  const listFile = path.join(dataDir, 'telechargements.json');
-  const torrentDir = path.join(dataDir, 'torrents');
+  const { downloads: listFile, torrents: torrentDir } = dataPaths(dataDir);
+  const listStore = createJsonStore(listFile, { defaults: { items: [] }, debounceMs: 300, space: 1 });
   const items = new Map(); // id → fiche affichée (enregistrée sur le disque)
   const live = new Map(); // id → { dl: DownloadItem } ou { torrent }
   const pendingUrls = new Map(); // adresse → contexte d'un téléchargement demandé par Mire
   let client = null;
   let clientLoading = null;
-  let saveTimer = 0;
 
   const settings = () => ({ dir: '', torrentClient: 'mire', seed: false, ...(getConfig().downloads || {}) });
   const baseDir = () => settings().dir || defaultDir;
 
   function load() {
     try {
-      for (const it of JSON.parse(fs.readFileSync(listFile, 'utf8')).items || []) {
+      for (const it of listStore.load().items || []) {
         // Après un redémarrage : les HTTP inachevés sont à relancer ; les torrents reprennent tout seuls.
         if (it.state !== PENDING && it.kind === 'http' && (ACTIVE.has(it.state) || it.state === 'paused')) Object.assign(it, { state: 'interrupted', speed: 0 });
         if (it.kind === 'torrent' && it.state === 'extracting') it.state = 'done';
         items.set(it.id, it);
       }
-    } catch { /* première fois */ }
+    } catch { /* liste illisible : on repart d'une liste vide */ }
   }
+  // La liste est relevée au moment de l'écriture (après le délai de regroupement), comme avant.
+  const snapshot = () => ({ items: [...items.values()].map(({ installers, ...rest }) => ({ ...rest, installers: installers || [] })) });
   function save() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      fs.mkdirSync(dataDir, { recursive: true });
-      const list = [...items.values()].map(({ installers, ...rest }) => ({ ...rest, installers: installers || [] }));
-      fs.writeFileSync(listFile, JSON.stringify({ items: list }, null, 1));
-    }, 300);
+    listStore.set({ toJSON: snapshot });
   }
   function update(it, patch = {}) {
     Object.assign(it, patch);
@@ -488,7 +486,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
     if (client) await new Promise((resolve) => { client.destroy(() => resolve()); setTimeout(resolve, 3000); });
   }
 
-  return { start, stop, addUrl, addTorrent, addPending, startPending, fetchText, handleWebDownload, pause, resume, cancel, remove, clearFinished, reveal, runInstaller, list, settings };
+  return { start, stop, flush: () => listStore.flush(), addUrl, addTorrent, addPending, startPending, fetchText, handleWebDownload, pause, resume, cancel, remove, clearFinished, reveal, runInstaller, list, settings };
 }
 
 module.exports = { createDownloads };

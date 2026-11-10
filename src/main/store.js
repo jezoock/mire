@@ -12,6 +12,8 @@ const fsp = require('node:fs/promises');
 const os = require('node:os');
 const { spawn } = require('node:child_process');
 const http = require('./net/http.ts');
+const { createJsonStore } = require('./storage/json-store.ts');
+const { dataPaths } = require('./storage/paths.ts');
 
 const PLATFORM = process.platform === 'win32' ? 'win32' : process.platform === 'linux' ? 'linux' : 'other';
 
@@ -207,12 +209,13 @@ const BIOS_HINTS = {
 };
 
 function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgress, sevenZipPath, paths = {} }) {
-  const emuRoot = path.join(dataDir, 'emulators');
+  const dataFiles = dataPaths(dataDir);
+  const emuRoot = dataFiles.emulatorsDir;
   const tmpRoot = path.join(os.tmpdir(), 'mire-store');
-  const metaFile = path.join(emuRoot, 'installed.json');
-  let meta = {};
-  try { meta = JSON.parse(fs.readFileSync(metaFile, 'utf8')); } catch { /* rien d'installé */ }
-  const saveMeta = () => fsp.mkdir(emuRoot, { recursive: true }).then(() => fsp.writeFile(metaFile, JSON.stringify(meta, null, 2)));
+  // Fichier absent ou illisible : rien d'installé.
+  const metaStore = createJsonStore(dataFiles.emulatorsInstalled, { defaults: {}, space: 2 });
+  const meta = metaStore.load();
+  const saveMeta = async () => metaStore.save();
   const busy = new Set();
 
   const romsRoot = () => getConfig().store?.romsRoot || defaultRomsRoot;
@@ -224,7 +227,7 @@ function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgre
     let bin = sevenZipPath;
     if (process.platform !== 'win32') {
       try { await fsp.chmod(bin, 0o755); } catch {
-        const copy = path.join(dataDir, 'bin', '7za');
+        const copy = dataFiles.sevenZip;
         await fsp.mkdir(path.dirname(copy), { recursive: true });
         await fsp.copyFile(bin, copy);
         await fsp.chmod(copy, 0o755);

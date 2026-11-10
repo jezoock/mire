@@ -28,6 +28,8 @@ const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
 const { isInside } = require('./lib/paths.js');
 const { substitute } = require('./lib/args.js');
+const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
+const { dataPaths } = require('./storage/paths.ts');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
 const { fold, slug, safeFileName, cleanRomName, parseEpisode, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget, newId } = require('@mire/shared');
@@ -78,7 +80,8 @@ protocol.registerSchemesAsPrivileged([
 let config = structuredClone(DEFAULT_CONFIG);
 let mainWindow = null;
 let pendingFiles = [];
-const configPath = () => path.join(app.getPath('userData'), 'config.json');
+const dataFiles = () => dataPaths(app.getPath('userData'));
+const configPath = () => dataFiles().config;
 
 function saveConfig(next) {
   config = normalizeConfig(next);
@@ -117,8 +120,8 @@ let adblock = null;
 let downloads = null;
 let adblockReady = Promise.resolve(false);
 
-const metaDir = () => path.join(app.getPath('userData'), 'meta');
-const romCacheDir = () => path.join(app.getPath('userData'), 'cache', 'roms');
+const metaDir = () => dataFiles().metaDir;
+const romCacheDir = () => dataFiles().romCache;
 
 function allowedRoots() {
   const roots = [];
@@ -1313,13 +1316,13 @@ async function launchRom(i, romPath) {
 /* ---------- Modifications manuelles des infos (titre, genre, images…) ---------- */
 
 let userMeta = {};
-const metaFile = () => path.join(metaDir(), 'meta.json');
+let metaStore = null;
 function loadMeta() {
-  try { userMeta = JSON.parse(fs.readFileSync(metaFile(), 'utf8')) || {}; } catch { userMeta = {}; }
+  metaStore = createJsonStore(dataFiles().meta, { defaults: {}, space: 2 });
+  userMeta = metaStore.load();
 }
 function saveMeta() {
-  fs.mkdirSync(metaDir(), { recursive: true });
-  fs.writeFileSync(metaFile(), JSON.stringify(userMeta, null, 2), 'utf8');
+  metaStore.set(userMeta);
 }
 const META_FIELDS = ['title', 'year', 'genre', 'overview', 'artist', 'image', 'backdrop'];
 function setMeta(key, patch) {
@@ -1866,7 +1869,16 @@ if (!app.requestSingleInstanceLock()) {
     app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createMainWindow(); });
   });
 
-  app.on('before-quit', () => { downloads?.stop().catch(() => {}); });
+  // Avant de quitter, on attend les écritures différées (deux secondes au plus), puis on quitte pour de bon.
+  let flushedBeforeQuit = false;
+  app.on('before-quit', (event) => {
+    if (flushedBeforeQuit) return;
+    flushedBeforeQuit = true;
+    event.preventDefault();
+    downloads?.stop().catch(() => {});
+    const flushes = [scraper, downloads].filter(Boolean).map((m) => () => m.flush());
+    flushWithin(flushes, 2000).finally(() => app.quit());
+  });
 
 app.on('window-all-closed', () => { if (!IS_MAC) app.quit(); });
 }

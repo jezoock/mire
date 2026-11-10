@@ -13,6 +13,8 @@ const { ElectronBlocker, adsAndTrackingLists, fetchResources, Request } = requir
 const { parse: parseDomain } = require('tldts-experimental');
 const { hostOf, siteOf } = require('@mire/shared');
 const http = require('./net/http.ts');
+const { createJsonStore } = require('./storage/json-store.ts');
+const { dataPaths } = require('./storage/paths.ts');
 
 // Liste FR : la liste qu'Adblock Plus ajoute à EasyList pour les sites français.
 const EXTRA_LISTS = ['https://easylist-downloads.adblockplus.org/liste_fr.txt'];
@@ -37,13 +39,13 @@ function engineVersion() {
 const ENGINE_VERSION = engineVersion();
 
 function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
-  const dir = path.join(dataDir, 'adblock');
-  const engineFile = path.join(dir, 'moteur.bin');
-  const infoFile = path.join(dir, 'listes.json');
+  const { adblockDir: dir, adblockEngine: engineFile, adblockLists } = dataPaths(dataDir);
+  // État des listes ; absent ou illisible : le moteur est reconstruit (première fois).
+  const infoStore = createJsonStore(adblockLists, { defaults: { updated: 0, loaded: [], failed: [] } });
   let blocker = null;
   let ses = null;
   let attached = false;
-  let info = { updated: 0, loaded: [], failed: [] };
+  let info = infoStore.get();
   let building = null;
   const counts = new Map(); // page (webContents) → nombre d'éléments bloqués
 
@@ -155,7 +157,7 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     await fsp.mkdir(dir, { recursive: true });
     await fsp.writeFile(engineFile, engine.serialize());
     info = { updated: Date.now(), loaded, failed, engine: ENGINE_VERSION };
-    await fsp.writeFile(infoFile, JSON.stringify(info));
+    infoStore.set(info);
     return engine;
   }
 
@@ -169,7 +171,7 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
   // Démarrage : moteur en cache tout de suite, mise à jour des listes en arrière-plan si besoin.
   async function start(session) {
     ses = session;
-    try { info = { ...info, ...JSON.parse(await fsp.readFile(infoFile, 'utf8')) }; } catch { /* première fois */ }
+    info = infoStore.load();
     let cached = null;
     if (info.engine === ENGINE_VERSION) {
       try { cached = ElectronBlocker.deserialize(new Uint8Array(await fsp.readFile(engineFile))); } catch { cached = null; }
