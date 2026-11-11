@@ -9,6 +9,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./ipc": "./src/ipc.ts"
+    "./ipc": "./src/ipc.ts",
+    "./settings/schema": "./src/settings/schema.ts"
   }
 }
