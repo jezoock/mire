@@ -1,0 +1,116 @@
+{
+  "https://musicbrainz.org/ws/2/release-group/?query=releasegroup%3A%22Discovery%22%20AND%20artist%3A%22Daft%20Punk%22&fmt=json&limit=5": {
+    "json": {
+      "count": 3,
+      "release-groups": [
+        {
+          "id": "rg-faible",
+          "score": 55,
+          "title": "Discovery",
+          "artist-credit": [
+            {
+              "name": "Autre"
+            }
+          ]
+        },
+        {
+          "id": "rg-sans-image",
+          "score": 90,
+          "title": "Discovery",
+          "primary-type": "Single",
+          "first-release-date": "2001-06-01",
+          "artist-credit": [
+            {
+              "name": "Daft Punk"
+            }
+          ]
+        },
+        {
+          "id": "rg-discovery",
+          "score": 100,
+          "title": "Discovery",
+          "primary-type": "Album",
+          "first-release-date": "2001-03-12",
+          "artist-credit": [
+            {
+              "name": "Daft Punk"
+            }
+          ],
+          "tags": [
+            {
+              "count": 5,
+              "name": "french house"
+            },
+            {
+              "count": 9,
+              "name": "electronic"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "https://musicbrainz.org/ws/2/release-group/?query=releasegroup%3A%22Inconnu%22&fmt=json&limit=5": {
+    "json": {
+      "count": 0,
+      "release-groups": []
+    }
+  },
+  "https://musicbrainz.org/ws/2/release-group/rg-discovery?inc=tags+artist-credits&fmt=json": {
+    "json": {
+      "id": "rg-discovery",
+      "title": "Discovery",
+      "first-release-date": "2001-03-12",
+      "artist-credit": [
+        {
+          "name": "Daft Punk"
+        },
+        {
+          "name": "Romanthony"
+        }
+      ],
+      "tags": [
+        {
+          "count": 3,
+          "name": "nu-disco"
+        }
+      ]
+    }
+  },
+  "https://coverartarchive.org/release-group/rg-discovery/front-250": {
+    "image": "image/jpeg"
+  },
+  "https://musicbrainz.org/ws/2/release-group/?query=releasegroup%3A%22Discovery%22%20AND%20artist%3A%22Daft%20Punk%22&fmt=json&limit=12": {
+    "json": {
+      "release-groups": [
+        {
+          "id": "rg-live",
+          "title": "Discovery Live",
+          "primary-type": "Album",
+          "first-release-date": "2002",
+          "artist-credit": [
+            {
+              "name": "Daft Punk"
+            }
+          ]
+        },
+        {
+          "id": "rg-discovery",
+          "title": "Discovery",
+          "primary-type": "Album",
+          "first-release-date": "2001-03-12",
+          "artist-credit": [
+            {
+              "name": "Daft Punk"
+            }
+          ]
+        },
+        {
+          "id": "rg-sans-date",
+          "title": "Discovery",
+          "artist-credit": []
+        }
+      ]
+    }
+  }
+}
