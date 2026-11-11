@@ -23,6 +23,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "typecheck": "tsc -p tsconfig.json && tsc -p packages/shared/tsconfig.json",
     "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.ts\"",
     "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/smoke.e2e.js",

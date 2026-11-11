@@ -34,6 +34,7 @@ const { createWebManager, createDrm, createWebExtensions, createGoogleSignin, se
 const { createTmdbClient } = require('./net/tmdb.ts');
 const { streamingSearchProvider } = require('./search/streaming.ts');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
+const { createLanguageService } = require('./i18n/index.ts');
 const { EXT, MIME } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
@@ -151,6 +152,10 @@ const { playExternal, openInBrowser } = createPlayers({
 /* ---------- Vues web intégrées (src/main/web) ---------- */
 
 const toUi = (channel, payload) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload); };
+
+// Langue de l'interface (src/main/i18n) : réglage ui.language, ou langue du système ; l'interface suit ses changements.
+const i18n = createLanguageService({ config: configService, systemLanguages: () => app.getPreferredSystemLanguages(), dev: !app.isPackaged });
+i18n.onChange((info) => toUi('i18n:changed', info));
 
 const drm = createDrm({ components, onError: (err) => console.error('Widevine :', err?.message || err) });
 
@@ -331,6 +336,7 @@ const ipcContext = {
   electron: { app, dialog, shell },
   config: configService,
   usage,
+  i18n,
   get mainWindow() { return mainWindow; },
   get pendingFiles() { return pendingFiles; },
   set pendingFiles(next) { pendingFiles = next; },

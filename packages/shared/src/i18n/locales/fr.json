@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "common": {
+      "ok": "OK",
+      "cancel": "Annuler",
+      "close": "Fermer"
+    },
+    "settings": {
+      "language": {
+        "label": "Langue",
+        "auto": "Langue du système"
+      }
+    },
+    "library": {
+      "fileCount": {
+        "one": "{count} fichier",
+        "other": "{count} fichiers"
+      }
+    }
+  }
+}

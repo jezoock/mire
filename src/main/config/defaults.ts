@@ -33,6 +33,8 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
     menu: { position: 'left', autohide: false },
     start: 'home',
     home: { clock: true, recent: true, bars: [...HOME_BARS], services: [] },
+    // Langue de l'interface : auto = celle du système, ramenée au français ou à l'anglais (src/main/i18n).
+    language: 'auto',
   },
   search: { tmdbToken: '', region: 'FR', language: 'fr-FR' },
   scrape: { auto: true },

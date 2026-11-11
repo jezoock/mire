@@ -95,6 +95,8 @@ export interface UiSettings {
   /** Vue ouverte au lancement. */
   start: string;
   home: HomeSettings;
+  /** Langue de l'interface : `auto` (langue du système) ou un code BCP 47 (`fr`, `en`, `pt-BR`). */
+  language: string;
 }
 
 export interface SearchSettings {

@@ -1,4 +1,5 @@
-/** Interface : thème, menu, vue de départ et accueil. */
+/** Interface : thème, menu, vue de départ, accueil et langue. */
+import { normalizeLanguageSetting } from '@mire/shared/i18n';
 import type { HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
 import { DEFAULT_CONFIG, HOME_BARS, THEMES } from '../defaults.ts';
 import { isObjectLike, type Loose } from './common.ts';
@@ -34,5 +35,6 @@ export function normalizeUi(ui: Loose, srcUi: unknown, web: WebSite[]): UiSettin
   if (typeof out.start !== 'string') out.start = 'home';
   out.backdrop = out.backdrop !== false;
   out.menu = normalizeMenu(src?.menu);
+  out.language = normalizeLanguageSetting(out.language);
   return out as UiSettings;
 }

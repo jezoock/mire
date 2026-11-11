@@ -20,8 +20,10 @@ ne se commence pas : signale-le.
 ## Conventions
 
 - Langue : commentaires et documentation en français. Textes destinés à l'utilisateur : simples, sans jargon
-  (voir le ton des messages existants) ; en français tant que la localisation n'existe pas, puis, dès la tâche
-  P1-28 faite, uniquement par les catalogues, en français **et** en anglais (décision D-11).
+  (voir le ton des messages existants). Tout nouveau texte destiné à l'utilisateur passe par les catalogues
+  (`@mire/shared/i18n`, voir `docs/i18n.md`) et est fourni en français **et** en anglais dans la même PR
+  (décision D-11). Les textes encore écrits en dur seront extraits par P1-29 (processus principal) et la phase 2
+  (interface).
 - Style : 2 espaces, guillemets simples, points-virgules, fonctions courtes. Commentaires seulement pour le « pourquoi ».
 - Pas de changement de comportement dans une tâche de refacto, sauf si la fiche le demande explicitement.
 - Toute logique déplacée ou dédoublonnée est couverte par un test (voir la fiche pour le runner).
@@ -32,11 +34,12 @@ ne se commence pas : signale-le.
 
 - `npm install` puis `npm start` : lancer l'application (télécharge le moteur Electron au premier lancement).
 - `npm run lint` : ESLint ; `npm run format:check` : vérifie le formatage Prettier (`npm run format` le corrige).
+- `npm run i18n:check` : vérifie les catalogues de textes (mêmes clés et variables en français et en anglais, aucun texte vide).
 - `npm run build` : construit `dist/` (esbuild) ; `npm run dev` : reconstruit en continu et lance Mire ;
   `npm run typecheck` : TypeScript. L'installateur de `npm run dist` sort dans `release/`.
 - `npm test` : tests unitaires (`node:test`). Un test de décodage Windows-1252 est sauté si le Node utilisé décode mal
   ce jeu de caractères (constaté avec un Node 22 compilé avec l'ICU du système) ; les Node officiels 22 et 24 le passent.
-- La CI (`.github/workflows/ci.yml`) lance lint, formatage, types et tests à chaque push et à chaque PR (tests sous Node 22 et 24).
+- La CI (`.github/workflows/ci.yml`) lance lint, formatage, types, catalogues et tests à chaque push et à chaque PR (tests sous Node 22 et 24).
 
 ## Points sensibles
 

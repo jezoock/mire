@@ -27,6 +27,7 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run i18n:check
 
   test:
     name: Tests (Node ${{ matrix.node }})
