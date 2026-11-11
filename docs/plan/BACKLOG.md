@@ -45,7 +45,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | faite | [#30](https://github.com/jezoock/mire/pull/30) |
-| P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | en revue | (PR à venir) |
+| P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | en revue | [#32](https://github.com/jezoock/mire/pull/32) |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
@@ -173,6 +173,6 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Passer au lecteur externe les sous-titres trouvés (`--sub-file=`, variable `{sub}`) | P1-11 ([#30](https://github.com/jezoock/mire/pull/30)) | À arbitrer |
 | Jeux PC : une extension en capitales (`Jeu.AppImage`) n'est pas retirée du nom affiché | P1-20 ([#31](https://github.com/jezoock/mire/pull/31)) | À arbitrer |
 | Retirer un marque-page de jeu oublie sa fiche mais pas son image (comme `forget` du scraper) | P1-20 ([#31](https://github.com/jezoock/mire/pull/31)) | À arbitrer |
-| Vue web fermée (Ctrl+W) pendant le plein écran du lecteur vidéo : l'état « plein écran de la page » n'est pas remis à zéro, la fenêtre peut rester en plein écran | P1-12 (PR à venir) | À arbitrer (remise à zéro dans `close` du gestionnaire) |
-| Configuration enregistrée : seuls les sites enregistrés ouverts reprennent leur entrée à jour ; un marque-page, un portail TV ou une console renommés gardent l'ancien nom tant que la vue est ouverte | P1-12 (PR à venir) | À arbitrer (résoudre de nouveau toutes les vues ouvertes par le registre d'entrées) |
-| L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 (PR à venir) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
+| Vue web fermée (Ctrl+W) pendant le plein écran du lecteur vidéo : l'état « plein écran de la page » n'est pas remis à zéro, la fenêtre peut rester en plein écran | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (remise à zéro dans `close` du gestionnaire) |
+| Configuration enregistrée : seuls les sites enregistrés ouverts reprennent leur entrée à jour ; un marque-page, un portail TV ou une console renommés gardent l'ancien nom tant que la vue est ouverte | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (résoudre de nouveau toutes les vues ouvertes par le registre d'entrées) |
+| L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
