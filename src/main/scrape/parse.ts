@@ -26,7 +26,9 @@ export function parseVideo(item: { name: string; dir?: string }): ParsedVideo {
     }
     return { type: 'tv', title, year: '' };
   }
-  const years = [...name.matchAll(/(?:^|[\s.(_[-])((?:19|20)\d{2})(?=$|[\s.)_\]-])/g)];
+  // Une année postérieure à l'année prochaine fait partie du titre (« Blade Runner 2049 »).
+  const latest = new Date().getFullYear() + 1;
+  const years = [...name.matchAll(/(?:^|[\s.(_[-])((?:19|20)\d{2})(?=$|[\s.)_\]-])/g)].filter((m) => Number(m[1]) <= latest);
   let year = '';
   let title = name;
   if (years.length) {

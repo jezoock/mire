@@ -26,6 +26,18 @@ test('parseVideo : une année dans le titre est gardée, seule la dernière comp
   });
 });
 
+test('parseVideo : une année postérieure à l’année prochaine fait partie du titre', () => {
+  assert.deepEqual(parseVideo({ name: 'Blade Runner 2049' }), { type: 'movie', title: 'Blade Runner 2049', year: '' });
+  assert.deepEqual(parseVideo({ name: 'Blade.Runner.2049.1080p.BluRay' }), { type: 'movie', title: 'Blade Runner 2049', year: '' });
+  assert.deepEqual(parseVideo({ name: 'Blade Runner 2049 (2017)' }), { type: 'movie', title: 'Blade Runner 2049', year: '2017' });
+});
+
+test('parseVideo : l’année prochaine est encore une année de sortie, celle d’après non', () => {
+  const next = new Date().getFullYear() + 1;
+  assert.deepEqual(parseVideo({ name: `Film ${next}` }), { type: 'movie', title: 'Film', year: String(next) });
+  assert.deepEqual(parseVideo({ name: `Film ${next + 1}` }), { type: 'movie', title: `Film ${next + 1}`, year: '' });
+});
+
 test('parseVideo : film sans année', () => {
   assert.deepEqual(parseVideo({ name: 'Mon film de vacances' }), {
     type: 'movie',
