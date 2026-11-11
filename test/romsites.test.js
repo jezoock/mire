@@ -2,7 +2,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { defaultRomSites, GAME_FILE_RE } = require('../src/main/romsites');
+const { defaultRomSites, _test: tables } = require('../src/main/romsites');
+const { GAME_FILE_RE, systemById } = require('@mire/shared');
 
 const names = (system) => defaultRomSites(system).map((s) => s.name);
 
@@ -59,5 +60,11 @@ test('GAME_FILE_RE : fichiers de jeux reconnus, sans tenir compte de la casse', 
 test('GAME_FILE_RE : autres fichiers refusés', () => {
   for (const name of ['page.html', 'jeu.zip.html', 'jeu.zip?dl=1', 'notice.pdf', 'zip', '']) {
     assert.doesNotMatch(name, GAME_FILE_RE);
+  }
+});
+
+test('tables des sites : indexées par identifiant de système du référentiel', () => {
+  for (const [name, table] of Object.entries(tables)) {
+    for (const id of Object.keys(table)) assert.ok(systemById(id), `${name} : ${id}`);
   }
 });

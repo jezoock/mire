@@ -1,7 +1,7 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('../../src/main/lib/formats.js');
+// Formats de fichiers (repris de test/lib/formats.test.js, déplacé avec le module en P1-03).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { ART_RE, COVER_RE, DISC_INDEX_EXT, EXT, FANART_RE, GAME_FILE_RE, KIND, MEDIA_KINDS, MIME, NATIVE } from '@mire/shared';
 
 test('KIND : chaque extension rangée sous son type', () => {
   assert.deepEqual(MEDIA_KINDS, Object.keys(EXT));
@@ -24,4 +24,10 @@ test('illustrations', () => {
   assert.match('clearlogo.png', ART_RE);
   assert.match('backdrop.webp', FANART_RE);
   assert.doesNotMatch('film-fanart.jpg', FANART_RE);
+});
+
+test('fichiers de jeux et index de disques', () => {
+  assert.match('Jeu.CHD', GAME_FILE_RE);
+  assert.doesNotMatch('jeu.txt', GAME_FILE_RE);
+  assert.deepEqual([...DISC_INDEX_EXT], ['.cue', '.gdi', '.m3u', '.ccd', '.mds', '.toc']);
 });

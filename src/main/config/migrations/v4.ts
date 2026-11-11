@@ -1,6 +1,5 @@
 /** Version 4 : chaque dossier de la bibliothèque devient une source par type de média. */
-import { newId } from '@mire/shared';
-import { MEDIA_KINDS } from '../../lib/formats.js';
+import { MEDIA_KINDS, newId } from '@mire/shared';
 import { isObjectLike } from '../normalize/common.ts';
 import type { Migration } from './types.ts';
 

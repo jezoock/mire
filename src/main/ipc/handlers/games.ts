@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { isHttpUrl, safeFileName } from '@mire/shared';
+import { SYSTEMS, isHttpUrl, safeFileName } from '@mire/shared';
 import type { Game } from '@mire/shared';
 import type { CleanupReport, GameRef } from '@mire/shared/ipc';
 import { findConsole } from '../../config/index.ts';
@@ -134,5 +134,6 @@ export function gamesHandlers(ctx: MainContext) {
       };
     },
     romDownload: (consoleId, url) => downloadGame(ctx, consoleId, url),
+    gameSystems: () => SYSTEMS.map(({ id, name }) => ({ id, name })),
   } satisfies Partial<IpcImplementations>;
 }

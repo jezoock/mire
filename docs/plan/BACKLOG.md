@@ -36,11 +36,11 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | --- | --- | --- | --- | --- | --- | --- |
 | P1-01 | Squelette : arborescence, TypeScript, build | L | G1, D-01, D-02 | | faite | [#16](https://github.com/jezoock/mire/pull/16) |
 | P1-02 | `@mire/shared` : texte, URL, identifiants | M | P1-01 | | faite | [#18](https://github.com/jezoock/mire/pull/18) |
-| P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | à faire | |
+| P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | en revue | |
 | P1-04 | Client HTTP unique | M | P1-01 | | faite | [#17](https://github.com/jezoock/mire/pull/17) |
 | P1-05 | Stockage JSON atomique | M | P1-01 | | faite | [#19](https://github.com/jezoock/mire/pull/19) |
 | P1-06 | Service de configuration | L | P1-02, P1-05 | | faite | [#22](https://github.com/jezoock/mire/pull/22) |
-| P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | en revue | [#23](https://github.com/jezoock/mire/pull/23) |
+| P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | faite | [#23](https://github.com/jezoock/mire/pull/23) |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | à faire | |

@@ -4,14 +4,26 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, d’adresse et d’identifiant', () => {
+  it('expose les utilitaires de texte, d’adresse et d’identifiant, les formats et les systèmes', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
+      'ART_RE',
+      'COVER_RE',
+      'DISC_INDEX_EXT',
+      'EXT',
+      'FANART_RE',
+      'GAME_FILE_RE',
       'GENERIC_DIR',
+      'KIND',
+      'MEDIA_KINDS',
+      'MIME',
+      'NATIVE',
+      'SYSTEMS',
       'bigramDice',
       'cleanRomName',
       'cleanTitle',
       'fold',
+      'guessSystem',
       'hostOf',
       'isHttpUrl',
       'isUrlTarget',
@@ -24,6 +36,7 @@ describe('@mire/shared', () => {
       'siteOf',
       'slug',
       'stripTags',
+      'systemById',
       'titleKey',
     ]);
   });

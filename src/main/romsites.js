@@ -6,6 +6,8 @@
  * « Modifier la console » ; on peut y ajouter n'importe quel site.
  *
  * search : adresse de recherche, {q} = mots cherchés (vide : à mémoriser avec la loupe).
+ *
+ * Les tables sont indexées par identifiant de système (nom libretro, voir SYSTEMS dans @mire/shared).
  */
 
 // PDRoms : homebrew et domaine public, page de chaque plateforme (adresses vérifiées sur le site).
@@ -76,7 +78,4 @@ function defaultRomSites(system) {
   return sites;
 }
 
-// Fichiers de jeux : un lien vers l'un d'eux, ouvert dans une nouvelle fenêtre, devient un téléchargement.
-const GAME_FILE_RE = /\.(zip|7z|iso|chd|cue|bin|cso|pbp|rvz|wbfs|wud|wux|gcm|ciso|nes|fds|sfc|smc|gb|gbc|gba|n64|z64|v64|md|gen|smd|sms|gg|pce|nds|3ds|cia|cci|3dsx|a26)$/i;
-
-module.exports = { defaultRomSites, GAME_FILE_RE };
+module.exports = { defaultRomSites, _test: { PDROMS, HOMEBREW_HUB, UNIVERSAL_DB, ITCH_WORDS } };

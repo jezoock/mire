@@ -40,6 +40,12 @@ export interface Failure {
 /** Réussite (avec des données) ou échec. */
 export type Outcome<T extends object = object> = ({ ok: true } & T) | Failure;
 
+/** Système de jeu tel que le reçoit l'interface : identifiant libretro et nom court. */
+export interface GameSystemInfo {
+  id: string;
+  name: string;
+}
+
 /** Jeu à supprimer (bouton « Supprimer » d'une fiche de jeu). */
 export interface GameRef {
   kind: 'game' | 'rom';
@@ -138,6 +144,8 @@ export interface IpcMethods {
   // Sites de jeux et marque-pages
   romSites(console: ConsoleRef): { sites: unknown[]; custom: boolean; defaults: unknown[] };
   romDownload(console: string, url: string): Outcome<{ count: number; total?: number }>;
+  /** Systèmes de jeu connus (référentiel de @mire/shared), pour le choix du système d'une console. */
+  gameSystems(): GameSystemInfo[];
   bookmarkAdd(data: BookmarkInput): Outcome<{ bookmark: Bookmark; scraped: boolean; config: MireConfig }>;
   bookmarkRemove(id: string): Outcome<{ config: MireConfig }>;
   bookmarkOpen(id: string): unknown;
@@ -250,6 +258,7 @@ export const IPC_METHODS = {
   webSessions: 'web:sessions',
   romSites: 'roms:sites',
   romDownload: 'roms:download',
+  gameSystems: 'games:systems',
   bookmarkAdd: 'bookmarks:add',
   bookmarkRemove: 'bookmarks:remove',
   bookmarkOpen: 'bookmarks:open',
