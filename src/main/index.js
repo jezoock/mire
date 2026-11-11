@@ -12,7 +12,6 @@ const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const { spawn } = require('node:child_process');
-const { Readable } = require('node:stream');
 const crypto = require('node:crypto');
 const { createScraper } = require('./scraper.js');
 const { createStore } = require('./store.js');
@@ -28,6 +27,8 @@ const { resolveLocation } = require('./lib/location.js');
 const { substitute } = require('./lib/args.js');
 const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
+const { createAccessPolicy } = require('./security/access-policy.ts');
+const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol/index.ts');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
@@ -69,9 +70,7 @@ const isSigninPage = (u) => SIGNIN_HOSTS.has(hostOf(u));
 app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback);
 
 // Le schéma media:// sert les fichiers locaux à l'interface, avec gestion des plages (avance rapide).
-protocol.registerSchemesAsPrivileged([
-  { scheme: 'media', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
-]);
+registerMediaScheme(protocol);
 
 /* ------------------------------------------------------------------ */
 /* Configuration                                                       */
@@ -89,9 +88,6 @@ const loadConfig = () => configService.load();
 /* Fichiers autorisés                                                  */
 /* ------------------------------------------------------------------ */
 
-// L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
-// et les fichiers ouverts explicitement (boîte de dialogue, glisser-déposer).
-const openedFiles = new Set();
 const pathKey = (p) => { const r = path.resolve(String(p)); return IS_WIN ? r.toLowerCase() : r; };
 
 let scraper = null;
@@ -115,72 +111,29 @@ function allowedRoots() {
   }
   if (scraper) roots.push(scraper.imgDir);
   roots.push(path.join(metaDir(), 'img'), romCacheDir());
-  return roots.map(pathKey);
+  return roots;
 }
+
+// Fichiers autorisés un par un par la configuration : image d'un jeu PC, bannière d'une console.
+function allowedFiles() {
+  const cfg = configService.get();
+  return [...cfg.games.map((g) => g.image), ...cfg.emulators.map((e) => e.banner)];
+}
+
+// L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
+// et les fichiers ouverts explicitement (boîte de dialogue, glisser-déposer).
+const access = createAccessPolicy({ roots: allowedRoots, files: allowedFiles });
+configService.onChange(() => access.invalidate());
 
 function locationError(loc, r) {
   if (r.network) return `Partage réseau inaccessible : ${loc}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.`;
   return `Dossier introuvable : ${loc}`;
 }
 
-function isAllowed(p) {
-  if (!p || typeof p !== 'string') return false;
-  const k = pathKey(p);
-  if (openedFiles.has(k)) return true;
-  if (configService.get().games.some((g) => g.image && pathKey(g.image) === k)) return true;
-  if (configService.get().emulators.some((e) => e.banner && pathKey(e.banner) === k)) return true;
-  return allowedRoots().some((r) => k === r || k.startsWith(r.endsWith(path.sep) ? r : r + path.sep));
-}
-
-function registerMediaProtocol() {
-  protocol.handle('media', async (request) => {
-    let file;
-    try { file = new URL(request.url).searchParams.get('p'); } catch { return new Response('Requête invalide', { status: 400 }); }
-    if (!isAllowed(file)) return new Response('Accès refusé', { status: 403 });
-
-    let stat;
-    try {
-      stat = await fsp.stat(file);
-      if (!stat.isFile()) throw new Error('pas un fichier');
-    } catch {
-      return new Response('Introuvable', { status: 404 });
-    }
-
-    const size = stat.size;
-    const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
-    const range = request.headers.get('range');
-
-    if (range && size > 0) {
-      const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
-      if (m) {
-        let start;
-        let end;
-        if (m[1] === '' && m[2] !== '') {
-          start = Math.max(0, size - Number(m[2]));
-          end = size - 1;
-        } else {
-          start = Number(m[1] || 0);
-          end = m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
-        }
-        if (start > end || start >= size) {
-          return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
-        }
-        return new Response(Readable.toWeb(fs.createReadStream(file, { start, end })), {
-          status: 206,
-          headers: {
-            'Content-Type': type,
-            'Content-Length': String(end - start + 1),
-            'Content-Range': `bytes ${start}-${end}/${size}`,
-            'Accept-Ranges': 'bytes',
-          },
-        });
-      }
-    }
-
-    return new Response(Readable.toWeb(fs.createReadStream(file)), {
-      status: 200,
-      headers: { 'Content-Type': type, 'Content-Length': String(size), 'Accept-Ranges': 'bytes' },
-    });
+function registerMedia() {
+  registerMediaProtocol(protocol, {
+    isAllowed: access.isAllowed,
+    mimeType: (file) => MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
   });
 }
 
@@ -394,7 +347,7 @@ async function itemFromPath(p) {
   const ext = path.extname(p).toLowerCase();
   const kind = KIND[ext];
   if (!kind) return null;
-  openedFiles.add(pathKey(p));
+  access.allowFile(p);
 
   const dir = path.dirname(p);
   const name = path.basename(p, path.extname(p));
@@ -405,7 +358,7 @@ async function itemFromPath(p) {
       const base = name.toLowerCase();
       const found = names.find((n) => KIND[path.extname(n).toLowerCase()] === 'image'
         && (path.basename(n, path.extname(n)).toLowerCase() === base || COVER_RE.test(n)));
-      if (found) { cover = path.join(dir, found); openedFiles.add(pathKey(cover)); }
+      if (found) { cover = path.join(dir, found); access.allowFile(cover); }
     } catch { /* pas de pochette */ }
   }
   return { path: p, name, ext, kind, folder: path.basename(dir), dir, native: NATIVE.has(ext), cover };
@@ -427,7 +380,7 @@ async function findSubtitles(videoPath) {
     }
     return out;
   }
-  if (!isAllowed(videoPath)) return [];
+  if (!access.isAllowed(videoPath)) return [];
   const dir = path.dirname(videoPath);
   const base = path.basename(videoPath, path.extname(videoPath)).toLowerCase();
   let names;
@@ -576,7 +529,7 @@ function resolvePlayer() {
 
 async function playExternal(target, title = '', start = 0) {
   if (typeof target !== 'string' || !target) return { ok: false, error: 'Rien à lire.' };
-  if (!isUrlTarget(target) && !isAllowed(target)) return { ok: false, error: 'Ce fichier ne fait pas partie de la bibliothèque.' };
+  if (!isUrlTarget(target) && !access.isAllowed(target)) return { ok: false, error: 'Ce fichier ne fait pas partie de la bibliothèque.' };
   const { cmd, args } = resolvePlayer();
   const s = Math.floor(Number(start) || 0);
   const r = await launchProcess(cmd, substitute(args, { url: target, title, start: s > 0 ? s : '' }));
@@ -1155,7 +1108,7 @@ function downloadRom(url, dest, onProgress) {
 }
 
 async function launchGamePath(target) {
-  if (typeof target !== 'string' || !isAllowed(target)) return { ok: false, error: 'Ce jeu ne fait pas partie de vos dossiers de jeux.' };
+  if (typeof target !== 'string' || !access.isAllowed(target)) return { ok: false, error: 'Ce jeu ne fait pas partie de vos dossiers de jeux.' };
   if (!fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
   return openTarget(target, [], { cwd: path.dirname(target), hideWhileRunning: true });
 }
@@ -1289,7 +1242,7 @@ async function launchRom(i, romPath) {
       }
       toUi('rom-progress', { name: fileName, phase: 'done' });
     }
-  } else if (!isAllowed(romPath)) {
+  } else if (!access.isAllowed(romPath)) {
     return { ok: false, error: 'Ce jeu ne se trouve pas dans les dossiers de la console.' };
   }
   const args = substitute(Array.isArray(emu.args) && emu.args.length ? emu.args : ['{rom}'], { rom: target });
@@ -1446,6 +1399,7 @@ const ipcContext = {
   get store() { return store; },
   get downloads() { return downloads; },
   get adblock() { return adblock; },
+  access,
   configPath, themeBackground,
   scanLibrary, findSubtitles, openMediaDialog, itemFromPath, locationError, pickFolder, pickFile,
   metaDir, saveMeta, setMeta, pickMetaImage,
@@ -1486,6 +1440,8 @@ if (!app.requestSingleInstanceLock()) {
       listRoms,
       onProgress: (p) => toUi('scrape-progress', p),
     });
+    // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
+    access.invalidate();
     store = createStore({
       dataDir: app.getPath('userData'),
       defaultRomsRoot: path.join(app.getPath('documents'), 'Mire', 'ROMs'),
@@ -1533,7 +1489,7 @@ if (!app.requestSingleInstanceLock()) {
     } else {
       Menu.setApplicationMenu(null);
     }
-    registerMediaProtocol();
+    registerMedia();
     setupWebSession();
     startWidevine();
     adblock = createAdblock({
