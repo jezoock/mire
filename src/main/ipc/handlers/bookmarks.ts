@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { hostOf, isHttpUrl, newId } from '@mire/shared';
 import type { Bookmark, BookmarkInput, GameBookmark, GameBookmarkInput } from '@mire/shared/ipc';
+import { findConsole } from '../../config/index.ts';
 import { guessSystem } from '../../scraper.js';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
@@ -50,8 +51,10 @@ export function addGameBookmark(ctx: MainContext, data: GameBookmarkInput) {
   const isMagnet = /^magnet:\?/i.test(source);
   if (!isMagnet && !isHttpUrl(source) && !source.toLowerCase().endsWith('.torrent')) return { ok: false as const, error: 'Lien ou fichier invalide.' };
   const kind = isMagnet || source.toLowerCase().endsWith('.torrent') ? 'torrent' : 'http';
-  const curConsole = data?.console === 'pc' ? 'pc' : data?.console != null ? Number(data.console) : null;
-  const curEmu = typeof curConsole === 'number' ? config.emulators[curConsole] : null;
+  const curConsole = data?.console == null ? null : String(data.console);
+  // Console de jeux (pas « pc ») : son identifiant, même si elle n'existe plus.
+  const isConsole = curConsole != null && curConsole !== 'pc';
+  const curEmu = isConsole ? findConsole(config, curConsole) : null;
 
   // Titre : fourni, sinon déduit du lien.
   let title = String(data?.title || '').trim();
@@ -66,20 +69,20 @@ export function addGameBookmark(ctx: MainContext, data: GameBookmarkInput) {
   const system = curEmu ? guessSystem(curEmu) : '';
 
   // Système non déterminé : on le signale, l'interface demandera (console ouverte par défaut).
-  const needSystem = typeof curConsole !== 'number' && !system;
+  const needSystem = !isConsole && !system;
 
   const bm: GameBookmark = { id: newId(), source, kind, title, console: curConsole, system, downloadId: null, done: false, added: Date.now() };
   // Entrée « en attente de téléchargement » dans le gestionnaire.
-  const dlCtx = { name: title, gameBookmark: bm.id, console: typeof curConsole === 'number' ? curConsole : undefined };
+  const dlCtx = { name: title, gameBookmark: bm.id, console: isConsole ? curConsole : undefined };
   const pending = ctx.downloads.addPending(source, dlCtx);
   bm.downloadId = pending.id;
   const next = ctx.config.update((c) => ({ ...c, gameBookmarks: [...c.gameBookmarks, bm] }));
   return { ok: true as const, bookmark: bm, needSystem, config: next };
 }
 
-export function setGameBookmarkConsole(ctx: MainContext, id: string, consoleIdx: unknown) {
-  const idx = consoleIdx === 'pc' ? 'pc' : Number(consoleIdx);
-  const config = ctx.config.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.map((b) => (b.id === id ? { ...b, console: idx } : b)) }));
+export function setGameBookmarkConsole(ctx: MainContext, id: string, consoleId: unknown) {
+  const ref = String(consoleId);
+  const config = ctx.config.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.map((b) => (b.id === id ? { ...b, console: ref } : b)) }));
   return { ok: true as const, config };
 }
 

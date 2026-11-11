@@ -557,11 +557,10 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
         seenGames.add(k);
         tasks.push({ kind: 'pc', run: () => scrapePcGame(g), limit: 2 });
       }
-      for (let i = 0; i < cfg.emulators.length; i++) {
-        const emu = cfg.emulators[i];
+      for (const emu of cfg.emulators) {
         const system = guessSystem(emu);
         if (!system) continue;
-        const r = await listRoms(i);
+        const r = await listRoms(emu.id);
         if (!r?.ok) continue;
         for (const rom of r.roms) if (wanted(`r:${rom.path}`, force)) tasks.push({ kind: 'rom', run: () => scrapeRom(rom, system), limit: 4 });
       }
@@ -647,7 +646,8 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
       };
     }
     if (kind === 'rom') {
-      const emu = getConfig().emulators[item?.emu];
+      // item.emu : identifiant de la console du jeu.
+      const emu = getConfig().emulators.find((e) => e.id === item?.emu);
       const system = emu ? guessSystem(emu) : '';
       if (!system) return { ok: false, error: 'Système de la console inconnu : indiquez-le avec « Modifier la console ».' };
       const list = await boxartIndex(system);
@@ -676,7 +676,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
     if (kind === 'album') return { ok: override?.pick ? await albumById(item, override.pick) : await scrapeAlbum(item, override) };
     if (kind === 'pc') return { ok: await scrapePcGame(item, override) };
     if (kind === 'rom') {
-      const emu = getConfig().emulators[item.emu];
+      const emu = getConfig().emulators.find((e) => e.id === item.emu);
       const system = emu ? guessSystem(emu) : '';
       if (!system) return { ok: false, error: 'Système de la console inconnu : ajoutez « system » dans sa configuration.' };
       return { ok: await scrapeRom(item, system, override) };

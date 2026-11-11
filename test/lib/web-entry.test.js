@@ -16,9 +16,9 @@ const config = {
     { id: 'b2', site: 'Exemple', url: 'https://exemple.fr/autre' },
   ],
   tv: { services: structuredClone(DEFAULT_TV), active: 'sfr' },
-  emulators: [{ name: 'Super Nintendo' }],
+  emulators: [{ id: 'snes-a1b2c3', name: 'Super Nintendo' }],
 };
-const romSites = (i) => (i === 0 || i === 'pc' ? SITES : []);
+const romSites = (i) => (i === 'snes-a1b2c3' || i === 'pc' ? SITES : []);
 
 test.describe('resolveWebEntry', () => {
   test('site enregistré : entrée de la configuration', () => {
@@ -26,14 +26,14 @@ test.describe('resolveWebEntry', () => {
   });
 
   test('sites de jeux d’une console, avec le site choisi', () => {
-    assert.deepEqual(resolveWebEntry('rom:0', config, { romSites, site: 1 }).entry, {
-      id: 'rom:0',
+    assert.deepEqual(resolveWebEntry('rom:snes-a1b2c3', config, { romSites, site: 1 }).entry, {
+      id: 'rom:snes-a1b2c3',
       name: 'Jeux : Super Nintendo',
       url: 'https://b.example/',
       search: '',
       color: '#6E88F7',
       mode: 'integrated',
-      romConsole: 0,
+      romConsole: 'snes-a1b2c3',
       romSite: 1,
     });
     const pc = resolveWebEntry('rom:pc', config, { romSites }).entry;
@@ -44,8 +44,8 @@ test.describe('resolveWebEntry', () => {
 
   test('console sans site, ou inconnue : erreur', () => {
     const msg = 'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».';
-    assert.deepEqual(resolveWebEntry('rom:1', config, { romSites }), { error: msg });
-    assert.deepEqual(resolveWebEntry('rom:0', config), { error: msg });
+    assert.deepEqual(resolveWebEntry('rom:inconnue', config, { romSites }), { error: msg });
+    assert.deepEqual(resolveWebEntry('rom:snes-a1b2c3', config), { error: msg });
   });
 
   test('marque-page : titre, ou à défaut le site', () => {
@@ -87,10 +87,10 @@ test.describe('resolveWebEntry', () => {
   });
 });
 
-test('romEntry : index de site borné', () => {
-  assert.equal(romEntry(config, 0, SITES, 9).romSite, 1);
-  assert.equal(romEntry(config, 0, SITES, -3).romSite, 0);
-  assert.equal(romEntry(config, 0, SITES, 'x').romSite, 0);
-  assert.equal(romEntry(config, 5, SITES), null);
-  assert.equal(romEntry(config, 0, []), null);
+test('romEntry : index de site borné, console désignée par son identifiant', () => {
+  assert.equal(romEntry(config, 'snes-a1b2c3', SITES, 9).romSite, 1);
+  assert.equal(romEntry(config, 'snes-a1b2c3', SITES, -3).romSite, 0);
+  assert.equal(romEntry(config, 'snes-a1b2c3', SITES, 'x').romSite, 0);
+  assert.equal(romEntry(config, 'inconnue', SITES), null);
+  assert.equal(romEntry(config, 'snes-a1b2c3', []), null);
 });

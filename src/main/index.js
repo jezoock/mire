@@ -665,7 +665,7 @@ function webStateOf(id) {
     bookmarkUrl: String(w.entry.id).startsWith('bm:') ? null : (w.entry.romConsole == null ? w.view.webContents.getURL() : null),
     rom: w.entry.romConsole != null ? {
       console: w.entry.romConsole,
-      consoleName: w.entry.romConsole === 'pc' ? 'Jeux PC' : (configService.get().emulators[w.entry.romConsole]?.name || ''),
+      consoleName: w.entry.romConsole === 'pc' ? 'Jeux PC' : (consoleById(w.entry.romConsole)?.name || ''),
       site: w.entry.romSite,
       pc: w.entry.romConsole === 'pc',
       sites: consoleSites(w.entry.romConsole).map((x) => ({ name: x.name, url: x.url, search: x.search || '' })),
@@ -796,10 +796,15 @@ function createWebView(entry) {
 
 /* ---------- « Ajouter des jeux » : navigateur intégré propre à chaque console ---------- */
 
+// Console désignée par son identifiant (P1-07 : plus jamais par sa position dans la liste).
+function consoleById(id) {
+  return id == null ? null : configService.get().emulators.find((e) => e.id === id) || null;
+}
+
 // Sites de la console : sa liste à elle, ou celle proposée pour son système.
 function consoleSites(i) {
   if (i === 'pc') return (configService.get().pcSites || []).filter((x) => x && x.url);
-  const emu = configService.get().emulators[i];
+  const emu = consoleById(i);
   if (!emu) return [];
   if (Array.isArray(emu.romSites)) return emu.romSites.filter((x) => x && x.url);
   return defaultRomSites(guessSystem(emu));
@@ -944,7 +949,7 @@ function webLearnSearch(id) {
     const i = w.entry.romConsole;
     const sites = consoleSites(i).map((x, n) => (n === w.entry.romSite ? { ...x, search: template } : x));
     if (i === 'pc') configService.update((c) => ({ ...c, pcSites: sites }));
-    else configService.update((c) => ({ ...c, emulators: c.emulators.map((e, n) => (n === i ? { ...e, romSites: sites } : e)) }));
+    else configService.update((c) => ({ ...c, emulators: c.emulators.map((e) => (e.id === i ? { ...e, romSites: sites } : e)) }));
     w.entry = romEntry(i, w.entry.romSite) || w.entry;
     pushWebState(w.entry.id);
     return { ok: true, template, config: configService.get() };
@@ -1164,7 +1169,7 @@ function consoleLocations(emu) {
 
 // opts.online : inclure les sources distantes. opts.only : n'analyser qu'un emplacement précis.
 async function listRoms(i, opts = {}) {
-  const emu = configService.get().emulators[i];
+  const emu = consoleById(i);
   if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
   let places = consoleLocations(emu);
   if (opts.only) places = places.filter((p) => p.location === opts.only);
@@ -1248,7 +1253,7 @@ async function listRoms(i, opts = {}) {
 
 // Un jeu d'une source web est téléchargé une fois dans le cache de Mire, puis lancé.
 async function launchRom(i, romPath) {
-  const emu = configService.get().emulators[i];
+  const emu = consoleById(i);
   if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
   let target = romPath;
   if (isHttpUrl(romPath)) {

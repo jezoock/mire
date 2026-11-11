@@ -16,8 +16,8 @@ export type Theme = 'auto' | 'ecran' | 'jour' | 'minuit' | 'velours' | 'contrast
 
 export type MenuPosition = 'left' | 'right' | 'top' | 'bottom';
 
-/** Console visée : position dans `config.emulators`, ou « pc ». */
-export type ConsoleRef = number | 'pc';
+/** Console visée : identifiant d'une console (`Emulator.id`), ou « pc » pour les jeux PC. */
+export type ConsoleRef = string;
 
 /** Source de la bibliothèque : dossier, partage réseau (\\NAS\Films ou smb://nas/films) ou adresse web. */
 export interface LibrarySource {
@@ -121,6 +121,11 @@ export interface Game {
 
 /** Console (émulateur), ajoutée à la main ou installée par la boutique (`store`). */
 export interface Emulator {
+  /**
+   * Identifiant stable (migration v6) : la valeur de `store` pour une console de la boutique, sinon le nom
+   * simplifié suivi d'un suffixe aléatoire. Attribué une fois pour toutes ; jamais « pc ».
+   */
+  id: string;
   name?: string;
   path: string;
   args?: string[];

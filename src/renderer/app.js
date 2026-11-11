@@ -216,6 +216,7 @@ const S = {
   tvWeb: null,
   tvLoading: false,
   tvError: null,
+  // Console ouverte : son identifiant (les caches de jeux et de sites des consoles sont rangés par identifiant).
   romsOf: null,
   roms: null,
   romsError: null,
@@ -354,7 +355,7 @@ function back() {
 
 function focusSelectorOf(el) {
   if (!el || !viewEl.contains(el)) return null;
-  const parts = ['action', 'index', 'go', 'id']
+  const parts = ['action', 'index', 'console', 'go', 'id']
     .filter((k) => el.dataset[k] != null)
     .map((k) => `[data-${k}="${CSS.escape(el.dataset[k])}"]`);
   if (parts.length) return parts.join('');
@@ -435,7 +436,7 @@ function headerToolsRight(sec) {
     genreMenu(inConsole ? (S.roms || []).map((r) => withScrape({ ...r, kind: 'rom' })) : allLocalGames());
     // Téléchargement : console ouverte, système filtré, sinon jeux PC.
     let target = 'pc';
-    if (inConsole) target = String(S.romsOf);
+    if (inConsole) target = S.romsOf;
     else if (S.gameSystem && S.gameSystem.startsWith('emu:')) target = S.gameSystem.slice(4);
     parts.push(`<button class="icon-btn hdr-icon focusable" data-action="games-download" data-id="${esc(target)}" aria-label="Télécharger des jeux" title="Télécharger des jeux">${ICON.download}</button>`);
     return parts.join('');
@@ -449,7 +450,7 @@ function render({ resetScroll = false } = {}) {
   const selector = hadFocus ? focusSelectorOf(active) : null;
 
   const sec = S.section;
-  titleEl.textContent = sec === 'games' && S.romsOf != null ? (S.config.emulators[S.romsOf]?.name || 'Jeux') : TITLES[sec];
+  titleEl.textContent = sec === 'games' && S.romsOf != null ? (consoleOf(S.romsOf)?.name || 'Jeux') : TITLES[sec];
   searchEl.hidden = !SEARCHABLE.has(sec);
   searchEl.placeholder = sec === 'tv' ? 'Rechercher une chaîne' : 'Rechercher';
   headerToolsEl.innerHTML = headerTools(sec);
@@ -780,18 +781,18 @@ function deleteRomButton(ref) {
   if (!it) return '';
   if (ref.kind === 'rom' && it.remote) return '';
   if (ref.kind === 'game' && it.auto) return ''; // trouvé dans un dossier : se retire via le dossier
-  const payload = { kind: ref.kind, path: it.path, label: labelOf(it), manualIndex: it.manualIndex, emuIndex: it.emuIndex != null ? it.emuIndex : (ref.kind === 'rom' ? S.romsOf : undefined) };
+  const payload = { kind: ref.kind, path: it.path, label: labelOf(it), manualIndex: it.manualIndex, consoleId: it.consoleId != null ? it.consoleId : (ref.kind === 'rom' ? S.romsOf : undefined) };
   return `<button class="btn btn-ghost btn-sm focusable danger" data-action="game-delete" data-ref="${esc(JSON.stringify(payload))}">Supprimer</button>`;
 }
 
 function focusInfoHtml(ref) {
   if (ref?.kind === 'console') {
-    const e = S.config.emulators[ref.index];
+    const e = consoleOf(ref.consoleId);
     if (!e) return '';
-    const n = ref.count != null ? ref.count : (S.romsCache[ref.index] || []).length;
+    const n = ref.count != null ? ref.count : (S.romsCache[ref.consoleId] || []).length;
     const line = [e.system, n ? plural(n, 'jeu', 'jeux') : ''].filter(Boolean).join(', ');
     return `<div class="fi-text"><h2 class="fi-title">${esc(e.name)}</h2><p class="fi-line">${esc(line)}</p></div>
-      <button class="btn btn-ghost btn-sm focusable" data-action="edit-console" data-index="${ref.index}">Modifier la console</button>`;
+      <button class="btn btn-ghost btn-sm focusable" data-action="edit-console" data-console="${esc(ref.consoleId)}">Modifier la console</button>`;
   }
   if (ref?.kind === 'gamebm') {
     const it = ref.item;
@@ -810,7 +811,7 @@ function focusInfoHtml(ref) {
   const it = ref?.item;
   if (!it) return '';
   const title = labelOf(it);
-  const emuName = ref.kind === 'rom' ? (S.config.emulators[it.emuIndex != null ? it.emuIndex : S.romsOf]?.name || '') : '';
+  const emuName = ref.kind === 'rom' ? (consoleOf(it.consoleId != null ? it.consoleId : S.romsOf)?.name || '') : '';
   const place = ref.kind === 'rom' ? `${emuName}${it.remote ? ', disponible en ligne' : ''}` : ref.kind === 'game' ? (it.auto ? 'Jeu PC trouvé dans vos dossiers' : 'Jeu PC') : folderText(it);
   const line = [it.sYear, it.sGenre, place].filter(Boolean).join(', ');
   let overview = it.sOverview;
@@ -822,7 +823,7 @@ function updateFocusInfo(el) {
   const box = $('#focus-info');
   const ref = el && refFromEl(el);
   if (!box || !ref || (!ref.item && ref.kind !== 'console')) return;
-  const k = ref.kind === 'console' ? `c:${ref.index}` : metaKey(ref.item, ref.kind);
+  const k = ref.kind === 'console' ? `c:${ref.consoleId}` : metaKey(ref.item, ref.kind);
   if (box.dataset.key !== k) { box.dataset.key = k; box.innerHTML = focusInfoHtml(ref); S.focusRef = ref; }
 }
 
@@ -841,12 +842,12 @@ function refFromEl(el) {
     case 'show-image': return { kind: 'image', item: S.list[i] };
     case 'gs-image': return { kind: 'image', item: S.gs.images?.[i] };
     case 'launch-rom': return { kind: 'rom', item: S.list[i], emu: S.romsOf };
-    case 'launch-rom-u': { const it = S.list[i]; return it ? { kind: 'rom', item: it, emu: it.emuIndex } : null; }
+    case 'launch-rom-u': { const it = S.list[i]; return it ? { kind: 'rom', item: it, emu: it.consoleId } : null; }
     case 'gs-rom': return { kind: 'rom', item: S.gs.roms?.[i], emu: S.gs.roms?.[i]?.emu };
     case 'launch-game': return { kind: 'game', item: S.gameList[i] };
     case 'gamebm': { const it = S.gameList[i]; return it ? { kind: 'gamebm', item: it } : null; }
     case 'gs-game': return { kind: 'game', item: S.gs.games?.[i] };
-    case 'open-emu': return { kind: 'console', index: i };
+    case 'open-emu': return { kind: 'console', consoleId: t.dataset.console };
     case 'play-recent': {
       const it = S.recent[i];
       return it ? { kind: it.kind === 'audio' ? 'track' : it.kind, item: it } : null;
@@ -985,8 +986,8 @@ function viewGames() {
 
 // Jeux de console présents sur l'ordinateur, pour la liste unifiée. Chargé en tâche de fond.
 async function loadLocalRoms() {
-  for (const [i] of S.config.emulators.entries()) {
-    try { const r = await api.listRoms(i); if (r?.ok) S.localRoms[i] = r.roms; } catch { /* console ignorée */ }
+  for (const { id } of S.config.emulators) {
+    try { const r = await api.listRoms(id); if (r?.ok) S.localRoms[id] = r.roms; } catch { /* console ignorée */ }
   }
   if (S.section === 'games' && S.romsOf == null) render();
 }
@@ -999,21 +1000,26 @@ function gameBmTile(g, i) {
     <span class="tile-t">${esc(g.sTitle || g.name)}</span><span class="tile-s">${esc([g.sYear, g.systemName].filter(Boolean).join(', '))}</span></button>`;
 }
 
+// Console désignée par son identifiant (P1-07 : plus jamais par sa position dans la liste).
+function consoleOf(id) {
+  return id == null ? null : S.config.emulators.find((e) => e.id === id) || null;
+}
+
 const gameSub = (g) => (g.kind === 'rom' ? [g.sYear, g.systemName].filter(Boolean).join(', ') : [g.sYear, genresOf(g)[0]].filter(Boolean).join(', '));
-const refOfGame = (g, i) => (g.kind === 'rom' ? { kind: 'rom', item: g, emu: g.emuIndex } : g.kind === 'gamebm' ? { kind: 'gamebm', item: g } : { kind: 'game', item: g });
+const refOfGame = (g, i) => (g.kind === 'rom' ? { kind: 'rom', item: g, emu: g.consoleId } : g.kind === 'gamebm' ? { kind: 'gamebm', item: g } : { kind: 'game', item: g });
 
 // Jeux PC (manuels + trouvés dans les dossiers) et jeux de console présents en local, dans une seule liste.
 function allLocalGames() {
   const pc = pcGameEntries().map((g) => ({ ...g, systemKey: 'pc', systemName: 'Jeux PC' }));
   const roms = [];
-  for (const [i, emu] of S.config.emulators.entries()) {
-    for (const r of (S.localRoms[i] || [])) roms.push(withScrape({ ...r, kind: 'rom', emuIndex: i, systemKey: `emu:${i}`, systemName: emu.name }));
+  for (const emu of S.config.emulators) {
+    for (const r of (S.localRoms[emu.id] || [])) roms.push(withScrape({ ...r, kind: 'rom', consoleId: emu.id, systemKey: `emu:${emu.id}`, systemName: emu.name }));
   }
   // Marque-pages de jeux en attente de téléchargement : des cartes avec un bouton Télécharger.
   const pending = (S.config.gameBookmarks || []).filter((b) => !b.done).map((b) => {
-    const emuIndex = typeof b.console === 'number' ? b.console : null;
-    const systemKey = b.console === 'pc' ? 'pc' : emuIndex != null ? `emu:${emuIndex}` : 'pending';
-    const systemName = b.console === 'pc' ? 'Jeux PC' : emuIndex != null ? (S.config.emulators[emuIndex]?.name || 'Console') : 'À télécharger';
+    const consoleId = b.console != null && b.console !== 'pc' ? b.console : null;
+    const systemKey = b.console === 'pc' ? 'pc' : consoleId != null ? `emu:${consoleId}` : 'pending';
+    const systemName = b.console === 'pc' ? 'Jeux PC' : consoleId != null ? (consoleOf(consoleId)?.name || 'Console') : 'À télécharger';
     return withScrape({ kind: 'gamebm', name: b.title, path: `gbm:${b.id}`, bookmarkId: b.id, dlSource: b.source, systemKey, systemName, pending: true });
   });
   return [...pc, ...roms, ...pending].sort((a, b) => collator.compare(labelOf(a), labelOf(b)));
@@ -1032,27 +1038,28 @@ function gameSystems(all) {
   const out = [];
   const pc = all.filter((g) => g.systemKey === 'pc').length;
   if (pc) out.push({ key: 'pc', name: 'Jeux PC', count: pc });
-  for (const [i, emu] of S.config.emulators.entries()) {
-    const n = all.filter((g) => g.systemKey === `emu:${i}`).length;
-    out.push({ key: `emu:${i}`, name: emu.name, count: n, emuIndex: i });
+  for (const emu of S.config.emulators) {
+    const n = all.filter((g) => g.systemKey === `emu:${emu.id}`).length;
+    out.push({ key: `emu:${emu.id}`, name: emu.name, count: n, consoleId: emu.id });
   }
   return out;
 }
 
 function viewRoms() {
-  const emu = S.config.emulators[S.romsOf];
+  const emu = consoleOf(S.romsOf);
   const sites = S.romSites[S.romsOf] || [];
+  const cid = esc(S.romsOf);
   const locations = emu ? [emu.romsDir, ...(emu.sources || [])].filter(Boolean) : [];
   const remoteLocs = locations.filter((l) => /^https?:\/\//i.test(l));
   const backBtn = `<div class="btn-row back">
     <button class="btn btn-ghost focusable" data-action="back-games">Retour aux jeux</button>
-    <button class="btn btn-ghost focusable" data-action="edit-console" data-index="${S.romsOf}">Modifier la console</button>
-    <button class="btn btn-primary focusable" data-action="rom-sites" data-index="${S.romsOf}">Ajouter des jeux</button></div>`;
-  const siteSearch = S.query && sites.length ? `<div class="site-search"><span>Chercher « ${esc(S.query)} » sur</span>${sites.map((x, n) => `<button class="btn btn-sm focusable" data-action="rom-site-search" data-index="${S.romsOf}" data-id="${n}">${esc(x.name)}</button>`).join('')}</div>` : '';
-  if (S.romsError) return backBtn + emptyBlock('Jeux introuvables', S.romsError, '<button class="btn focusable" data-action="edit-console" data-index="' + S.romsOf + '">Modifier la console</button>');
+    <button class="btn btn-ghost focusable" data-action="edit-console" data-console="${cid}">Modifier la console</button>
+    <button class="btn btn-primary focusable" data-action="rom-sites" data-console="${cid}">Ajouter des jeux</button></div>`;
+  const siteSearch = S.query && sites.length ? `<div class="site-search"><span>Chercher « ${esc(S.query)} » sur</span>${sites.map((x, n) => `<button class="btn btn-sm focusable" data-action="rom-site-search" data-console="${cid}" data-id="${n}">${esc(x.name)}</button>`).join('')}</div>` : '';
+  if (S.romsError) return backBtn + emptyBlock('Jeux introuvables', S.romsError, `<button class="btn focusable" data-action="edit-console" data-console="${cid}">Modifier la console</button>`);
   if (!S.roms) return backBtn + loading('Recherche des jeux…');
 
-  const all = filterQ(S.roms.map((r) => withScrape({ ...r, kind: 'rom', emuIndex: S.romsOf })), (r) => `${r.displayName} ${r.sTitle || ''} ${r.sGenre}`);
+  const all = filterQ(S.roms.map((r) => withScrape({ ...r, kind: 'rom', consoleId: S.romsOf })), (r) => `${r.displayName} ${r.sTitle || ''} ${r.sGenre}`);
   const items = byGenre(all);
   const fileOf = (r) => decodeURIComponent(String(r.path).split(/[\\/]/).pop().split('?')[0]).toLowerCase();
   const localNames = new Set(items.filter((r) => !r.remote).map(fileOf));
@@ -1070,7 +1077,7 @@ function viewRoms() {
   let onlineBlock = '';
   if (remoteLocs.length) {
     if (!S.romsOnline) {
-      onlineBlock = `<div class="sec-h-row"><h2 class="sec-h">Disponibles en ligne</h2><button class="btn btn-sm btn-primary focusable" data-action="rom-online" data-index="${S.romsOf}">Afficher les jeux en ligne</button></div>
+      onlineBlock = `<div class="sec-h-row"><h2 class="sec-h">Disponibles en ligne</h2><button class="btn btn-sm btn-primary focusable" data-action="rom-online" data-console="${cid}">Afficher les jeux en ligne</button></div>
         <p class="hint">${plural(remoteLocs.length, 'source en ligne', 'sources en ligne')} pour cette console. L’affichage peut prendre un moment selon la source.</p>`;
     } else if (S.romsOnlineLoading) {
       onlineBlock = `<h2 class="sec-h">Disponibles en ligne</h2>${loading('Lecture de la source en ligne…')}`;
@@ -1085,7 +1092,7 @@ function viewRoms() {
     }
   }
   const warn = S.romsWarnings?.length ? `<p class="hint warn">${esc(S.romsWarnings.join(' '))}</p>` : '';
-  return `${backBtn}${warn}${siteSearch}<section class="games-hero" id="focus-info">${focusInfoHtml({ kind: 'console', index: S.romsOf, count: local.length })}</section>${localBlock}${onlineBlock}${moreButton(Math.max(local.length, online.length))}`;
+  return `${backBtn}${warn}${siteSearch}<section class="games-hero" id="focus-info">${focusInfoHtml({ kind: 'console', consoleId: S.romsOf, count: local.length })}</section>${localBlock}${onlineBlock}${moreButton(Math.max(local.length, online.length))}`;
 }
 
 const sourceLabel = (l) => { try { return new URL(l).hostname.replace(/^www\./, ''); } catch { return l; } };
@@ -1149,11 +1156,11 @@ function viewDownloads() {
   const list = S.downloads;
   const running = list.filter((d) => DL_ACTIVE.has(d.state) || d.state === 'paused' || d.state === 'pending');
   const others = list.filter((d) => !running.includes(d));
-  const dests = [['', 'Dossier des téléchargements'], ...S.config.emulators.map((e, i) => [String(i), `Console : ${e.name}`])];
+  const dests = [['', 'Dossier des téléchargements'], ...S.config.emulators.map((e) => [e.id, `Console : ${e.name}`])];
   const client = S.dlSettings.torrentClient === 'system' ? 'confiés à votre logiciel de torrent' : 'téléchargés par le client intégré de Mire';
   return `<section class="dl-add">
       <div class="field-row"><input class="input focusable" id="dl-url" placeholder="Coller un lien : https://… ou magnet:?…" aria-label="Lien à télécharger">
-      <select class="input focusable dl-dest" id="dl-dest" aria-label="Destination">${dests.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select>
+      <select class="input focusable dl-dest" id="dl-dest" aria-label="Destination">${dests.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>
       <button class="btn btn-primary focusable" data-action="dl-add">Télécharger</button></div>
       <div class="btn-row"><button class="btn btn-sm focusable" data-action="dl-torrent">Ouvrir un fichier .torrent</button></div>
       <p class="hint">Les liens magnet et fichiers .torrent sont ${client} (réglable avec le rouage). Les téléchargements des sites ouverts dans Mire arrivent ici aussi ; depuis « Ajouter des jeux », ils vont dans le dossier de la console.</p>
@@ -1599,7 +1606,7 @@ async function bookmarkCurrentGame() {
 
 // Demande à quel système rattacher un jeu bookmarké (console ouverte par défaut).
 async function askBookmarkConsole(id, def) {
-  const options = [['pc', 'Jeux PC'], ...S.config.emulators.map((e, i) => [String(i), e.name])];
+  const options = [['pc', 'Jeux PC'], ...S.config.emulators.map((e) => [e.id, e.name])];
   if (!options.length) return;
   const res = await openForm({
     title: 'Système du jeu',
@@ -1701,7 +1708,7 @@ async function cleanupGames() {
 }
 
 async function openRomBrowser(i, { site, url } = {}) {
-  const name = i === 'pc' ? 'Jeux PC' : S.config.emulators[i]?.name;
+  const name = i === 'pc' ? 'Jeux PC' : consoleOf(i)?.name;
   if (name == null) return;
   const r = await api.romSites(i);
   S.romSites[i] = r?.sites || [];
@@ -1804,7 +1811,7 @@ async function openEmu(i) {
   else S.romsError = r.error;
   render();
   // Option : afficher d'emblée les jeux en ligne.
-  const emu = S.config.emulators[i];
+  const emu = consoleOf(i);
   const hasRemote = emu && [emu.romsDir, ...(emu.sources || [])].filter(Boolean).some((l) => /^https?:\/\//i.test(l));
   if (S.config.gamesOpts?.autoOnline && hasRemote) {
     S.romsOnline = true; S.romsOnlineLoading = true; render();
@@ -1813,7 +1820,7 @@ async function openEmu(i) {
     if (rr?.ok) { S.roms = rr.roms; S.romsWarnings = rr.errors || []; }
     render();
   }
-  const banner = S.config.emulators[i]?.banner;
+  const banner = consoleOf(i)?.banner;
   if (banner) showBackdrop(banner);
   (viewEl.querySelector('.tile') || viewEl.querySelector('.focusable'))?.focus();
 }
@@ -1827,12 +1834,12 @@ function closeRoms() {
   searchEl.value = '';
   S.limit = PAGE;
   render({ resetScroll: true });
-  (viewEl.querySelector(`[data-action="open-emu"][data-index="${i}"]`) || viewEl.querySelector('.focusable'))?.focus();
+  (viewEl.querySelector(`[data-action="open-emu"][data-console="${CSS.escape(String(i))}"]`) || viewEl.querySelector('.focusable'))?.focus();
 }
 
-async function launchRom(rom, emuIndex) {
+async function launchRom(rom, consoleId) {
   if (!rom) return;
-  const i = emuIndex != null ? emuIndex : S.romsOf;
+  const i = consoleId != null ? consoleId : S.romsOf;
   toast(`Lancement de ${rom.displayName}…`, { duration: 2500 });
   audio.pause();
   const r = await api.launchRom(i, rom.path);
@@ -2041,8 +2048,7 @@ viewEl.addEventListener('change', (e) => {
     return;
   }
   if (e.target.id !== 'wb-sites') return;
-  const i = Number(String(S.webActive).slice(4));
-  openRomBrowser(i, { site: Number(e.target.value) });
+  openRomBrowser(String(S.webActive).slice(4), { site: Number(e.target.value) });
 });
 api.onWebSessions((list) => {
   S.webSessions = Array.isArray(list) ? list : [];
@@ -2097,7 +2103,7 @@ function viewSearch() {
 // Charge en arrière-plan ce qui n'est pas encore en mémoire : chaînes et listes de jeux des consoles.
 async function ensureSearchSources() {
   if (!S.channels && !S.tvLoading && !S.tvError) loadChannels();
-  const missing = S.config.emulators.map((_, i) => i).filter((i) => !S.romsCache[i]);
+  const missing = S.config.emulators.map((e) => e.id).filter((id) => !S.romsCache[id]);
   if (!missing.length) return;
   await Promise.all(missing.map(async (i) => {
     const r = await api.listRoms(i);
@@ -2108,7 +2114,7 @@ async function ensureSearchSources() {
 
 function allRoms() {
   const out = [];
-  S.config.emulators.forEach((e, i) => { for (const r of S.romsCache[i] || []) out.push({ ...r, emu: i, emuName: e.name }); });
+  S.config.emulators.forEach((e) => { for (const r of S.romsCache[e.id] || []) out.push({ ...r, emu: e.id, emuName: e.name }); });
   return out;
 }
 
@@ -2499,10 +2505,10 @@ function tvBlock() {
 
 function consolesBlock() {
   const list = S.config.emulators;
-  const rows = list.length ? list.map((e, i) => `<li class="con-row">
+  const rows = list.length ? list.map((e) => `<li class="con-row">
       <span class="con-thumb"${e.banner ? ` style="background-image:url('${esc(mediaUrl(e.banner)).replace(/'/g, '%27')}')"` : ''}></span>
       <span class="con-name">${esc(e.name)}<span class="con-sub">${esc([e.system || '', plural((e.sources || []).length + (e.romsDir ? 1 : 0), 'source')].filter(Boolean).join(', '))}</span></span>
-      <button type="button" class="btn btn-ghost btn-sm focusable" data-action="edit-console" data-index="${i}">Modifier</button>
+      <button type="button" class="btn btn-ghost btn-sm focusable" data-action="edit-console" data-console="${esc(e.id)}">Modifier</button>
     </li>`).join('') : '<li class="none">Aucune console. L’onglet Boutique les installe en un clic.</li>';
   return `<section class="pset"><p class="set-help">« Modifier » change l’émulateur, les dossiers et sources de jeux, et la bannière affichée dans Jeux.</p><ul class="folder-list con-list">${rows}</ul></section>`;
 }
@@ -2777,13 +2783,13 @@ function deletableGame(ref) {
 }
 async function deleteGameRef(ref) {
   const it = ref.item;
-  const payload = { kind: ref.kind, path: it.path, label: labelOf(it), manualIndex: it.manualIndex, emuIndex: it.emuIndex != null ? it.emuIndex : (ref.kind === 'rom' ? S.romsOf : undefined) };
+  const payload = { kind: ref.kind, path: it.path, label: labelOf(it), manualIndex: it.manualIndex, consoleId: it.consoleId != null ? it.consoleId : (ref.kind === 'rom' ? S.romsOf : undefined) };
   const ok = await confirmDialog(`Supprimer « ${payload.label} » ?`, ref.kind === 'rom' ? 'Le fichier du jeu sera supprimé de l’ordinateur.' : 'Le jeu sera retiré de la liste.', 'Supprimer');
   if (!ok) return;
   const r = await api.gameDelete(payload);
   if (!r?.ok) { toast(r?.error || 'Suppression impossible.', { duration: 8000 }); return; }
   if (r.config) S.config = r.config;
-  if (ref.kind === 'rom' && payload.emuIndex != null) { const rr = await api.listRoms(payload.emuIndex); if (rr?.ok) { S.localRoms[payload.emuIndex] = rr.roms; if (S.romsOf === payload.emuIndex) S.roms = rr.roms; } }
+  if (ref.kind === 'rom' && payload.consoleId != null) { const rr = await api.listRoms(payload.consoleId); if (rr?.ok) { S.localRoms[payload.consoleId] = rr.roms; if (S.romsOf === payload.consoleId) S.roms = rr.roms; } }
   else S.autoGames = S.autoGames.filter((g) => g.path !== payload.path);
   toast('Jeu supprimé');
   render();
@@ -2791,7 +2797,7 @@ async function deleteGameRef(ref) {
 
 async function editRef(ref) {
   if (!ref) return;
-  if (ref.kind === 'console') { editConsole(ref.index); return; }
+  if (ref.kind === 'console') { editConsole(ref.consoleId); return; }
   if (!ref.item || !EDIT_FIELDS[ref.kind]) return;
   const kind = ref.kind;
   const it = ref.item;
@@ -2919,7 +2925,7 @@ function parseSites(text) {
 }
 
 async function editConsole(i) {
-  const e = S.config.emulators[i];
+  const e = consoleOf(i);
   if (!e) return;
   let banner = e.banner || '';
   const siteInfo = await api.romSites(i);
@@ -2957,7 +2963,7 @@ async function editConsole(i) {
       actions: [{ id: 'yes', label: 'Supprimer', kind: 'primary' }, { id: 'cancel', label: 'Annuler', kind: 'ghost' }],
     });
     if (confirm?.action !== 'yes') return;
-    next.emulators.splice(i, 1);
+    next.emulators = next.emulators.filter((x) => x.id !== i);
     S.config = await api.saveConfig(next);
     S.romsCache = {};
     refreshPanel();
@@ -2966,7 +2972,9 @@ async function editConsole(i) {
     return;
   }
   const v = res.values;
-  next.emulators[i] = {
+  const at = next.emulators.findIndex((x) => x.id === i);
+  if (at < 0) return;
+  next.emulators[at] = {
     ...e,
     name: v.name || e.name,
     system: v.system,
@@ -2980,8 +2988,8 @@ async function editConsole(i) {
   };
   // Sites : on ne garde une liste propre à la console que si elle diffère de celle proposée par Mire.
   const parsedSites = parseSites(v.romSites);
-  if (!v.romSites.trim() || JSON.stringify(parsedSites) === JSON.stringify(siteInfo?.defaults || [])) delete next.emulators[i].romSites;
-  else next.emulators[i].romSites = parsedSites;
+  if (!v.romSites.trim() || JSON.stringify(parsedSites) === JSON.stringify(siteInfo?.defaults || [])) delete next.emulators[at].romSites;
+  else next.emulators[at].romSites = parsedSites;
   delete S.romSites[i];
   S.config = await api.saveConfig(next);
   S.romsCache = {};
@@ -3033,14 +3041,14 @@ function onHoverItem(target) {
   if (!ref) return;
   if (ref.kind === 'console') {
     updateFocusInfo(target);
-    const banner = S.config.emulators[ref.index]?.banner;
+    const banner = consoleOf(ref.consoleId)?.banner;
     if (banner) showBackdrop(banner);
     return;
   }
   if (!ref.item) return;
   updateFocusInfo(target);
   const it = ref.item.sBackdrop !== undefined ? ref.item : withScrape(ref.item);
-  const consoleBanner = ref.kind === 'rom' ? S.config.emulators[S.romsOf]?.banner : null;
+  const consoleBanner = ref.kind === 'rom' ? consoleOf(S.romsOf)?.banner : null;
   showBackdrop(backdropFor({ ...ref, item: it }) || consoleBanner);
 }
 
@@ -3129,9 +3137,9 @@ function viewStore() {
     </article>`;
   }).join('');
 
-  const consoles = S.config.emulators.map((e, i) => ({ e, i })).filter(({ e }) => e.romsDir);
+  const consoles = S.config.emulators.filter((e) => e.romsDir);
   const importer = consoles.length
-    ? `<div class="st-import"><div class="field"><label for="st-console">Console</label><select class="input focusable" id="st-console">${consoles.map(({ e, i }) => `<option value="${i}">${esc(e.name)}</option>`).join('')}</select></div>
+    ? `<div class="st-import"><div class="field"><label for="st-console">Console</label><select class="input focusable" id="st-console">${consoles.map((e) => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}</select></div>
        <button class="btn focusable" data-action="store-import">Choisir des fichiers</button></div>`
     : '<p class="set-help">Ajoutez d’abord une console ci-dessus.</p>';
 
@@ -3172,6 +3180,8 @@ async function onActionClick(e) {
   const t = e.target.closest('[data-action]');
   if (!t || !e.currentTarget.contains(t)) return;
   const i = t.dataset.index != null ? Number(t.dataset.index) : -1;
+  // Actions d'une console : son identifiant (jamais sa position dans la liste).
+  const cid = t.dataset.console;
 
   switch (t.dataset.action) {
     case 'go': go(t.dataset.go, { focus: 'content' }); break;
@@ -3225,9 +3235,9 @@ async function onActionClick(e) {
       break;
     }
     case 'add-game': addGame(); break;
-    case 'open-emu': openEmu(i); break;
+    case 'open-emu': openEmu(cid); break;
     case 'launch-rom': launchRom(S.list[i]); break;
-    case 'launch-rom-u': { const it = S.list[i]; launchRom(it, it.emuIndex); break; }
+    case 'launch-rom-u': { const it = S.list[i]; launchRom(it, it.consoleId); break; }
     case 'back-games': closeRoms(); break;
     case 'game-system': {
       S.gameSystem = t.dataset.id;
@@ -3243,7 +3253,7 @@ async function onActionClick(e) {
       S.limit = PAGE;
       render();
       const r = await api.romListSource(S.romsOf, S.romsSource || undefined);
-      if (S.romsOf !== i && S.romsOf !== null) { /* console changée entre-temps */ }
+      if (S.romsOf !== cid && S.romsOf !== null) { /* console changée entre-temps */ }
       S.romsOnlineLoading = false;
       if (r?.ok) { S.roms = r.roms; S.romsWarnings = r.errors || []; }
       else toast(r?.error || 'Impossible de lire la source en ligne.', { duration: 7000 });
@@ -3257,7 +3267,7 @@ async function onActionClick(e) {
       const r = await api.gameDelete(ref);
       if (!r?.ok) { toast(r?.error || 'Suppression impossible.', { duration: 8000 }); break; }
       if (r.config) S.config = r.config;
-      if (ref.kind === 'rom' && ref.emuIndex != null) { const rr = await api.listRoms(ref.emuIndex); if (rr?.ok) S.localRoms[ref.emuIndex] = rr.roms; if (S.romsOf === ref.emuIndex) S.roms = rr.roms; }
+      if (ref.kind === 'rom' && ref.consoleId != null) { const rr = await api.listRoms(ref.consoleId); if (rr?.ok) S.localRoms[ref.consoleId] = rr.roms; if (S.romsOf === ref.consoleId) S.roms = rr.roms; }
       else S.autoGames = S.autoGames.filter((g) => g.path !== ref.path);
       toast('Jeu supprimé');
       render();
@@ -3282,7 +3292,7 @@ async function onActionClick(e) {
     }
     case 'edit-focused': editRef(S.focusRef || refFromEl(viewEl.querySelector('.tile, .track'))); break;
     case 'edit-album': editRef({ kind: 'album', item: S.list[i] }); break;
-    case 'edit-console': editConsole(i); break;
+    case 'edit-console': editConsole(cid); break;
     case 'browse': {
       const p = await api.pickFile(t.dataset.kind);
       if (p) $(`#${t.dataset.id}`).value = p;
@@ -3290,9 +3300,9 @@ async function onActionClick(e) {
     }
     case 'reveal-config': api.revealConfig(); break;
     case 'open-store': openPageSettings('store'); break;
-    case 'rom-sites': openRomBrowser(i); break;
+    case 'rom-sites': openRomBrowser(cid); break;
     case 'games-download': {
-      if (t.dataset.id && t.dataset.id !== 'pc') { openRomBrowser(Number(t.dataset.id)); break; }
+      if (t.dataset.id && t.dataset.id !== 'pc') { openRomBrowser(t.dataset.id); break; }
       if (!(S.config.pcSites || []).length) { toast('Ajoutez d’abord un site dans les réglages de la page Jeux, onglet Jeux PC.', { duration: 7000 }); openPageSettings('pc'); break; }
       openRomBrowser('pc');
       break;
@@ -3330,7 +3340,7 @@ async function onActionClick(e) {
       const localNames = new Set((S.roms || []).filter((r) => !r.remote).map((r) => String(r.path).split(/[\\/]/).pop().toLowerCase()));
       const todo = all.filter((r) => !localNames.has(fileOf(r)));
       if (!todo.length) break;
-      const ok = await confirmDialog(`Télécharger ${plural(todo.length, 'jeu', 'jeux')} dans le dossier de ${S.config.emulators[S.romsOf]?.name || 'la console'} ?`, 'Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans Téléchargements.', 'Tout télécharger');
+      const ok = await confirmDialog(`Télécharger ${plural(todo.length, 'jeu', 'jeux')} dans le dossier de ${consoleOf(S.romsOf)?.name || 'la console'} ?`, 'Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans Téléchargements.', 'Tout télécharger');
       if (!ok) break;
       let n = 0;
       for (const r of todo) { const res = await api.romDownload(S.romsOf, r.path); if (res?.ok) n++; }
@@ -3341,7 +3351,7 @@ async function onActionClick(e) {
       const url = $('#dl-url').value.trim();
       if (!url) { toast('Collez d’abord un lien (https://… ou magnet:?…).'); break; }
       const dest = $('#dl-dest').value;
-      const r = await api.downloadsAddUrl(url, dest === '' ? {} : { console: Number(dest) });
+      const r = await api.downloadsAddUrl(url, dest === '' ? {} : { console: dest });
       if (!r?.ok) { toast(r?.error || 'Ce lien n’a pas pu être ajouté.', { duration: 8000 }); break; }
       $('#dl-url').value = '';
       toast(r.external ? 'Lien confié à votre logiciel de torrent.' : 'Téléchargement ajouté.');
@@ -3349,7 +3359,7 @@ async function onActionClick(e) {
     }
     case 'dl-torrent': {
       const dest = $('#dl-dest')?.value || '';
-      const r = await api.downloadsAddTorrentFile(dest === '' ? {} : { console: Number(dest) });
+      const r = await api.downloadsAddTorrentFile(dest === '' ? {} : { console: dest });
       if (r && !r.ok && !r.canceled) toast(r.error || 'Ce fichier .torrent n’a pas pu être ajouté.', { duration: 8000 });
       break;
     }
@@ -3383,10 +3393,10 @@ async function onActionClick(e) {
     }
     case 'bios-open': { const r = await api.biosOpen(t.dataset.id); if (r && !r.ok && r.error) toast(r.error); break; }
     case 'rom-site-search': {
-      const site = (S.romSites[i] || [])[Number(t.dataset.id)];
+      const site = (S.romSites[cid] || [])[Number(t.dataset.id)];
       if (!site) break;
-      if (!site.search) { openRomBrowser(i, { site: Number(t.dataset.id) }); setTimeout(() => toast(`La recherche de ${site.name} n’est pas encore connue : cherchez le mot « mire » sur le site, puis appuyez sur la loupe.`, { duration: 9000 }), 2600); break; }
-      openRomBrowser(i, { site: Number(t.dataset.id), url: searchUrlFor(site, S.query) });
+      if (!site.search) { openRomBrowser(cid, { site: Number(t.dataset.id) }); setTimeout(() => toast(`La recherche de ${site.name} n’est pas encore connue : cherchez le mot « mire » sur le site, puis appuyez sur la loupe.`, { duration: 9000 }), 2600); break; }
+      openRomBrowser(cid, { site: Number(t.dataset.id), url: searchUrlFor(site, S.query) });
       break;
     }
     case 'scrape-section': {
@@ -3449,8 +3459,7 @@ async function onActionClick(e) {
       break;
     }
     case 'store-import': {
-      const idx = Number($('#st-console')?.value);
-      const r = await api.storeImport(idx);
+      const r = await api.storeImport($('#st-console')?.value);
       if (r?.ok && r.count) { S.romsCache = {}; toast(`${plural(r.count, 'jeu copié', 'jeux copiés')} dans ${r.console}.`); }
       else if (r && !r.ok) toast(r.error, { duration: 7000 });
       break;

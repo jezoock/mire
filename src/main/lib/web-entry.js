@@ -5,10 +5,11 @@ const ROM_COLOR = '#6E88F7';
 const BOOKMARK_COLOR = '#9B6CF7';
 const TV_COLOR = '#E23B3B';
 
-// Entrée « Ajouter des jeux » d'une console : sites fournis par l'appelant (ils dépendent du scraper).
+// Entrée « Ajouter des jeux » d'une console (son identifiant, ou « pc ») : sites fournis par l'appelant
+// (ils dépendent du scraper).
 function romEntry(config, i, sites, siteIndex = 0) {
   if (!sites || !sites.length) return null;
-  const name = i === 'pc' ? 'Jeux PC' : config.emulators?.[i]?.name;
+  const name = i === 'pc' ? 'Jeux PC' : (config.emulators || []).find((e) => e.id === i)?.name;
   if (name == null) return null;
   const si = Math.max(0, Math.min(Number(siteIndex) || 0, sites.length - 1));
   return {
@@ -28,8 +29,7 @@ function romEntry(config, i, sites, siteIndex = 0) {
 function resolveWebEntry(id, config, opts = {}) {
   const s = String(id);
   if (s.startsWith('rom:')) {
-    const raw = s.slice(4);
-    const i = raw === 'pc' ? 'pc' : Number(raw);
+    const i = s.slice(4);
     const entry = romEntry(config, i, opts.romSites ? opts.romSites(i) : [], opts.site);
     return entry ? { entry } : { error: 'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».' };
   }

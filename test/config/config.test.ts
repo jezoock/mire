@@ -150,10 +150,14 @@ test.describe('normalizeConfig', () => {
     assert.equal(c.bookmarks.length, 1);
     assert.equal(c.bookmarks[0].type, 'tv');
     assert.equal(c.gameBookmarks.length, 1);
-    assert.equal(c.gameBookmarks[0].console, 2);
+    // Depuis la v6, la console est un identifiant : la normalisation ne la convertit plus en position.
+    assert.equal(c.gameBookmarks[0].console, '2');
     assert.equal(c.gameBookmarks[0].kind, 'torrent');
     assert.deepEqual(c.games, [{ path: '/jeu' }]);
-    assert.deepEqual(c.emulators, [{ path: '/emu', sources: ['/roms'], romSites: [{ name: 'https://roms/', url: 'https://roms/', search: '' }] }]);
+    assert.match(c.emulators[0].id, /^console-[0-9a-f]{6}$/);
+    assert.deepEqual(c.emulators, [
+      { path: '/emu', sources: ['/roms'], romSites: [{ name: 'https://roms/', url: 'https://roms/', search: '' }], id: c.emulators[0].id },
+    ]);
     assert.equal('freebox' in c, false);
   });
 });
@@ -188,7 +192,7 @@ test.describe('migrateConfig', () => {
   test('registre : une étape par version, dans l’ordre, jusqu’à la version courante', () => {
     assert.deepEqual(
       MIGRATIONS.map((m) => m.version),
-      [2, 3, 4, 5],
+      [2, 3, 4, 5, 6],
     );
     assert.equal(MIGRATIONS.at(-1)?.version, CONFIG_VERSION);
   });

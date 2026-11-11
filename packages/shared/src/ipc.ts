@@ -47,12 +47,13 @@ export interface GameRef {
   manualIndex?: number | null;
   /** Jeu de console : fichier à supprimer et console qui le possède. */
   path?: string;
-  emuIndex?: number;
+  consoleId?: string;
 }
 
 /** Contexte d'un téléchargement : console de destination, nom affiché… */
 export interface DownloadContext {
-  console?: number;
+  /** Identifiant de la console de destination. */
+  console?: string;
   name?: string;
   [key: string]: unknown;
 }
@@ -69,7 +70,7 @@ export interface BookmarkInput {
 export interface GameBookmarkInput {
   source: string;
   title?: string;
-  console?: ConsoleRef | string | null;
+  console?: ConsoleRef | null;
 }
 
 export interface CleanupReport {
@@ -136,15 +137,15 @@ export interface IpcMethods {
 
   // Sites de jeux et marque-pages
   romSites(console: ConsoleRef): { sites: unknown[]; custom: boolean; defaults: unknown[] };
-  romDownload(console: number, url: string): Outcome<{ count: number; total?: number }>;
+  romDownload(console: string, url: string): Outcome<{ count: number; total?: number }>;
   bookmarkAdd(data: BookmarkInput): Outcome<{ bookmark: Bookmark; scraped: boolean; config: MireConfig }>;
   bookmarkRemove(id: string): Outcome<{ config: MireConfig }>;
   bookmarkOpen(id: string): unknown;
   gameBookmarkAdd(data: GameBookmarkInput): Outcome<{ bookmark: GameBookmark; needSystem: boolean; config: MireConfig }>;
-  gameBookmarkSetConsole(id: string, console: ConsoleRef | string): Outcome<{ config: MireConfig }>;
+  gameBookmarkSetConsole(id: string, console: ConsoleRef): Outcome<{ config: MireConfig }>;
   gameBookmarkRemove(id: string): Outcome<{ config: MireConfig }>;
   gameBookmarkDownload(id: string): Outcome;
-  romListSource(console: number, only?: string): Outcome<Record<string, unknown>>;
+  romListSource(console: string, only?: string): Outcome<Record<string, unknown>>;
   gameDelete(ref: GameRef): Outcome<{ config?: MireConfig }>;
   gamesCleanup(online?: boolean): Outcome<CleanupReport>;
 
@@ -201,14 +202,14 @@ export interface IpcMethods {
   storeInstall(id: string, systems?: unknown): unknown;
   storeUninstall(id: string): unknown;
   storeGame(id: string): unknown;
-  storeImport(console: number): Outcome<{ count?: number }>;
+  storeImport(console: string): Outcome<{ count?: number }>;
   storePickRoot(): MireConfig | null;
 
   // Lancement des jeux
   launchGame(index: number): Outcome;
   addGame(): MireConfig | null;
-  listRoms(console: number, opts?: { online?: boolean; only?: string }): Outcome<Record<string, unknown>>;
-  launchRom(console: number, romPath: string): Outcome;
+  listRoms(console: string, opts?: { online?: boolean; only?: string }): Outcome<Record<string, unknown>>;
+  launchRom(console: string, romPath: string): Outcome;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;

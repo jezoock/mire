@@ -26,7 +26,7 @@ export function normalizeGameBookmarks(list: unknown): GameBookmark[] {
       source: String(b.source),
       kind: b.kind === 'torrent' ? 'torrent' : 'http',
       title: String(b.title || ''),
-      console: b.console == null ? null : b.console === 'pc' ? 'pc' : Number(b.console),
+      console: b.console == null || b.console === '' ? null : String(b.console),
       system: String(b.system || ''),
       downloadId: b.downloadId || null,
       done: b.done === true,

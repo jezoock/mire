@@ -5,6 +5,7 @@ import path from 'node:path';
 import { isHttpUrl, safeFileName } from '@mire/shared';
 import type { Game } from '@mire/shared';
 import type { CleanupReport, GameRef } from '@mire/shared/ipc';
+import { findConsole } from '../../config/index.ts';
 import * as http from '../../net/http.ts';
 import disc from '../../discfiles.js';
 import { resolveLocation } from '../../lib/location.js';
@@ -33,7 +34,7 @@ export async function deleteGame(ctx: MainContext, ref: GameRef) {
   // Jeu de console local : on supprime son fichier (et les fichiers voisins d'un jeu sur disque).
   if (typeof ref.path !== 'string' || !ref.path || isHttpUrl(ref.path))
     return { ok: false as const, error: 'Un jeu disponible en ligne ne peut pas être supprimé ici.' };
-  const emu = ref.kind === 'rom' && Number.isInteger(ref.emuIndex) ? config.emulators[ref.emuIndex as number] : null;
+  const emu = ref.kind === 'rom' ? findConsole(config, ref.consoleId) : null;
   if (!emu) return { ok: false as const, error: 'Ce jeu n’est rattaché à aucune console : il n’a pas été supprimé.' };
   // Le renderer n'est pas cru sur parole : le fichier doit être dans un dossier local de cette console.
   const roots = ctx
@@ -72,8 +73,7 @@ export async function cleanupGames(ctx: MainContext, online?: boolean) {
       result.missingLocal.push(g.name as string);
     }
   }
-  for (let i = 0; i < config.emulators.length; i++) {
-    const emu = config.emulators[i];
+  for (const emu of config.emulators) {
     if (online) {
       for (const p of ctx.consoleLocations(emu).filter((x: { remote?: boolean }) => x.remote)) {
         try {
@@ -93,13 +93,13 @@ export async function cleanupGames(ctx: MainContext, online?: boolean) {
 }
 
 // Jeu d'une source web : copie locale dans le dossier principal de la console.
-export async function downloadGame(ctx: MainContext, i: number, url: string) {
-  const emu = ctx.config.get().emulators[i];
+export async function downloadGame(ctx: MainContext, consoleId: string, url: string) {
+  const emu = findConsole(ctx.config.get(), consoleId);
   const { downloads } = ctx;
   if (!emu) return { ok: false as const, error: 'Cette console n’existe plus dans la configuration.' };
   if (!emu.romsDir) return { ok: false as const, error: `Indiquez d’abord le dossier principal de ${emu.name} (Modifier la console).` };
   const u = String(url || '');
-  if (!disc.isDescriptor(u)) return { ...downloads.addUrl(u, { console: i }), count: 1 };
+  if (!disc.isDescriptor(u)) return { ...downloads.addUrl(u, { console: consoleId }), count: 1 };
   // Jeu sur disque : l'index et tous les fichiers qu'il cite, dans un dossier au nom du jeu.
   let files;
   try {
@@ -110,7 +110,7 @@ export async function downloadGame(ctx: MainContext, i: number, url: string) {
   const base = safeFileName(path.basename(files[0].rel, path.extname(files[0].rel)), { max: Infinity, fallback: '' });
   const folder = path.join(emu.romsDir as string, base);
   const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
-  for (const f of todo) downloads.addUrl(f.url, { console: i, saveAs: path.join(folder, ...f.rel.split('/')), group: base, companionsQueued: true });
+  for (const f of todo) downloads.addUrl(f.url, { console: consoleId, saveAs: path.join(folder, ...f.rel.split('/')), group: base, companionsQueued: true });
   return { ok: true as const, count: todo.length, total: files.length };
 }
 
@@ -122,17 +122,17 @@ export function gamesHandlers(ctx: MainContext) {
     addGame: (...args) => ctx.addGame(...args),
     listRoms: (...args) => ctx.listRoms(...args),
     launchRom: (...args) => ctx.launchRom(...args),
-    romListSource: (i, only) => ctx.listRoms(i, { online: true, only }),
+    romListSource: (consoleId, only) => ctx.listRoms(consoleId, { online: true, only }),
     gameDelete: (ref) => deleteGame(ctx, ref),
     gamesCleanup: (online) => cleanupGames(ctx, online),
-    romSites: (i) => {
-      const config = ctx.config.get();
+    romSites: (consoleId) => {
+      const emu = consoleId === 'pc' ? null : findConsole(ctx.config.get(), consoleId);
       return {
-        sites: ctx.consoleSites(i),
-        custom: i === 'pc' ? true : Array.isArray(config.emulators[i]?.romSites),
-        defaults: i === 'pc' ? [] : config.emulators[i] ? defaultRomSites(guessSystem(config.emulators[i])) : [],
+        sites: ctx.consoleSites(consoleId),
+        custom: consoleId === 'pc' ? true : Array.isArray(emu?.romSites),
+        defaults: emu ? defaultRomSites(guessSystem(emu)) : [],
       };
     },
-    romDownload: (i, url) => downloadGame(ctx, i, url),
+    romDownload: (consoleId, url) => downloadGame(ctx, consoleId, url),
   } satisfies Partial<IpcImplementations>;
 }
