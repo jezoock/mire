@@ -18,8 +18,8 @@ export function webHandlers(ctx: MainContext) {
     searchStreaming: (...args) => ctx.searchStreaming(...args),
 
     adblockStatus: () => (ctx.adblock ? ctx.adblock.status() : null),
-    adblockSetEnabled: (on) => {
-      const st = ctx.adblock.setEnabled(on);
+    adblockSetEnabled: async (on) => {
+      const st = await ctx.adblock.setEnabled(on);
       ctx.web.reloadAll();
       return st;
     },

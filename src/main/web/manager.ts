@@ -2,7 +2,7 @@
  * Gestionnaire des vues web intégrées : une vue par site ouvert (on passe de Netflix à Mire et on revient sans tout
  * recharger). Création, affichage, position, mode immersif, plein écran du lecteur vidéo, fermeture, focus, touches
  * de la manette, pause des vidéos, état publié vers l'interface. L'état (vue active, visible, immersif…) est interne ;
- * la fenêtre, la configuration, les téléchargements et le bloqueur sont injectés.
+ * la fenêtre, la configuration, les téléchargements et les extensions (bloqueur…) sont injectés.
  */
 import type { WebState, WebSession } from '@mire/shared/ipc';
 import { GAME_FILE_RE, hostOf, isHttpUrl, siteOf } from '@mire/shared';
@@ -74,7 +74,7 @@ export function createWebManager(deps: WebManagerDeps) {
     if (!w) return null;
     const wc = w.view.webContents;
     const { entry } = w;
-    const adblock = deps.adblock();
+    const ext = deps.extensions();
     const rc = entry.romConsole;
     return {
       id,
@@ -87,7 +87,7 @@ export function createWebManager(deps: WebManagerDeps) {
       loading: wc.isLoading(),
       immersive: state.immersive || state.html,
       hasSearch: !!entry.search,
-      blocked: adblock ? adblock.countFor(wc.id) : 0,
+      blocked: ext ? ext.blockedCount(wc.id) : 0,
       bookmarkUrl: String(entry.id).startsWith('bm:') ? null : rc == null ? wc.getURL() : null,
       rom:
         rc != null
@@ -99,7 +99,7 @@ export function createWebManager(deps: WebManagerDeps) {
               sites: sitesOf(rc).map((x) => ({ name: x.name, url: x.url, search: x.search || '' })),
             }
           : null,
-      adOn: !!adblock && adblock.status().enabled && !adblock.pageAllowed(wc.getURL()),
+      adOn: !!ext && ext.activeOn(wc.getURL()),
     };
   }
 
@@ -237,7 +237,7 @@ export function createWebManager(deps: WebManagerDeps) {
     const push = () => pushState(entry.id);
     for (const ev of ['page-title-updated', 'did-navigate-in-page', 'did-start-loading', 'did-stop-loading']) wc.on(ev, push);
     wc.on('did-navigate', () => {
-      deps.adblock()?.resetCount(wc.id);
+      deps.extensions()?.resetPage(wc.id);
       push();
     });
     // « Clic sur la vidéo → page de pub » : la navigation vers une régie publicitaire est annulée.
@@ -249,7 +249,7 @@ export function createWebManager(deps: WebManagerDeps) {
         return;
       }
       if (event.isMainFrame === false) return;
-      if (deps.adblock()?.blocksNavigation(url, wc.getURL())) {
+      if (deps.extensions()?.guardNavigation(url, wc.getURL())) {
         event.preventDefault();
         toUi('web-adblocked', { id: entry.id, host: hostOf(url) });
       }
@@ -397,18 +397,18 @@ export function createWebManager(deps: WebManagerDeps) {
     return { ok: true as const, template: r.template, config };
   }
 
-  // Compteur de publicités bloquées : regroupé (un message par quart de seconde et par page).
+  // Compteur des éléments bloqués par les extensions : regroupé (un message par quart de seconde et par page).
   const countTimers = new Map<number, ReturnType<typeof setTimeout>>();
-  function onAdCount(wcId: number) {
+  function onBlockedCount(wcId: number) {
     if (countTimers.has(wcId)) return;
     countTimers.set(
       wcId,
       setTimeout(() => {
         countTimers.delete(wcId);
-        const adblock = deps.adblock();
+        const ext = deps.extensions();
         for (const w of views.values()) {
           const wc = w.view.webContents;
-          if (!wc.isDestroyed() && wc.id === wcId) toUi('web-blocked', { id: w.entry.id, count: adblock ? adblock.countFor(wcId) : 0 });
+          if (!wc.isDestroyed() && wc.id === wcId) toUi('web-blocked', { id: w.entry.id, count: ext ? ext.blockedCount(wcId) : 0 });
         }
       }, 250),
     );
@@ -430,7 +430,7 @@ export function createWebManager(deps: WebManagerDeps) {
     entries,
     onDownload,
     takeMagnet,
-    onAdCount,
+    onBlockedCount,
     /** Page de la vue affichée (bloqueur : « autoriser ce site »). */
     activeContents: () => active()?.view.webContents || null,
     /** Recharge toutes les vues (bloqueur activé ou désactivé). */

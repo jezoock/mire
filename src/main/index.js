@@ -30,7 +30,7 @@ const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { createAccessPolicy } = require('./security/access-policy.ts');
 const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol/index.ts');
-const { createWebManager, createDrm, setupWebSession: setupWebSessionOf, chromeLikeUserAgent, nativeUserAgent, WEB_PARTITION } = require('./web/index.ts');
+const { createWebManager, createDrm, createWebExtensions, createGoogleSignin, setupWebSession: setupWebSessionOf, chromeLikeUserAgent, nativeUserAgent, WEB_PARTITION } = require('./web/index.ts');
 const { providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
 const { fold, isHttpUrl } = require('@mire/shared');
@@ -65,6 +65,7 @@ const loadConfig = () => configService.load();
 let scraper = null;
 let store = null;
 let adblock = null;
+let webExtensions = null;
 let downloads = null;
 let adblockReady = Promise.resolve(false);
 
@@ -201,23 +202,26 @@ const web = createWebManager({
   defaultRomSites,
   guessSystem,
   downloads: () => downloads,
-  adblock: () => adblock,
+  extensions: () => webExtensions,
   // Le premier site ouvert attend Widevine, puis le bloqueur.
   whenReady: async () => { await drm.whenReady(); await adblockReady; },
   openInBrowser,
   toUi,
 });
 
+// Extensions des vues web, dans l'ordre où elles voient passer les requêtes : bloqueur, puis connexion Google.
 function setupWebSession() {
+  webExtensions = createWebExtensions([
+    adblock,
+    createGoogleSignin({ nativeUserAgent: NATIVE_UA, contentsFromId: (id) => webContents.fromId(id) }),
+  ]);
   setupWebSessionOf({
     session: session.fromPartition(WEB_PARTITION),
     ipcMain,
-    contentsFromId: (id) => webContents.fromId(id),
-    nativeUserAgent: NATIVE_UA,
     preloadPath: path.join(__dirname, '..', 'preload', 'web-preload.js'),
     onDownload: web.onDownload,
     takeMagnet: web.takeMagnet,
-    scriptletsFor: (url) => (adblock ? adblock.scriptletsFor(url) : ''),
+    extensions: webExtensions,
   });
 }
 
@@ -523,17 +527,18 @@ if (!app.requestSingleInstanceLock()) {
       Menu.setApplicationMenu(null);
     }
     registerMedia();
-    setupWebSession();
-    drm.start();
     adblock = createAdblock({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
       saveConfig: configService.replace,
-      onCount: web.onAdCount,
+      onCount: web.onBlockedCount,
     });
+    setupWebSession();
+    drm.start();
     // Le premier site ouvert attend le bloqueur (dix secondes au plus) pour ne pas laisser passer de pubs.
+    // Désactivé, le bloqueur ne charge rien et ne télécharge aucune liste.
     adblockReady = Promise.race([
-      adblock.start(session.fromPartition(WEB_PARTITION)).catch((err) => { console.error('Bloqueur :', err.message); return false; }),
+      adblock.start().catch((err) => { console.error('Bloqueur :', err.message); return false; }),
       new Promise((resolve) => { setTimeout(() => resolve(false), 10000); }),
     ]);
     registerIpc();

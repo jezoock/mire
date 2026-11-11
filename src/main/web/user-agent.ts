@@ -7,13 +7,8 @@
  * annonçait « Chrome », et Cloudflare refusait la vérification. Le détail de version est retiré, comme le fait
  * Chrome (Chrome/152.0.0.0).
  *
- * Exception : la page de connexion Google (accounts.google.com). Google y refuse un navigateur intégré qui se
- * présente comme Chrome (« Ce navigateur ou cette application ne sont peut-être pas sécurisés ») et accepte celui
- * qui donne sa vraie identité Electron. Sur cette seule page, et pour ce qu'elle charge, Mire envoie donc
- * l'identité d'origine d'Electron (sans le nom de Mire).
+ * Exception : la page de connexion Google, qui reçoit l'identité d'origine d'Electron (extension google-signin.ts).
  */
-import { hostOf } from '@mire/shared';
-
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Identité « Chrome » : sans Electron ni le nom de l'application, version réduite à son numéro principal. */
@@ -29,10 +24,3 @@ export function nativeUserAgent(ua: string, appName: string): string {
   if (/^electron$/i.test(appName)) return ua;
   return ua.replace(new RegExp(`\\s*${escapeRe(appName)}\\/\\S+`, 'i'), '');
 }
-
-export const SIGNIN_HOSTS: ReadonlySet<string> = new Set(['accounts.google.com']);
-
-export const isSigninPage = (url: string): boolean => SIGNIN_HOSTS.has(hostOf(url));
-
-/** Identité à imposer pour une page : l'identité d'Electron sur la page de connexion Google, sinon aucune (''). */
-export const signinUserAgent = (pageUrl: string, nativeUa: string): string => (isSigninPage(pageUrl) ? nativeUa : '');

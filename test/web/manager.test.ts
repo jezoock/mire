@@ -2,7 +2,7 @@
 // liens magnet) et Widevine. Aucune page n'est chargée.
 import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDrm, createWebManager, setupWebSession, WEB_PREFERENCES } from '../../src/main/web/index.ts';
+import { createDrm, createGoogleSignin, createWebExtensions, createWebManager, setupWebSession, WEB_PREFERENCES } from '../../src/main/web/index.ts';
 
 type Any = any;
 
@@ -112,7 +112,7 @@ function setup(extra: Any = {}) {
     defaultRomSites: () => [],
     guessSystem: () => '',
     downloads: () => downloads,
-    adblock: () => null,
+    extensions: () => null,
     whenReady: async () => {},
     openInBrowser: async (url) => (browser.push(url), { ok: true }),
     toUi: (channel, payload) => sent.push([channel, payload]),
@@ -341,27 +341,89 @@ describe('téléchargements', () => {
   });
 });
 
+describe('extensions', () => {
+  // Deux extensions : l'une bloque et compte, l'autre seulement compte ; le gestionnaire ne connaît que l'hôte.
+  function withExtensions() {
+    const counts = new Map<number, number>();
+    const blocker = {
+      id: 'bloqueur',
+      attach() {},
+      detach() {},
+      guardNavigation: (url: string) => url.includes('regie.example'),
+      blockedCount: (id: number) => counts.get(id) || 0,
+      resetPage: (id: number) => counts.delete(id),
+      activeOn: (url: string) => !url.includes('autorise.example'),
+    };
+    const other = { id: 'autre', attach() {}, detach() {}, blockedCount: () => 1 };
+    const extensions = createWebExtensions([blocker, other]);
+    return { counts, ...setup({ extensions: () => extensions }) };
+  }
+
+  test('compteur, bouclier et remise à zéro à la navigation', async () => {
+    const x = withExtensions();
+    await x.web.open('netflix');
+    const wc = x.created[0].webContents;
+    x.counts.set(wc.id, 4);
+    assert.equal((x.web.stateOf('netflix') as Any).blocked, 5);
+    assert.equal((x.web.stateOf('netflix') as Any).adOn, true);
+    x.web.onBlockedCount(wc.id);
+    await new Promise((r) => setTimeout(r, 300));
+    assert.deepEqual(channels(x.sent, 'web-blocked').at(-1), { id: 'netflix', count: 5 });
+    wc.loadURL('https://autorise.example/');
+    wc.emit('did-navigate');
+    assert.equal((x.web.stateOf('netflix') as Any).blocked, 1);
+    assert.equal((x.web.stateOf('netflix') as Any).adOn, false);
+  });
+
+  test('garde de navigation : la redirection publicitaire est annulée', async () => {
+    const x = withExtensions();
+    await x.web.open('netflix');
+    const wc = x.created[0].webContents;
+    const go = (url: string, isMainFrame = true) => {
+      let prevented = false;
+      wc.emit('will-navigate', { url, isMainFrame, preventDefault: () => (prevented = true) });
+      return prevented;
+    };
+    assert.equal(go('https://regie.example/pub'), true);
+    assert.deepEqual(channels(x.sent, 'web-adblocked').at(-1), { id: 'netflix', host: 'regie.example' });
+    assert.equal(go('https://regie.example/pub', false), false);
+    assert.equal(go('https://www.netflix.com/title/1'), false);
+  });
+
+  test('sans extensions : rien de bloqué, bouclier éteint', async () => {
+    await t.web.open('netflix');
+    assert.equal((t.web.stateOf('netflix') as Any).blocked, 0);
+    assert.equal((t.web.stateOf('netflix') as Any).adOn, false);
+  });
+});
+
 describe('session', () => {
   function fakeSession() {
-    const ses: Any = { handlers: {}, ipc: {} };
+    const ses: Any = { handlers: {}, ipc: {}, storagePath: '/donnees/Partitions/web' };
     ses.on = (ev: string, fn: Any) => (ses.handlers[ev] = fn);
     ses.setPermissionRequestHandler = (fn: Any) => (ses.handlers.permission = fn);
-    ses.webRequest = { onBeforeSendHeaders: (fn: Any) => (ses.handlers.headers = fn) };
+    ses.webRequest = {
+      onBeforeRequest: (fn: Any) => (ses.handlers.request = fn),
+      onBeforeSendHeaders: (fn: Any) => (ses.handlers.headers = fn),
+      onHeadersReceived: (fn: Any) => (ses.handlers.received = fn),
+    };
     ses.registerPreloadScript = (s: Any) => (ses.preload = s);
     return ses;
   }
   const pages: Record<number, string> = { 1: 'https://accounts.google.com/signin', 2: 'https://www.youtube.com/' };
   function wire(magnets: string[] = []) {
     const ses = fakeSession();
+    const extensions = createWebExtensions([
+      { id: 'scripts', attach() {}, detach() {}, beforePageScript: (url) => `/* ${url} */` },
+      createGoogleSignin({ nativeUserAgent: 'UA-Electron', contentsFromId: (id) => ({ getURL: () => pages[id], isDestroyed: () => false }) }),
+    ]);
     setupWebSession({
       session: ses,
       ipcMain: { on: (ch: string, fn: Any) => (ses.ipc[ch] = fn) },
-      contentsFromId: (id) => ({ getURL: () => pages[id], isDestroyed: () => false }),
-      nativeUserAgent: 'UA-Electron',
       preloadPath: '/p/web-preload.js',
       onDownload: () => {},
       takeMagnet: (url) => (url.startsWith('magnet:') ? (magnets.push(url), true) : false),
-      scriptletsFor: (url) => `/* ${url} */`,
+      extensions,
     });
     return ses;
   }
@@ -381,24 +443,46 @@ describe('session', () => {
     assert.equal(ses.preload.filePath, '/p/web-preload.js');
   });
 
-  test('identité Electron pour la connexion Google et ce qu’elle charge, seulement', () => {
+  test('identité Electron pour la connexion Google et ce qu’elle charge, seulement', async () => {
     const ses = wire();
-    const send = (details: Any) => {
-      let out: Any;
-      ses.handlers.headers({ requestHeaders: { 'User-Agent': 'UA-Chrome' }, ...details }, (r: Any) => (out = r.requestHeaders['User-Agent']));
-      return out;
-    };
-    assert.equal(send({ resourceType: 'mainFrame', url: 'https://accounts.google.com/' }), 'UA-Electron');
-    assert.equal(send({ resourceType: 'script', url: 'https://gstatic.com/x.js', webContentsId: 1 }), 'UA-Electron');
-    assert.equal(send({ resourceType: 'script', url: 'https://gstatic.com/x.js', webContentsId: 2 }), 'UA-Chrome');
-    assert.equal(send({ resourceType: 'mainFrame', url: 'https://www.google.com/' }), 'UA-Chrome');
+    // Seul l'événement utilisé par une extension reçoit un écouteur.
+    assert.equal(typeof ses.handlers.headers, 'function');
+    assert.equal(ses.handlers.request, undefined);
+    const send = (details: Any) =>
+      new Promise((resolve) => {
+        ses.handlers.headers({ requestHeaders: { 'User-Agent': 'UA-Chrome' }, ...details }, (r: Any) =>
+          resolve(r.requestHeaders?.['User-Agent'] ?? 'UA-Chrome'),
+        );
+      });
+    assert.equal(await send({ resourceType: 'mainFrame', url: 'https://accounts.google.com/' }), 'UA-Electron');
+    assert.equal(await send({ resourceType: 'script', url: 'https://gstatic.com/x.js', webContentsId: 1 }), 'UA-Electron');
+    assert.equal(await send({ resourceType: 'script', url: 'https://gstatic.com/x.js', webContentsId: 2 }), 'UA-Chrome');
+    assert.equal(await send({ resourceType: 'mainFrame', url: 'https://www.google.com/' }), 'UA-Chrome');
+  });
 
-    const ev: Any = { sender: { getURL: () => pages[1], isDestroyed: () => false } };
-    ses.ipc['mire:signin-ua'](ev);
-    assert.equal(ev.returnValue, 'UA-Electron');
-    const ev2: Any = {};
-    ses.ipc['mire:scriptlets'](ev2, 'https://site/');
-    assert.equal(ev2.returnValue, '/* https://site/ */');
+  test('script d’avant-page : un seul canal, servi aux seules vues web', () => {
+    const ses = wire();
+    assert.equal(ses.ipc['mire:scriptlets'], undefined);
+    assert.equal(ses.ipc['mire:signin-ua'], undefined);
+    const ask = (url: string, sender: Any) => {
+      const ev: Any = { sender };
+      ses.ipc['mire:before-page'](ev, url);
+      return ev.returnValue as string;
+    };
+    const view = (url: string, session: Any = ses) => ({ getURL: () => url, isDestroyed: () => false, session });
+
+    const google = ask(pages[1], view(pages[1]));
+    assert.match(google, /\/\* https:\/\/accounts\.google\.com\/signin \*\//);
+    assert.match(google, /'userAgent', \{ get: \(\) => "UA-Electron"/);
+    const youtube = ask(pages[2], view(pages[2]));
+    assert.match(youtube, /\/\* https:\/\/www\.youtube\.com\/ \*\//);
+    assert.doesNotMatch(youtube, /userAgent/);
+    // Même session retrouvée par son dossier (objet session différent).
+    assert.notEqual(ask(pages[2], view(pages[2], { storagePath: ses.storagePath })), '');
+    // Fenêtre de Mire (autre session), page fermée ou sans expéditeur : rien.
+    assert.equal(ask(pages[2], view(pages[2], { storagePath: null })), '');
+    assert.equal(ask(pages[2], { ...view(pages[2]), isDestroyed: () => true }), '');
+    assert.equal(ask(pages[2], undefined), '');
   });
 });
 
