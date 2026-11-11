@@ -1,0 +1,320 @@
+{
+  "run": {
+    "ok": true,
+    "total": 10,
+    "found": 7,
+    "missing": 3,
+    "skipped": [],
+    "cancelled": false
+  },
+  "progress": {
+    "running": false,
+    "done": 10,
+    "total": 10,
+    "found": 7,
+    "missing": 3,
+    "skipped": [],
+    "cancelled": false
+  },
+  "ones": [
+    {
+      "ok": true
+    },
+    {
+      "ok": true
+    },
+    {
+      "ok": true
+    },
+    {
+      "ok": true
+    },
+    {
+      "ok": true
+    },
+    {
+      "ok": false,
+      "error": "Système de la console inconnu : ajoutez « system » dans sa configuration."
+    },
+    {
+      "ok": true
+    },
+    {
+      "ok": true
+    }
+  ],
+  "searches": [
+    {
+      "ok": true,
+      "items": [
+        {
+          "id": "tv:62014",
+          "title": "Le Bureau des Légendes",
+          "year": "2015",
+          "sub": "Série",
+          "image": "https://image.tmdb.org/t/p/w154/bdl.jpg"
+        }
+      ]
+    },
+    {
+      "ok": false,
+      "error": "Indiquez un titre à chercher."
+    },
+    {
+      "ok": true,
+      "items": [
+        {
+          "id": "rg-discovery",
+          "title": "Discovery",
+          "year": "2001",
+          "sub": "Daft Punk, Album",
+          "image": "https://coverartarchive.org/release-group/rg-discovery/front-250"
+        },
+        {
+          "id": "rg-sans-date",
+          "title": "Discovery",
+          "year": "",
+          "sub": "",
+          "image": "https://coverartarchive.org/release-group/rg-sans-date/front-250"
+        },
+        {
+          "id": "rg-live",
+          "title": "Discovery Live",
+          "year": "2002",
+          "sub": "Daft Punk, Album",
+          "image": "https://coverartarchive.org/release-group/rg-live/front-250"
+        }
+      ]
+    },
+    {
+      "ok": true,
+      "items": [
+        {
+          "id": "1145360",
+          "title": "Hades",
+          "year": "",
+          "sub": "Steam",
+          "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg",
+          "fallback": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/capsule_231x87.jpg"
+        },
+        {
+          "id": "1145350",
+          "title": "Hades II",
+          "year": "",
+          "sub": "Steam",
+          "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145350/library_600x900.jpg",
+          "fallback": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145350/capsule_231x87.jpg"
+        }
+      ]
+    },
+    {
+      "ok": true,
+      "items": [
+        {
+          "id": "Super Mario World (Europe)",
+          "title": "Super Mario World",
+          "year": "",
+          "sub": "Europe",
+          "image": "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(Europe).png"
+        },
+        {
+          "id": "Super Mario World (USA)",
+          "title": "Super Mario World",
+          "year": "",
+          "sub": "USA",
+          "image": "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(USA).png"
+        },
+        {
+          "id": "Super Mario World (Japan)",
+          "title": "Super Mario World",
+          "year": "",
+          "sub": "Japan",
+          "image": "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(Japan).png"
+        },
+        {
+          "id": "Super Mario Kart (USA)",
+          "title": "Super Mario Kart",
+          "year": "",
+          "sub": "USA",
+          "image": "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20Kart%20(USA).png"
+        }
+      ]
+    },
+    {
+      "ok": false,
+      "error": "Système de la console inconnu : indiquez-le avec « Modifier la console »."
+    },
+    {
+      "ok": false,
+      "error": "Type inconnu."
+    }
+  ],
+  "items": {
+    "a:/m/Choix": {
+      "title": "Discovery",
+      "artist": "Daft Punk, Romanthony",
+      "year": "2001",
+      "genre": "Nu-disco",
+      "image": "d2a820f144aa491a372d01ac47d99a9ac0e30ee8.jpg",
+      "source": "MusicBrainz",
+      "picked": true,
+      "rev": 2
+    },
+    "a:/m/Daft Punk - Discovery (2001)": {
+      "title": "Discovery",
+      "artist": "Daft Punk",
+      "year": "2001",
+      "genre": "Électronique",
+      "image": "6709c1e0e0c1dae9284fdc7cce9baa6d5379e180.jpg",
+      "source": "MusicBrainz",
+      "rev": 2
+    },
+    "b:marque-page-1": {
+      "title": "Super Mario World",
+      "image": "5ab33aaf3a7434a445e6af43d3d990a052c1c799.png",
+      "backdrop": "9c6119c1f751ab37025877f1871a35dafa4ca331.png",
+      "genre": "Plateformes",
+      "year": "1992",
+      "source": "libretro",
+      "rev": 2
+    },
+    "b:marque-page-2": {
+      "title": "Hades",
+      "image": "e1ef19cae79c2eb89f5a78a00d3b8e58f0375373.jpg",
+      "backdrop": "b6c5be65318e272039ab693f338c2502ef88fff8.jpg",
+      "genre": "Action, Aventure",
+      "year": "2020",
+      "overview": "Défiez le dieu des morts & frayez-vous un chemin hors des Enfers dans ce rogue-like d’exploration de donjons, \"par les créateurs de Bastion\".",
+      "source": "Steam",
+      "rev": 2
+    },
+    "g:hades": {
+      "title": "Hades",
+      "image": "104e8bd719e39f4a8e67013ee7876689396d658b.jpg",
+      "backdrop": "0b8ec5b20cc2f1384f4343d455e2194a932b261f.jpg",
+      "genre": "Action, Aventure",
+      "year": "2020",
+      "overview": "Défiez le dieu des morts & frayez-vous un chemin hors des Enfers dans ce rogue-like d’exploration de donjons, \"par les créateurs de Bastion\".",
+      "source": "Steam",
+      "rev": 2
+    },
+    "g:mon jeu": {
+      "title": "Hades",
+      "image": "bf2fb3d22f476d7efaa220ddc83d23bdfc85a12b.jpg",
+      "backdrop": "f47192478b8b6d93895da1c2af1070188a63df34.jpg",
+      "genre": "Action, Aventure",
+      "year": "2020",
+      "overview": "Défiez le dieu des morts & frayez-vous un chemin hors des Enfers dans ce rogue-like d’exploration de donjons, \"par les créateurs de Bastion\".",
+      "source": "Steam",
+      "rev": 2
+    },
+    "g:portal 2": {
+      "title": "Portal 2",
+      "image": "fd208c8a666e75604646da48e33a8d8d40006107.jpg",
+      "backdrop": null,
+      "genre": "",
+      "year": "",
+      "overview": "",
+      "source": "Steam",
+      "rev": 2
+    },
+    "r:/r/smw.sfc": {
+      "title": "Super Mario World",
+      "image": "9a00784b5f44eef65ccc9cdacf9c8c04bc5639d7.png",
+      "backdrop": "ea07a45f1efa279adf2cdeab71bfb8f1250f9fe9.png",
+      "genre": "Plateformes",
+      "year": "1992",
+      "source": "libretro",
+      "rev": 2
+    },
+    "r:/r/Super Mario World (Europe).sfc": {
+      "title": "Super Mario World",
+      "image": "d5eb7ba287371c2ad35b1af77813c2d51be0b2a3.png",
+      "backdrop": "16160733121eb6ac476875a2c3b1e49fac400f12.png",
+      "genre": "Plateformes",
+      "year": "1992",
+      "source": "libretro",
+      "rev": 2
+    },
+    "v:/v/Choix.mkv": {
+      "title": "Le Fabuleux Destin d'Amélie Poulain",
+      "year": "2001",
+      "overview": "Amélie, une jeune serveuse dans un bar de Montmartre…",
+      "genre": "Comédie, Romance",
+      "image": "9a513874370c017073c63adced295d0aa82d8f4e.jpg",
+      "backdrop": "d4d3101fef386b6ec5a068ae1bc826f808951083.jpg",
+      "series": false,
+      "source": "TMDB",
+      "picked": true,
+      "rev": 2
+    },
+    "v:/v/Corrige.mkv": {
+      "title": "Le Bureau des Légendes",
+      "year": "2015",
+      "overview": "Au sein de la DGSE, le département le plus important…",
+      "genre": "Drame, Crime",
+      "image": "58068c93b7e34ad8727b6ff572c1495c3a71803e.webp",
+      "backdrop": "d593a289ef6f460fea53d620695aefdc29070e18.png",
+      "series": true,
+      "source": "TMDB",
+      "rev": 2
+    },
+    "v:/v/Le Bureau des légendes/Saison 1/S01E03.mkv": {
+      "title": "Le Bureau des Légendes",
+      "year": "2015",
+      "overview": "Au sein de la DGSE, le département le plus important…",
+      "genre": "Drame, Crime",
+      "image": "58068c93b7e34ad8727b6ff572c1495c3a71803e.webp",
+      "backdrop": "d593a289ef6f460fea53d620695aefdc29070e18.png",
+      "series": true,
+      "source": "TMDB",
+      "rev": 2
+    },
+    "v:/v/Le Bureau des légendes/Saison 1/S01E04.mkv": {
+      "title": "Le Bureau des Légendes",
+      "year": "2015",
+      "overview": "Au sein de la DGSE, le département le plus important…",
+      "genre": "Drame, Crime",
+      "image": "58068c93b7e34ad8727b6ff572c1495c3a71803e.webp",
+      "backdrop": "d593a289ef6f460fea53d620695aefdc29070e18.png",
+      "series": true,
+      "source": "TMDB",
+      "rev": 2
+    },
+    "v:/v/Le.Fabuleux.Destin.2001.1080p.mkv": {
+      "title": "Le Fabuleux Destin d'Amélie Poulain",
+      "year": "2001",
+      "overview": "Amélie, une jeune serveuse dans un bar de Montmartre…",
+      "genre": "Comédie, Romance",
+      "image": "9a65875b1c1f180318671f17d84c3b08d5b350bb.jpg",
+      "backdrop": "297cb8868d333b0e22852b2bf7f6435ce66b6811.jpg",
+      "series": false,
+      "source": "TMDB",
+      "rev": 2
+    }
+  },
+  "misses": ["a:/m/Inconnu", "r:/r/Jeu Introuvable.sfc", "v:/v/Vacances.mkv"],
+  "images": {
+    "0b8ec5b20cc2f1384f4343d455e2194a932b261f.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_hero.jpg",
+    "104e8bd719e39f4a8e67013ee7876689396d658b.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg",
+    "16160733121eb6ac476875a2c3b1e49fac400f12.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Snaps/Super%20Mario%20World%20(Europe).png",
+    "297cb8868d333b0e22852b2bf7f6435ce66b6811.jpg": "image:https://image.tmdb.org/t/p/w1280/amelie-fond.jpg",
+    "58068c93b7e34ad8727b6ff572c1495c3a71803e.webp": "image:https://image.tmdb.org/t/p/w342/bdl.jpg",
+    "5ab33aaf3a7434a445e6af43d3d990a052c1c799.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(Europe).png",
+    "6709c1e0e0c1dae9284fdc7cce9baa6d5379e180.jpg": "image:https://coverartarchive.org/release-group/rg-discovery/front-250",
+    "9a00784b5f44eef65ccc9cdacf9c8c04bc5639d7.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(USA).png",
+    "9a513874370c017073c63adced295d0aa82d8f4e.jpg": "image:https://image.tmdb.org/t/p/w342/amelie.jpg",
+    "9a65875b1c1f180318671f17d84c3b08d5b350bb.jpg": "image:https://image.tmdb.org/t/p/w342/amelie.jpg",
+    "9c6119c1f751ab37025877f1871a35dafa4ca331.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Snaps/Super%20Mario%20World%20(Europe).png",
+    "b6c5be65318e272039ab693f338c2502ef88fff8.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_hero.jpg",
+    "bf2fb3d22f476d7efaa220ddc83d23bdfc85a12b.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg",
+    "d2a820f144aa491a372d01ac47d99a9ac0e30ee8.jpg": "image:https://coverartarchive.org/release-group/rg-discovery/front-250",
+    "d4d3101fef386b6ec5a068ae1bc826f808951083.jpg": "image:https://image.tmdb.org/t/p/w1280/amelie-fond.jpg",
+    "d593a289ef6f460fea53d620695aefdc29070e18.png": "image:https://image.tmdb.org/t/p/w1280/bdl-fond.jpg",
+    "d5eb7ba287371c2ad35b1af77813c2d51be0b2a3.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(Europe).png",
+    "e1ef19cae79c2eb89f5a78a00d3b8e58f0375373.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg",
+    "ea07a45f1efa279adf2cdeab71bfb8f1250f9fe9.png": "image:https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Titles/Super%20Mario%20World%20(USA).png",
+    "f47192478b8b6d93895da1c2af1070188a63df34.jpg": "image:https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_hero.jpg",
+    "fd208c8a666e75604646da48e33a8d8d40006107.jpg": "image:https://cdn.akamai.steamstatic.com/steam/apps/620/header.jpg"
+  }
+}

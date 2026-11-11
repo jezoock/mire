@@ -2,7 +2,6 @@
 src/main/index.js
 src/renderer/app.js
 src/renderer/styles.css
-src/main/scraper.js
 src/main/store.js
 src/main/downloads.js
 src/main/adblock.js

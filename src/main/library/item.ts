@@ -1,6 +1,6 @@
 /** Règles communes aux éléments de la bibliothèque, quelle que soit leur source. */
 import { parseEpisode } from '@mire/shared';
-import { parseVideo } from '../scraper.js';
+import { parseVideo } from '../scrape/index.ts';
 import type { LibraryItem } from './types.ts';
 
 /** Épisode de série : titre de la série, saison et épisode d'après le nom du fichier et son dossier. */

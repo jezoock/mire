@@ -1,30 +1,10 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
 
-// Aucun accès réseau pendant les tests : le moindre appel à fetch fait échouer le test.
-globalThis.fetch = () => {
-  throw new Error('accès réseau interdit pendant les tests');
-};
-
-const { createScraper, guessSystem, parseVideo } = require('../src/main/scraper');
-
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-scraper-'));
-test.after(() => fs.rmSync(dataDir, { recursive: true, force: true }));
-const { cleanTitle, romKey, bestMatch, rankByTitle, ...internes } = createScraper({
-  dataDir,
-  getConfig: () => ({}),
-  listRoms: () => [],
-  onProgress: () => {},
-})._test;
-
-test('_test expose les mêmes fonctions que les exports du module', () => {
-  assert.equal(internes.parseVideo, parseVideo);
-  assert.equal(internes.guessSystem, guessSystem);
-});
+// Analyse des noms de fichiers et fonctions de rapprochement du moteur de récupération (anciennement scraper.js).
+const { parseVideo, guessSystem, romKey, bestMatch } = require('../../src/main/scrape/index.ts');
+const { cleanTitle, rankByTitle } = require('@mire/shared');
 
 test('parseVideo : film avec année entre parenthèses', () => {
   assert.deepEqual(parseVideo({ name: 'Amélie (2001)' }), { type: 'movie', title: 'Amélie', year: '2001' });

@@ -2,7 +2,7 @@
 import { SYSTEMS } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
 import { defaultRomSites } from '../../romsites.js';
-import { guessSystem } from '../../scraper.js';
+import { guessSystem } from '../../scrape/index.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
 

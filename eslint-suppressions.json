@@ -1,9 +1,4 @@
 {
-  "src/main/scraper.js": {
-    "no-useless-escape": {
-      "count": 1
-    }
-  },
   "src/renderer/app.js": {
     "no-unused-vars": {
       "count": 4
