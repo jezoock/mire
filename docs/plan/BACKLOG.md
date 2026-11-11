@@ -43,7 +43,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | faite | [#23](https://github.com/jezoock/mire/pull/23) |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
-| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | à faire | |
+| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | en revue | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
