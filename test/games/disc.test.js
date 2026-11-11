@@ -10,7 +10,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { isDescriptor, decode, safeRel, parseRefs, refUrl, resolveRemote, missingLocal } = require('../src/main/discfiles');
+const { isDescriptor, decode, safeRel, parseRefs, refUrl, citedUrls, resolveRemote, missingLocal } = require('../../src/main/games/disc/index.ts');
 
 test('isDescriptor : index de disque reconnus, sans tenir compte de la casse ni de la requête', () => {
   assert.equal(isDescriptor('Jeu.CUE'), true);
@@ -238,4 +238,14 @@ test('missingLocal : index complet, ou fichier introuvable → liste vide', (t) 
   fs.writeFileSync(path.join(dir, 'Jeu.bin'), '');
   assert.deepEqual(missingLocal(path.join(dir, 'Jeu.cue')), []);
   assert.deepEqual(missingLocal(path.join(dir, 'absent.cue')), []);
+});
+
+test('citedUrls : un .m3u distant donne ses disques par chemin relatif ou par adresse complète, dans l’ordre', () => {
+  const text = '#EXTM3U\nJeu (Disque 1).cue\nhttps://autre.test/jeux/Jeu%20(Disque%202).cue\nhttps://ex.org/jeux/Jeu (Disque 3).cue\n../hors.cue\n';
+  assert.deepEqual(citedUrls('Jeu.m3u', text, 'https://ex.org/jeux/Jeu.m3u'), [
+    'https://ex.org/jeux/Jeu%20(Disque%201).cue',
+    'https://autre.test/jeux/Jeu%20(Disque%202).cue',
+    'https://ex.org/jeux/Jeu%20(Disque%203).cue',
+  ]);
+  assert.deepEqual(citedUrls('Jeu.cue', 'FILE "piste 1.bin" BINARY\n', 'https://ex.org/jeux/Jeu.cue'), ['https://ex.org/jeux/piste%201.bin']);
 });

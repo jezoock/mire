@@ -1,12 +1,7 @@
 {
-  "src/main/discfiles.js": {
-    "no-useless-assignment": {
-      "count": 2
-    }
-  },
   "src/main/index.js": {
     "no-useless-assignment": {
-      "count": 2
+      "count": 1
     }
   },
   "src/main/scraper.js": {
