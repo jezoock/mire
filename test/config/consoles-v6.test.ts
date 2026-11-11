@@ -10,7 +10,7 @@ import { consoleIdAt, createConfigService, findConsole, migrate, normalizeConfig
 import { assignConsoleIds } from '../../src/main/config/normalize/consoles.ts';
 
 const require = createRequire(import.meta.url);
-const { createDownloads } = require('../../src/main/downloads.js');
+const { createDownloads } = require('../../src/main/downloads/index.ts');
 
 type Any = any;
 
