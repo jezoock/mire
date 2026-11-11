@@ -51,7 +51,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
-| P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | en revue | PR_LINK |
+| P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | en revue | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | à faire | |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | à faire | |
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
