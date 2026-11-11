@@ -9,14 +9,19 @@
  * Les canaux synchrones du preload des sites (`mire:scriptlets`, `mire:signin-ua`) ne passent pas par ce contrat.
  */
 
+import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
+
+// Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
+export type { Bookmark, ConsoleRef, GameBookmark };
+
 /* ------------------------------------------------------------------ */
 /* Données échangées                                                   */
 /* ------------------------------------------------------------------ */
 
 // Structures décrites par le processus principal ; leurs types détaillés viendront avec les modules qui les
-// possèdent (configuration : P1-06, bibliothèque : P1-14…). En attendant, elles restent opaques.
-/** Configuration complète (config.json), voir src/main/lib/config.js. */
-export type MireConfig = Record<string, unknown>;
+// possèdent (bibliothèque : P1-14…). En attendant, elles restent opaques.
+/** Configuration complète (config.json), voir src/main/config/. */
+export type MireConfig = Config;
 /** Fichier de la bibliothèque (vidéo, musique, image…). */
 export type MediaItem = Record<string, unknown>;
 /** État d'une vue web publié vers l'interface. */
@@ -45,9 +50,6 @@ export interface GameRef {
   emuIndex?: number;
 }
 
-/** Console visée : position dans `config.emulators`, ou « pc ». */
-export type ConsoleRef = number | 'pc';
-
 /** Contexte d'un téléchargement : console de destination, nom affiché… */
 export interface DownloadContext {
   console?: number;
@@ -64,33 +66,10 @@ export interface BookmarkInput {
   year?: string;
 }
 
-export interface Bookmark {
-  id: string;
-  url: string;
-  title: string;
-  type: 'movie' | 'tv';
-  season: number | null;
-  episode: number | null;
-  site: string;
-  added: number;
-}
-
 export interface GameBookmarkInput {
   source: string;
   title?: string;
   console?: ConsoleRef | string | null;
-}
-
-export interface GameBookmark {
-  id: string;
-  source: string;
-  kind: 'torrent' | 'http';
-  title: string;
-  console: ConsoleRef | null;
-  system: string;
-  downloadId: string | null;
-  done: boolean;
-  added: number;
 }
 
 export interface CleanupReport {

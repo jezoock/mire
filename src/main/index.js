@@ -23,7 +23,7 @@ const { createDownloads } = require('./downloads.js');
 const disc = require('./discfiles.js');
 const { guessSystem, parseVideo } = require('./scraper.js');
 const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS } = require('./lib/formats.js');
-const { THEME_BG, DEFAULT_CONFIG, normalizeConfig, migrateConfig } = require('./lib/config.js');
+const { THEME_BG, createConfigService } = require('./config/index.ts');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const { resolveLocation } = require('./lib/location.js');
 const { substitute } = require('./lib/args.js');
@@ -77,33 +77,13 @@ protocol.registerSchemesAsPrivileged([
 /* Configuration                                                       */
 /* ------------------------------------------------------------------ */
 
-let config = structuredClone(DEFAULT_CONFIG);
 let mainWindow = null;
 let pendingFiles = [];
 const dataFiles = () => dataPaths(app.getPath('userData'));
 const configPath = () => dataFiles().config;
-
-function saveConfig(next) {
-  config = normalizeConfig(next);
-  fs.mkdirSync(path.dirname(configPath()), { recursive: true });
-  fs.writeFileSync(configPath(), JSON.stringify(config, null, 2), 'utf8');
-  return config;
-}
-
-function loadConfig() {
-  const file = configPath();
-  if (!fs.existsSync(file)) { saveConfig(DEFAULT_CONFIG); return; }
-  try {
-    const { raw, changed } = migrateConfig(JSON.parse(fs.readFileSync(file, 'utf8')));
-    config = normalizeConfig(raw);
-    if (changed) saveConfig(config);
-  } catch (err) {
-    // Fichier abîmé : on le garde de côté au lieu de l'écraser.
-    try { fs.copyFileSync(file, `${file}.illisible-${Date.now()}`); } catch { /* rien */ }
-    console.error('config.json illisible :', err.message);
-    saveConfig(DEFAULT_CONFIG);
-  }
-}
+// Seul détenteur de la configuration : lue au démarrage (loadConfig), modifiée par update/replace.
+const configService = createConfigService({ file: configPath() });
+const loadConfig = () => configService.load();
 
 /* ------------------------------------------------------------------ */
 /* Fichiers autorisés                                                  */
@@ -126,9 +106,9 @@ const romCacheDir = () => dataFiles().romCache;
 function allowedRoots() {
   const roots = [];
   const addLoc = (loc) => { const r = resolveLocation(loc); if (r.type === 'path' && r.path) roots.push(r.path); };
-  for (const src of config.library.sources) addLoc(src.location);
-  for (const src of config.gameSources) addLoc(src.location);
-  for (const e of config.emulators) {
+  for (const src of configService.get().library.sources) addLoc(src.location);
+  for (const src of configService.get().gameSources) addLoc(src.location);
+  for (const e of configService.get().emulators) {
     if (e.romsDir) roots.push(e.romsDir);
     if (e.imagesDir) roots.push(e.imagesDir);
     for (const x of e.sources || []) addLoc(x);
@@ -147,8 +127,8 @@ function isAllowed(p) {
   if (!p || typeof p !== 'string') return false;
   const k = pathKey(p);
   if (openedFiles.has(k)) return true;
-  if (config.games.some((g) => g.image && pathKey(g.image) === k)) return true;
-  if (config.emulators.some((e) => e.banner && pathKey(e.banner) === k)) return true;
+  if (configService.get().games.some((g) => g.image && pathKey(g.image) === k)) return true;
+  if (configService.get().emulators.some((e) => e.banner && pathKey(e.banner) === k)) return true;
   return allowedRoots().some((r) => k === r || k.startsWith(r.endsWith(path.sep) ? r : r + path.sep));
 }
 
@@ -359,7 +339,7 @@ async function scanLibrary() {
   const status = {};
   urlSubs.clear();
   const groups = new Map(); // une même source déclarée pour plusieurs types n'est parcourue qu'une fois
-  for (const src of config.library.sources) {
+  for (const src of configService.get().library.sources) {
     const loc = resolveLocation(src.location);
     const k = loc.type === 'url' ? loc.url : pathKey(loc.path);
     if (!groups.has(k)) groups.set(k, { loc, location: src.location, kinds: new Set(), sources: [] });
@@ -382,7 +362,7 @@ async function scanLibrary() {
     }
   }
   // Marque-pages de streaming : ajoutés comme des vidéos qui rouvrent la page du site.
-  for (const b of config.bookmarks || []) {
+  for (const b of configService.get().bookmarks || []) {
     items.push({
       path: b.url,
       name: b.title || b.url,
@@ -476,7 +456,7 @@ async function findSubtitles(videoPath) {
 
 // Repère le service de télé en place en joignant brièvement chaque box sur le réseau local.
 async function detectTvService() {
-  for (const svc of config.tv.services) {
+  for (const svc of configService.get().tv.services) {
     if (!svc.detect) continue;
     try {
       await http.request(svc.detect, { timeout: 1500 });
@@ -487,14 +467,14 @@ async function detectTvService() {
 }
 
 async function detectTvOnce() {
-  if (config.tv.detected) return;
+  if (configService.get().tv.detected) return;
   const found = await detectTvService();
-  config = saveConfig({ ...config, tv: { ...config.tv, active: found || config.tv.active, detected: true } });
-  if (found) toUi('tv-detected', { id: found, name: config.tv.services.find((t) => t.id === found)?.name || '' });
+  configService.update((c) => ({ ...c, tv: { ...c.tv, active: found || c.tv.active, detected: true } }));
+  if (found) toUi('tv-detected', { id: found, name: configService.get().tv.services.find((t) => t.id === found)?.name || '' });
 }
 
 function activeTvService() {
-  const { services, active } = config.tv;
+  const { services, active } = configService.get().tv;
   return services.find((t) => t.id === active) || null;
 }
 
@@ -585,7 +565,7 @@ function detectPlayer() {
 }
 
 function resolvePlayer() {
-  const p = config.externalPlayer;
+  const p = configService.get().externalPlayer;
   const cmd = (p.path || '').trim() || detectPlayer() || 'mpv';
   const isVlc = /vlc/i.test(path.basename(cmd));
   const args = Array.isArray(p.args) && p.args.length ? p.args
@@ -629,7 +609,7 @@ function detectBrowser() {
 }
 
 async function openInBrowser(url) {
-  const b = config.browser;
+  const b = configService.get().browser;
   const cmd = (b.path || '').trim() || detectBrowser();
   if (!cmd) { await shell.openExternal(url); return { ok: true }; }
   const args = Array.isArray(b.args) && b.args.length ? b.args : ['--app={url}'];
@@ -685,7 +665,7 @@ function webStateOf(id) {
     bookmarkUrl: String(w.entry.id).startsWith('bm:') ? null : (w.entry.romConsole == null ? w.view.webContents.getURL() : null),
     rom: w.entry.romConsole != null ? {
       console: w.entry.romConsole,
-      consoleName: w.entry.romConsole === 'pc' ? 'Jeux PC' : (config.emulators[w.entry.romConsole]?.name || ''),
+      consoleName: w.entry.romConsole === 'pc' ? 'Jeux PC' : (configService.get().emulators[w.entry.romConsole]?.name || ''),
       site: w.entry.romSite,
       pc: w.entry.romConsole === 'pc',
       sites: consoleSites(w.entry.romConsole).map((x) => ({ name: x.name, url: x.url, search: x.search || '' })),
@@ -818,20 +798,20 @@ function createWebView(entry) {
 
 // Sites de la console : sa liste à elle, ou celle proposée pour son système.
 function consoleSites(i) {
-  if (i === 'pc') return (config.pcSites || []).filter((x) => x && x.url);
-  const emu = config.emulators[i];
+  if (i === 'pc') return (configService.get().pcSites || []).filter((x) => x && x.url);
+  const emu = configService.get().emulators[i];
   if (!emu) return [];
   if (Array.isArray(emu.romSites)) return emu.romSites.filter((x) => x && x.url);
   return defaultRomSites(guessSystem(emu));
 }
 
 function romEntry(i, siteIndex = 0) {
-  return romEntryOf(config, i, consoleSites(i), siteIndex);
+  return romEntryOf(configService.get(), i, consoleSites(i), siteIndex);
 }
 
 async function webOpen(id, url, opts = {}) {
   const site = opts.site != null ? opts.site : webViews.get(id)?.entry.romSite || 0;
-  const { entry, error } = resolveWebEntry(id, config, { romSites: consoleSites, site });
+  const { entry, error } = resolveWebEntry(id, configService.get(), { romSites: consoleSites, site });
   if (!entry) return { ok: false, error };
   const target = typeof url === 'string' && isHttpUrl(url) ? url : entry.url;
   if (entry.mode === 'browser') {
@@ -963,17 +943,16 @@ function webLearnSearch(id) {
   if (w.entry.romConsole != null) {
     const i = w.entry.romConsole;
     const sites = consoleSites(i).map((x, n) => (n === w.entry.romSite ? { ...x, search: template } : x));
-    if (i === 'pc') config = saveConfig({ ...config, pcSites: sites });
-    else config = saveConfig({ ...config, emulators: config.emulators.map((e, n) => (n === i ? { ...e, romSites: sites } : e)) });
+    if (i === 'pc') configService.update((c) => ({ ...c, pcSites: sites }));
+    else configService.update((c) => ({ ...c, emulators: c.emulators.map((e, n) => (n === i ? { ...e, romSites: sites } : e)) }));
     w.entry = romEntry(i, w.entry.romSite) || w.entry;
     pushWebState(w.entry.id);
-    return { ok: true, template, config };
+    return { ok: true, template, config: configService.get() };
   }
-  const web2 = config.web.map((e) => (e.id === w.entry.id ? { ...e, search: template } : e));
-  saveConfig({ ...config, web: web2 });
-  w.entry = config.web.find((e) => e.id === w.entry.id) || w.entry;
+  configService.update((c) => ({ ...c, web: c.web.map((e) => (e.id === w.entry.id ? { ...e, search: template } : e)) }));
+  w.entry = configService.get().web.find((e) => e.id === w.entry.id) || w.entry;
   pushWebState(w.entry.id);
-  return { ok: true, template, config };
+  return { ok: true, template, config: configService.get() };
 }
 
 // Tout téléchargement des pages passe par le gestionnaire. Depuis « Ajouter des jeux », il va dans le
@@ -1043,7 +1022,7 @@ function setupWebSession() {
 /* ---------- Recherche dans les catalogues de streaming (TMDB + JustWatch) ---------- */
 
 async function tmdbFetch(pathname, params = {}) {
-  const token = String(config.search.tmdbToken || '').trim();
+  const token = String(configService.get().search.tmdbToken || '').trim();
   const url = new URL(`https://api.themoviedb.org/3${pathname}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const headers = { accept: 'application/json' };
@@ -1060,7 +1039,7 @@ async function tmdbFetch(pathname, params = {}) {
 
 function sourceForProvider(providerName) {
   const p = fold(providerName).trim();
-  return config.web.find((w) => {
+  return configService.get().web.find((w) => {
     const names = [w.name, ...(Array.isArray(w.providers) ? w.providers : [])].map((n) => fold(n).trim()).filter(Boolean);
     return names.some((n) => providerMatches(p, n));
   }) || null;
@@ -1069,9 +1048,9 @@ function sourceForProvider(providerName) {
 async function searchStreaming(query) {
   const q = String(query || '').trim();
   if (!q) return { ok: true, results: [] };
-  if (!String(config.search.tmdbToken || '').trim()) return { ok: false, reason: 'nokey' };
-  const language = config.search.language || 'fr-FR';
-  const region = String(config.search.region || 'FR').toUpperCase();
+  if (!String(configService.get().search.tmdbToken || '').trim()) return { ok: false, reason: 'nokey' };
+  const language = configService.get().search.language || 'fr-FR';
+  const region = String(configService.get().search.region || 'FR').toUpperCase();
   const data = await tmdbFetch('/search/multi', { query: q, language, include_adult: 'false', page: '1' });
   const items = (data.results || []).filter((r) => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 12);
 
@@ -1103,7 +1082,7 @@ async function searchStreaming(query) {
 /* ---------- Jeux et émulateurs ---------- */
 
 async function launchGame(i) {
-  const g = config.games[i];
+  const g = configService.get().games[i];
   if (!g) return { ok: false, error: 'Ce jeu n’existe plus dans la configuration.' };
   const target = String(g.path);
   if (!isUrlTarget(target) && !fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
@@ -1141,7 +1120,7 @@ async function bestExecutable(dir, folderName, depth = 0) {
 async function scanGameSources() {
   const games = [];
   const status = {};
-  for (const src of config.gameSources) {
+  for (const src of configService.get().gameSources) {
     const loc = resolveLocation(src.location);
     if (loc.type === 'url') { status[src.id] = { ok: false, error: 'Les jeux PC doivent se trouver sur un disque ou un partage réseau.', count: 0 }; continue; }
     let entries;
@@ -1185,7 +1164,7 @@ function consoleLocations(emu) {
 
 // opts.online : inclure les sources distantes. opts.only : n'analyser qu'un emplacement précis.
 async function listRoms(i, opts = {}) {
-  const emu = config.emulators[i];
+  const emu = configService.get().emulators[i];
   if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
   let places = consoleLocations(emu);
   if (opts.only) places = places.filter((p) => p.location === opts.only);
@@ -1269,7 +1248,7 @@ async function listRoms(i, opts = {}) {
 
 // Un jeu d'une source web est téléchargé une fois dans le cache de Mire, puis lancé.
 async function launchRom(i, romPath) {
-  const emu = config.emulators[i];
+  const emu = configService.get().emulators[i];
   if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
   let target = romPath;
   if (isHttpUrl(romPath)) {
@@ -1389,7 +1368,7 @@ async function addGame() {
   const p = await pickFile('game');
   if (!p) return null;
   const name = path.basename(p).replace(/\.(exe|lnk|url|bat|cmd|app)$/i, '');
-  return saveConfig({ ...config, games: [...config.games, { name, path: p, args: [], image: '' }] });
+  return configService.update((c) => ({ ...c, games: [...c.games, { name, path: p, args: [], image: '' }] }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1397,7 +1376,7 @@ async function addGame() {
 /* ------------------------------------------------------------------ */
 
 function themeBackground() {
-  const t = config.ui.theme === 'auto' ? (nativeTheme.shouldUseDarkColors ? 'ecran' : 'jour') : config.ui.theme;
+  const t = configService.get().ui.theme === 'auto' ? (nativeTheme.shouldUseDarkColors ? 'ecran' : 'jour') : configService.get().ui.theme;
   return THEME_BG[t] || THEME_BG.ecran;
 }
 
@@ -1410,7 +1389,7 @@ function createMainWindow() {
     title: 'Mire',
     backgroundColor: themeBackground(),
     autoHideMenuBar: true,
-    fullscreen: !!config.ui.fullscreen,
+    fullscreen: !!configService.get().ui.fullscreen,
     show: false,
     webPreferences: { preload: path.join(__dirname, '..', 'preload', 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
   });
@@ -1451,8 +1430,7 @@ function filesFromArgv(argv) {
 // change (configuration, fenêtre, services créés au démarrage), fonctions pour le reste.
 const ipcContext = {
   electron: { app, dialog, shell },
-  get config() { return config; },
-  set config(next) { config = next; },
+  config: configService,
   get mainWindow() { return mainWindow; },
   get pendingFiles() { return pendingFiles; },
   set pendingFiles(next) { pendingFiles = next; },
@@ -1463,7 +1441,7 @@ const ipcContext = {
   get store() { return store; },
   get downloads() { return downloads; },
   get adblock() { return adblock; },
-  saveConfig, configPath, themeBackground,
+  configPath, themeBackground,
   scanLibrary, findSubtitles, openMediaDialog, itemFromPath, locationError, pickFolder, pickFile,
   metaDir, saveMeta, setMeta, pickMetaImage,
   playExternal, detectTvService, fetchChannels,
@@ -1499,22 +1477,22 @@ if (!app.requestSingleInstanceLock()) {
     const sevenZipPath = require('7zip-bin').path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
     scraper = createScraper({
       dataDir: app.getPath('userData'),
-      getConfig: () => config,
+      getConfig: configService.get,
       listRoms,
       onProgress: (p) => toUi('scrape-progress', p),
     });
     store = createStore({
       dataDir: app.getPath('userData'),
       defaultRomsRoot: path.join(app.getPath('documents'), 'Mire', 'ROMs'),
-      getConfig: () => config,
-      saveConfig,
+      getConfig: configService.get,
+      saveConfig: configService.replace,
       onProgress: (p) => toUi('store-progress', p),
       sevenZipPath,
       paths: { home: app.getPath('home'), documents: app.getPath('documents'), appData: app.getPath('appData') },
     });
     downloads = createDownloads({
       dataDir: app.getPath('userData'),
-      getConfig: () => config,
+      getConfig: configService.get,
       getSession: () => session.fromPartition('persist:web'),
       extract: (file, dest) => store.extract(file, dest),
       shell,
@@ -1524,8 +1502,8 @@ if (!app.requestSingleInstanceLock()) {
         toUi('download-finished', item);
         // Marque-page de jeu téléchargé : on le marque terminé (sa carte « à télécharger » disparaît).
         if (item.gameBookmark) {
-          const bm = (config.gameBookmarks || []).find((b) => b.id === item.gameBookmark);
-          if (bm) config = saveConfig({ ...config, gameBookmarks: config.gameBookmarks.map((b) => (b.id === bm.id ? { ...b, done: true } : b)) });
+          const bm = (configService.get().gameBookmarks || []).find((b) => b.id === item.gameBookmark);
+          if (bm) configService.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.map((b) => (b.id === bm.id ? { ...b, done: true } : b)) }));
         }
         if (item.console == null) return;
         // Index qui attend ses pistes : on annoncera le jeu quand tout sera là.
@@ -1555,8 +1533,8 @@ if (!app.requestSingleInstanceLock()) {
     startWidevine();
     adblock = createAdblock({
       dataDir: app.getPath('userData'),
-      getConfig: () => config,
-      saveConfig,
+      getConfig: configService.get,
+      saveConfig: configService.replace,
       onCount: onAdCount,
     });
     // Le premier site ouvert attend le bloqueur (dix secondes au plus) pour ne pas laisser passer de pubs.

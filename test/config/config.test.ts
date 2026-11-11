@@ -1,12 +1,16 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, mergeConfig, normalizeConfig, migrateConfig } = require('../../src/main/lib/config.js');
+// Normalisation, migrations et fusion de la configuration (tests de caractérisation de P0-03, repris pour
+// src/main/config/). Les fixtures gardent la forme `{ raw, changed }` de l'ancien `migrateConfig`.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, MIGRATIONS, mergeConfig, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 
-const FIXTURES = path.join(__dirname, '..', 'fixtures');
-const readFixture = (name) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
+// Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
+type Any = any;
+
+const FIXTURES = path.join(import.meta.dirname, '..', 'fixtures');
+const readFixture = (name: string) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
 const ID_RE = /^[0-9a-f]{10}$/;
 
 test.describe('normalizeConfig', () => {
@@ -26,13 +30,13 @@ test.describe('normalizeConfig', () => {
   test('ne modifie pas DEFAULT_CONFIG', () => {
     const before = structuredClone(DEFAULT_CONFIG);
     const c = normalizeConfig({});
-    c.ui.home.bars.push('x');
+    (c.ui.home.bars as Any).push('x');
     c.tv.services[0].url = 'x';
     assert.deepEqual(DEFAULT_CONFIG, before);
   });
 
   test('config complète : valeurs conservées', () => {
-    const raw = {
+    const raw: Any = {
       library: { sources: [{ id: 's1', kind: 'audio', location: ' /musique ' }] },
       gameSources: [{ id: 'g1', location: 'D:\\Jeux' }],
       web: [{ id: 'netflix', name: 'Netflix', url: 'https://www.netflix.com', mode: 'browser', search: 'https://n/?q={q}' }],
@@ -127,7 +131,7 @@ test.describe('normalizeConfig', () => {
     assert.equal(fb.quality, 'sd');
     assert.equal(fb.name, 'Freebox TV');
     assert.equal(fb.kind, 'playlist');
-    assert.equal(c.tv.services.at(-1).kind, 'web');
+    assert.equal(c.tv.services.at(-1)?.kind, 'web');
     assert.equal(c.tv.active, 'ma-tele');
   });
 
@@ -156,7 +160,7 @@ test.describe('normalizeConfig', () => {
 
 test.describe('migrateConfig', () => {
   // Les identifiants des sources créées par la migration sont aléatoires : on les remplace pour comparer.
-  const stableIds = (res) => {
+  const stableIds = (res: Any) => {
     for (const s of res.raw?.library?.sources || []) {
       if (ID_RE.test(s.id)) s.id = '<id>';
     }
@@ -165,24 +169,41 @@ test.describe('migrateConfig', () => {
 
   for (let v = 1; v <= 5; v++) {
     test(`version ${v} : résultat figé`, () => {
-      const res = migrateConfig(readFixture(`config-v${v}.json`));
-      assert.deepEqual(stableIds(res), readFixture(`config-v${v}.migrated.json`));
+      const { config, from, changed } = migrate(readFixture(`config-v${v}.json`));
+      assert.equal(from, v);
+      assert.deepEqual(stableIds({ raw: config, changed }), readFixture(`config-v${v}.migrated.json`));
     });
 
     test(`version ${v} : normalizeConfig accepte le résultat`, () => {
-      const c = normalizeConfig(migrateConfig(readFixture(`config-v${v}.json`)).raw);
+      const c = normalizeConfig(migrate(readFixture(`config-v${v}.json`)).config);
       assert.equal(c.version, CONFIG_VERSION);
     });
   }
 
   test('valeur qui n’est pas un objet : rendue telle quelle', () => {
-    assert.deepEqual(migrateConfig(null), { raw: null, changed: false });
-    assert.deepEqual(migrateConfig('x'), { raw: 'x', changed: false });
+    assert.deepEqual(migrate(null), { config: null, from: null, changed: false });
+    assert.deepEqual(migrate('x'), { config: 'x', from: null, changed: false });
+  });
+
+  test('registre : une étape par version, dans l’ordre, jusqu’à la version courante', () => {
+    assert.deepEqual(
+      MIGRATIONS.map((m) => m.version),
+      [2, 3, 4, 5],
+    );
+    assert.equal(MIGRATIONS.at(-1)?.version, CONFIG_VERSION);
+  });
+
+  test('G1 : les sites connus absents ne sont pas ajoutés, ceux présents sont complétés', () => {
+    const { config } = migrate({ web: [{ id: 'deezer', name: 'Deezer', url: 'https://www.deezer.com/fr/', search: '' }] }) as Any;
+    assert.equal(config.web.length, 1);
+    assert.equal(config.web[0].search, 'https://www.deezer.com/search/{q}');
+    assert.equal(config.web[0].background, true);
+    assert.equal(config.web[0].group, 'music');
   });
 });
 
 test.describe('mergeConfig', () => {
-  const current = () => ({
+  const current = (): Any => ({
     web: [{ id: 'a', url: 'https://a/' }],
     emulators: [{ path: '/emu/snes' }],
     games: [{ path: '/jeux/un' }],

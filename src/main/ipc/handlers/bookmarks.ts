@@ -24,7 +24,7 @@ export async function addBookmark(ctx: MainContext, data: BookmarkInput) {
     site,
     added: Date.now(),
   };
-  ctx.config = ctx.saveConfig({ ...ctx.config, bookmarks: [...(ctx.config.bookmarks || []), bm] });
+  ctx.config.update((c) => ({ ...c, bookmarks: [...c.bookmarks, bm] }));
   // Scraping immédiat : on récupère la fiche TMDB à partir du titre (et du type choisi).
   let scraped = false;
   try {
@@ -34,18 +34,18 @@ export async function addBookmark(ctx: MainContext, data: BookmarkInput) {
   } catch (err) {
     console.error('Marque-page, scraping :', (err as Error).message);
   }
-  return { ok: true as const, bookmark: bm, scraped, config: ctx.config };
+  return { ok: true as const, bookmark: bm, scraped, config: ctx.config.get() };
 }
 
 export function removeBookmark(ctx: MainContext, id: string) {
-  ctx.config = ctx.saveConfig({ ...ctx.config, bookmarks: (ctx.config.bookmarks || []).filter((b: { id: string }) => b.id !== id) });
-  return { ok: true as const, config: ctx.config };
+  const config = ctx.config.update((c) => ({ ...c, bookmarks: c.bookmarks.filter((b) => b.id !== id) }));
+  return { ok: true as const, config };
 }
 
 // Marque-page d'un jeu depuis un site de téléchargement : page du jeu, lien direct, ou .torrent.
 // data : { source, title?, console? (console ouverte), kind? }
 export function addGameBookmark(ctx: MainContext, data: GameBookmarkInput) {
-  const { config } = ctx;
+  const config = ctx.config.get();
   const source = String(data?.source || '').trim();
   const isMagnet = /^magnet:\?/i.test(source);
   if (!isMagnet && !isHttpUrl(source) && !source.toLowerCase().endsWith('.torrent')) return { ok: false as const, error: 'Lien ou fichier invalide.' };
@@ -73,28 +73,25 @@ export function addGameBookmark(ctx: MainContext, data: GameBookmarkInput) {
   const dlCtx = { name: title, gameBookmark: bm.id, console: typeof curConsole === 'number' ? curConsole : undefined };
   const pending = ctx.downloads.addPending(source, dlCtx);
   bm.downloadId = pending.id;
-  ctx.config = ctx.saveConfig({ ...ctx.config, gameBookmarks: [...(ctx.config.gameBookmarks || []), bm] });
-  return { ok: true as const, bookmark: bm, needSystem, config: ctx.config };
+  const next = ctx.config.update((c) => ({ ...c, gameBookmarks: [...c.gameBookmarks, bm] }));
+  return { ok: true as const, bookmark: bm, needSystem, config: next };
 }
 
 export function setGameBookmarkConsole(ctx: MainContext, id: string, consoleIdx: unknown) {
   const idx = consoleIdx === 'pc' ? 'pc' : Number(consoleIdx);
-  ctx.config = ctx.saveConfig({
-    ...ctx.config,
-    gameBookmarks: (ctx.config.gameBookmarks || []).map((b: GameBookmark) => (b.id === id ? { ...b, console: idx } : b)),
-  });
-  return { ok: true as const, config: ctx.config };
+  const config = ctx.config.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.map((b) => (b.id === id ? { ...b, console: idx } : b)) }));
+  return { ok: true as const, config };
 }
 
 export function removeGameBookmark(ctx: MainContext, id: string) {
-  const bm = (ctx.config.gameBookmarks || []).find((b: GameBookmark) => b.id === id);
+  const bm = ctx.config.get().gameBookmarks.find((b) => b.id === id);
   if (bm?.downloadId) ctx.downloads.remove(bm.downloadId);
-  ctx.config = ctx.saveConfig({ ...ctx.config, gameBookmarks: (ctx.config.gameBookmarks || []).filter((b: GameBookmark) => b.id !== id) });
-  return { ok: true as const, config: ctx.config };
+  const config = ctx.config.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.filter((b) => b.id !== id) }));
+  return { ok: true as const, config };
 }
 
 export function downloadGameBookmark(ctx: MainContext, id: string) {
-  const bm = (ctx.config.gameBookmarks || []).find((b: GameBookmark) => b.id === id);
+  const bm = ctx.config.get().gameBookmarks.find((b) => b.id === id);
   if (!bm) return { ok: false as const, error: 'Marque-page introuvable.' };
   ctx.downloads.startPending(bm.downloadId);
   return { ok: true as const };

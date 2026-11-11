@@ -1,9 +1,10 @@
 /**
  * Ce que les handlers IPC reçoivent du processus principal. Tant que src/main/index.js n'est pas découpé, l'état
- * (configuration, fenêtre, services) y vit encore : le contexte y donne accès par des accesseurs, pour que les
- * handlers lisent toujours la valeur courante et que `ctx.config = …` mette à jour celle de index.js.
- * Les types restent larges : ils se préciseront avec les modules qui posséderont ces données (P1-06 et suivantes).
+ * (fenêtre, services) y vit encore : le contexte y donne accès par des accesseurs, pour que les handlers lisent
+ * toujours la valeur courante. La configuration passe par son service (`ctx.config.get()`, `update`, `replace`).
+ * Les autres types restent larges : ils se préciseront avec les modules qui posséderont ces données.
  */
+import type { ConfigService } from '../config/service.ts';
 
 // Fonction du processus principal encore définie dans index.js.
 type Fn = (...args: any[]) => any;
@@ -21,8 +22,9 @@ export interface ElectronApis {
 export interface MainContext {
   electron: ElectronApis;
 
+  readonly config: ConfigService;
+
   // État de index.js (lu et écrit au moment de l'appel).
-  config: any;
   readonly mainWindow: any;
   pendingFiles: string[];
   readonly userMeta: Record<string, any>;
@@ -36,7 +38,6 @@ export interface MainContext {
   readonly adblock: any;
 
   // Configuration.
-  saveConfig: Fn;
   configPath: () => string;
   themeBackground: () => string;
 
