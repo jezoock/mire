@@ -21,7 +21,7 @@ export function gamesHandlers(ctx: MainContext) {
     romSites: (consoleId) => {
       const emu = consoleId === 'pc' ? null : findConsole(ctx.config.get(), consoleId);
       return {
-        sites: ctx.consoleSites(consoleId),
+        sites: ctx.web.consoleSites(consoleId),
         custom: consoleId === 'pc' ? true : Array.isArray(emu?.romSites),
         defaults: emu ? defaultRomSites(guessSystem(emu)) : [],
       };

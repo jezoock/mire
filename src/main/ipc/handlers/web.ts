@@ -4,32 +4,32 @@ import type { IpcImplementations } from '../register.ts';
 
 export function webHandlers(ctx: MainContext) {
   return {
-    webOpen: (...args) => ctx.webOpen(...args),
-    webShow: (...args) => ctx.webShow(...args),
-    webHide: (...args) => ctx.webHide(...args),
-    webBounds: (...args) => ctx.webBounds(...args),
-    webNav: (...args) => ctx.webNav(...args),
-    webClose: (...args) => ctx.webClose(...args),
-    webFocus: (...args) => ctx.webFocus(...args),
-    webKey: (...args) => ctx.webKey(...args),
-    webLearnSearch: (...args) => ctx.webLearnSearch(...args),
-    webSessions: (...args) => ctx.webSessions(...args),
+    webOpen: (id, url, opts) => ctx.web.open(id, url, opts),
+    webShow: (id, bounds, focus) => ctx.web.show(id, bounds, focus),
+    webHide: () => ctx.web.hide(),
+    webBounds: (bounds) => ctx.web.setBounds(bounds),
+    webNav: (action) => ctx.web.nav(action),
+    webClose: (id) => ctx.web.close(id),
+    webFocus: () => ctx.web.focus(),
+    webKey: (name) => ctx.web.key(name),
+    webLearnSearch: (id) => ctx.web.learnSearch(id),
+    webSessions: () => ctx.web.sessions(),
     drmStatus: (...args) => ctx.drmStatus(...args),
     searchStreaming: (...args) => ctx.searchStreaming(...args),
 
     adblockStatus: () => (ctx.adblock ? ctx.adblock.status() : null),
     adblockSetEnabled: (on) => {
       const st = ctx.adblock.setEnabled(on);
-      for (const w of ctx.webViews.values()) w.view.webContents.reload();
+      ctx.web.reloadAll();
       return st;
     },
     adblockToggleSite: () => {
       const { adblock } = ctx;
-      const w = ctx.webViews.get(ctx.web.activeId as string);
-      if (!w) return null;
-      const st = adblock.toggleSite(w.view.webContents.getURL());
-      w.view.webContents.reload();
-      return { ...st, adOn: adblock.status().enabled && !adblock.pageAllowed(w.view.webContents.getURL()) };
+      const wc = ctx.web.activeContents();
+      if (!wc) return null;
+      const st = adblock.toggleSite(wc.getURL());
+      wc.reload();
+      return { ...st, adOn: adblock.status().enabled && !adblock.pageAllowed(wc.getURL()) };
     },
     adblockSetLists: (lists) => ctx.adblock.setLists(lists || {}),
     adblockUpdate: async () => {

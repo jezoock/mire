@@ -7,6 +7,7 @@
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
+import type { WebManager } from '../web/index.ts';
 
 // Fonction du processus principal encore définie dans index.js.
 type Fn = (...args: any[]) => any;
@@ -32,8 +33,6 @@ export interface MainContext {
   readonly mainWindow: any;
   pendingFiles: string[];
   readonly userMeta: Record<string, any>;
-  readonly webViews: Map<string, any>;
-  readonly web: { activeId: string | null; [key: string]: unknown };
 
   // Services créés au démarrage.
   readonly scraper: any;
@@ -63,21 +62,11 @@ export interface MainContext {
   detectTvService: Fn;
   fetchChannels: Fn;
 
-  // Vues web.
-  webOpen: Fn;
-  webShow: Fn;
-  webHide: Fn;
-  webBounds: Fn;
-  webNav: Fn;
-  webClose: Fn;
-  webFocus: Fn;
-  webKey: Fn;
-  webLearnSearch: Fn;
-  webSessions: Fn;
+  // Vues web (src/main/web) : leur état est interne au gestionnaire.
+  readonly web: WebManager;
   drmStatus: Fn;
   searchStreaming: Fn;
 
-  // Jeux (src/main/games) ; les sites de jeux restent avec les vues web.
+  // Jeux (src/main/games) ; les sites de jeux d'une console sont donnés par le gestionnaire des vues web.
   readonly games: Games;
-  consoleSites: Fn;
 }

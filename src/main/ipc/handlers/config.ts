@@ -46,7 +46,7 @@ export function configHandlers(ctx: MainContext) {
       const saved = ctx.config.replace(next);
       const { mainWindow } = ctx;
       if (mainWindow && saved.ui.fullscreen !== wasFullscreen) mainWindow.setFullScreen(!!saved.ui.fullscreen);
-      for (const w of ctx.webViews.values()) w.entry = saved.web.find((e) => e.id === w.entry.id) || w.entry;
+      ctx.web.refreshEntries(saved);
       if (mainWindow) mainWindow.setBackgroundColor(ctx.themeBackground());
       return saved;
     },

@@ -30,45 +30,18 @@ const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { createAccessPolicy } = require('./security/access-policy.ts');
 const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol/index.ts');
-const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
+const { createWebManager, createDrm, setupWebSession: setupWebSessionOf, chromeLikeUserAgent, nativeUserAgent, WEB_PARTITION } = require('./web/index.ts');
 const { providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
-const { fold, hostOf, siteOf, isHttpUrl } = require('@mire/shared');
-const { EXT, MIME, GAME_FILE_RE } = require('@mire/shared');
+const { fold, isHttpUrl } = require('@mire/shared');
+const { EXT, MIME } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
 
-/**
- * Identité unique pour toute l'application, fixée avant la création de la moindre page.
- * Un réglage par session ne s'applique pas aux cadres d'un autre site (processus séparés) :
- * la case « Vérifiez que vous êtes humain » de Cloudflare, servie par challenges.cloudflare.com,
- * annonçait alors « Electron » pendant que la page annonçait « Chrome », et Cloudflare refusait
- * la vérification. On retire aussi le détail de version, comme le fait Chrome (Chrome/152.0.0.0).
- */
-function chromeLikeUserAgent(ua) {
-  const name = app.getName().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return ua
-    .replace(/\s*Electron\/\S+/i, '')
-    .replace(new RegExp(`\\s*${name}\\/\\S+`, 'i'), '')
-    .replace(/Chrome\/(\d+)\.[\d.]+/, 'Chrome/$1.0.0.0');
-}
-/**
- * Exception : la page de connexion Google (accounts.google.com). Google y refuse un navigateur
- * intégré qui se présente comme Chrome (« Ce navigateur ou cette application ne sont peut-être
- * pas sécurisés ») et accepte celui qui donne sa vraie identité Electron. Sur cette seule page,
- * et pour ce qu'elle charge, Mire envoie donc l'identité d'origine d'Electron (sans le nom de Mire).
- */
-function nativeUserAgent(ua) {
-  const name = app.getName();
-  if (/^electron$/i.test(name)) return ua;
-  return ua.replace(new RegExp(`\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\/\\S+`, 'i'), '');
-}
-const NATIVE_UA = nativeUserAgent(app.userAgentFallback);
-const SIGNIN_HOSTS = new Set(['accounts.google.com']);
-const isSigninPage = (u) => SIGNIN_HOSTS.has(hostOf(u));
-
-app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback);
+// Identité « Chrome » pour toute l'application, fixée avant la création de la moindre page (src/main/web/user-agent.ts).
+const NATIVE_UA = nativeUserAgent(app.userAgentFallback, app.getName());
+app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback, app.getName());
 
 // Le schéma media:// sert les fichiers locaux à l'interface, avec gestion des plages (avance rapide).
 registerMediaScheme(protocol);
@@ -215,411 +188,36 @@ const { playExternal, openInBrowser } = createPlayers({
   settings: () => configService.get(), isAllowed: (file) => access.isAllowed(file),
 });
 
-/* ---------- Vue web intégrée ---------- */
-
-// Widevine (lecture protégée de Netflix, Prime Video…) : fourni par castLabs Electron.
-let cdmReady = Promise.resolve(false);
-function startWidevine() {
-  if (!components) return;
-  cdmReady = Promise.race([
-    components.whenReady().then(() => true).catch((err) => { console.error('Widevine :', err?.message || err); return false; }),
-    new Promise((resolve) => { setTimeout(() => resolve(false), 15000); }),
-  ]);
-}
-
-function drmStatus() {
-  if (!components) return { ecs: false, platform: process.platform };
-  let st = {};
-  try { st = components.status(); } catch { /* pas encore prêt */ }
-  const w = st[components.WIDEVINE_CDM_ID];
-  return { ecs: true, platform: process.platform, widevine: w ? { status: w.status, version: w.version } : null };
-}
-
-// Une vue par site ouvert : on peut passer de Netflix à Mire et revenir sans tout recharger.
-const webViews = new Map();
-const web = { activeId: null, visible: false, bounds: { x: 0, y: 0, width: 0, height: 0 }, immersive: false, html: false, setFs: false };
+/* ---------- Vues web intégrées (src/main/web) ---------- */
 
 const toUi = (channel, payload) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload); };
 
-function webSessions() {
-  return [...webViews.values()].map(({ entry }) => ({ id: entry.id, name: entry.name, color: entry.color }));
-}
+const drm = createDrm({ components, onError: (err) => console.error('Widevine :', err?.message || err) });
 
-function webStateOf(id) {
-  const w = webViews.get(id);
-  if (!w) return null;
-  const wc = w.view.webContents;
-  return {
-    id,
-    name: w.entry.name,
-    color: w.entry.color,
-    title: wc.getTitle(),
-    url: wc.getURL(),
-    canGoBack: wc.navigationHistory.canGoBack(),
-    canGoForward: wc.navigationHistory.canGoForward(),
-    loading: wc.isLoading(),
-    immersive: web.immersive || web.html,
-    hasSearch: !!w.entry.search,
-    blocked: adblock ? adblock.countFor(wc.id) : 0,
-    bookmarkUrl: String(w.entry.id).startsWith('bm:') ? null : (w.entry.romConsole == null ? w.view.webContents.getURL() : null),
-    rom: w.entry.romConsole != null ? {
-      console: w.entry.romConsole,
-      consoleName: w.entry.romConsole === 'pc' ? 'Jeux PC' : (consoleById(w.entry.romConsole)?.name || ''),
-      site: w.entry.romSite,
-      pc: w.entry.romConsole === 'pc',
-      sites: consoleSites(w.entry.romConsole).map((x) => ({ name: x.name, url: x.url, search: x.search || '' })),
-    } : null,
-    adOn: !!adblock && adblock.status().enabled && !adblock.pageAllowed(wc.getURL()),
-  };
-}
-function pushWebState(id) { const st = webStateOf(id); if (st) toUi('web-state', st); }
-
-function fullBounds() {
-  const [width, height] = mainWindow.getContentSize();
-  return { x: 0, y: 0, width, height };
-}
-
-function applyWeb() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  for (const [id, w] of webViews) {
-    const show = web.visible && id === web.activeId;
-    w.view.setVisible(show);
-    if (show) w.view.setBounds(web.immersive || web.html ? fullBounds() : web.bounds);
-  }
-}
-
-// Met en pause les vidéos d'un site qu'on quitte (sauf la musique, qui continue en fond).
-function pauseVideos(w) {
-  if (!w || w.entry.background) return;
-  try {
-    for (const f of w.view.webContents.mainFrame.framesInSubtree) {
-      f.executeJavaScript("document.querySelectorAll('video').forEach((v) => v.pause())").catch(() => {});
-    }
-  } catch { /* page en cours de chargement */ }
-}
-
-function setImmersive(on) {
-  if (!mainWindow) return;
-  web.immersive = on;
-  if (on && !mainWindow.isFullScreen()) { web.setFs = true; mainWindow.setFullScreen(true); }
-  else if (!on && web.setFs && !web.html) { web.setFs = false; mainWindow.setFullScreen(false); }
-  applyWeb();
-  if (web.activeId) pushWebState(web.activeId);
-}
-
-function focusMire() {
-  if (!mainWindow) return;
-  if (web.immersive) setImmersive(false);
-  mainWindow.webContents.focus();
-  toUi('web-focus', false);
-  toUi('web-mire-focus');
-}
-
-function handleWebShortcut(id, input) {
-  const w = webViews.get(id);
-  if (!w) return false;
-  const nav = w.view.webContents.navigationHistory;
-  const key = input.key;
-  const ctrl = input.control || input.meta;
-  if (key === 'F11') { setImmersive(!web.immersive); return true; }
-  if (key === 'Escape' && web.immersive && !web.html) { setImmersive(false); return true; }
-  if (key === 'F9') { focusMire(); return true; }
-  if (key === 'F5' || (ctrl && key.toLowerCase() === 'r')) { w.view.webContents.reload(); return true; }
-  if (ctrl && key.toLowerCase() === 'w') { webClose(id); return true; }
-  if (input.alt && key === 'ArrowLeft') { if (nav.canGoBack()) nav.goBack(); return true; }
-  if (input.alt && key === 'ArrowRight') { if (nav.canGoForward()) nav.goForward(); return true; }
-  return false;
-}
-
-function createWebView(entry) {
-  const view = new WebContentsView({
-    webPreferences: { partition: 'persist:web', contextIsolation: true, sandbox: true, nodeIntegration: false },
-  });
-  view.setBackgroundColor('#000000');
-  view.setVisible(false);
-  const wc = view.webContents;
-  const w = { view, entry };
-
-  // Fenêtres surgissantes bloquées ; un lien vers le même site s'ouvre dans la vue.
-  wc.setWindowOpenHandler(({ url }) => {
-    if (takeMagnet(url, wc)) return { action: 'deny' };
-    if (!/^https?:/i.test(url)) return { action: 'deny' };
-    let pathname = '';
-    try { pathname = new URL(url).pathname; } catch { /* adresse illisible */ }
-    if (w.entry.romConsole != null && (w.entry.romConsole === 'pc' || GAME_FILE_RE.test(pathname))) wc.downloadURL(url);
-    else if (siteOf(url) === siteOf(wc.getURL())) wc.loadURL(url);
-    return { action: 'deny' };
-  });
-  const push = () => pushWebState(entry.id);
-  for (const ev of ['page-title-updated', 'did-navigate-in-page', 'did-start-loading', 'did-stop-loading']) wc.on(ev, push);
-  wc.on('did-navigate', () => { adblock?.resetCount(wc.id); push(); });
-  // « Clic sur la vidéo → page de pub » : la navigation vers une régie publicitaire est annulée.
-  const guard = (event, legacyUrl) => {
-    const url = event.url || legacyUrl;
-    if (/^magnet:\?/i.test(url)) { event.preventDefault(); takeMagnet(url, wc); return; }
-    if (event.isMainFrame === false) return;
-    if (adblock?.blocksNavigation(url, wc.getURL())) {
-      event.preventDefault();
-      toUi('web-adblocked', { id: entry.id, host: hostOf(url) });
-    }
-  };
-  wc.on('will-navigate', guard);
-  wc.on('will-redirect', guard);
-  wc.on('did-fail-load', (_e, code, desc, _url, isMainFrame) => {
-    if (isMainFrame && code !== -3) toUi('web-error', { id: entry.id, message: `${entry.name} ne répond pas (${desc}). Vérifiez la connexion ou l’adresse du site.` });
-  });
-  wc.on('render-process-gone', () => toUi('web-error', { id: entry.id, message: `${entry.name} s’est arrêté. Rechargez la page.` }));
-  wc.on('focus', () => toUi('web-focus', true));
-  wc.on('blur', () => toUi('web-focus', false));
-  // Plein écran demandé par le lecteur vidéo du site.
-  wc.on('enter-html-full-screen', () => {
-    web.html = true;
-    if (!mainWindow.isFullScreen()) { web.setFs = true; mainWindow.setFullScreen(true); }
-    applyWeb();
-    push();
-  });
-  wc.on('leave-html-full-screen', () => {
-    web.html = false;
-    if (web.setFs && !web.immersive) { web.setFs = false; mainWindow.setFullScreen(false); }
-    applyWeb();
-    push();
-  });
-  wc.on('before-input-event', (event, input) => {
-    if (input.type === 'keyDown' && handleWebShortcut(entry.id, input)) event.preventDefault();
-  });
-
-  mainWindow.contentView.addChildView(view);
-  webViews.set(entry.id, w);
-  return w;
-}
-
-/* ---------- « Ajouter des jeux » : navigateur intégré propre à chaque console ---------- */
-
-// Console désignée par son identifiant (P1-07 : plus jamais par sa position dans la liste).
-function consoleById(id) {
-  return id == null ? null : configService.get().emulators.find((e) => e.id === id) || null;
-}
-
-// Sites de la console : sa liste à elle, ou celle proposée pour son système.
-function consoleSites(i) {
-  if (i === 'pc') return (configService.get().pcSites || []).filter((x) => x && x.url);
-  const emu = consoleById(i);
-  if (!emu) return [];
-  if (Array.isArray(emu.romSites)) return emu.romSites.filter((x) => x && x.url);
-  return defaultRomSites(guessSystem(emu));
-}
-
-function romEntry(i, siteIndex = 0) {
-  return romEntryOf(configService.get(), i, consoleSites(i), siteIndex);
-}
-
-async function webOpen(id, url, opts = {}) {
-  const site = opts.site != null ? opts.site : webViews.get(id)?.entry.romSite || 0;
-  const { entry, error } = resolveWebEntry(id, configService.get(), { romSites: consoleSites, site });
-  if (!entry) return { ok: false, error };
-  const target = typeof url === 'string' && isHttpUrl(url) ? url : entry.url;
-  if (entry.mode === 'browser') {
-    const r = await openInBrowser(target);
-    return { ...r, integrated: false };
-  }
-  await cdmReady;
-  await adblockReady;
-  let w = webViews.get(id);
-  if (!w) {
-    w = createWebView(entry);
-    w.view.webContents.loadURL(target);
-  } else {
-    w.entry = entry;
-    if (url || opts.site != null) w.view.webContents.loadURL(target);
-  }
-  toUi('web-sessions', webSessions());
-  return { ok: true, integrated: true, state: webStateOf(id) };
-}
-
-function webShow(id, bounds, focus = true) {
-  const w = webViews.get(id);
-  if (!w) return { ok: false };
-  if (web.activeId && web.activeId !== id) pauseVideos(webViews.get(web.activeId));
-  web.activeId = id;
-  web.visible = true;
-  if (bounds) web.bounds = roundRect(bounds);
-  applyWeb();
-  if (focus) w.view.webContents.focus();
-  return { ok: true, state: webStateOf(id) };
-}
-
-function webHide() {
-  if (web.visible && web.activeId) pauseVideos(webViews.get(web.activeId));
-  web.visible = false;
-  if (web.immersive) setImmersive(false);
-  applyWeb();
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.focus();
-  return true;
-}
-
-const roundRect = (r) => ({
-  x: Math.max(0, Math.round(r.x || 0)),
-  y: Math.max(0, Math.round(r.y || 0)),
-  width: Math.max(0, Math.round(r.width || 0)),
-  height: Math.max(0, Math.round(r.height || 0)),
+const web = createWebManager({
+  window: () => mainWindow,
+  createView: (webPreferences) => new WebContentsView({ webPreferences }),
+  config: configService,
+  defaultRomSites,
+  guessSystem,
+  downloads: () => downloads,
+  adblock: () => adblock,
+  // Le premier site ouvert attend Widevine, puis le bloqueur.
+  whenReady: async () => { await drm.whenReady(); await adblockReady; },
+  openInBrowser,
+  toUi,
 });
 
-function webBounds(bounds) {
-  web.bounds = roundRect(bounds);
-  applyWeb();
-  return true;
-}
-
-function webNav(action) {
-  const w = webViews.get(web.activeId);
-  if (!w) return false;
-  const wc = w.view.webContents;
-  const nav = wc.navigationHistory;
-  if (action === 'back' && nav.canGoBack()) nav.goBack();
-  else if (action === 'forward' && nav.canGoForward()) nav.goForward();
-  else if (action === 'reload') wc.reload();
-  else if (action === 'stop') wc.stop();
-  else if (action === 'home') wc.loadURL(w.entry.url);
-  else if (action === 'immersive') setImmersive(!web.immersive);
-  else if (action === 'mire') focusMire();
-  else if (action === 'browser') openInBrowser(wc.getURL());
-  return true;
-}
-
-function webClose(id) {
-  const w = webViews.get(id || web.activeId);
-  if (!w) return false;
-  const closedId = w.entry.id;
-  try { mainWindow.contentView.removeChildView(w.view); } catch { /* déjà retirée */ }
-  try { w.view.webContents.close(); } catch { /* déjà fermée */ }
-  webViews.delete(closedId);
-  if (web.activeId === closedId) {
-    web.activeId = null;
-    web.visible = false;
-    if (web.immersive) setImmersive(false);
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.focus();
-  }
-  toUi('web-sessions', webSessions());
-  toUi('web-closed', { id: closedId });
-  return true;
-}
-
-function webFocus() {
-  const w = webViews.get(web.activeId);
-  if (w && web.visible) w.view.webContents.focus();
-  return true;
-}
-
-// Touches envoyées à la page depuis la manette.
-const PAD_KEYS = {
-  Up: [{ keyCode: 'Up' }], Down: [{ keyCode: 'Down' }], Left: [{ keyCode: 'Left' }], Right: [{ keyCode: 'Right' }],
-  Enter: [{ keyCode: 'Return', char: '\r' }], Space: [{ keyCode: 'Space', char: ' ' }], Escape: [{ keyCode: 'Escape' }],
-  Tab: [{ keyCode: 'Tab' }], ShiftTab: [{ keyCode: 'Tab', modifiers: ['shift'] }],
-};
-function webKey(name) {
-  const w = webViews.get(web.activeId);
-  if (!w || !web.visible) return false;
-  if (name === 'Back') { const nav = w.view.webContents.navigationHistory; if (nav.canGoBack()) nav.goBack(); return true; }
-  const wc = w.view.webContents;
-  for (const k of PAD_KEYS[name] || []) {
-    const modifiers = k.modifiers || [];
-    wc.sendInputEvent({ type: 'keyDown', keyCode: k.keyCode, modifiers });
-    if (k.char) wc.sendInputEvent({ type: 'char', keyCode: k.char, modifiers });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: k.keyCode, modifiers });
-  }
-  return true;
-}
-
-// « Mémoriser la recherche » : l'utilisateur cherche le mot « mire » sur le site,
-// Mire relève l'adresse obtenue et remplace « mire » par {q}.
-function webLearnSearch(id) {
-  const w = webViews.get(id || web.activeId);
-  if (!w) return { ok: false, error: 'Aucun site ouvert.' };
-  const url = w.view.webContents.getURL();
-  let origin = '';
-  try { origin = new URL(url).origin; } catch { return { ok: false, error: 'Adresse de page illisible.' }; }
-  const rest = url.slice(origin.length);
-  const idx = rest.toLowerCase().indexOf('mire');
-  if (idx < 0) {
-    return { ok: false, error: 'Cherchez d’abord le mot « mire » avec le moteur de recherche du site, puis appuyez de nouveau sur ce bouton.' };
-  }
-  const template = origin + rest.slice(0, idx) + '{q}' + rest.slice(idx + 4);
-  if (w.entry.romConsole != null) {
-    const i = w.entry.romConsole;
-    const sites = consoleSites(i).map((x, n) => (n === w.entry.romSite ? { ...x, search: template } : x));
-    if (i === 'pc') configService.update((c) => ({ ...c, pcSites: sites }));
-    else configService.update((c) => ({ ...c, emulators: c.emulators.map((e) => (e.id === i ? { ...e, romSites: sites } : e)) }));
-    w.entry = romEntry(i, w.entry.romSite) || w.entry;
-    pushWebState(w.entry.id);
-    return { ok: true, template, config: configService.get() };
-  }
-  configService.update((c) => ({ ...c, web: c.web.map((e) => (e.id === w.entry.id ? { ...e, search: template } : e)) }));
-  w.entry = configService.get().web.find((e) => e.id === w.entry.id) || w.entry;
-  pushWebState(w.entry.id);
-  return { ok: true, template, config: configService.get() };
-}
-
-// Tout téléchargement des pages passe par le gestionnaire. Depuis « Ajouter des jeux », il va dans le
-// dossier de la console ; depuis un autre site, dans le dossier des téléchargements.
-function viewOfContents(wc) {
-  return wc ? [...webViews.values()].find((x) => !x.view.webContents.isDestroyed() && x.view.webContents === wc) : null;
-}
-function onWebDownload(_event, item, wc) {
-  if (!downloads) return;
-  const w = viewOfContents(wc);
-  const rc = w?.entry.romConsole;
-  downloads.handleWebDownload(item, rc != null && rc !== 'pc' ? { console: rc } : {});
-}
-// Lien magnet ouvert par une page : il part dans le gestionnaire au lieu du système.
-function takeMagnet(url, wc) {
-  if (!downloads || !/^magnet:\?/i.test(url)) return false;
-  const w = viewOfContents(wc);
-  const rc2 = w?.entry.romConsole;
-  downloads.addTorrent(url, rc2 != null && rc2 !== 'pc' ? { console: rc2 } : {}).then((r) => {
-    toUi('download-added', r?.ok ? { ok: true, external: !!r.external } : { ok: false, error: r?.error });
-  });
-  return true;
-}
-
-const countTimers = new Map();
-function onAdCount(wcId) {
-  if (countTimers.has(wcId)) return;
-  countTimers.set(wcId, setTimeout(() => {
-    countTimers.delete(wcId);
-    for (const w of webViews.values()) {
-      if (!w.view.webContents.isDestroyed() && w.view.webContents.id === wcId) toUi('web-blocked', { id: w.entry.id, count: adblock.countFor(wcId) });
-    }
-  }, 250));
-}
-
 function setupWebSession() {
-  const ses = session.fromPartition('persist:web');
-  // Pas de setUserAgent ici : l'identité vient de app.userAgentFallback, la même pour tous les cadres.
-  // L'accès au stockage est accordé, comme dans Chrome, aux cadres de vérification qui le demandent.
-  ses.on('will-download', onWebDownload);
-  const allowed = ['fullscreen', 'clipboard-sanitized-write', 'mediaKeySystem', 'protected-media-identifier', 'storage-access', 'top-level-storage-access'];
-  ses.setPermissionRequestHandler((wc, permission, callback, details) => {
-    if (permission === 'openExternal' && takeMagnet(details?.externalURL || '', wc)) { callback(false); return; }
-    callback(allowed.includes(permission));
-  });
-
-  // Connexion Google : identité Electron d'origine pour la page de connexion et tout ce qu'elle charge.
-  // (Le bloqueur de pubs utilise onBeforeRequest et onHeadersReceived ; cet événement-ci reste libre.)
-  ses.webRequest.onBeforeSendHeaders((details, callback) => {
-    const page = details.resourceType === 'mainFrame' ? details.url : (() => {
-      const wc = details.webContentsId ? webContents.fromId(details.webContentsId) : null;
-      return wc && !wc.isDestroyed() ? wc.getURL() : '';
-    })();
-    if (isSigninPage(page)) details.requestHeaders['User-Agent'] = NATIVE_UA;
-    callback({ requestHeaders: details.requestHeaders });
-  });
-  // Et la même identité pour ce que voit la page en JavaScript (navigator.userAgent).
-  ses.registerPreloadScript({ type: 'frame', filePath: path.join(__dirname, '..', 'preload', 'web-preload.js') });
-  // Scripts correcteurs du bloqueur, demandés par web-preload.js au tout début de chaque page.
-  ipcMain.on('mire:scriptlets', (event, url) => { event.returnValue = adblock ? adblock.scriptletsFor(String(url || '')) : ''; });
-  ipcMain.on('mire:signin-ua', (event) => {
-    const page = event.sender && !event.sender.isDestroyed() ? event.sender.getURL() : '';
-    event.returnValue = isSigninPage(page) ? NATIVE_UA : '';
+  setupWebSessionOf({
+    session: session.fromPartition(WEB_PARTITION),
+    ipcMain,
+    contentsFromId: (id) => webContents.fromId(id),
+    nativeUserAgent: NATIVE_UA,
+    preloadPath: path.join(__dirname, '..', 'preload', 'web-preload.js'),
+    onDownload: web.onDownload,
+    takeMagnet: web.takeMagnet,
+    scriptletsFor: (url) => (adblock ? adblock.scriptletsFor(url) : ''),
   });
 }
 
@@ -801,16 +399,12 @@ function createMainWindow() {
     if (input.key === 'F11') { mainWindow.setFullScreen(!mainWindow.isFullScreen()); e.preventDefault(); }
     if (input.key === 'F12') { mainWindow.webContents.toggleDevTools(); e.preventDefault(); }
   });
-  mainWindow.on('resize', () => { if (web.immersive || web.html) applyWeb(); });
+  mainWindow.on('resize', () => web.onWindowResize());
   // Bouton « précédent » de la souris (Windows) dans un site.
-  mainWindow.on('app-command', (_e, cmd) => {
-    if (!web.visible) return;
-    if (cmd === 'browser-backward') webNav('back');
-    if (cmd === 'browser-forward') webNav('forward');
-  });
+  mainWindow.on('app-command', (_e, cmd) => web.onAppCommand(cmd));
   mainWindow.on('closed', () => {
     mainWindow = null;
-    webViews.clear();
+    web.onWindowClosed();
     if (!IS_MAC) app.quit();
   });
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
@@ -832,7 +426,6 @@ const ipcContext = {
   get pendingFiles() { return pendingFiles; },
   set pendingFiles(next) { pendingFiles = next; },
   get userMeta() { return userMeta; },
-  webViews,
   web,
   get scraper() { return scraper; },
   get store() { return store; },
@@ -843,9 +436,8 @@ const ipcContext = {
   scanLibrary, findSubtitles, openMediaDialog, itemFromPath, locationError, pickFolder, pickFile,
   metaDir, saveMeta, setMeta, pickMetaImage,
   playExternal, detectTvService, fetchChannels,
-  webOpen, webShow, webHide, webBounds, webNav, webClose, webFocus, webKey, webLearnSearch, webSessions,
-  drmStatus, searchStreaming,
-  games, consoleSites,
+  drmStatus: drm.status, searchStreaming,
+  games,
 };
 
 function registerIpc() {
@@ -894,7 +486,7 @@ if (!app.requestSingleInstanceLock()) {
     downloads = createDownloads({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
-      getSession: () => session.fromPartition('persist:web'),
+      getSession: () => session.fromPartition(WEB_PARTITION),
       extract: archive.extract,
       shell,
       defaultDir: path.join(app.getPath('downloads'), 'Mire'),
@@ -932,16 +524,16 @@ if (!app.requestSingleInstanceLock()) {
     }
     registerMedia();
     setupWebSession();
-    startWidevine();
+    drm.start();
     adblock = createAdblock({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
       saveConfig: configService.replace,
-      onCount: onAdCount,
+      onCount: web.onAdCount,
     });
     // Le premier site ouvert attend le bloqueur (dix secondes au plus) pour ne pas laisser passer de pubs.
     adblockReady = Promise.race([
-      adblock.start(session.fromPartition('persist:web')).catch((err) => { console.error('Bloqueur :', err.message); return false; }),
+      adblock.start(session.fromPartition(WEB_PARTITION)).catch((err) => { console.error('Bloqueur :', err.message); return false; }),
       new Promise((resolve) => { setTimeout(() => resolve(false), 10000); }),
     ]);
     registerIpc();
