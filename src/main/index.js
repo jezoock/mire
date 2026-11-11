@@ -19,13 +19,12 @@ const http = require('./net/http.ts');
 const { createAdblock } = require('./adblock.js');
 const { defaultRomSites } = require('./romsites.js');
 const { createDownloads } = require('./downloads/index.ts');
-const disc = require('./discfiles.js');
+const { createGames } = require('./games/index.ts');
 const { guessSystem } = require('./scraper.js');
 const { THEME_BG, createConfigService } = require('./config/index.ts');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const library = require('./library/index.ts');
-const { resolveLocation, locationError, crawlHttp } = library;
-const { substitute } = require('./lib/args.js');
+const { resolveLocation, locationError } = library;
 const { createLauncher, createPlayers } = require('./platform/index.ts');
 const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
@@ -34,8 +33,8 @@ const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
 const { providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
-const { fold, slug, safeFileName, cleanRomName, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget } = require('@mire/shared');
-const { EXT, KIND, MIME, GAME_FILE_RE } = require('@mire/shared');
+const { fold, hostOf, siteOf, isHttpUrl } = require('@mire/shared');
+const { EXT, MIME, GAME_FILE_RE } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -684,218 +683,18 @@ async function searchStreaming(query) {
   return { ok: true, results };
 }
 
-/* ---------- Jeux et émulateurs ---------- */
+/* ---------- Jeux et émulateurs (src/main/games) ---------- */
 
-async function launchGame(i) {
-  const g = configService.get().games[i];
-  if (!g) return { ok: false, error: 'Ce jeu n’existe plus dans la configuration.' };
-  const target = String(g.path);
-  if (!isUrlTarget(target) && !fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
-  return openTarget(target, g.args || [], {
-    cwd: g.cwd || (isUrlTarget(target) ? undefined : path.dirname(target)),
-    hideWhileRunning: true,
-  });
-}
-
-// Dossiers de jeux PC : un jeu par raccourci ou exécutable, ou par sous-dossier (on y choisit le bon .exe).
-const JUNK_EXE = /unins|setup|install|crash|report|redist|vcredist|vc_redist|dxsetup|directx|dotnet|update|patch|helper|prereq|easyanticheat|battleye|cleanup|config|launcherhelper|cefprocess|webhelper|unitycrash/i;
-const GAME_FILES = IS_WIN ? ['.exe', '.lnk', '.url', '.bat'] : IS_MAC ? ['.app'] : ['.desktop', '.sh', '.appimage', '.x86_64'];
-
-async function bestExecutable(dir, folderName, depth = 0) {
-  const found = [];
-  async function walk(d, level) {
-    if (level > 2) return;
-    let entries;
-    try { entries = await fsp.readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      const full = path.join(d, e.name);
-      const ext = path.extname(e.name).toLowerCase();
-      if (e.isDirectory()) { if (!/^(redist|_commonredist|directx|support|tools|engine)$/i.test(e.name)) await walk(full, level + 1); continue; }
-      if (!GAME_FILES.includes(ext) || ['.lnk', '.url', '.desktop'].includes(ext) || JUNK_EXE.test(e.name)) continue;
-      let size = 0;
-      try { size = (await fsp.stat(full)).size; } catch { /* rien */ }
-      found.push({ full, score: similarity(path.basename(e.name, ext), folderName) * 1e12 + size - level * 1e6 });
-    }
-  }
-  await walk(dir, depth);
-  found.sort((a, b) => b.score - a.score);
-  return found[0]?.full || null;
-}
-
-async function scanGameSources() {
-  const games = [];
-  const status = {};
-  for (const src of configService.get().gameSources) {
-    const loc = resolveLocation(src.location);
-    if (loc.type === 'url') { status[src.id] = { ok: false, error: 'Les jeux PC doivent se trouver sur un disque ou un partage réseau.', count: 0 }; continue; }
-    let entries;
-    try { entries = await fsp.readdir(loc.path, { withFileTypes: true }); } catch { status[src.id] = { ok: false, error: locationError(src.location, loc), count: 0 }; continue; }
-    const start = games.length;
-    for (const e of entries) {
-      if (e.name.startsWith('.')) continue;
-      const full = path.join(loc.path, e.name);
-      const ext = path.extname(e.name).toLowerCase();
-      if (IS_MAC && ext === '.app') { games.push({ name: path.basename(e.name, ext), path: full, source: src.id }); continue; }
-      if (e.isFile() && GAME_FILES.includes(ext) && !JUNK_EXE.test(e.name)) {
-        games.push({ name: path.basename(e.name, ext).replace(/[._]+/g, ' ').trim(), path: full, source: src.id });
-      } else if (e.isDirectory()) {
-        const exe = await bestExecutable(full, e.name);
-        if (exe) games.push({ name: e.name, path: exe, source: src.id });
-      }
-    }
-    status[src.id] = { ok: true, error: null, count: games.length - start };
-  }
-  games.sort((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true, sensitivity: 'base' }));
-  return { games, status };
-}
-
-// Jeu en ligne copié dans le cache avant son lancement (gros fichier : jusqu'à 30 minutes).
-function downloadRom(url, dest, onProgress) {
-  return http.downloadToFile(url, dest, { onProgress, timeout: 30 * 60 * 1000 });
-}
-
-async function launchGamePath(target) {
-  if (typeof target !== 'string' || !access.isAllowed(target)) return { ok: false, error: 'Ce jeu ne fait pas partie de vos dossiers de jeux.' };
-  if (!fs.existsSync(target)) return { ok: false, error: `Fichier introuvable : ${target}` };
-  return openTarget(target, [], { cwd: path.dirname(target), hideWhileRunning: true });
-}
-
-// Les emplacements d'une console : local (dossier principal) et distants (sources web ou réseau).
-function consoleLocations(emu) {
-  const main = emu.romsDir ? [{ location: emu.romsDir, remote: false }] : [];
-  const extra = (emu.sources || []).map((loc) => ({ location: loc, remote: isHttpUrl(loc) }));
-  return [...main, ...extra];
-}
-
-// opts.online : inclure les sources distantes. opts.only : n'analyser qu'un emplacement précis.
-async function listRoms(i, opts = {}) {
-  const emu = consoleById(i);
-  if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
-  let places = consoleLocations(emu);
-  if (opts.only) places = places.filter((p) => p.location === opts.only);
-  else if (!opts.online) places = places.filter((p) => !p.remote);
-  const locations = places.map((p) => p.location);
-  if (!locations.length) {
-    if (!opts.online && consoleLocations(emu).some((p) => p.remote)) return { ok: true, roms: [], errors: [], noLocal: true };
-    return { ok: false, error: `Aucun dossier de jeux indiqué pour ${emu.name}.` };
-  }
-
-  const exts = new Set((emu.extensions || []).map((e) => (String(e).startsWith('.') ? e : `.${e}`).toLowerCase()));
-  const roms = [];
-  const errors = [];
-  const add = (p, fileName, dir, remote = false) => {
-    const name = path.basename(fileName, path.extname(fileName));
-    roms.push({ path: p, name, displayName: cleanRomName(name), dir, image: null, remote });
-  };
-  async function walk(dir, depth) {
-    if (depth > 4 || roms.length > 20000) return;
-    let entries;
-    try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      if (e.name.startsWith('.')) continue;
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) { await walk(full, depth + 1); continue; }
-      const ext = path.extname(e.name).toLowerCase();
-      if (exts.size && !exts.has(ext)) continue;
-      add(full, e.name, dir);
-    }
-  }
-  for (const location of locations) {
-    const loc = resolveLocation(location);
-    try {
-      if (loc.type === 'url') {
-        await crawlHttp(loc.url, async (dirUrl, _dirName, files) => {
-          for (const u of files) {
-            const fileName = safeDecode(u.pathname.split('/').pop());
-            if (exts.size && !exts.has(path.extname(fileName).toLowerCase())) continue;
-            add(u.href, fileName, dirUrl, true);
-          }
-        });
-      } else {
-        try { await fsp.access(loc.path); } catch { throw new Error(locationError(location, loc)); }
-        await walk(loc.path, 0);
-      }
-    } catch (err) { errors.push(err.message); }
-  }
-  if (!roms.length && errors.length === locations.length) return { ok: false, error: errors.join(' ') };
-
-  // Jeux à plusieurs disques : la liste .m3u représente le jeu ; ses disques ne sont pas listés à part.
-  const m3us = roms.filter((r) => /\.m3u$/i.test(String(r.path).split('?')[0]));
-  if (m3us.length) {
-    const keyOf = (p) => (isHttpUrl(p) ? safeDecode(new URL(p).pathname) : path.resolve(p));
-    const hidden = new Set();
-    await Promise.all(m3us.map(async (r) => {
-      let text = '';
-      try { text = r.remote ? await downloads.fetchText(r.path) : disc.decode(await fsp.readFile(r.path)); } catch { return; }
-      for (const ref of disc.parseRefs(r.path, text)) {
-        hidden.add(keyOf(r.remote ? disc.refUrl(ref, r.path) : path.join(path.dirname(r.path), ...ref.split('/'))));
-      }
-    }));
-    if (hidden.size) {
-      const kept = roms.filter((r) => !hidden.has(keyOf(r.path)));
-      roms.length = 0;
-      roms.push(...kept);
-    }
-  }
-
-  if (emu.imagesDir) {
-    try {
-      const images = new Map();
-      for (const n of await fsp.readdir(emu.imagesDir)) {
-        if (KIND[path.extname(n).toLowerCase()] === 'image') images.set(path.basename(n, path.extname(n)).toLowerCase(), path.join(emu.imagesDir, n));
-      }
-      for (const r of roms) r.image = images.get(r.name.toLowerCase()) || images.get(r.displayName.toLowerCase()) || null;
-    } catch { /* pas de jaquettes */ }
-  }
-  roms.sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr', { numeric: true, sensitivity: 'base' }));
-  return { ok: true, roms, errors };
-}
-
-// Un jeu d'une source web est téléchargé une fois dans le cache de Mire, puis lancé.
-async function launchRom(i, romPath) {
-  const emu = consoleById(i);
-  if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
-  let target = romPath;
-  if (isHttpUrl(romPath)) {
-    const fromSource = (emu.sources || []).some((x) => isHttpUrl(x) && romPath.startsWith(x.endsWith('/') ? x : `${x}/`));
-    if (!fromSource) return { ok: false, error: 'Ce jeu ne provient pas d’une source de cette console.' };
-    const fileName = safeFileName(safeDecode(new URL(romPath).pathname.split('/').pop()), { max: Infinity, fallback: '' });
-    target = path.join(romCacheDir(), slug(emu.name) || 'console', fileName);
-    if (disc.isDescriptor(fileName)) {
-      // Jeu sur disque : l'index et ses pistes (ou ses disques) vont ensemble dans un dossier du cache.
-      let files;
-      try { files = await disc.resolveRemote(romPath, (x) => downloads.fetchText(x)); } catch (err) { return { ok: false, error: `Index du jeu illisible (${err.message}).` }; }
-      const folder = path.join(romCacheDir(), slug(emu.name) || 'console', path.basename(fileName, path.extname(fileName)));
-      const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
-      for (const [n, f] of todo.entries()) {
-        const dest = path.join(folder, ...f.rel.split('/'));
-        const label = todo.length > 1 ? `${fileName} (fichier ${n + 1} sur ${todo.length})` : fileName;
-        await fsp.mkdir(path.dirname(dest), { recursive: true });
-        toUi('rom-progress', { name: label, phase: 'download' });
-        try {
-          await downloadRom(f.url, dest, (received, total) => toUi('rom-progress', { name: label, phase: 'download', received, total }));
-        } catch (err) {
-          return { ok: false, error: `${path.basename(dest)} : ${err.message}` };
-        }
-      }
-      if (todo.length) toUi('rom-progress', { name: fileName, phase: 'done' });
-      target = path.join(folder, files[0].rel);
-    } else if (!fs.existsSync(target)) {
-      toUi('rom-progress', { name: fileName, phase: 'download' });
-      try {
-        await downloadRom(romPath, target, (received, total) => toUi('rom-progress', { name: fileName, phase: 'download', received, total }));
-      } catch (err) {
-        return { ok: false, error: err.message };
-      }
-      toUi('rom-progress', { name: fileName, phase: 'done' });
-    }
-  } else if (!access.isAllowed(romPath)) {
-    return { ok: false, error: 'Ce jeu ne se trouve pas dans les dossiers de la console.' };
-  }
-  const args = substitute(Array.isArray(emu.args) && emu.args.length ? emu.args : ['{rom}'], { rom: target });
-  const cwd = path.isAbsolute(emu.path) ? path.dirname(emu.path) : undefined;
-  return launchProcess(emu.path, args, { cwd, hideWhileRunning: true });
-}
+const games = createGames({
+  config: configService,
+  access,
+  launcher: { launchProcess, openTarget },
+  downloads: () => downloads,
+  scraper: () => scraper,
+  romCacheDir,
+  pickFile: (kind) => pickFile(kind),
+  toUi,
+});
 
 /* ---------- Modifications manuelles des infos (titre, genre, images…) ---------- */
 
@@ -967,13 +766,6 @@ async function openMediaDialog() {
   });
   if (r.canceled) return [];
   return (await Promise.all(r.filePaths.map(itemFromPath))).filter(Boolean);
-}
-
-async function addGame() {
-  const p = await pickFile('game');
-  if (!p) return null;
-  const name = path.basename(p).replace(/\.(exe|lnk|url|bat|cmd|app)$/i, '');
-  return configService.update((c) => ({ ...c, games: [...c.games, { name, path: p, args: [], image: '' }] }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -1053,7 +845,7 @@ const ipcContext = {
   playExternal, detectTvService, fetchChannels,
   webOpen, webShow, webHide, webBounds, webNav, webClose, webFocus, webKey, webLearnSearch, webSessions,
   drmStatus, searchStreaming,
-  scanGameSources, launchGamePath, launchGame, addGame, listRoms, launchRom, consoleSites, consoleLocations,
+  games, consoleSites,
 };
 
 function registerIpc() {
@@ -1085,7 +877,7 @@ if (!app.requestSingleInstanceLock()) {
     scraper = createScraper({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
-      listRoms,
+      listRoms: games.listRoms,
       onProgress: (p) => toUi('scrape-progress', p),
     });
     // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
@@ -1108,12 +900,13 @@ if (!app.requestSingleInstanceLock()) {
       defaultDir: path.join(app.getPath('downloads'), 'Mire'),
       onChange: (item) => toUi('download', item),
       onFinished: (item) => {
-        toUi('download-finished', item);
-        // Marque-page de jeu téléchargé : on le marque terminé (sa carte « à télécharger » disparaît).
+        // Marque-page de jeu téléchargé : terminé, et sa fiche reportée sur le jeu (src/main/games/bookmarks.ts),
+        // avant de prévenir l'interface, qui recharge alors la liste et les fiches.
         if (item.gameBookmark) {
-          const bm = (configService.get().gameBookmarks || []).find((b) => b.id === item.gameBookmark);
-          if (bm) configService.update((c) => ({ ...c, gameBookmarks: c.gameBookmarks.map((b) => (b.id === bm.id ? { ...b, done: true } : b)) }));
-        }
+          games.onBookmarkDownloaded(item)
+            .catch((err) => console.error('Marque-page de jeu :', err.message))
+            .finally(() => toUi('download-finished', item));
+        } else toUi('download-finished', item);
         if (item.console == null) return;
         // Index qui attend ses pistes : on annoncera le jeu quand tout sera là.
         if (item.companions && !item.group) return;

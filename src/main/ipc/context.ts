@@ -5,6 +5,7 @@
  * Les autres types restent larges : ils se préciseront avec les modules qui posséderont ces données.
  */
 import type { ConfigService } from '../config/service.ts';
+import type { Games } from '../games/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 
 // Fonction du processus principal encore définie dans index.js.
@@ -76,13 +77,7 @@ export interface MainContext {
   drmStatus: Fn;
   searchStreaming: Fn;
 
-  // Jeux.
-  scanGameSources: Fn;
-  launchGamePath: Fn;
-  launchGame: Fn;
-  addGame: Fn;
-  listRoms: Fn;
-  launchRom: Fn;
+  // Jeux (src/main/games) ; les sites de jeux restent avec les vues web.
+  readonly games: Games;
   consoleSites: Fn;
-  consoleLocations: Fn;
 }

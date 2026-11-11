@@ -398,8 +398,8 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
     return score >= 0.82 ? best : null;
   }
 
-  async function scrapeRom(rom, system, override) {
-    const key = `r:${rom.path}`;
+  // key : clé sous laquelle enregistrer la fiche (marque-page de jeu), sinon celle du jeu.
+  async function scrapeRom(rom, system, override, key = `r:${rom.path}`) {
     const name = override?.title || rom.name;
     let image = null;
     let matched = null;
@@ -436,8 +436,7 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
 
   /* ---------- Jeux PC (magasin Steam) ---------- */
 
-  async function scrapePcGame(game, override) {
-    const key = `g:${fold(game.name)}`;
+  async function scrapePcGame(game, override, key = `g:${fold(game.name)}`) {
     let appId = (/^steam:\/\/rungameid\/(\d+)/i.exec(String(game.path || '')) || [])[1] || null;
     let title = game.name;
     if (override?.pick) {
@@ -629,15 +628,15 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
     return { ok: false, error: 'Type inconnu.' };
   }
 
-  async function one({ kind, item, override }) {
+  async function one({ kind, item, override, key }) {
     if (kind === 'video') return { ok: await scrapeVideo(item, override) };
     if (kind === 'album') return { ok: override?.pick ? await albumById(item, override.pick) : await scrapeAlbum(item, override) };
-    if (kind === 'pc') return { ok: await scrapePcGame(item, override) };
+    if (kind === 'pc') return { ok: await scrapePcGame(item, override, key) };
     if (kind === 'rom') {
       const emu = getConfig().emulators.find((e) => e.id === item.emu);
       const system = emu ? guessSystem(emu) : '';
       if (!system) return { ok: false, error: 'Système de la console inconnu : ajoutez « system » dans sa configuration.' };
-      return { ok: await scrapeRom(item, system, override) };
+      return { ok: await scrapeRom(item, system, override, key) };
     }
     return { ok: false };
   }
@@ -651,6 +650,14 @@ function createScraper({ dataDir, getConfig, listRoms, onProgress }) {
     cancel: () => { state.cancel = true; return true; },
     running: () => state.running,
     forget(key) { delete db.items[key]; delete db.misses[key]; save(); return true; },
+    // Reporte une fiche sur une autre clé (marque-page de jeu → jeu téléchargé), sans écraser une fiche existante.
+    copy(from, to) {
+      if (!db.items[from] || db.items[to]) return false;
+      db.items[to] = { ...db.items[from] };
+      delete db.misses[to];
+      save();
+      return true;
+    },
     async clear() {
       db = { items: {}, misses: {} };
       save();
