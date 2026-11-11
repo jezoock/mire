@@ -78,19 +78,7 @@ function prepareData() {
   for (const file of ['config.json', 'telechargements.json']) {
     fs.writeFileSync(path.join(data, file), fs.readFileSync(path.join(FIXTURES, file), 'utf8').replaceAll('@FIXTURES@', prefix));
   }
-  seedAdblock(data);
   return data;
-}
-
-// Le bloqueur télécharge ses listes au démarrage même désactivé : un moteur vide et récent en cache l'en dispense.
-function seedAdblock(data) {
-  const { ElectronBlocker } = require('@ghostery/adblocker-electron');
-  const pkg = path.join(path.dirname(require.resolve('@ghostery/adblocker')), '..', '..', 'package.json');
-  const dir = path.join(data, 'adblock');
-  fs.mkdirSync(dir);
-  fs.writeFileSync(path.join(dir, 'moteur.bin'), ElectronBlocker.empty().serialize());
-  const info = { updated: Date.now(), loaded: [], failed: [], engine: JSON.parse(fs.readFileSync(pkg, 'utf8')).version };
-  fs.writeFileSync(path.join(dir, 'listes.json'), JSON.stringify(info));
 }
 
 async function shot(name) {

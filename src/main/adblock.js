@@ -4,12 +4,16 @@
  *
  * Listes : celles d'Adblock Plus (EasyList, EasyPrivacy, Liste FR) et celles d'uBlock Origin,
  * dont les règles contre les fenêtres surgissantes et les redirections publicitaires.
- * Le moteur compilé est gardé en cache ; les listes sont rafraîchies tous les quatre jours.
+ * Le moteur compilé est gardé en cache ; les listes sont rafraîchies tous les quatre jours. Rien n'est
+ * téléchargé tant que le bloqueur est désactivé.
+ *
+ * C'est une extension des vues web (src/main/web/extensions.ts) : l'hôte des extensions lui passe les requêtes
+ * réseau, lui demande ses scripts correcteurs avant chaque page et lui soumet les navigations.
  */
 const path = require('node:path');
 const fsp = require('node:fs/promises');
-const { webContents } = require('electron');
-const { ElectronBlocker, adsAndTrackingLists, fetchResources, Request } = require('@ghostery/adblocker-electron');
+const electron = require('electron');
+const { BlockingContext, ElectronBlocker, adsAndTrackingLists, fetchResources, Request } = require('@ghostery/adblocker-electron');
 const { parse: parseDomain } = require('tldts-experimental');
 const { hostOf, siteOf } = require('@mire/shared');
 const http = require('./net/http.ts');
@@ -38,18 +42,39 @@ function engineVersion() {
 }
 const ENGINE_VERSION = engineVersion();
 
-function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
+// Masquage seul (script de page du moteur et ses canaux) : les requêtes réseau passent par l'hôte des extensions,
+// qui est le seul à poser des écouteurs webRequest sur la session.
+function cosmeticContext(ses, blocker) {
+  const cosmeticSession = {
+    registerPreloadScript: (script) => ses.registerPreloadScript(script),
+    unregisterPreloadScript: (id) => ses.unregisterPreloadScript(id),
+    webRequest: { onBeforeRequest() {}, onHeadersReceived() {} },
+  };
+  return new BlockingContext(cosmeticSession, blocker);
+}
+
+const wait = (ms) => new Promise((resolve) => { const t = setTimeout(resolve, ms); t.unref?.(); });
+
+/**
+ * Dépendances facultatives (tests) : `fetchText` (listes), `fetch` (ressources d'uBlock), `contentsFromId`
+ * (webContents.fromId) et `cosmetics` (masquage dans la session).
+ */
+function createAdblock({ dataDir, getConfig, saveConfig, onCount, fetchText = (url) => http.getText(url, { timeout: 30000 }), fetch: fetchImpl = globalThis.fetch, contentsFromId = (id) => electron.webContents.fromId(id), cosmetics = cosmeticContext }) {
   const { adblockDir: dir, adblockEngine: engineFile, adblockLists } = dataPaths(dataDir);
   // État des listes ; absent ou illisible : le moteur est reconstruit (première fois).
   const infoStore = createJsonStore(adblockLists, { defaults: { updated: 0, loaded: [], failed: [] } });
   let blocker = null;
   let ses = null;
-  let attached = false;
+  let cosmetic = null; // masquage en place dans la session
   let info = infoStore.get();
   let building = null;
+  let loading = null;
   const counts = new Map(); // page (webContents) → nombre d'éléments bloqués
 
   const settings = () => getConfig().adblock || { enabled: true, allowlist: [], customLists: [] };
+  const enabled = () => settings().enabled !== false;
+  // Le bloqueur agit : moteur prêt, branché sur la session, et activé.
+  const running = () => !!blocker && !!ses && enabled();
 
   // Le site de la page qui fait la requête est-il dans la liste « bloqueur désactivé » ?
   function pageAllowed(pageUrl) {
@@ -58,22 +83,12 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     return (settings().allowlist || []).some((d) => h === d || h.endsWith(`.${d}`));
   }
   const pageUrlOf = (id, fallback) => {
-    const wc = id ? webContents.fromId(id) : null;
+    const wc = id ? contentsFromId(id) : null;
     return (wc && !wc.isDestroyed() && wc.getURL()) || fallback || '';
   };
 
-  // Branche nos exceptions par site sur les fonctions du moteur.
+  // Branche nos exceptions par site et le compteur sur le moteur.
   function wrap(engine) {
-    const before = engine.onBeforeRequest;
-    const headers = engine.onHeadersReceived;
-    engine.onBeforeRequest = (details, callback) => {
-      if (pageAllowed(pageUrlOf(details.webContentsId, details.referrer))) { callback({}); return; }
-      before(details, callback);
-    };
-    engine.onHeadersReceived = (details, callback) => {
-      if (pageAllowed(pageUrlOf(details.webContentsId, details.url))) { callback({}); return; }
-      headers(details, callback);
-    };
     // Règles de masquage seulement : les scripts correcteurs (scriptlets) sont injectés par Mire
     // dès le début de la page (voir scriptletsFor). Le moteur, lui, les injectait trop tard, et à la
     // suite les uns des autres : sur YouTube, certains se gênaient (« JSONPath déjà déclaré ») et le
@@ -119,7 +134,7 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
       setTimeout(() => {
         const urls = [...(pending.get(id) || [])].slice(0, 80);
         pending.delete(id);
-        const wc = webContents.fromId(id);
+        const wc = contentsFromId(id);
         if (!wc || wc.isDestroyed() || !urls.length) return;
         const q = (u) => `"${u.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
         const selectors = urls.flatMap((u) => [`iframe[src=${q(u)}]`, `img[src=${q(u)}]`, `embed[src=${q(u)}]`, `object[data=${q(u)}]`, `video[src=${q(u)}]`]);
@@ -129,15 +144,15 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     pending.get(id).add(url);
   }
 
-  function attach(engine) {
-    if (blocker && ses && attached) blocker.disableBlockingInSession(ses);
-    attached = false;
-    blocker = wrap(engine);
-    if (ses && settings().enabled !== false) { blocker.enableBlockingInSession(ses); attached = true; }
+  // Met le masquage en accord avec l'état : en place quand le bloqueur agit, retiré sinon.
+  function sync() {
+    if (cosmetic && (!running() || cosmetic.blocker !== blocker)) { cosmetic.disable(); cosmetic = null; }
+    if (running() && !cosmetic) { cosmetic = cosmetics(ses, blocker); cosmetic.enable(); }
   }
 
-  function fetchText(url) {
-    return http.getText(url, { timeout: 30000 });
+  function use(engine) {
+    blocker = wrap(engine);
+    sync();
   }
 
   // Télécharge les listes ; une liste indisponible n'empêche pas les autres de servir.
@@ -151,7 +166,7 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     if (!texts.length) throw new Error('Aucune liste de filtres n’a pu être téléchargée. Vérifiez la connexion Internet.');
     const engine = ElectronBlocker.parse(texts.join('\n'), { loadNetworkFilters: true, loadCosmeticFilters: true, enableCompression: true });
     try {
-      const resources = await fetchResources(fetch);
+      const resources = await fetchResources(fetchImpl);
       if (resources) engine.updateResources(resources, String(resources.length));
     } catch { /* sans les scripts correcteurs d'uBlock */ }
     await fsp.mkdir(dir, { recursive: true });
@@ -163,21 +178,20 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
 
   function refresh() {
     if (!building) {
-      building = build().then((engine) => { attach(engine); return true; }).finally(() => { building = null; });
+      building = build().then((engine) => { use(engine); return true; }).finally(() => { building = null; });
     }
     return building;
   }
 
-  // Démarrage : moteur en cache tout de suite, mise à jour des listes en arrière-plan si besoin.
-  async function start(session) {
-    ses = session;
+  // Moteur en cache tout de suite, mise à jour des listes en arrière-plan si besoin ; sans cache, téléchargement.
+  async function loadEngine() {
     info = infoStore.load();
     let cached = null;
     if (info.engine === ENGINE_VERSION) {
       try { cached = ElectronBlocker.deserialize(new Uint8Array(await fsp.readFile(engineFile))); } catch { cached = null; }
     }
     if (cached) {
-      attach(cached);
+      use(cached);
       if (Date.now() - info.updated > REFRESH_MS) refresh().catch((err) => console.error('Bloqueur :', err.message));
       return true;
     }
@@ -185,10 +199,22 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     return true;
   }
 
+  function load() {
+    if (blocker) return Promise.resolve(true);
+    if (!loading) loading = loadEngine().finally(() => { loading = null; });
+    return loading;
+  }
+
+  // Démarrage : rien n'est chargé ni téléchargé tant que le bloqueur est désactivé.
+  async function start() {
+    if (!enabled()) return false;
+    return load();
+  }
+
   // Scripts correcteurs d'une page, à exécuter avant ceux du site. Chacun est enfermé dans son propre
   // bloc : leurs déclarations (class JSONPath…) ne se gênent plus, et l'échec de l'un n'arrête pas les autres.
   function scriptletsFor(url) {
-    if (!blocker || !attached || !/^https?:/i.test(url) || pageAllowed(url)) return '';
+    if (!running() || !/^https?:/i.test(url) || pageAllowed(url)) return '';
     try {
       const parsed = parseDomain(url);
       const { active, scripts } = blocker.getCosmeticsFilters({
@@ -208,16 +234,20 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
 
   // Redirection publicitaire : la page part vers une régie (« clic sur la vidéo → page de pub »).
   function blocksNavigation(url, fromUrl) {
-    if (!blocker || !attached || !/^https?:/i.test(url) || pageAllowed(fromUrl)) return false;
+    if (!running() || !/^https?:/i.test(url) || pageAllowed(fromUrl)) return false;
     if (fromUrl && siteOf(url) === siteOf(fromUrl)) return false;
     try { return !!blocker.match(Request.fromRawDetails({ url, type: 'main_frame', sourceUrl: fromUrl || url })).match; } catch { return false; }
   }
 
-  function setEnabled(on) {
+  // Activé pour la première fois : les listes sont chargées (téléchargées sans cache), dix secondes d'attente au plus
+  // avant de rendre la main, comme au démarrage.
+  async function setEnabled(on) {
     saveConfig({ ...getConfig(), adblock: { ...settings(), enabled: !!on } });
-    if (!blocker || !ses) return status();
-    if (on && !attached) { blocker.enableBlockingInSession(ses); attached = true; }
-    if (!on && attached) { blocker.disableBlockingInSession(ses); attached = false; }
+    sync();
+    if (on && !blocker) {
+      const ready = load().catch((err) => { console.error('Bloqueur :', err.message); return false; });
+      await Promise.race([ready, wait(10000)]);
+    }
     return status();
   }
 
@@ -254,7 +284,31 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     };
   }
 
+  // Requêtes réseau, passées par l'hôte des extensions. Sites autorisés et bloqueur inactif : rien n'est fait.
+  const webRequest = {
+    onBeforeRequest: (details) => new Promise((resolve) => {
+      if (!running() || pageAllowed(pageUrlOf(details.webContentsId, details.referrer))) { resolve({}); return; }
+      blocker.onBeforeRequest(details, resolve);
+    }),
+    onHeadersReceived: (details) => new Promise((resolve) => {
+      if (!running() || pageAllowed(pageUrlOf(details.webContentsId, details.url))) { resolve({}); return; }
+      blocker.onHeadersReceived(details, resolve);
+    }),
+  };
+
   return {
+    // Extension des vues web.
+    id: 'adblock',
+    attach(session) { ses = session; sync(); },
+    detach() { if (cosmetic) { cosmetic.disable(); cosmetic = null; } ses = null; },
+    webRequest,
+    beforePageScript: (url) => scriptletsFor(url),
+    guardNavigation: (url, fromUrl) => blocksNavigation(url, fromUrl),
+    status,
+    blockedCount: (id) => counts.get(id) || 0,
+    resetPage: (id) => { counts.delete(id); },
+    activeOn: (url) => enabled() && !pageAllowed(url),
+    // Réglages.
     start,
     refresh,
     blocksNavigation,
@@ -262,10 +316,7 @@ function createAdblock({ dataDir, getConfig, saveConfig, onCount }) {
     setEnabled,
     toggleSite,
     setLists,
-    status,
     pageAllowed,
-    countFor: (id) => counts.get(id) || 0,
-    resetCount: (id) => counts.delete(id),
   };
 }
 

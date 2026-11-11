@@ -103,13 +103,16 @@ export interface WebDownloads {
   addTorrent(url: string, ctx?: DownloadContext): Promise<{ ok: boolean; external?: boolean; error?: string } | null | undefined>;
 }
 
-/** Ce que le gestionnaire utilise du bloqueur de publicités (son interface d'extension viendra avec P1-13). */
-export interface WebAdblock {
-  countFor(webContentsId: number): number;
-  resetCount(webContentsId: number): unknown;
-  blocksNavigation(url: string, from: string): boolean;
-  status(): { enabled: boolean };
-  pageAllowed(url: string): boolean;
+/** Ce que le gestionnaire utilise des extensions des vues web (src/main/web/extensions.ts). */
+export interface WebManagerExtensions {
+  /** Éléments bloqués dans une page (bouclier de la barre du site). */
+  blockedCount(webContentsId: number): number;
+  /** Nouvelle page dans la vue : compteurs remis à zéro. */
+  resetPage(webContentsId: number): unknown;
+  /** Navigation à annuler (redirection publicitaire). */
+  guardNavigation(url: string, from: string): boolean;
+  /** Une extension agit-elle sur cette page (bouclier actif) ? */
+  activeOn(url: string): boolean;
 }
 
 export interface WebManagerDeps {
@@ -123,7 +126,7 @@ export interface WebManagerDeps {
   /** Système d'une console (pour ses sites par défaut). */
   guessSystem: (console: unknown) => string;
   downloads: () => WebDownloads | null;
-  adblock: () => WebAdblock | null;
+  extensions: () => WebManagerExtensions | null;
   /** Ce qu'il faut attendre avant d'ouvrir le premier site (Widevine, bloqueur). */
   whenReady: () => Promise<unknown>;
   openInBrowser: (url: string) => Promise<{ ok: boolean; error?: string }>;
