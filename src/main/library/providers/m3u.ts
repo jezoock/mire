@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { KIND, NATIVE, safeDecode } from '@mire/shared';
 import * as http from '../../net/http.ts';
-import { parseM3U } from '../../lib/m3u.js';
+import { parseM3U } from '../../tv/channels.ts';
 import type { SourceProvider } from '../types.ts';
 
 /** Vrai si l'adresse désigne une liste de lecture (.m3u, .m3u8). Une adresse invalide n'en est pas une. */

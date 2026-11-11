@@ -1,7 +1,9 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { parseM3U, qualityOf, groupChannels } = require('../../src/main/lib/m3u.js');
+// Télévision (P1-15) : lecture des listes M3U, qualité des flux, regroupement des variantes d'une chaîne.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { parseM3U, qualityOf, groupChannels } from '../../src/main/tv/index.ts';
+import type { M3uEntry } from '../../src/main/tv/index.ts';
 
 test.describe('parseM3U', () => {
   test('titre après la première virgule hors guillemets, attributs', () => {
@@ -39,7 +41,7 @@ test('qualityOf', () => {
 });
 
 test.describe('groupChannels', () => {
-  const e = (title, url, extra = {}) => ({ title, url, logo: '', group: '', chno: '', ...extra });
+  const e = (title: string, url: string, extra: Partial<M3uEntry> = {}): M3uEntry => ({ title, url, logo: '', group: '', chno: '', ...extra });
 
   test('numéro dans tvg-chno ou dans le titre, variantes « (HD) » regroupées', () => {
     const out = groupChannels([
@@ -77,5 +79,32 @@ test.describe('groupChannels', () => {
 
   test('sans titre : l’adresse sert de nom', () => {
     assert.equal(groupChannels([e('', 'http://x')])[0].name, 'http://x');
+  });
+});
+
+test.describe('playlist Freebox d’exemple', () => {
+  const text = readFileSync(new URL('../fixtures/tv/freebox.m3u', import.meta.url), 'utf8');
+  const channels = groupChannels(parseM3U(text));
+
+  test('une chaîne par numéro, variantes HD, standard et bas débit regroupées', () => {
+    assert.deepEqual(
+      channels.map((c) => [c.number, c.name, c.variants.map((v) => v.q)]),
+      [
+        [2, 'France 2', ['hd', 'sd', 'ld']],
+        [3, 'France 3', ['hd', 'ld']],
+        [5, 'France 5', ['other']],
+        [7, 'Arte', ['sd', 'hd']],
+        [999, 'Radio FIP', ['other']],
+      ],
+    );
+  });
+
+  test('libellés et adresses rtsp conservés', () => {
+    assert.deepEqual(channels[0].variants[2], {
+      label: 'bas débit',
+      url: 'rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=201&flavour=ld',
+      q: 'ld',
+    });
+    assert.equal(channels[2].variants[0].label, '');
   });
 });
