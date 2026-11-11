@@ -56,7 +56,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | faite | [#31](https://github.com/jezoock/mire/pull/31) |
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | en revue | [#38](https://github.com/jezoock/mire/pull/38) |
-| P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | à faire | |
+| P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | en revue | [#40](https://github.com/jezoock/mire/pull/40) |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
 | P1-26 | Schéma des réglages | M | P1-06 | | faite | [#27](https://github.com/jezoock/mire/pull/27) |
