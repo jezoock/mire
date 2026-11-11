@@ -7,10 +7,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { EMULATORS, FREE_GAMES } = require('../src/main/store');
-
-// RETROARCH_SYSTEMS n'est pas exporté : c'est la liste des systèmes de l'émulateur RetroArch.
-const RETROARCH_SYSTEMS = EMULATORS.find((e) => e.id === 'retroarch').systems;
+const { EMULATORS, FREE_GAMES, RETROARCH_SYSTEMS } = require('../src/main/store/catalog/index.ts');
 const ALL_SYSTEMS = EMULATORS.flatMap((e) => e.systems);
 
 const duplicates = (ids) => ids.filter((id, i) => ids.indexOf(id) !== i);
@@ -19,6 +16,10 @@ test('catalogue : identifiants uniques', () => {
   assert.deepEqual(duplicates(EMULATORS.map((e) => e.id)), []);
   assert.deepEqual(duplicates(ALL_SYSTEMS.map((s) => s.id)), []);
   assert.deepEqual(duplicates(FREE_GAMES.map((g) => g.id)), []);
+});
+
+test('catalogue : RetroArch propose exactement les systèmes RetroArch', () => {
+  assert.deepEqual(EMULATORS.find((e) => e.id === 'retroarch').systems, RETROARCH_SYSTEMS);
 });
 
 test('catalogue : chaque système a un nom libretro et des extensions valides', () => {

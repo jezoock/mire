@@ -14,7 +14,7 @@ globalThis.fetch = () => {
 const { createJsonStore } = require('../../src/main/storage/json-store.ts');
 const { createScraper } = require('../../src/main/scraper.js');
 const { createDownloads } = require('../../src/main/downloads.js');
-const { createStore } = require('../../src/main/store.js');
+const { createStore } = require('../../src/main/store/index.ts');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-fichiers-'));
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -79,7 +79,7 @@ test('emulators/installed.json : indentation 2', async () => {
       return next;
     },
     onProgress: () => {},
-    sevenZipPath: '7za',
+    extract: async () => {},
   });
   await store.uninstall('duckstation');
   delete meta.duckstation;
