@@ -1,7 +1,6 @@
 /** Bibliothèque (sources de médias) et dossiers de jeux PC. */
-import { newId } from '@mire/shared';
+import { MEDIA_KINDS, newId } from '@mire/shared';
 import type { Config, GameSource, LibrarySource } from '@mire/shared';
-import { MEDIA_KINDS } from '../../lib/formats.js';
 import { isObjectLike, listOf, type Loose } from './common.ts';
 
 const validLocation = (x: unknown): x is { location: string } & Loose => isObjectLike(x) && typeof x.location === 'string' && !!x.location.trim();

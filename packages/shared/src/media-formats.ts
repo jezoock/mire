@@ -1,15 +1,20 @@
-'use strict';
+// Formats de fichiers reconnus par Mire : médias de la bibliothèque, illustrations, jeux et index de disques.
 
-const EXT = {
+import type { MediaKind } from './config.ts';
+
+export const MEDIA_KINDS: readonly MediaKind[] = ['video', 'audio', 'image'];
+
+export const EXT: Record<MediaKind, string[]> = {
   video: ['.mp4', '.m4v', '.mkv', '.webm', '.mov', '.ogv', '.avi', '.wmv', '.flv', '.ts', '.m2ts', '.mts', '.mpg', '.mpeg', '.vob', '.3gp', '.divx', '.rmvb'],
   audio: ['.mp3', '.flac', '.wav', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.wma', '.aiff', '.aif', '.ape', '.mka'],
   image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.svg', '.ico', '.tif', '.tiff', '.heic'],
 };
-const KIND = {};
-for (const [kind, list] of Object.entries(EXT)) for (const e of list) KIND[e] = kind;
+/** Type de média d'une extension (« .mkv » → « video ») ; absent pour une extension inconnue. */
+export const KIND: Record<string, MediaKind> = {};
+for (const kind of MEDIA_KINDS) for (const e of EXT[kind]) KIND[e] = kind;
 
 // Ce que le lecteur intégré (Chromium) lit directement. Le reste part dans mpv ou VLC.
-const NATIVE = new Set([
+export const NATIVE: ReadonlySet<string> = new Set([
   '.mp4',
   '.m4v',
   '.mkv',
@@ -35,7 +40,7 @@ const NATIVE = new Set([
   '.ico',
 ]);
 
-const MIME = {
+export const MIME: Record<string, string> = {
   '.mp4': 'video/mp4',
   '.m4v': 'video/mp4',
   '.mkv': 'video/x-matroska',
@@ -62,11 +67,16 @@ const MIME = {
 };
 
 // Pochettes d'album et affiches de dossier.
-const COVER_RE = /^(cover|folder|front|poster|album|albumart)\.(jpe?g|png|webp)$/i;
+export const COVER_RE = /^(cover|folder|front|poster|album|albumart)\.(jpe?g|png|webp)$/i;
 // Illustrations à ne pas montrer dans la galerie d'images (pochettes, fonds façon Kodi…).
-const ART_RE = /^(cover|folder|front|poster|album|albumart|fanart|backdrop|background|banner|clearlogo|clearart|landscape|logo|thumb|disc)\.(jpe?g|png|webp)$/i;
+export const ART_RE =
+  /^(cover|folder|front|poster|album|albumart|fanart|backdrop|background|banner|clearlogo|clearart|landscape|logo|thumb|disc)\.(jpe?g|png|webp)$/i;
 // Fonds d'écran (convention Kodi) : fanart.jpg dans le dossier, ou film-fanart.jpg à côté du film.
-const FANART_RE = /^(fanart|backdrop|background)\.(jpe?g|png|webp)$/i;
-const MEDIA_KINDS = ['video', 'audio', 'image'];
+export const FANART_RE = /^(fanart|backdrop|background)\.(jpe?g|png|webp)$/i;
 
-module.exports = { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS };
+// Fichiers de jeux : un lien vers l'un d'eux, ouvert dans une nouvelle fenêtre, devient un téléchargement.
+export const GAME_FILE_RE =
+  /\.(zip|7z|iso|chd|cue|bin|cso|pbp|rvz|wbfs|wud|wux|gcm|ciso|nes|fds|sfc|smc|gb|gbc|gba|n64|z64|v64|md|gen|smd|sms|gg|pce|nds|3ds|cia|cci|3dsx|a26)$/i;
+
+// Index de jeux sur disque : le fichier lancé ne fait que renvoyer aux vrais fichiers de données (voir discfiles).
+export const DISC_INDEX_EXT: ReadonlySet<string> = new Set(['.cue', '.gdi', '.m3u', '.ccd', '.mds', '.toc']);

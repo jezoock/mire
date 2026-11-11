@@ -13,7 +13,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const crypto = require('node:crypto');
-const { fold, cleanTitle, GENERIC_DIR, titleKey, bigramDice, rankByTitle, stripTags, parseEpisode } = require('@mire/shared');
+const { fold, cleanTitle, GENERIC_DIR, titleKey, bigramDice, rankByTitle, stripTags, parseEpisode, guessSystem } = require('@mire/shared');
 const http = require('./net/http.ts');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
@@ -84,48 +84,6 @@ function regionScore(file) {
   return i < 0 ? REGION_PREF.length : i;
 }
 
-// Devine le système libretro d'une console d'après son nom, ses extensions ou son programme.
-const SYSTEM_GUESS = [
-  [/\.(nes|fds|unf)$/, 'Nintendo - Nintendo Entertainment System'],
-  [/\.(sfc|smc)$/, 'Nintendo - Super Nintendo Entertainment System'],
-  [/\.gbc$/, 'Nintendo - Game Boy Color'],
-  [/\.gb$/, 'Nintendo - Game Boy'],
-  [/\.gba$/, 'Nintendo - Game Boy Advance'],
-  [/\.(n64|z64|v64)$/, 'Nintendo - Nintendo 64'],
-  [/\.nds$/, 'Nintendo - Nintendo DS'],
-  [/\.(3ds|cci|cxi)$/, 'Nintendo - Nintendo 3DS'],
-  [/\.(md|gen|smd)$/, 'Sega - Mega Drive - Genesis'],
-  [/\.sms$/, 'Sega - Master System - Mark III'],
-  [/\.gg$/, 'Sega - Game Gear'],
-  [/\.pce$/, 'NEC - PC Engine - TurboGrafx 16'],
-  [/\.a26$/, 'Atari - 2600'],
-];
-const NAME_GUESS = [
-  [/duckstation|playstation(?!\s*[2p])|\bps1\b|psx/i, 'Sony - PlayStation'],
-  [/pcsx2|playstation\s*2|\bps2\b/i, 'Sony - PlayStation 2'],
-  [/ppsspp|\bpsp\b/i, 'Sony - PlayStation Portable'],
-  [/gamecube|\bgc\b/i, 'Nintendo - GameCube'],
-  [/\bwii\s*u\b|cemu/i, 'Nintendo - Wii U'],
-  [/\bwii\b/i, 'Nintendo - Wii'],
-  [/dolphin/i, 'Nintendo - GameCube'],
-  [/dreamcast|flycast/i, 'Sega - Dreamcast'],
-  [/saturn/i, 'Sega - Saturn'],
-  [/super\s*nintendo|snes/i, 'Nintendo - Super Nintendo Entertainment System'],
-  [/mega\s*drive|genesis/i, 'Sega - Mega Drive - Genesis'],
-  [/nintendo\s*64|\bn64\b/i, 'Nintendo - Nintendo 64'],
-  [/game\s*boy\s*advance|\bgba\b/i, 'Nintendo - Game Boy Advance'],
-  [/game\s*boy\s*color|\bgbc\b/i, 'Nintendo - Game Boy Color'],
-  [/game\s*boy|\bgb\b/i, 'Nintendo - Game Boy'],
-  [/\bnes\b|famicom/i, 'Nintendo - Nintendo Entertainment System'],
-];
-function guessSystem(emu) {
-  if (emu.system) return emu.system;
-  for (const [re, sys] of NAME_GUESS) if (re.test(`${emu.name} ${emu.path}`)) return sys;
-  for (const ext of emu.extensions || []) {
-    for (const [re, sys] of SYSTEM_GUESS) if (re.test(String(ext).toLowerCase())) return sys;
-  }
-  return '';
-}
 
 /* ------------------------------------------------------------------ */
 /* Le module                                                           */

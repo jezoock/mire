@@ -48,3 +48,30 @@ test('catalogue : un programme à lancer pour chaque plateforme proposée par la
     }
   }
 });
+
+// Nom, dossier et système libretro de chaque console de la boutique, tels qu'ils étaient écrits avant P1-03.
+test('catalogue : consoles reprises du référentiel des systèmes sans changement', () => {
+  const before = {
+    nes: ['NES', 'Nintendo - Nintendo Entertainment System'],
+    snes: ['Super Nintendo', 'Nintendo - Super Nintendo Entertainment System'],
+    gb: ['Game Boy', 'Nintendo - Game Boy'],
+    gbc: ['Game Boy Color', 'Nintendo - Game Boy Color'],
+    gba: ['Game Boy Advance', 'Nintendo - Game Boy Advance'],
+    n64: ['Nintendo 64', 'Nintendo - Nintendo 64'],
+    md: ['Mega Drive', 'Sega - Mega Drive - Genesis'],
+    sms: ['Master System', 'Sega - Master System - Mark III'],
+    gg: ['Game Gear', 'Sega - Game Gear'],
+    pce: ['PC Engine', 'NEC - PC Engine - TurboGrafx 16'],
+    ps1: ['PlayStation', 'Sony - PlayStation'],
+    ps2: ['PlayStation 2', 'Sony - PlayStation 2'],
+    psp: ['PSP', 'Sony - PlayStation Portable'],
+    gc: ['GameCube', 'Nintendo - GameCube'],
+    wii: ['Wii', 'Nintendo - Wii'],
+    nds: ['Nintendo DS', 'Nintendo - Nintendo DS'],
+    '3ds': ['Nintendo 3DS', 'Nintendo - Nintendo 3DS'],
+    wiiu: ['Wii U', 'Nintendo - Wii U'],
+  };
+  const now = Object.fromEntries(ALL_SYSTEMS.map((s) => [s.id, [s.name, s.libretro]]));
+  assert.deepEqual(now, before);
+  for (const s of ALL_SYSTEMS) assert.equal(s.folder, s.name);
+});

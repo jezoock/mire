@@ -11,9 +11,9 @@
  */
 const path = require('node:path');
 const fs = require('node:fs');
+const { DISC_INDEX_EXT } = require('@mire/shared');
 
-const DESCRIPTORS = new Set(['.cue', '.gdi', '.m3u', '.ccd', '.mds', '.toc']);
-const isDescriptor = (name) => DESCRIPTORS.has(path.extname(String(name).split('?')[0]).toLowerCase());
+const isDescriptor = (name) => DISC_INDEX_EXT.has(path.extname(String(name).split('?')[0]).toLowerCase());
 
 // Texte d'un index : UTF-8, ou Latin-1 pour les vieux fichiers aux noms accentués.
 function decode(buf) {
@@ -128,4 +128,4 @@ function missingLocal(file, depth = 0) {
   return [...new Set(missing)];
 }
 
-module.exports = { DESCRIPTORS, isDescriptor, decode, safeRel, parseRefs, refUrl, resolveRemote, missingLocal };
+module.exports = { isDescriptor, decode, safeRel, parseRefs, refUrl, resolveRemote, missingLocal };

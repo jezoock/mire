@@ -121,6 +121,11 @@ const ORIGINAL_EVENTS: Record<string, string> = {
   onMireFocus: 'web-mire-focus',
 };
 
+// Méthodes ajoutées après P1-08 (absentes de l'ancien preload).
+const ADDED_METHODS: Record<string, string> = {
+  gameSystems: 'games:systems', // P1-03 : référentiel des systèmes pour l'interface
+};
+
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.
 const LOCAL_METHODS = ['pathForFile'];
 
@@ -128,9 +133,9 @@ const LOCAL_METHODS = ['pathForFile'];
 const fakeContext = () => new Proxy({}, { get: () => () => undefined }) as unknown as MainContext;
 
 describe('contrat IPC : la table', () => {
-  it('reprend les 85 méthodes et leurs canaux, sans en ajouter ni en retirer', () => {
+  it('reprend les 85 méthodes et leurs canaux, sans en retirer, plus les méthodes ajoutées depuis', () => {
     assert.equal(Object.keys(ORIGINAL_METHODS).length, 85);
-    assert.deepEqual({ ...IPC_METHODS }, ORIGINAL_METHODS);
+    assert.deepEqual({ ...IPC_METHODS }, { ...ORIGINAL_METHODS, ...ADDED_METHODS });
   });
 
   it('reprend les 17 événements et leurs canaux', () => {
@@ -162,9 +167,9 @@ describe('contrat IPC : window.api', () => {
   };
   const api = createApi(ipc) as unknown as Record<string, (...args: unknown[]) => unknown>;
 
-  it('a exactement les noms de l’ancien preload', () => {
+  it('a exactement les noms de l’ancien preload, plus les méthodes ajoutées', () => {
     const names = [...Object.keys(api), ...LOCAL_METHODS].sort();
-    assert.deepEqual(names, [...Object.keys(ORIGINAL_METHODS), ...Object.keys(ORIGINAL_EVENTS), ...LOCAL_METHODS].sort());
+    assert.deepEqual(names, [...Object.keys(ORIGINAL_METHODS), ...Object.keys(ADDED_METHODS), ...Object.keys(ORIGINAL_EVENTS), ...LOCAL_METHODS].sort());
   });
 
   it('le preload expose createApi et pathForFile, et rien d’autre', () => {

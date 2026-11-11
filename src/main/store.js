@@ -14,6 +14,7 @@ const { spawn } = require('node:child_process');
 const http = require('./net/http.ts');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
+const { systemById } = require('@mire/shared');
 
 const PLATFORM = process.platform === 'win32' ? 'win32' : process.platform === 'linux' ? 'linux' : 'other';
 
@@ -21,18 +22,26 @@ const PLATFORM = process.platform === 'win32' ? 'win32' : process.platform === '
 /* Catalogue                                                           */
 /* ------------------------------------------------------------------ */
 
+// Console proposée par la boutique. Le nom (et le dossier des jeux) vient du référentiel des systèmes ; les
+// extensions enregistrées sur la console et le cœur RetroArch sont propres à la boutique.
+function storeSystem(id, libretro, extra) {
+  const sys = systemById(libretro);
+  if (!sys) throw new Error(`Système inconnu : ${libretro}`);
+  return { id, name: sys.name, folder: sys.name, libretro, ...extra };
+}
+
 // Systèmes de RetroArch : chaque système ajoute un « cœur » (module d'émulation) et une console dans Mire.
 const RETROARCH_SYSTEMS = [
-  { id: 'nes', name: 'NES', folder: 'NES', libretro: 'Nintendo - Nintendo Entertainment System', core: 'fceumm', ext: ['.nes', '.fds', '.unf', '.zip'] },
-  { id: 'snes', name: 'Super Nintendo', folder: 'Super Nintendo', libretro: 'Nintendo - Super Nintendo Entertainment System', core: 'snes9x', ext: ['.sfc', '.smc', '.zip'] },
-  { id: 'gb', name: 'Game Boy', folder: 'Game Boy', libretro: 'Nintendo - Game Boy', core: 'gambatte', ext: ['.gb', '.zip'] },
-  { id: 'gbc', name: 'Game Boy Color', folder: 'Game Boy Color', libretro: 'Nintendo - Game Boy Color', core: 'gambatte', ext: ['.gbc', '.zip'] },
-  { id: 'gba', name: 'Game Boy Advance', folder: 'Game Boy Advance', libretro: 'Nintendo - Game Boy Advance', core: 'mgba', ext: ['.gba', '.zip'] },
-  { id: 'n64', name: 'Nintendo 64', folder: 'Nintendo 64', libretro: 'Nintendo - Nintendo 64', core: 'mupen64plus_next', ext: ['.n64', '.z64', '.v64', '.zip'] },
-  { id: 'md', name: 'Mega Drive', folder: 'Mega Drive', libretro: 'Sega - Mega Drive - Genesis', core: 'genesis_plus_gx', ext: ['.md', '.gen', '.smd', '.bin', '.zip'] },
-  { id: 'sms', name: 'Master System', folder: 'Master System', libretro: 'Sega - Master System - Mark III', core: 'genesis_plus_gx', ext: ['.sms', '.zip'] },
-  { id: 'gg', name: 'Game Gear', folder: 'Game Gear', libretro: 'Sega - Game Gear', core: 'genesis_plus_gx', ext: ['.gg', '.zip'] },
-  { id: 'pce', name: 'PC Engine', folder: 'PC Engine', libretro: 'NEC - PC Engine - TurboGrafx 16', core: 'mednafen_pce_fast', ext: ['.pce', '.zip'] },
+  storeSystem('nes', 'Nintendo - Nintendo Entertainment System', { core: 'fceumm', ext: ['.nes', '.fds', '.unf', '.zip'] }),
+  storeSystem('snes', 'Nintendo - Super Nintendo Entertainment System', { core: 'snes9x', ext: ['.sfc', '.smc', '.zip'] }),
+  storeSystem('gb', 'Nintendo - Game Boy', { core: 'gambatte', ext: ['.gb', '.zip'] }),
+  storeSystem('gbc', 'Nintendo - Game Boy Color', { core: 'gambatte', ext: ['.gbc', '.zip'] }),
+  storeSystem('gba', 'Nintendo - Game Boy Advance', { core: 'mgba', ext: ['.gba', '.zip'] }),
+  storeSystem('n64', 'Nintendo - Nintendo 64', { core: 'mupen64plus_next', ext: ['.n64', '.z64', '.v64', '.zip'] }),
+  storeSystem('md', 'Sega - Mega Drive - Genesis', { core: 'genesis_plus_gx', ext: ['.md', '.gen', '.smd', '.bin', '.zip'] }),
+  storeSystem('sms', 'Sega - Master System - Mark III', { core: 'genesis_plus_gx', ext: ['.sms', '.zip'] }),
+  storeSystem('gg', 'Sega - Game Gear', { core: 'genesis_plus_gx', ext: ['.gg', '.zip'] }),
+  storeSystem('pce', 'NEC - PC Engine - TurboGrafx 16', { core: 'mednafen_pce_fast', ext: ['.pce', '.zip'] }),
 ];
 
 // Émulateurs autonomes. source.github : dépôt officiel ; on prend la dernière version publiée.
@@ -54,7 +63,7 @@ const EMULATORS = [
     source: { github: 'stenzek/duckstation', win32: /^duckstation-windows-x64-release\.zip$/, linux: /^DuckStation-x64\.AppImage$/ },
     exe: { win32: /^duckstation-qt-x64-ReleaseLTCG\.exe$/i, linux: /^DuckStation-x64\.AppImage$/ },
     args: ['-batch', '-fullscreen', '{rom}'],
-    systems: [{ id: 'ps1', name: 'PlayStation', folder: 'PlayStation', libretro: 'Sony - PlayStation', ext: ['.cue', '.chd', '.m3u', '.pbp', '.iso'] }],
+    systems: [storeSystem('ps1', 'Sony - PlayStation', { ext: ['.cue', '.chd', '.m3u', '.pbp', '.iso'] })],
   },
   {
     id: 'pcsx2',
@@ -64,7 +73,7 @@ const EMULATORS = [
     source: { github: 'PCSX2/pcsx2', win32: /-windows-x64-Qt\.7z$/, linux: /-linux-appimage-x64-Qt\.AppImage$/ },
     exe: { win32: /^pcsx2-qt\.exe$/i, linux: /\.AppImage$/ },
     args: ['-batch', '-fullscreen', '{rom}'],
-    systems: [{ id: 'ps2', name: 'PlayStation 2', folder: 'PlayStation 2', libretro: 'Sony - PlayStation 2', ext: ['.iso', '.chd', '.cso', '.gz'] }],
+    systems: [storeSystem('ps2', 'Sony - PlayStation 2', { ext: ['.iso', '.chd', '.cso', '.gz'] })],
   },
   {
     id: 'ppsspp',
@@ -74,7 +83,7 @@ const EMULATORS = [
     source: { github: 'hrydgard/ppsspp', win32: /-Windows-x64\.zip$/, linux: /-anylinux-x86_64\.AppImage$/ },
     exe: { win32: /^PPSSPPWindows64\.exe$/i, linux: /\.AppImage$/ },
     args: ['--fullscreen', '{rom}'],
-    systems: [{ id: 'psp', name: 'PSP', folder: 'PSP', libretro: 'Sony - PlayStation Portable', ext: ['.iso', '.cso', '.pbp', '.chd'] }],
+    systems: [storeSystem('psp', 'Sony - PlayStation Portable', { ext: ['.iso', '.cso', '.pbp', '.chd'] })],
   },
   {
     id: 'dolphin',
@@ -85,8 +94,8 @@ const EMULATORS = [
     exe: { win32: /^Dolphin\.exe$/i },
     args: ['-b', '-e', '{rom}'],
     systems: [
-      { id: 'gc', name: 'GameCube', folder: 'GameCube', libretro: 'Nintendo - GameCube', ext: ['.iso', '.gcm', '.rvz', '.ciso', '.gcz'] },
-      { id: 'wii', name: 'Wii', folder: 'Wii', libretro: 'Nintendo - Wii', ext: ['.wbfs', '.rvz', '.iso'] },
+      storeSystem('gc', 'Nintendo - GameCube', { ext: ['.iso', '.gcm', '.rvz', '.ciso', '.gcz'] }),
+      storeSystem('wii', 'Nintendo - Wii', { ext: ['.wbfs', '.rvz', '.iso'] }),
     ],
   },
   {
@@ -97,7 +106,7 @@ const EMULATORS = [
     source: { github: 'melonDS-emu/melonDS', win32: /-windows-x86_64\.zip$/, linux: /-appimage-x86_64\.zip$/ },
     exe: { win32: /^melonDS\.exe$/i, linux: /\.AppImage$/i },
     args: ['-f', '{rom}'],
-    systems: [{ id: 'nds', name: 'Nintendo DS', folder: 'Nintendo DS', libretro: 'Nintendo - Nintendo DS', ext: ['.nds', '.zip'] }],
+    systems: [storeSystem('nds', 'Nintendo - Nintendo DS', { ext: ['.nds', '.zip'] })],
   },
   {
     id: 'azahar',
@@ -107,7 +116,7 @@ const EMULATORS = [
     source: { github: 'azahar-emu/azahar', win32: /^azahar-windows-msvc-[\w.]+\.zip$/ },
     exe: { win32: /^azahar\.exe$/i },
     args: ['{rom}'],
-    systems: [{ id: '3ds', name: 'Nintendo 3DS', folder: 'Nintendo 3DS', libretro: 'Nintendo - Nintendo 3DS', ext: ['.3ds', '.cci', '.cxi', '.3dsx'] }],
+    systems: [storeSystem('3ds', 'Nintendo - Nintendo 3DS', { ext: ['.3ds', '.cci', '.cxi', '.3dsx'] })],
   },
   {
     id: 'cemu',
@@ -117,7 +126,7 @@ const EMULATORS = [
     source: { github: 'cemu-project/Cemu', win32: /-windows-x64\.zip$/, linux: /-x86_64\.AppImage$/ },
     exe: { win32: /^Cemu\.exe$/i, linux: /\.AppImage$/ },
     args: ['-f', '-g', '{rom}'],
-    systems: [{ id: 'wiiu', name: 'Wii U', folder: 'Wii U', libretro: 'Nintendo - Wii U', ext: ['.wud', '.wux', '.wua', '.rpx'] }],
+    systems: [storeSystem('wiiu', 'Nintendo - Wii U', { ext: ['.wud', '.wux', '.wua', '.rpx'] })],
   },
 ];
 
