@@ -11,7 +11,6 @@ if (process.env.MIRE_USER_DATA) app.setPath('userData', process.env.MIRE_USER_DA
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
-const { spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 const { createScraper } = require('./scraper.js');
 const { createStore } = require('./store/index.ts');
@@ -27,6 +26,7 @@ const { parseM3U, groupChannels } = require('./lib/m3u.js');
 const library = require('./library/index.ts');
 const { resolveLocation, locationError, crawlHttp } = library;
 const { substitute } = require('./lib/args.js');
+const { createLauncher, createPlayers } = require('./platform/index.ts');
 const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { createAccessPolicy } = require('./security/access-policy.ts');
@@ -204,117 +204,17 @@ async function fetchChannels() {
 /* Lancement de programmes (jeux, émulateurs, lecteur externe)         */
 /* ------------------------------------------------------------------ */
 
-function launchProcess(cmd, args = [], { cwd, hideWhileRunning = false } = {}) {
-  return new Promise((resolve) => {
-    let command = cmd;
-    let argv = args;
-    if (IS_MAC && /\.app\/?$/i.test(command)) { argv = ['-W', '-a', command, '--args', ...args]; command = 'open'; }
-    let child;
-    try {
-      child = spawn(command, argv, { cwd: cwd && fs.existsSync(cwd) ? cwd : undefined, detached: true, stdio: 'ignore' });
-    } catch (err) {
-      resolve({ ok: false, error: err.message });
-      return;
-    }
-    child.once('error', (err) => {
-      resolve({ ok: false, error: err.code === 'ENOENT' ? `Programme introuvable : ${cmd}` : err.message });
-    });
-    child.once('spawn', () => {
-      if (hideWhileRunning && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.minimize();
-        child.once('exit', () => {
-          if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.restore(); mainWindow.focus(); }
-        });
-      }
-      child.unref();
-      resolve({ ok: true });
-    });
-  });
+// « Réduire pendant le jeu » : la fenêtre est réduite au lancement, rétablie à la fermeture du programme.
+function minimizeWhileRunning() {
+  if (!mainWindow || mainWindow.isDestroyed()) return undefined;
+  mainWindow.minimize();
+  return () => { if (mainWindow && !mainWindow.isDestroyed()) { mainWindow.restore(); mainWindow.focus(); } };
 }
-
-async function openTarget(target, args, opts) {
-  if (isUrlTarget(target)) { await shell.openExternal(target); return { ok: true }; }
-  const ext = path.extname(target).toLowerCase();
-  if (['.lnk', '.url', '.bat', '.cmd'].includes(ext)) {
-    const err = await shell.openPath(target);
-    return err ? { ok: false, error: err } : { ok: true };
-  }
-  return launchProcess(target, args, opts);
-}
-
-const firstExisting = (list) => list.filter(Boolean).find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } }) || null;
-const under = (base, ...rest) => (base ? path.join(base, ...rest) : null);
-
-function detectPlayer() {
-  const pf = process.env.ProgramFiles;
-  const pf86 = process.env['ProgramFiles(x86)'];
-  const local = process.env.LOCALAPPDATA;
-  if (IS_WIN) {
-    return firstExisting([
-      under(pf, 'mpv', 'mpv.exe'), under(local, 'Programs', 'mpv', 'mpv.exe'), 'C:\\mpv\\mpv.exe',
-      under(pf, 'VideoLAN', 'VLC', 'vlc.exe'), under(pf86, 'VideoLAN', 'VLC', 'vlc.exe'),
-    ]);
-  }
-  if (IS_MAC) {
-    return firstExisting([
-      '/Applications/mpv.app/Contents/MacOS/mpv', '/opt/homebrew/bin/mpv', '/usr/local/bin/mpv',
-      '/Applications/VLC.app/Contents/MacOS/VLC',
-    ]);
-  }
-  return firstExisting(['/usr/bin/mpv', '/usr/local/bin/mpv', '/usr/bin/vlc', '/snap/bin/vlc']);
-}
-
-function resolvePlayer() {
-  const p = configService.get().externalPlayer;
-  const cmd = (p.path || '').trim() || detectPlayer() || 'mpv';
-  const isVlc = /vlc/i.test(path.basename(cmd));
-  const args = Array.isArray(p.args) && p.args.length ? p.args
-    : isVlc ? ['--fullscreen', '--meta-title={title}', '--start-time={start}', '{url}']
-      : ['--fs', '--force-media-title={title}', '--start={start}', '{url}'];
-  return { cmd, args };
-}
-
-async function playExternal(target, title = '', start = 0) {
-  if (typeof target !== 'string' || !target) return { ok: false, error: 'Rien à lire.' };
-  if (!isUrlTarget(target) && !access.isAllowed(target)) return { ok: false, error: 'Ce fichier ne fait pas partie de la bibliothèque.' };
-  const { cmd, args } = resolvePlayer();
-  const s = Math.floor(Number(start) || 0);
-  const r = await launchProcess(cmd, substitute(args, { url: target, title, start: s > 0 ? s : '' }));
-  if (!r.ok && r.error.startsWith('Programme introuvable')) {
-    r.error = 'Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages.';
-  }
-  return r;
-}
-
-function detectBrowser() {
-  const pf = process.env.ProgramFiles;
-  const pf86 = process.env['ProgramFiles(x86)'];
-  const local = process.env.LOCALAPPDATA;
-  if (IS_WIN) {
-    // Edge en premier : c'est lui qui obtient la meilleure qualité sur Netflix sous Windows.
-    return firstExisting([
-      under(pf86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), under(pf, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-      under(pf, 'Google', 'Chrome', 'Application', 'chrome.exe'), under(pf86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-      under(local, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-    ]);
-  }
-  if (IS_MAC) {
-    return firstExisting([
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    ]);
-  }
-  return firstExisting(['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/microsoft-edge', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium']);
-}
-
-async function openInBrowser(url) {
-  const b = configService.get().browser;
-  const cmd = (b.path || '').trim() || detectBrowser();
-  if (!cmd) { await shell.openExternal(url); return { ok: true }; }
-  const args = Array.isArray(b.args) && b.args.length ? b.args : ['--app={url}'];
-  return launchProcess(cmd, substitute(args, { url }));
-}
+const { launchProcess, openTarget } = createLauncher({ shell, minimizeWhileRunning });
+const { playExternal, openInBrowser } = createPlayers({
+  launcher: { launchProcess, openTarget }, shell,
+  settings: () => configService.get(), isAllowed: (file) => access.isAllowed(file),
+});
 
 /* ---------- Vue web intégrée ---------- */
 

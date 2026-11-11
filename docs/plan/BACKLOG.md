@@ -44,10 +44,10 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
-| P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
+| P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | en revue | [#30](https://github.com/jezoock/mire/pull/30) |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
-| P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | en revue | [#29](https://github.com/jezoock/mire/pull/29) |
+| P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
