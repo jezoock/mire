@@ -14,7 +14,8 @@ const fsp = require('node:fs/promises');
 const { spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 const { createScraper } = require('./scraper.js');
-const { createStore } = require('./store.js');
+const { createStore } = require('./store/index.ts');
+const { createArchive } = require('./archive/index.ts');
 const http = require('./net/http.ts');
 const { createAdblock } = require('./adblock.js');
 const { defaultRomSites } = require('./romsites.js');
@@ -1434,6 +1435,7 @@ if (!app.requestSingleInstanceLock()) {
     loadConfig();
     loadMeta();
     const sevenZipPath = require('7zip-bin').path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+    const archive = createArchive({ sevenZipPath, copyPath: dataFiles().sevenZip });
     scraper = createScraper({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
@@ -1448,14 +1450,14 @@ if (!app.requestSingleInstanceLock()) {
       getConfig: configService.get,
       saveConfig: configService.replace,
       onProgress: (p) => toUi('store-progress', p),
-      sevenZipPath,
+      extract: archive.extract,
       paths: { home: app.getPath('home'), documents: app.getPath('documents'), appData: app.getPath('appData') },
     });
     downloads = createDownloads({
       dataDir: app.getPath('userData'),
       getConfig: configService.get,
       getSession: () => session.fromPartition('persist:web'),
-      extract: (file, dest) => store.extract(file, dest),
+      extract: archive.extract,
       shell,
       defaultDir: path.join(app.getPath('downloads'), 'Mire'),
       onChange: (item) => toUi('download', item),

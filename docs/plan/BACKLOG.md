@@ -43,7 +43,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | faite | [#23](https://github.com/jezoock/mire/pull/23) |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
-| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | en revue | [#25](https://github.com/jezoock/mire/pull/25) |
+| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
@@ -51,7 +51,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
-| P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | à faire | |
+| P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | en revue | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | à faire | |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | à faire | |
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
@@ -156,7 +156,7 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Piste | Origine | Proposition |
 | --- | --- | --- |
 | `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Retenue au point G1 : intégrée à P1-16 |
-| `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Intégrée à P1-18 (catalogue en données) |
+| `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Traitée par P1-18 : `RETROARCH_SYSTEMS` exporté par `src/main/store/catalog/` |
 | `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. Notée dans P1-12 |
 | Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Close : la CI (P0-04) exécute ce test sous Node 22 et 24 ; le défaut venait du Node du conteneur de développement |
 | `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : intégrée à P1-06 |
