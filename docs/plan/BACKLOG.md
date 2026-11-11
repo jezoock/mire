@@ -59,7 +59,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | à faire | |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
-| P1-26 | Schéma des réglages | M | P1-06 | | en revue | PRLINK |
+| P1-26 | Schéma des réglages | M | P1-06 | | en revue | [#27](https://github.com/jezoock/mire/pull/27) |
 | P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
 | P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | à faire | |
 | P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | à faire | |
