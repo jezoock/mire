@@ -1,47 +1,20 @@
-'use strict';
 /* Mire : interface. Affichage des sections, lecteurs intégrés, navigation clavier et manette. */
-
-// `api` est fourni par preload.js (window.api).
+import { $, $$, esc } from './core/dom.ts';
+import { clamp, fmtBytes, fmtEta, fmtSize, fmtTime, plural } from './core/format.ts';
+import { ICON } from './core/icons.ts';
+import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
+import { toast } from './ui/toast.ts';
+import { I, PAGE, Q, S, V } from './state/index.ts';
+import { api } from './api/index.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
 /* ------------------------------------------------------------------ */
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 // Les fichiers locaux passent par media:// ; les sources web sont lues directement.
 const mediaUrl = (p) => (/^https?:\/\//i.test(p) ? p : `media://local/?p=${encodeURIComponent(p)}`);
 const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const plural = (n, one, many = `${one}s`) => `${n} ${n > 1 ? many : one}`;
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
-function fmtTime(sec) {
-  if (!Number.isFinite(sec) || sec < 0) sec = 0;
-  const s = Math.floor(sec);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const r = String(s % 60).padStart(2, '0');
-  return h ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
-}
-
-// Couleurs des cartons de remplacement : les barres de la mire, sauf le blanc.
-const BARS = ['yellow', 'cyan', 'green', 'magenta', 'red', 'blue'];
-function barFor(s) {
-  let h = 0;
-  for (const ch of String(s)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  return BARS[h % BARS.length];
-}
-
-// Lettre affichée quand il n'y a pas d'affiche : « E03 » pour un épisode, sinon l'initiale.
-function monogram(label) {
-  const ep = /S\d{1,2}\s*E(\d{1,3})/i.exec(label);
-  if (ep) return `E${ep[1]}`;
-  const m = /[\p{L}\p{N}]/u.exec(label || '');
-  return m ? m[0].toUpperCase() : '?';
-}
 
 const parentName = (dir) => { const parts = String(dir || '').split(/[\\/]/).filter(Boolean); return parts.length >= 2 ? parts[parts.length - 2] : ''; };
 const GENERIC_DIR = /^(saison|season|s\d{1,2}|disc|disque|cd|dvd|partie|part|volume|vol)\b/i;
@@ -56,49 +29,11 @@ const folderText = (it) => { const f = folderLabel(it); return f.sub ? `${f.titl
 // « 01 - One More Time » → « One More Time »
 const cleanTrack = (name) => name.replace(/^(?:\d{1,2}[-.])?\d{1,3}\s*[-._)]\s*|^\d{2}\s+(?=\S)/, '') || name;
 
-function onColor(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
-  if (!m) return '#ffffff';
-  const n = Number.parseInt(m[1], 16);
-  const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
-  const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  return L > 0.4 ? '#171A18' : '#ffffff';
-}
-const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#59625B');
-
-const ICON = {
-  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.6v12.8a1 1 0 0 0 1.5.86l10.2-6.4a1 1 0 0 0 0-1.72L9.5 4.74A1 1 0 0 0 8 5.6z"/></svg>',
-  pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>',
-  prev: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h2.2v14H6zM19 5.9v12.2a.8.8 0 0 1-1.25.66l-8.4-6.1a.8.8 0 0 1 0-1.3l8.4-6.1A.8.8 0 0 1 19 5.9z"/></svg>',
-  next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.8 5H18v14h-2.2zM5 5.9v12.2a.8.8 0 0 0 1.25.66l8.4-6.1a.8.8 0 0 0 0-1.3l-8.4-6.1A.8.8 0 0 0 5 5.9z"/></svg>',
-  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>',
-  external: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
-  fullscreen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>',
-  subs: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 12h3M13 12h4M7 15.5h10"/></svg>',
-  volume: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
-  chevL: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></svg>',
-  chevR: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>',
-  chevU: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>',
-  chevD: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></svg>',
-  gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M10.3 3.2h3.4l.5 2.4c.6.2 1.2.5 1.7.9l2.3-.8 1.7 2.9-1.8 1.6c.1.6.1 1.3 0 1.9l1.8 1.6-1.7 2.9-2.3-.8c-.5.4-1.1.7-1.7.9l-.5 2.4h-3.4l-.5-2.4c-.6-.2-1.2-.5-1.7-.9l-2.3.8-1.7-2.9 1.8-1.6a6 6 0 0 1 0-1.9L3.6 8.6l1.7-2.9 2.3.8c.5-.4 1.1-.7 1.7-.9z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4.2l2 2.2H19a1.5 1.5 0 0 1 1.5 1.5v8.8A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/></svg>',
-  download: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg>',
-  source: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16M8 3v3M14 9v3M10 15v3"/></svg>',
-  layers: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l8 4.3 8-4.3M4 16.5l8 4.3 8-4.3"/></svg>',
-  filter: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.5 5.5h17l-6.5 7.5v5l-4 2v-7z"/></svg>',
-  sort: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M7 20l-3-3M7 4l3 3M13 6h8M13 12h5M13 18h3"/></svg>',
-  star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z"/></svg>',
-  power: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 3.5v7.5M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/></svg>',
-  shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z"/></svg>',
-  shieldOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6z"/><path stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M4 4l16 16"/></svg>',
-  globe: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5s1.2-6.1 3.6-8.5z"/></svg>',
-  reload: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.2h-4.2"/></svg>',
-  search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5L20 20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
-};
-
 /* ------------------------------------------------------------------ */
 /* État                                                                */
 /* ------------------------------------------------------------------ */
+
+// S, Q, V et I sont déclarés dans state/.
 
 const THEMES = [
   { id: 'auto', name: 'Automatique', desc: 'Clair ou sombre, comme le système' },
@@ -195,77 +130,6 @@ for (const b of $$('[data-rail-scroll]')) {
 
 const TITLES = { home: 'Accueil', search: 'Rechercher', videos: 'Vidéos', music: 'Musique', images: 'Images', streaming: 'Streaming', web: 'Streaming', tv: 'Télévision', games: 'Jeux', downloads: 'Téléchargements', settings: 'Réglages' };
 const SEARCHABLE = new Set(['videos', 'music', 'images', 'tv', 'games']);
-const PAGE = 120;
-
-const S = {
-  config: null,
-  configPath: '',
-  platform: '',
-  library: [],
-  videos: [],
-  tracks: [],
-  images: [],
-  scanned: false,
-  scanning: false,
-  section: 'home',
-  query: '',
-  limit: PAGE,
-  list: [],
-  recent: [],
-  // Données d'usage, détenues par le processus principal (usage.json) : copie lue au démarrage.
-  usage: { recent: [], volume: 0.9, queries: [] },
-  channels: null,
-  tvWeb: null,
-  tvLoading: false,
-  tvError: null,
-  // Console ouverte : son identifiant (les caches de jeux et de sites des consoles sont rangés par identifiant).
-  romsOf: null,
-  roms: null,
-  romsError: null,
-  draft: null,
-  pendingFocus: false,
-  // Vue web intégrée
-  webSessions: [],
-  webActive: null,
-  webStates: {},
-  webFocused: false,
-  webFocusOnShow: false,
-  // Recherche globale
-  gq: '',
-  tmdb: { q: '', status: 'idle', results: [] },
-  romsCache: {},
-  gs: {},
-  // Infos et images récupérées (clé : v:chemin, a:dossier, r:chemin, g:nom)
-  scrape: {},
-  scraping: null,
-  // Boutique
-  // Sources, modifications manuelles, genres, manette
-  meta: {},
-  sourceStatus: {},
-  autoGames: [],
-  gameSourceStatus: {},
-  gameList: [],
-  genre: '',
-  pad: null,
-  adblock: null,
-  catalog: null,
-  storeProgress: {},
-  raPick: new Set(),
-  romSites: {},
-  localRoms: {},
-  videoSeries: null,
-  videoSeason: null,
-  videoSource: '',
-  searchSource: {},
-  videoSort: 'title',
-  videoCards: [],
-  gameSystem: '',
-  romsOnline: false,
-  romsOnlineLoading: false,
-  romsSource: '',
-  downloads: [],
-  dlSettings: {},
-};
 
 const viewEl = $('#view');
 const titleEl = $('#title');
@@ -273,21 +137,6 @@ const searchEl = $('#search');
 const headerToolsEl = $('#header-tools');
 const headerToolsRightEl = $('#header-tools-right');
 const clockEl = $('#clock');
-const toastEl = $('#toast');
-
-/* ------------------------------------------------------------------ */
-/* Messages                                                            */
-/* ------------------------------------------------------------------ */
-
-let toastTimer = 0;
-function toast(message, { action, onAction, duration = 3800 } = {}) {
-  toastEl.innerHTML = `<span>${esc(message)}</span>${action ? `<button class="toast-btn" type="button">${esc(action)}</button>` : ''}`;
-  if (action) toastEl.querySelector('button').onclick = () => { hideToast(); onAction?.(); };
-  toastEl.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, action ? Math.max(duration, 7000) : duration);
-}
-function hideToast() { toastEl.classList.remove('show'); }
 
 /* ------------------------------------------------------------------ */
 /* Historique « Reprendre »                                            */
@@ -1128,17 +977,6 @@ const sourceLabel = (l) => { try { return new URL(l).hostname.replace(/^www\./, 
 
 const DL_ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const DL_STATE = { pending: 'En attente de téléchargement', waiting: 'En attente', downloading: 'En cours', paused: 'En pause', extracting: 'Décompression', done: 'Terminé', error: 'Erreur', cancelled: 'Annulé', interrupted: 'Interrompu', external: 'Confié au logiciel de torrent' };
-const fmtBytes = (n) => {
-  if (!n) return '0 o';
-  const u = ['o', 'Ko', 'Mo', 'Go', 'To'];
-  const k = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  return `${(n / 1024 ** k).toLocaleString('fr-FR', { maximumFractionDigits: k > 1 ? 1 : 0 })} ${u[k]}`;
-};
-const fmtEta = (ms) => {
-  if (!ms || !Number.isFinite(ms)) return '';
-  const m = Math.round(ms / 60000);
-  return m < 1 ? 'moins d’une minute' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
-};
 
 function dlMeta(d) {
   const parts = [DL_STATE[d.state] || d.state];
@@ -3100,12 +2938,6 @@ async function loadCatalog() {
   if (panel.open && P.tab === 'store') refreshPanel();
 }
 
-function fmtSize(n) {
-  if (!n) return '';
-  if (n > 1e9) return `${(n / 1e9).toFixed(1).replace('.', ',')} Go`;
-  return `${Math.round(n / 1e6)} Mo`;
-}
-
 function progressHtml(id) {
   const p = S.storeProgress[id];
   if (!p || p.phase === 'done' || p.phase === 'error') return '';
@@ -3716,7 +3548,6 @@ function setVolume(v, silent = false) {
 /* Musique                                                             */
 /* ------------------------------------------------------------------ */
 
-const Q = { list: [], i: -1 };
 const mini = $('#mini');
 const miniPlay = $('#mini-play');
 const miniRange = $('#mini-range');
@@ -3824,7 +3655,6 @@ const videoLayer = $('#video-layer');
 const vpPlay = $('#vp-play');
 const vpSeek = $('#vp-seek');
 const vpSubs = $('#vp-subs');
-const V = { list: [], i: -1, blobs: [], subIndex: -1, subLabels: [], hideTimer: 0, silentTimer: 0, lastSave: 0, returnSel: null, seeking: false, cuesUp: null };
 
 // Remonte les sous-titres quand les commandes sont affichées, pour qu'ils ne passent pas dessous.
 function liftCues(up) {
@@ -4073,7 +3903,6 @@ function videoKey(key, fromPad) {
 
 const imageLayer = $('#image-layer');
 const ivImg = $('#iv-img');
-const I = { list: [], i: 0, timer: 0, hideTimer: 0, returnSel: null };
 
 function wakeImages() {
   imageLayer.classList.remove('idle');

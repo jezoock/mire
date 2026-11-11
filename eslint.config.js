@@ -15,8 +15,9 @@ module.exports = [
     },
   },
   {
+    // Interface : modules ES assemblés par esbuild en un seul script (scripts/build.mjs).
     files: ['src/renderer/**/*.js'],
-    languageOptions: { sourceType: 'script', globals: globals.browser },
+    languageOptions: { sourceType: 'module', globals: globals.browser },
   },
   {
     // Les preloads tournent dans une page web mais ont accès à `require`.
@@ -32,10 +33,5 @@ module.exports = [
     // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.
     files: ['test/e2e/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
-  },
-  {
-    // `api` est exposé par src/preload/preload.js (contextBridge).
-    files: ['src/renderer/app.js'],
-    languageOptions: { globals: { api: 'readonly' } },
   },
 ];
