@@ -45,7 +45,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | faite | [#30](https://github.com/jezoock/mire/pull/30) |
-| P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
+| P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | en revue | (PR à venir) |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
@@ -53,7 +53,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
-| P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | en revue | [#31](https://github.com/jezoock/mire/pull/31) |
+| P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | faite | [#31](https://github.com/jezoock/mire/pull/31) |
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | à faire | |
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | à faire | |
@@ -157,7 +157,7 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | --- | --- | --- |
 | `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Retenue au point G1 : intégrée à P1-16 |
 | `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Traitée par P1-18 : `RETROARCH_SYSTEMS` exporté par `src/main/store/catalog/` |
-| `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | Sans effet aujourd'hui : `main.js` teste le seul chemin de l'adresse. Notée dans P1-12 |
+| `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Traitée dans P1-12 : `windowOpenAction` teste le chemin de l'adresse, test ajouté pour `jeu.zip?dl=1` |
 | Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Close : la CI (P0-04) exécute ce test sous Node 22 et 24 ; le défaut venait du Node du conteneur de développement |
 | `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : intégrée à P1-06 |
 | `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : ne plus ajouter de sites ; intégrée à P1-06 |
@@ -173,3 +173,6 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Passer au lecteur externe les sous-titres trouvés (`--sub-file=`, variable `{sub}`) | P1-11 ([#30](https://github.com/jezoock/mire/pull/30)) | À arbitrer |
 | Jeux PC : une extension en capitales (`Jeu.AppImage`) n'est pas retirée du nom affiché | P1-20 ([#31](https://github.com/jezoock/mire/pull/31)) | À arbitrer |
 | Retirer un marque-page de jeu oublie sa fiche mais pas son image (comme `forget` du scraper) | P1-20 ([#31](https://github.com/jezoock/mire/pull/31)) | À arbitrer |
+| Vue web fermée (Ctrl+W) pendant le plein écran du lecteur vidéo : l'état « plein écran de la page » n'est pas remis à zéro, la fenêtre peut rester en plein écran | P1-12 (PR à venir) | À arbitrer (remise à zéro dans `close` du gestionnaire) |
+| Configuration enregistrée : seuls les sites enregistrés ouverts reprennent leur entrée à jour ; un marque-page, un portail TV ou une console renommés gardent l'ancien nom tant que la vue est ouverte | P1-12 (PR à venir) | À arbitrer (résoudre de nouveau toutes les vues ouvertes par le registre d'entrées) |
+| L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 (PR à venir) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
