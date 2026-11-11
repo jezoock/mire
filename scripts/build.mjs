@@ -1,7 +1,8 @@
 /**
  * Construction de Mire dans dist/ :
  * - processus principal et preloads : bundles CommonJS (le preload sandboxé ne charge pas d'ESM) ;
- * - renderer : copié tel quel.
+ * - renderer : un script unique (IIFE) construit à partir de src/renderer/main.js, chargé par index.html sans
+ *   script en ligne ni eval (CSP `script-src 'self'`) ; HTML, styles et polices copiés tels quels.
  * Les dépendances npm restent externes (chargées depuis node_modules au lancement) ; seuls les paquets
  * de l'espace de travail (@mire/*) sont intégrés aux bundles.
  * Usage : node scripts/build.mjs [--watch [--electron]]
@@ -44,18 +45,42 @@ const common = {
   plugins: [externalPackages],
 };
 
+// Interface : script classique pour la page (pas de module ES ; esbuild le place en mode strict). Aucune
+// dépendance npm n'y est importée ; les paquets de l'espace de travail y seraient intégrés.
+const renderer = {
+  entryPoints: { 'renderer/main': 'src/renderer/main.js' },
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  // Chromium d'Electron 44 (au moins) : la syntaxe moderne est conservée telle quelle.
+  target: 'chrome140',
+  sourcemap: 'linked',
+  logLevel: 'info',
+};
+
 const targets = [
   { ...common, entryPoints: { 'main/index': 'src/main/index.js' } },
   {
     ...common,
     entryPoints: { 'preload/preload': 'src/preload/preload.js', 'preload/web-preload': 'src/preload/web-preload.js' },
   },
+  renderer,
 ];
+
+// Sources de l'interface, intégrées au script : seuls les autres fichiers (HTML, CSS, polices) sont copiés.
+const CODE = /\.(?:js|mjs|ts)$/;
+const BUNDLE = /^main\.js(?:\.map)?$/;
+const hasAssets = (dir) => fs.readdirSync(dir, { withFileTypes: true }).some((e) => (e.isDirectory() ? hasAssets(path.join(dir, e.name)) : !CODE.test(e.name)));
 
 function copyRenderer() {
   const out = path.join(DIST, 'renderer');
-  fs.rmSync(out, { recursive: true, force: true });
-  fs.cpSync(RENDERER, out, { recursive: true });
+  fs.mkdirSync(out, { recursive: true });
+  // Le script construit par esbuild reste en place ; le reste est recopié depuis src/renderer.
+  for (const e of fs.readdirSync(out)) if (!BUNDLE.test(e)) fs.rmSync(path.join(out, e), { recursive: true, force: true });
+  fs.cpSync(RENDERER, out, {
+    recursive: true,
+    filter: (src) => (fs.statSync(src).isDirectory() ? hasAssets(src) : !CODE.test(src)),
+  });
 }
 
 // Recopie le renderer à chaque construction des bundles (mode --watch compris).
@@ -80,7 +105,7 @@ if (watch) {
   // Première construction terminée avant de lancer Mire, puis reconstruction à chaque changement.
   await Promise.all(contexts.map((c) => c.rebuild()));
   await Promise.all(contexts.map((c) => c.watch()));
-  // esbuild ne suit que les fichiers importés : le renderer (HTML, CSS, script classique) est surveillé à part.
+  // esbuild ne suit que les fichiers importés : HTML, CSS et polices de l'interface sont surveillés à part.
   const watcher = fs.watch(RENDERER, { recursive: true }, () => copyRenderer());
   if (process.argv.includes('--electron')) {
     // Le paquet electron exporte le chemin de son exécutable (et télécharge le moteur au premier appel).
