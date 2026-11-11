@@ -110,10 +110,10 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 | DS-00 | Poser le tag `v0.1.0` sur le commit de fusion de la 0.1.0 (action de ta part) | XS | — | B-117 | faite (tag `v0.1.0` posé sur dot-stash) | |
 | DS-01 | Release : archive construite attachée à la release GitHub, installation par adresse | S | DS-00 | B-119, B-120 | à faire | |
 | DS-02 | Moteur SCSS dans le paquet (`scss/` dans `files` et `exports`) | XS | — | à créer | à faire | |
-| DS-03 | `ds-range` : curseur habillé, remplissage jusqu'à la valeur | M | — | à créer | à faire | |
-| DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | à faire | |
-| DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | à faire | |
-| DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | à faire | |
+| DS-03 | `ds-range` : curseur habillé, remplissage jusqu'à la valeur | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
+| DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
+| DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
+| DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-07 | Imports par composant (`dist-custom-elements`), si P2-01 en a besoin | S | — | B-122, B-123 | selon P2-01 | |
 
 ## Phase 3 — Addons
