@@ -21,20 +21,21 @@ const { createAdblock } = require('./adblock.js');
 const { defaultRomSites } = require('./romsites.js');
 const { createDownloads } = require('./downloads/index.ts');
 const disc = require('./discfiles.js');
-const { guessSystem, parseVideo } = require('./scraper.js');
+const { guessSystem } = require('./scraper.js');
 const { THEME_BG, createConfigService } = require('./config/index.ts');
 const { parseM3U, groupChannels } = require('./lib/m3u.js');
-const { resolveLocation } = require('./lib/location.js');
+const library = require('./library/index.ts');
+const { resolveLocation, locationError, crawlHttp } = library;
 const { substitute } = require('./lib/args.js');
 const { createJsonStore, flushWithin } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
 const { createAccessPolicy } = require('./security/access-policy.ts');
 const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol/index.ts');
 const { romEntry: romEntryOf, resolveWebEntry } = require('./lib/web-entry.js');
-const { decodeText, srtToVtt, providerMatches } = require('./lib/text.js');
+const { providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
-const { fold, slug, safeFileName, cleanRomName, parseEpisode, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget } = require('@mire/shared');
-const { EXT, KIND, NATIVE, MIME, COVER_RE, ART_RE, FANART_RE, MEDIA_KINDS, GAME_FILE_RE } = require('@mire/shared');
+const { fold, slug, safeFileName, cleanRomName, similarity, hostOf, siteOf, safeDecode, isHttpUrl, isUrlTarget } = require('@mire/shared');
+const { EXT, KIND, MIME, GAME_FILE_RE } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
 const IS_MAC = process.platform === 'darwin';
@@ -89,8 +90,6 @@ const loadConfig = () => configService.load();
 /* Fichiers autorisés                                                  */
 /* ------------------------------------------------------------------ */
 
-const pathKey = (p) => { const r = path.resolve(String(p)); return IS_WIN ? r.toLowerCase() : r; };
-
 let scraper = null;
 let store = null;
 let adblock = null;
@@ -126,11 +125,6 @@ function allowedFiles() {
 const access = createAccessPolicy({ roots: allowedRoots, files: allowedFiles });
 configService.onChange(() => access.invalidate());
 
-function locationError(loc, r) {
-  if (r.network) return `Partage réseau inaccessible : ${loc}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.`;
-  return `Dossier introuvable : ${loc}`;
-}
-
 function registerMedia() {
   registerMediaProtocol(protocol, {
     isAllowed: access.isAllowed,
@@ -139,270 +133,22 @@ function registerMedia() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Bibliothèque locale                                                 */
+/* Bibliothèque (src/main/library)                                     */
 /* ------------------------------------------------------------------ */
 
-const MAX_ITEMS = 150000;
-
-async function walkLibrary(dir, out, seen, depth, kinds = new Set(MEDIA_KINDS)) {
-  if (depth > 16 || out.length >= MAX_ITEMS) return;
-  const k = pathKey(dir);
-  if (seen.has(k)) return;
-  seen.add(k);
-
-  let entries;
-  try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { return; }
-
-  const files = entries.filter((e) => e.isFile() && !e.name.startsWith('.'));
-  const extOf = (name) => path.extname(name).toLowerCase();
-  const baseOf = (name) => path.basename(name, path.extname(name)).toLowerCase();
-
-  const coverEntry = files.find((e) => COVER_RE.test(e.name));
-  const folderCover = coverEntry ? path.join(dir, coverEntry.name) : null;
-  const fanartEntry = files.find((e) => FANART_RE.test(e.name));
-  const folderFanart = fanartEntry ? path.join(dir, fanartEntry.name) : null;
-
-  // Images portant le nom d'une vidéo (film.jpg, film-poster.jpg) : ce sont des affiches.
-  const imagesByBase = new Map();
-  const videoBases = new Set();
-  for (const e of files) {
-    const kind = KIND[extOf(e.name)];
-    if (kind === 'image') imagesByBase.set(baseOf(e.name), path.join(dir, e.name));
-    if (kind === 'video') videoBases.add(baseOf(e.name));
-  }
-  const isPosterOfVideo = (b) => videoBases.has(b) || videoBases.has(b.replace(/-(poster|fanart|thumb|landscape)$/, ''));
-
-  for (const e of files) {
-    const ext = extOf(e.name);
-    const kind = KIND[ext];
-    if (!kind || !kinds.has(kind)) continue;
-    const name = path.basename(e.name, path.extname(e.name));
-    const b = name.toLowerCase();
-    if (kind === 'image' && (ART_RE.test(e.name) || isPosterOfVideo(b))) continue;
-
-    const item = { path: path.join(dir, e.name), name, ext, kind, folder: path.basename(dir), dir, native: NATIVE.has(ext), cover: null, fanart: null };
-    if (kind === 'video') { const p = parseVideo({ name, dir }); if (p.type === 'tv') { item.seriesTitle = p.title; const { season, episode } = parseEpisode(name); Object.assign(item, { season, episode }); } }
-    if (kind === 'video') {
-      item.cover = imagesByBase.get(b) || imagesByBase.get(`${b}-poster`) || folderCover;
-      item.fanart = imagesByBase.get(`${b}-fanart`) || folderFanart;
-    }
-    if (kind === 'audio') { item.cover = folderCover; item.fanart = folderFanart; }
-    out.push(item);
-    if (out.length >= MAX_ITEMS) return;
-  }
-
-  for (const e of entries) {
-    if (!e.isDirectory() || e.name.startsWith('.') || e.name.startsWith('$')) continue;
-    await walkLibrary(path.join(dir, e.name), out, seen, depth + 1, kinds);
-  }
-}
-
-/* ---------- Sources web : page d'index d'un serveur, ou liste M3U ---------- */
-
-const urlSubs = new Map(); // vidéo en ligne → sous-titres trouvés à côté
-
-// Raison affichée quand la première page d'index ne se charge pas.
-function crawlError(err) {
-  if (err.kind === 'timeout') return 'délai dépassé';
-  if (err.kind === 'unreachable') return 'serveur injoignable';
-  if (err.kind === 'status') return `le serveur a répondu avec le code ${err.status}`;
-  return err.message;
-}
-
-// Parcourt les pages d'index (Apache, nginx, NAS…) sans sortir du dossier de départ.
-async function crawlHttp(startUrl, onDir, maxDirs = 400) {
-  const base = new URL(startUrl.endsWith('/') ? startUrl : `${startUrl}/`);
-  const queue = [base.href];
-  const seen = new Set();
-  let first = true;
-  while (queue.length && seen.size < maxDirs) {
-    const dirUrl = queue.shift();
-    if (seen.has(dirUrl)) continue;
-    seen.add(dirUrl);
-    let html;
-    try {
-      html = await http.getText(dirUrl, { timeout: 15000 });
-    } catch (err) {
-      if (first) throw new Error(`Adresse inaccessible (${crawlError(err)}).`);
-      continue;
-    }
-    first = false;
-    const files = [];
-    const dirPath = new URL(dirUrl).pathname;
-    for (const m of html.matchAll(/href\s*=\s*(?:"([^"#?]+)"|'([^'#?]+)')/gi)) {
-      let u;
-      try { u = new URL(m[1] || m[2], dirUrl); } catch { continue; }
-      if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) continue;
-      if (u.pathname.endsWith('/')) { if (u.pathname.length > dirPath.length) queue.push(u.href); continue; }
-      files.push(u);
-    }
-    const parts = dirPath.split('/').filter(Boolean);
-    await onDir(dirUrl, safeDecode(parts[parts.length - 1] || base.hostname), files);
-  }
-}
-
-async function crawlLibraryUrl(url, kinds, out) {
-  if (/\.m3u8?$/i.test(new URL(url).pathname)) {
-    let text;
-    try { text = await http.getText(url, { timeout: 15000 }); } catch { throw new Error('Liste de lecture inaccessible.'); }
-    const listName = safeDecode(new URL(url).pathname.split('/').pop()).replace(/\.m3u8?$/i, '');
-    const fallbackKind = kinds.has('video') ? 'video' : kinds.has('audio') ? 'audio' : 'image';
-    for (const e of parseM3U(text)) {
-      let u;
-      try { u = new URL(e.url, url).href; } catch { continue; }
-      const ext = path.extname(new URL(u).pathname).toLowerCase();
-      const kind = KIND[ext] || fallbackKind;
-      if (!kinds.has(kind)) continue;
-      out.push({ path: u, name: e.title || safeDecode(path.basename(new URL(u).pathname, ext)) || u, ext, kind, folder: listName, dir: url, native: !ext || NATIVE.has(ext) || ext === '.m3u8', cover: e.logo || null, fanart: null, remote: true });
-    }
-    return;
-  }
-  await crawlHttp(url, async (dirUrl, dirName, files) => {
-    const byName = files.map((u) => ({ u, name: safeDecode(u.pathname.split('/').pop()) }));
-    const extOf = (n) => path.extname(n).toLowerCase();
-    const baseOf = (n) => path.basename(n, path.extname(n)).toLowerCase();
-    const folderCover = byName.find((f) => COVER_RE.test(f.name))?.u.href || null;
-    const folderFanart = byName.find((f) => FANART_RE.test(f.name))?.u.href || null;
-    const images = new Map(byName.filter((f) => KIND[extOf(f.name)] === 'image').map((f) => [baseOf(f.name), f.u.href]));
-    const videoBases = new Set(byName.filter((f) => KIND[extOf(f.name)] === 'video').map((f) => baseOf(f.name)));
-    const subs = byName.filter((f) => ['.srt', '.vtt'].includes(extOf(f.name)));
-    for (const f of byName) {
-      const ext = extOf(f.name);
-      const kind = KIND[ext];
-      if (!kind || !kinds.has(kind) || out.length >= MAX_ITEMS) continue;
-      const b = baseOf(f.name);
-      if (kind === 'image' && (ART_RE.test(f.name) || videoBases.has(b) || videoBases.has(b.replace(/-(poster|fanart|thumb)$/, '')))) continue;
-      const item = { path: f.u.href, name: path.basename(f.name, path.extname(f.name)), ext, kind, folder: dirName, dir: dirUrl, native: NATIVE.has(ext), cover: null, fanart: null, remote: true };
-      if (kind === 'video') { const p = parseVideo({ name: item.name, dir: dirUrl }); if (p.type === 'tv') { item.seriesTitle = p.title; const { season, episode } = parseEpisode(item.name); Object.assign(item, { season, episode }); } }
-      if (kind === 'video') {
-        item.cover = images.get(b) || images.get(`${b}-poster`) || folderCover;
-        item.fanart = images.get(`${b}-fanart`) || folderFanart;
-        const mine = subs.filter((x) => baseOf(x.name).startsWith(b));
-        if (mine.length) urlSubs.set(item.path, mine.map((x) => ({ url: x.u.href, name: x.name, base: b })));
-      }
-      if (kind === 'audio') { item.cover = folderCover; item.fanart = folderFanart; }
-      out.push(item);
-    }
-  });
-}
+// Sous-titres des vidéos en ligne trouvés par la dernière analyse.
+let remoteSubtitles = new Map();
 
 // Analyse de toutes les sources ; renvoie aussi l'état de chacune (nombre d'éléments, erreur).
-
 async function scanLibrary() {
-  const items = [];
-  const status = {};
-  urlSubs.clear();
-  const groups = new Map(); // une même source déclarée pour plusieurs types n'est parcourue qu'une fois
-  for (const src of configService.get().library.sources) {
-    const loc = resolveLocation(src.location);
-    const k = loc.type === 'url' ? loc.url : pathKey(loc.path);
-    if (!groups.has(k)) groups.set(k, { loc, location: src.location, kinds: new Set(), sources: [] });
-    groups.get(k).kinds.add(src.kind);
-    groups.get(k).sources.push(src);
-  }
-  for (const g of groups.values()) {
-    const start = items.length;
-    let error = null;
-    try {
-      if (g.loc.type === 'url') await crawlLibraryUrl(g.loc.url, g.kinds, items);
-      else {
-        try { await fsp.access(g.loc.path); } catch { throw new Error(locationError(g.location, g.loc)); }
-        await walkLibrary(g.loc.path, items, new Set(), 0, g.kinds);
-      }
-    } catch (err) { error = err.message; }
-    for (const src of g.sources) {
-      const count = items.slice(start).filter((it) => it.kind === src.kind).length;
-      status[src.id] = { ok: !error, error, count };
-    }
-  }
-  // Marque-pages de streaming : ajoutés comme des vidéos qui rouvrent la page du site.
-  for (const b of configService.get().bookmarks || []) {
-    items.push({
-      path: b.url,
-      name: b.title || b.url,
-      ext: '',
-      kind: 'video',
-      folder: b.site || 'Streaming',
-      dir: b.site || 'Streaming',
-      native: false,
-      cover: null,
-      fanart: null,
-      bookmark: true,
-      bookmarkId: b.id,
-      series: b.type === 'tv',
-      seriesTitle: b.type === 'tv' ? (b.title || '') : undefined,
-      season: b.type === 'tv' ? (b.season || null) : null,
-      episode: b.type === 'tv' ? (b.episode || null) : null,
-      bookmarkType: b.type,
-    });
-  }
+  const cfg = configService.get();
+  const { items, status, subtitles } = await library.scanLibrary({ sources: cfg.library.sources, bookmarks: cfg.bookmarks || [] });
+  remoteSubtitles = subtitles;
   return { items, status };
 }
 
-async function itemFromPath(p) {
-  if (typeof p !== 'string') return null;
-  try {
-    const st = await fsp.stat(p);
-    if (!st.isFile()) return null;
-  } catch { return null; }
-  const ext = path.extname(p).toLowerCase();
-  const kind = KIND[ext];
-  if (!kind) return null;
-  access.allowFile(p);
-
-  const dir = path.dirname(p);
-  const name = path.basename(p, path.extname(p));
-  let cover = null;
-  if (kind !== 'image') {
-    try {
-      const names = await fsp.readdir(dir);
-      const base = name.toLowerCase();
-      const found = names.find((n) => KIND[path.extname(n).toLowerCase()] === 'image'
-        && (path.basename(n, path.extname(n)).toLowerCase() === base || COVER_RE.test(n)));
-      if (found) { cover = path.join(dir, found); access.allowFile(cover); }
-    } catch { /* pas de pochette */ }
-  }
-  return { path: p, name, ext, kind, folder: path.basename(dir), dir, native: NATIVE.has(ext), cover };
-}
-
-/* ---------- Sous-titres .srt / .vtt à côté de la vidéo ---------- */
-
-async function findSubtitles(videoPath) {
-  if (isHttpUrl(videoPath)) {
-    const out = [];
-    for (const sub of urlSubs.get(videoPath) || []) {
-      try {
-        let text = decodeText(await http.getBuffer(sub.url, { timeout: 15000 }));
-        if (sub.name.toLowerCase().endsWith('.srt')) text = srtToVtt(text);
-        const rest = path.basename(sub.name, path.extname(sub.name)).slice(sub.base.length).replace(/^[._\-\s]+/, '');
-        const lang = (rest.split(/[._\s-]/)[0] || '').toLowerCase();
-        out.push({ label: rest || 'Sous-titres', lang: /^[a-z]{2,3}$/.test(lang) ? lang : '', vtt: text });
-      } catch { /* sous-titre inaccessible */ }
-    }
-    return out;
-  }
-  if (!access.isAllowed(videoPath)) return [];
-  const dir = path.dirname(videoPath);
-  const base = path.basename(videoPath, path.extname(videoPath)).toLowerCase();
-  let names;
-  try { names = await fsp.readdir(dir); } catch { return []; }
-
-  const subs = [];
-  for (const n of names) {
-    const ext = path.extname(n).toLowerCase();
-    if (ext !== '.srt' && ext !== '.vtt') continue;
-    const b = path.basename(n, path.extname(n));
-    if (!b.toLowerCase().startsWith(base)) continue;
-    const rest = b.slice(base.length).replace(/^[._\-\s]+/, '');
-    try {
-      let text = decodeText(await fsp.readFile(path.join(dir, n)));
-      if (ext === '.srt') text = srtToVtt(text);
-      const lang = (rest.split(/[._\s-]/)[0] || '').toLowerCase();
-      subs.push({ label: rest || 'Sous-titres', lang: /^[a-z]{2,3}$/.test(lang) ? lang : '', vtt: text });
-    } catch { /* fichier illisible */ }
-  }
-  return subs;
-}
+const itemFromPath = (p) => library.itemFromPath(p, { allowFile: access.allowFile });
+const findSubtitles = (videoPath) => library.findSubtitles(videoPath, { remote: remoteSubtitles, isAllowed: access.isAllowed });
 
 /* ------------------------------------------------------------------ */
 /* Freebox TV (playlist M3U)                                           */

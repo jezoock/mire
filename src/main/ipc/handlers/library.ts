@@ -1,7 +1,7 @@
 /** Bibliothèque et fichiers : analyse des sources, sous-titres, fichiers ouverts, emplacements, boîtes de dialogue. */
 import fsp from 'node:fs/promises';
 import * as http from '../../net/http.ts';
-import { resolveLocation } from '../../lib/location.js';
+import { resolveLocation } from '../../library/location.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
 

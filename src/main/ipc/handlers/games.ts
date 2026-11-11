@@ -8,7 +8,7 @@ import type { CleanupReport, GameRef } from '@mire/shared/ipc';
 import { findConsole } from '../../config/index.ts';
 import * as http from '../../net/http.ts';
 import disc from '../../discfiles.js';
-import { resolveLocation } from '../../lib/location.js';
+import { resolveLocation } from '../../library/location.ts';
 import { defaultRomSites } from '../../romsites.js';
 import { guessSystem } from '../../scraper.js';
 import type { MainContext } from '../context.ts';
