@@ -10,6 +10,7 @@
  */
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
+import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
 export type { Bookmark, ConsoleRef, GameBookmark };
@@ -125,6 +126,18 @@ export interface LegacyUsage {
   resume?: Record<string, unknown>;
   volume?: unknown;
   queries?: unknown;
+}
+
+/** Langue de l'interface : réglage, langue retenue, langues disponibles et catalogues à consulter. */
+export interface LanguageInfo {
+  /** Valeur de `ui.language` (`auto` ou un code BCP 47). */
+  setting: string;
+  /** Langue retenue, toujours une langue disponible. */
+  language: string;
+  /** Langues disponibles : code et nom dans la langue. */
+  available: Pick<CatalogMeta, 'code' | 'name'>[];
+  /** Catalogues de la langue retenue puis des langues de repli, dans l'ordre de consultation. */
+  catalogs: Record<string, Catalog>;
 }
 
 export interface Bounds {
@@ -265,6 +278,9 @@ export interface IpcMethods {
   listRoms(console: string, opts?: { online?: boolean; only?: string }): Outcome<Record<string, unknown>>;
   launchRom(console: string, romPath: string): Outcome;
 
+  // Langue de l'interface et catalogues de textes
+  i18nGet(): LanguageInfo;
+
   // Fenêtre et application
   toggleFullscreen(): boolean;
   quit(): boolean;
@@ -382,6 +398,8 @@ export const IPC_METHODS = {
   usageSetVolume: 'usage:setVolume',
   usageAddQuery: 'usage:addQuery',
   usageClearQueries: 'usage:clearQueries',
+
+  i18nGet: 'i18n:get',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
@@ -409,6 +427,8 @@ export interface IpcEvents {
   onWebClosed: { id: string };
   onWebFocus: boolean;
   onMireFocus: undefined;
+  /** La langue de l'interface a changé (réglage ou langue du système) : à appliquer à chaud. */
+  onLanguageChange: LanguageInfo;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -432,6 +452,7 @@ export const IPC_EVENTS = {
   onWebClosed: 'web-closed',
   onWebFocus: 'web-focus',
   onMireFocus: 'web-mire-focus',
+  onLanguageChange: 'i18n:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

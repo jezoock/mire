@@ -6,6 +6,7 @@
  */
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
+import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
 import type { WebManager } from '../web/index.ts';
@@ -31,6 +32,8 @@ export interface MainContext {
   readonly access: AccessPolicy;
   /** « Reprendre », positions de reprise, volume, recherches récentes (usage.json). */
   readonly usage: UsageService;
+  /** Langue de l'interface et traduction des textes. */
+  readonly i18n: LanguageService;
 
   // État de index.js (lu et écrit au moment de l'appel).
   readonly mainWindow: any;

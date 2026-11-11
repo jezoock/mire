@@ -10,6 +10,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./ipc": "./src/ipc.ts",
-    "./settings/schema": "./src/settings/schema.ts"
+    "./settings/schema": "./src/settings/schema.ts",
+    "./i18n": "./src/i18n/index.ts"
   }
 }

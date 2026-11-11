@@ -192,7 +192,7 @@ test.describe('migrateConfig', () => {
   test('registre : une étape par version, dans l’ordre, jusqu’à la version courante', () => {
     assert.deepEqual(
       MIGRATIONS.map((m) => m.version),
-      [2, 3, 4, 5, 6],
+      [2, 3, 4, 5, 6, 7],
     );
     assert.equal(MIGRATIONS.at(-1)?.version, CONFIG_VERSION);
   });

@@ -135,6 +135,12 @@ const ADDED_METHODS: Record<string, string> = {
   usageSetVolume: 'usage:setVolume',
   usageAddQuery: 'usage:addQuery',
   usageClearQueries: 'usage:clearQueries',
+  i18nGet: 'i18n:get', // P1-28 : langue de l'interface et catalogues
+};
+
+// Événements ajoutés après P1-08.
+const ADDED_EVENTS: Record<string, string> = {
+  onLanguageChange: 'i18n:changed', // P1-28 : changement de langue à chaud
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.
@@ -149,9 +155,9 @@ describe('contrat IPC : la table', () => {
     assert.deepEqual({ ...IPC_METHODS }, { ...ORIGINAL_METHODS, ...ADDED_METHODS });
   });
 
-  it('reprend les 17 événements et leurs canaux', () => {
+  it('reprend les 17 événements et leurs canaux, plus les événements ajoutés depuis', () => {
     assert.equal(Object.keys(ORIGINAL_EVENTS).length, 17);
-    assert.deepEqual({ ...IPC_EVENTS }, ORIGINAL_EVENTS);
+    assert.deepEqual({ ...IPC_EVENTS }, { ...ORIGINAL_EVENTS, ...ADDED_EVENTS });
   });
 
   it('n’emploie chaque canal qu’une fois', () => {
@@ -180,7 +186,10 @@ describe('contrat IPC : window.api', () => {
 
   it('a exactement les noms de l’ancien preload, plus les méthodes ajoutées', () => {
     const names = [...Object.keys(api), ...LOCAL_METHODS].sort();
-    assert.deepEqual(names, [...Object.keys(ORIGINAL_METHODS), ...Object.keys(ADDED_METHODS), ...Object.keys(ORIGINAL_EVENTS), ...LOCAL_METHODS].sort());
+    assert.deepEqual(
+      names,
+      [...Object.keys(ORIGINAL_METHODS), ...Object.keys(ADDED_METHODS), ...Object.keys(ORIGINAL_EVENTS), ...Object.keys(ADDED_EVENTS), ...LOCAL_METHODS].sort(),
+    );
   });
 
   it('le preload expose createApi et pathForFile, et rien d’autre', () => {

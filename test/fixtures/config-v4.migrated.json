@@ -1,6 +1,6 @@
 {
   "raw": {
-    "version": 6,
+    "version": 7,
     "web": [
       {
         "id": "mon-site",
@@ -20,7 +20,8 @@
       ]
     },
     "ui": {
-      "theme": "minuit"
+      "theme": "minuit",
+      "language": "fr"
     },
     "tv": {
       "services": [

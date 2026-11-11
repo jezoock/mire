@@ -48,7 +48,8 @@
       ]
     },
     "ui": {
-      "fullscreen": true
+      "fullscreen": true,
+      "language": "fr"
     },
     "tv": {
       "services": [
@@ -92,7 +93,7 @@
       "active": "freebox",
       "detected": true
     },
-    "version": 6
+    "version": 7
   },
   "changed": true
 }
