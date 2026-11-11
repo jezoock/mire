@@ -9,6 +9,8 @@ export interface DataPaths {
   root: string;
   /** Configuration (P1-06). */
   config: string;
+  /** « Reprendre », positions de reprise, volume, recherches récentes (P1-09). */
+  usage: string;
   /** Infos modifiées à la main (titre, genre, images…) et leurs images. */
   metaDir: string;
   meta: string;
@@ -40,6 +42,7 @@ export function dataPaths(root: string): DataPaths {
   return {
     root,
     config: at('config.json'),
+    usage: at('usage.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

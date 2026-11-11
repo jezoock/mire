@@ -7,6 +7,7 @@
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
+import type { UsageService } from '../usage/index.ts';
 import type { WebManager } from '../web/index.ts';
 
 // Fonction du processus principal encore définie dans index.js.
@@ -28,6 +29,8 @@ export interface MainContext {
   readonly config: ConfigService;
   /** Politique d'accès aux fichiers locaux. */
   readonly access: AccessPolicy;
+  /** « Reprendre », positions de reprise, volume, recherches récentes (usage.json). */
+  readonly usage: UsageService;
 
   // État de index.js (lu et écrit au moment de l'appel).
   readonly mainWindow: any;

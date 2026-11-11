@@ -22,6 +22,7 @@ const { createDownloads } = require('./downloads/index.ts');
 const { createGames } = require('./games/index.ts');
 const { THEME_BG, createConfigService } = require('./config/index.ts');
 const { createTv } = require('./tv/index.ts');
+const { createUsageService } = require('./usage/index.ts');
 const library = require('./library/index.ts');
 const { resolveLocation, locationError } = library;
 const { createLauncher, createPlayers } = require('./platform/index.ts');
@@ -56,6 +57,8 @@ const configPath = () => dataFiles().config;
 // Seul détenteur de la configuration : lue au démarrage (loadConfig), modifiée par update/replace.
 const configService = createConfigService({ file: configPath() });
 const loadConfig = () => configService.load();
+// « Reprendre », positions de reprise, volume et recherches récentes (src/main/usage), lus au démarrage.
+const usage = createUsageService({ file: dataFiles().usage });
 
 /* ------------------------------------------------------------------ */
 /* Fichiers autorisés                                                  */
@@ -382,6 +385,7 @@ function filesFromArgv(argv) {
 const ipcContext = {
   electron: { app, dialog, shell },
   config: configService,
+  usage,
   get mainWindow() { return mainWindow; },
   get pendingFiles() { return pendingFiles; },
   set pendingFiles(next) { pendingFiles = next; },
@@ -423,6 +427,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     loadConfig();
+    usage.load();
     loadMeta();
     const sevenZipPath = require('7zip-bin').path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
     const archive = createArchive({ sevenZipPath, copyPath: dataFiles().sevenZip });
@@ -509,7 +514,7 @@ if (!app.requestSingleInstanceLock()) {
     flushedBeforeQuit = true;
     event.preventDefault();
     downloads?.stop().catch(() => {});
-    const flushes = [scraper, downloads].filter(Boolean).map((m) => () => m.flush());
+    const flushes = [scraper, downloads, usage].filter(Boolean).map((m) => () => m.flush());
     flushWithin(flushes, 2000).finally(() => app.quit());
   });
 
