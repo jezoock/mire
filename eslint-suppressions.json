@@ -4,16 +4,13 @@
       "count": 2
     }
   },
-  "src/main/downloads.js": {
-    "no-useless-assignment": {
-      "count": 1
-    }
-  },
   "src/main/index.js": {
     "no-useless-assignment": {
       "count": 2
-    },
-    "preserve-caught-error": {
+    }
+  },
+  "src/main/scraper.js": {
+    "no-useless-escape": {
       "count": 1
     }
   },
@@ -22,11 +19,6 @@
       "count": 4
     },
     "no-useless-assignment": {
-      "count": 1
-    }
-  },
-  "src/main/scraper.js": {
-    "no-useless-escape": {
       "count": 1
     }
   }

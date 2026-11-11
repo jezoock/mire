@@ -47,12 +47,12 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
-| P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | à faire | |
+| P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | en revue | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
-| P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | en revue | [#28](https://github.com/jezoock/mire/pull/28) |
+| P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | à faire | |
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | à faire | |
@@ -162,8 +162,11 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | `migrateConfig` 1 → 2 cherche les valeurs par défaut dans `DEFAULT_CONFIG.web`, vide depuis que rien n'est installé d'office : `search`, `background` et `providers` ne sont plus complétés (le passage 2 → 3 compense pour les sites connus) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : intégrée à P1-06 |
 | `migrateConfig` 2 → 3 ajoute encore les 15 sites de `DEFAULT_WEB` à une config v1 ou v2, contrairement au commentaire de la v5 (« on garde ceux que l'utilisateur a réellement ») | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Retenue au point G1 : ne plus ajouter de sites ; intégrée à P1-06 |
 | `migrateConfig` v5 contient un `if` vide (`ui.home.services`) ; `KNOWN_WEB` est inutilisé (désormais dans `lib/config.js`) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Traitée dans P0-07 ([#11](https://github.com/jezoock/mire/pull/11)) |
-| `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Intégrée à P1-14 |
+| `resolveLocation` simulant macOS ou Linux depuis Windows : `path.join` produit des barres obliques inverses (les tests passent par `path.join` pour rester portables) | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | Intégrée à P1-14 ([#29](https://github.com/jezoock/mire/pull/29)) |
 | `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | ✅ Retenue au point G1 : intégrée à P1-13 |
 | Le test de fumée ne tourne que sous Linux (Xvfb) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | L'ajouter à des runners CI Windows et macOS quand la phase 1 sera avancée ; Widevine reste à vérifier à la main |
 | Les captures de référence varient de quelques pixels d'une exécution à l'autre (lissage des bords, écart de 16/255 au plus) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Comparaison automatique avec seuil de tolérance, dans P2-21 |
 | Un lien symbolique placé dans un dossier autorisé est servi par `media://` (comparaison du chemin tel quel) ; risque faible : il faut déjà pouvoir écrire dans la bibliothèque | P1-10 ([#25](https://github.com/jezoock/mire/pull/25)) | Durcissement par `fs.realpath` (racines et fichier) dans une tâche dédiée, à tester sous Windows (`subst`, lecteurs réseau, lien vers un autre disque) ; variante : refuser seulement si le chemin réel sort des racines réelles et que `lstat` montre un lien |
+| `fetchToCache` attend sans fin si le téléchargement ne démarre jamais | P1-19 ([#28](https://github.com/jezoock/mire/pull/28)) | À traiter dans P1-20 |
+| Deux demandes pour la même adresse en même temps : la seconde remplace la première dans `pendingUrls`, la première ne se résout jamais | P1-19 ([#28](https://github.com/jezoock/mire/pull/28)) | À traiter dans P1-20 |
+| La copie dans le cache déclenche `download-finished`, donc le message « X est téléchargé » | P1-19 ([#28](https://github.com/jezoock/mire/pull/28)) | À traiter dans P1-20 |

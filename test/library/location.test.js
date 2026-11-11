@@ -1,8 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
-const { resolveLocation } = require('../../src/main/lib/location.js');
+const { resolveLocation, locationError } = require('../../src/main/library/location.ts');
 
 const WIN = { platform: 'win32' };
 const MAC = { platform: 'darwin' };
@@ -37,13 +36,13 @@ test.describe('smb://', () => {
   });
 
   test('macOS : /Volumes', () => {
-    assert.deepEqual(resolveLocation('smb://nas/films/S%C3%A9ries', MAC), { type: 'path', path: path.join('/Volumes', 'films', 'Séries'), network: true });
+    assert.deepEqual(resolveLocation('smb://nas/films/S%C3%A9ries', MAC), { type: 'path', path: '/Volumes/films/Séries', network: true });
   });
 
   test('Linux : gvfs, serveur et partage en minuscules', () => {
     assert.deepEqual(resolveLocation('smb://NAS/Films/Bad%ZZ', { platform: 'linux', uid: 1234 }), {
       type: 'path',
-      path: path.join('/run/user/1234/gvfs', 'smb-share:server=nas,share=films', 'Bad%ZZ'),
+      path: '/run/user/1234/gvfs/smb-share:server=nas,share=films/Bad%ZZ',
       network: true,
     });
   });
@@ -56,4 +55,15 @@ test.describe('smb://', () => {
 test('sans second paramètre : système courant', () => {
   const expected = resolveLocation('smb://nas/films', { platform: process.platform });
   assert.deepEqual(resolveLocation('smb://nas/films'), expected);
+});
+
+// Les chemins macOS et Linux gardent des barres obliques, même sur un Windows qui simule ces systèmes.
+test('smb:// sous macOS et Linux : barres obliques sur tous les systèmes', () => {
+  assert.equal(resolveLocation('smb://nas/films/a/b', MAC).path, '/Volumes/films/a/b');
+  assert.equal(resolveLocation('smb://nas/films/a', LINUX).path, '/run/user/1000/gvfs/smb-share:server=nas,share=films/a');
+});
+
+test("message d'erreur : partage réseau ou dossier", () => {
+  assert.match(locationError('smb://nas/films', { network: true }), /^Partage réseau inaccessible : smb:\/\/nas\/films\./);
+  assert.equal(locationError('/films', { network: false }), 'Dossier introuvable : /films');
 });
