@@ -1,8 +1,12 @@
-'use strict';
+/**
+ * Chaînes de télévision : lecture d'une liste M3U (partagée avec le fournisseur « m3u » de la bibliothèque),
+ * qualité d'un flux et regroupement des variantes d'une même chaîne (HD, SD, bas débit).
+ */
+import type { Channel, M3uEntry, Quality } from './types.ts';
 
-function parseM3U(text) {
-  const out = [];
-  let cur = null;
+export function parseM3U(text: string): M3uEntry[] {
+  const out: M3uEntry[] = [];
+  let cur: Omit<M3uEntry, 'url'> | null = null;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
@@ -18,8 +22,8 @@ function parseM3U(text) {
         }
       }
       const head = comma >= 0 ? line.slice(0, comma) : line;
-      const attrs = {};
-      head.replace(/([\w-]+)="([^"]*)"/g, (_, k, v) => {
+      const attrs: Record<string, string> = {};
+      head.replace(/([\w-]+)="([^"]*)"/g, (_, k: string, v: string) => {
         attrs[k.toLowerCase()] = v;
         return '';
       });
@@ -39,7 +43,7 @@ function parseM3U(text) {
   return out;
 }
 
-function qualityOf(label, url) {
+export function qualityOf(label: string, url: string): Quality {
   const s = `${label} ${url}`.toLowerCase();
   if (/flavour=hd|\b(hd|fhd|uhd|4k)\b/.test(s)) return 'hd';
   if (/flavour=ld|bas d[ée]bit|\bld\b/.test(s)) return 'ld';
@@ -47,8 +51,8 @@ function qualityOf(label, url) {
   return 'other';
 }
 
-function groupChannels(entries) {
-  const map = new Map();
+export function groupChannels(entries: readonly M3uEntry[]): Channel[] {
+  const map = new Map<string, Channel>();
   for (const e of entries) {
     let num = e.chno;
     let name = e.title || e.url;
@@ -67,7 +71,7 @@ function groupChannels(entries) {
     if (!map.has(key)) {
       map.set(key, { number: num ? Number.parseInt(num, 10) : null, name, logo: e.logo, group: e.group, variants: [] });
     }
-    map.get(key).variants.push({ label, url: e.url, q: qualityOf(label, e.url) });
+    (map.get(key) as Channel).variants.push({ label, url: e.url, q: qualityOf(label, e.url) });
   }
   return [...map.values()].sort((a, b) => {
     if (a.number != null && b.number != null) return a.number - b.number;
@@ -76,5 +80,3 @@ function groupChannels(entries) {
     return a.name.localeCompare(b.name, 'fr');
   });
 }
-
-module.exports = { parseM3U, qualityOf, groupChannels };

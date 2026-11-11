@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Mire : lecteur multimédia et frontend de jeux.
- * Processus principal : fenêtres, accès au disque, Freebox TV, lancement des programmes.
+ * Processus principal : fenêtres, accès au disque, télévision, lancement des programmes.
  */
 const { app, BrowserWindow, WebContentsView, ipcMain, dialog, protocol, shell, session, Menu, nativeTheme, webContents } = require('electron');
 // API propre à castLabs Electron (Widevine). Absente d'Electron standard : on la teste avant usage.
@@ -22,7 +22,7 @@ const { createDownloads } = require('./downloads/index.ts');
 const { createGames } = require('./games/index.ts');
 const { guessSystem } = require('./scraper.js');
 const { THEME_BG, createConfigService } = require('./config/index.ts');
-const { parseM3U, groupChannels } = require('./lib/m3u.js');
+const { createTv } = require('./tv/index.ts');
 const library = require('./library/index.ts');
 const { resolveLocation, locationError } = library;
 const { createLauncher, createPlayers } = require('./platform/index.ts');
@@ -33,7 +33,7 @@ const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol
 const { createWebManager, createDrm, createWebExtensions, createGoogleSignin, setupWebSession: setupWebSessionOf, chromeLikeUserAgent, nativeUserAgent, WEB_PARTITION } = require('./web/index.ts');
 const { providerMatches } = require('./lib/text.js');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
-const { fold, isHttpUrl } = require('@mire/shared');
+const { fold } = require('@mire/shared');
 const { EXT, MIME } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
@@ -124,54 +124,11 @@ const itemFromPath = (p) => library.itemFromPath(p, { allowFile: access.allowFil
 const findSubtitles = (videoPath) => library.findSubtitles(videoPath, { remote: remoteSubtitles, isAllowed: access.isAllowed });
 
 /* ------------------------------------------------------------------ */
-/* Freebox TV (playlist M3U)                                           */
+/* Télévision (src/main/tv)                                            */
 /* ------------------------------------------------------------------ */
 
-// Repère le service de télé en place en joignant brièvement chaque box sur le réseau local.
-async function detectTvService() {
-  for (const svc of configService.get().tv.services) {
-    if (!svc.detect) continue;
-    try {
-      await http.request(svc.detect, { timeout: 1500 });
-      return svc.id; // la box a répondu : ce service est disponible
-    } catch { /* box absente, on essaie la suivante */ }
-  }
-  return '';
-}
-
-async function detectTvOnce() {
-  if (configService.get().tv.detected) return;
-  const found = await detectTvService();
-  configService.update((c) => ({ ...c, tv: { ...c.tv, active: found || c.tv.active, detected: true } }));
-  if (found) toUi('tv-detected', { id: found, name: configService.get().tv.services.find((t) => t.id === found)?.name || '' });
-}
-
-function activeTvService() {
-  const { services, active } = configService.get().tv;
-  return services.find((t) => t.id === active) || null;
-}
-
-async function fetchChannels() {
-  const svc = activeTvService();
-  if (!svc) return { ok: false, error: 'Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision.' };
-  if (svc.kind === 'web') return { ok: true, web: { id: svc.id, url: svc.url, name: svc.name } };
-  const src = (svc.url || '').trim();
-  if (!src) return { ok: false, error: `Aucune adresse de playlist pour ${svc.name}.` };
-  let text;
-  if (isHttpUrl(src)) {
-    try {
-      text = await http.getText(src, { timeout: 8000 });
-    } catch (err) {
-      if (err.kind === 'status') return { ok: false, error: `${svc.name} a répondu avec le code ${err.status}. Vérifiez l’adresse de la playlist dans les réglages de la page.` };
-      return { ok: false, error: `${svc.name} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).` };
-    }
-  } else {
-    try { text = await fsp.readFile(src, 'utf8'); } catch { return { ok: false, error: `Fichier de playlist introuvable : ${src}` }; }
-  }
-  const channels = groupChannels(parseM3U(text));
-  if (!channels.length) return { ok: false, error: 'La playlist ne contient aucune chaîne.' };
-  return { ok: true, channels };
-}
+// toUi est défini plus bas, avec les vues web ; il n'est appelé qu'après le démarrage.
+const tv = createTv({ config: configService, http, toUi: (channel, payload) => toUi(channel, payload) });
 
 /* ------------------------------------------------------------------ */
 /* Lancement de programmes (jeux, émulateurs, lecteur externe)         */
@@ -439,7 +396,7 @@ const ipcContext = {
   configPath, themeBackground,
   scanLibrary, findSubtitles, openMediaDialog, itemFromPath, locationError, pickFolder, pickFile,
   metaDir, saveMeta, setMeta, pickMetaImage,
-  playExternal, detectTvService, fetchChannels,
+  playExternal, detectTvService: tv.detect, fetchChannels: tv.channels,
   drmStatus: drm.status, searchStreaming,
   games,
 };
@@ -520,7 +477,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     downloads.start().catch((err) => console.error('Téléchargements :', err.message));
     // Premier lancement : on repère le service de télévision en place sur le réseau local.
-    detectTvOnce().catch((err) => console.error('Détection TV :', err.message));
+    tv.detectOnce().catch((err) => console.error('Détection TV :', err.message));
     if (IS_MAC) {
       Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]));
     } else {
