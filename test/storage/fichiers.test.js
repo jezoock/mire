@@ -13,7 +13,7 @@ globalThis.fetch = () => {
 
 const { createJsonStore } = require('../../src/main/storage/json-store.ts');
 const { createScraper } = require('../../src/main/scraper.js');
-const { createDownloads } = require('../../src/main/downloads.js');
+const { createDownloads } = require('../../src/main/downloads/index.ts');
 const { createStore } = require('../../src/main/store/index.ts');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-fichiers-'));
