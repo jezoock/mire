@@ -451,8 +451,8 @@ function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgre
   }
 
   // Copie vos propres fichiers de jeux dans le dossier d'une console.
-  async function importFiles(emuIndex, files) {
-    const emu = getConfig().emulators[emuIndex];
+  async function importFiles(consoleId, files) {
+    const emu = getConfig().emulators.find((e) => e.id === consoleId);
     if (!emu || !emu.romsDir) return { ok: false, error: 'Console inconnue ou sans dossier de jeux.' };
     await fsp.mkdir(emu.romsDir, { recursive: true });
     let n = 0;

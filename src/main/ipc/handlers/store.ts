@@ -1,5 +1,6 @@
 /** Boutique : catalogue, installation des consoles, import de jeux, BIOS, dossier des jeux. */
 import fsp from 'node:fs/promises';
+import { findConsole } from '../../config/index.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
 
@@ -9,8 +10,8 @@ export function storeHandlers(ctx: MainContext) {
     storeInstall: (id, systems) => ctx.store.install(id, systems),
     storeUninstall: (id) => ctx.store.uninstall(id),
     storeGame: (id) => ctx.store.getGame(id),
-    storeImport: async (emuIndex) => {
-      const emu = ctx.config.get().emulators[emuIndex];
+    storeImport: async (consoleId) => {
+      const emu = findConsole(ctx.config.get(), consoleId);
       if (!emu) return { ok: false, error: 'Console inconnue.' };
       const exts = (emu.extensions || []).map((e: unknown) => String(e).replace(/^\./, ''));
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
@@ -19,7 +20,7 @@ export function storeHandlers(ctx: MainContext) {
         filters: [...(exts.length ? [{ name: emu.name, extensions: exts }] : []), { name: 'Tous les fichiers', extensions: ['*'] }],
       });
       if (r.canceled) return { ok: true, count: 0 };
-      return ctx.store.importFiles(emuIndex, r.filePaths);
+      return ctx.store.importFiles(consoleId, r.filePaths);
     },
     storePickRoot: async () => {
       const p = await ctx.pickFolder();

@@ -20,6 +20,7 @@ const { safeFileName, newId, isHttpUrl } = require('@mire/shared');
 const http = require('./net/http.ts');
 const { createJsonStore } = require('./storage/json-store.ts');
 const { dataPaths } = require('./storage/paths.ts');
+const { consoleIdAt } = require('./config/migrations/v6.ts');
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const PENDING = 'pending'; // bookmark de téléchargement : en attente, ne démarre qu'à la demande
@@ -46,14 +47,21 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
   const baseDir = () => settings().dir || defaultDir;
 
   function load() {
+    let migrated = false;
     try {
       for (const it of listStore.load().items || []) {
         // Après un redémarrage : les HTTP inachevés sont à relancer ; les torrents reprennent tout seuls.
         if (it.state !== PENDING && it.kind === 'http' && (ACTIVE.has(it.state) || it.state === 'paused')) Object.assign(it, { state: 'interrupted', speed: 0 });
         if (it.kind === 'torrent' && it.state === 'extracting') it.state = 'done';
+        // Fiche d'avant la configuration v6 : console désignée par sa position, que la migration a conservée.
+        if (typeof it.console === 'number') {
+          it.console = consoleIdAt(getConfig().emulators || [], it.console);
+          migrated = true;
+        }
         items.set(it.id, it);
       }
     } catch { /* liste illisible : on repart d'une liste vide */ }
+    if (migrated) save();
   }
   // La liste est relevée au moment de l'écriture (après le délai de regroupement), comme avant.
   const snapshot = () => ({ items: [...items.values()].map(({ installers, ...rest }) => ({ ...rest, installers: installers || [] })) });
@@ -68,7 +76,7 @@ function createDownloads({ dataDir, getConfig, getSession, extract, shell, defau
 
   // Dossier de destination : celui de la console, sinon le dossier des téléchargements.
   function destFor(ctx) {
-    const emu = ctx?.console != null ? getConfig().emulators[ctx.console] : null;
+    const emu = ctx?.console != null ? getConfig().emulators.find((e) => e.id === ctx.console) : null;
     if (emu?.romsDir) return { dir: emu.romsDir, console: ctx.console, consoleName: emu.name, extensions: emu.extensions || [] };
     return { dir: baseDir(), console: null, consoleName: '', extensions: [] };
   }

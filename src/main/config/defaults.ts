@@ -2,7 +2,7 @@
 import type { Config, HomeBar, Theme } from '@mire/shared';
 import { DEFAULT_TV } from './catalogs/tv.ts';
 
-export const CONFIG_VERSION = 5;
+export const CONFIG_VERSION = 6;
 
 // Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
 export const HOME_BARS: readonly HomeBar[] = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];

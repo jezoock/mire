@@ -78,16 +78,16 @@ describe('deleteGame', () => {
   });
 
   it('refuse un jeu trouvé dans un dossier, un jeu en ligne ou sans console', async () => {
-    const { ctx } = makeContext({ emulators: [{ name: 'NES', path: 'nes.exe', romsDir: tmp }] });
+    const { ctx } = makeContext({ emulators: [{ id: 'nes', name: 'NES', path: 'nes.exe', romsDir: tmp }] });
     assert.match((await deleteGame(ctx, { kind: 'game' })).error!, /trouvé automatiquement/);
-    assert.match((await deleteGame(ctx, { kind: 'rom', emuIndex: 0, path: 'https://exemple.org/jeu.nes' })).error!, /en ligne/);
-    assert.match((await deleteGame(ctx, { kind: 'rom', emuIndex: 3, path: write('jeu.nes') })).error!, /aucune console/);
+    assert.match((await deleteGame(ctx, { kind: 'rom', consoleId: 'nes', path: 'https://exemple.org/jeu.nes' })).error!, /en ligne/);
+    assert.match((await deleteGame(ctx, { kind: 'rom', consoleId: 'inconnue', path: write('jeu.nes') })).error!, /aucune console/);
   });
 
   it('ne supprime pas un fichier hors des dossiers de la console', async () => {
     const outside = write('ailleurs/jeu.nes');
-    const { ctx } = makeContext({ emulators: [{ name: 'NES', path: 'nes.exe', romsDir: path.join(tmp, 'roms') }] });
-    const r = await deleteGame(ctx, { kind: 'rom', emuIndex: 0, path: outside });
+    const { ctx } = makeContext({ emulators: [{ id: 'nes', name: 'NES', path: 'nes.exe', romsDir: path.join(tmp, 'roms') }] });
+    const r = await deleteGame(ctx, { kind: 'rom', consoleId: 'nes', path: outside });
     assert.match(r.error!, /ne se trouve pas dans les dossiers de NES/);
     assert.ok(fs.existsSync(outside));
   });
@@ -96,9 +96,9 @@ describe('deleteGame', () => {
     const cue = write('roms/jeu.cue', 'FILE "jeu (piste 1).bin" BINARY\n  TRACK 01 MODE1/2352\n');
     const bin = write('roms/jeu (piste 1).bin');
     write('roms/dossier/x');
-    const { ctx } = makeContext({ emulators: [{ name: 'PS1', path: 'ps1.exe', romsDir: path.join(tmp, 'roms') }] });
-    assert.match((await deleteGame(ctx, { kind: 'rom', emuIndex: 0, path: path.join(tmp, 'roms', 'dossier') })).error!, /pas un dossier/);
-    assert.deepEqual(await deleteGame(ctx, { kind: 'rom', emuIndex: 0, path: cue }), { ok: true });
+    const { ctx } = makeContext({ emulators: [{ id: 'ps1', name: 'PS1', path: 'ps1.exe', romsDir: path.join(tmp, 'roms') }] });
+    assert.match((await deleteGame(ctx, { kind: 'rom', consoleId: 'ps1', path: path.join(tmp, 'roms', 'dossier') })).error!, /pas un dossier/);
+    assert.deepEqual(await deleteGame(ctx, { kind: 'rom', consoleId: 'ps1', path: cue }), { ok: true });
     assert.equal(fs.existsSync(cue), false);
     assert.equal(fs.existsSync(bin), false);
   });
@@ -137,22 +137,22 @@ describe('cleanupGames', () => {
 
 describe('downloadGame', () => {
   it('demande une console existante avec un dossier principal', async () => {
-    const { ctx } = makeContext({ emulators: [{ name: 'NES', path: 'nes.exe' }] });
-    assert.match((await downloadGame(ctx, 2, 'https://exemple.org/jeu.nes')).error!, /n’existe plus/);
-    assert.match((await downloadGame(ctx, 0, 'https://exemple.org/jeu.nes')).error!, /dossier principal de NES/);
+    const { ctx } = makeContext({ emulators: [{ id: 'nes', name: 'NES', path: 'nes.exe' }] });
+    assert.match((await downloadGame(ctx, 'inconnue', 'https://exemple.org/jeu.nes')).error!, /n’existe plus/);
+    assert.match((await downloadGame(ctx, 'nes', 'https://exemple.org/jeu.nes')).error!, /dossier principal de NES/);
   });
 
   it('confie un fichier simple au gestionnaire de téléchargements', async () => {
-    const { ctx, log } = makeContext({ emulators: [{ name: 'NES', path: 'nes.exe', romsDir: tmp }] });
-    assert.deepEqual(await downloadGame(ctx, 0, 'https://exemple.org/jeu.nes'), { ok: true, id: 'd1', count: 1 });
-    assert.deepEqual(log, [['addUrl', 'https://exemple.org/jeu.nes', { console: 0 }]]);
+    const { ctx, log } = makeContext({ emulators: [{ id: 'nes', name: 'NES', path: 'nes.exe', romsDir: tmp }] });
+    assert.deepEqual(await downloadGame(ctx, 'nes', 'https://exemple.org/jeu.nes'), { ok: true, id: 'd1', count: 1 });
+    assert.deepEqual(log, [['addUrl', 'https://exemple.org/jeu.nes', { console: 'nes' }]]);
   });
 
   it('télécharge l’index d’un jeu sur disque et les pistes manquantes dans un dossier au nom du jeu', async () => {
-    const { ctx, log } = makeContext({ emulators: [{ name: 'PS1', path: 'ps1.exe', romsDir: tmp }] });
+    const { ctx, log } = makeContext({ emulators: [{ id: 'ps1', name: 'PS1', path: 'ps1.exe', romsDir: tmp }] });
     write('jeu/jeu.bin'); // déjà là : pas retéléchargé
     (ctx.downloads as Any).fetchText = async () => 'FILE "jeu.bin" BINARY\nFILE "jeu 2.bin" BINARY\n';
-    const r = await downloadGame(ctx, 0, 'https://exemple.org/jeux/jeu.cue');
+    const r = await downloadGame(ctx, 'ps1', 'https://exemple.org/jeux/jeu.cue');
     assert.deepEqual(r, { ok: true, count: 2, total: 3 });
     assert.deepEqual(
       log.map((l) => [l[1], l[2].saveAs, l[2].group]),
@@ -221,19 +221,19 @@ describe('marque-pages de jeux', () => {
   });
 
   it('déduisent le titre du lien et rattachent la console ouverte', () => {
-    const { ctx } = makeContext({ emulators: [{ name: 'Super Nintendo', path: 'snes.exe' }] });
-    const r: Any = addGameBookmark(ctx, { source: 'https://exemple.org/jeux/Mon%20jeu.zip', console: 0 });
+    const { ctx } = makeContext({ emulators: [{ id: 'snes', name: 'Super Nintendo', path: 'snes.exe' }] });
+    const r: Any = addGameBookmark(ctx, { source: 'https://exemple.org/jeux/Mon%20jeu.zip', console: 'snes' });
     assert.equal(r.bookmark.title, 'Mon jeu');
     assert.equal(r.bookmark.kind, 'http');
-    assert.equal(r.bookmark.console, 0);
+    assert.equal(r.bookmark.console, 'snes');
     assert.equal(r.needSystem, false);
   });
 
   it('changent de console, se téléchargent et se retirent avec leur téléchargement', () => {
     const { ctx, log } = makeContext();
     const { bookmark }: Any = addGameBookmark(ctx, { source: 'https://exemple.org/jeu.zip', title: 'Jeu' });
-    setGameBookmarkConsole(ctx, bookmark.id, '1');
-    assert.equal(ctx.config.get().gameBookmarks[0].console, 1);
+    setGameBookmarkConsole(ctx, bookmark.id, 'snes');
+    assert.equal(ctx.config.get().gameBookmarks[0].console, 'snes');
     setGameBookmarkConsole(ctx, bookmark.id, 'pc');
     assert.equal(ctx.config.get().gameBookmarks[0].console, 'pc');
     assert.match(downloadGameBookmark(ctx, 'inconnu').error!, /introuvable/);

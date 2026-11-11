@@ -9,8 +9,9 @@ import { v2 } from './v2.ts';
 import { v3 } from './v3.ts';
 import { v4 } from './v4.ts';
 import { v5 } from './v5.ts';
+import { v6 } from './v6.ts';
 
-export const MIGRATIONS: readonly Migration[] = [v2, v3, v4, v5];
+export const MIGRATIONS: readonly Migration[] = [v2, v3, v4, v5, v6];
 
 export interface MigrationResult {
   /** Configuration migrée (le même objet, modifié sur place), ou la valeur reçue si ce n'est pas un objet. */

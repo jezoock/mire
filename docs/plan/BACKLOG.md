@@ -39,8 +39,8 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | à faire | |
 | P1-04 | Client HTTP unique | M | P1-01 | | faite | [#17](https://github.com/jezoock/mire/pull/17) |
 | P1-05 | Stockage JSON atomique | M | P1-01 | | faite | [#19](https://github.com/jezoock/mire/pull/19) |
-| P1-06 | Service de configuration | L | P1-02, P1-05 | | en revue | [#22](https://github.com/jezoock/mire/pull/22) |
-| P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | à faire | |
+| P1-06 | Service de configuration | L | P1-02, P1-05 | | faite | [#22](https://github.com/jezoock/mire/pull/22) |
+| P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | en revue | |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | à faire | |
@@ -107,7 +107,7 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 
 | ID | Tâche | Taille | Dépend de | dot-stash | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| DS-00 | Poser le tag `v0.1.0` sur le commit de fusion de la 0.1.0 (action de ta part) | XS | — | B-117 | à faire | |
+| DS-00 | Poser le tag `v0.1.0` sur le commit de fusion de la 0.1.0 (action de ta part) | XS | — | B-117 | faite (tag `v0.1.0` posé sur dot-stash) | |
 | DS-01 | Release : archive construite attachée à la release GitHub, installation par adresse | S | DS-00 | B-119, B-120 | à faire | |
 | DS-02 | Moteur SCSS dans le paquet (`scss/` dans `files` et `exports`) | XS | — | à créer | à faire | |
 | DS-03 | `ds-range` : curseur habillé, remplissage jusqu'à la valeur | M | — | à créer | à faire | |
