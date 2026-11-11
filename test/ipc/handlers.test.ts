@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createConfigService, DEFAULT_CONFIG } from '../../src/main/config/index.ts';
 import { exportConfig, importConfig } from '../../src/main/ipc/handlers/config.ts';
 import { cleanupGames, deleteGame, downloadGame } from '../../src/main/ipc/handlers/games.ts';
+import { createAccessPolicy } from '../../src/main/security/access-policy.ts';
 import {
   addBookmark,
   addGameBookmark,
@@ -42,6 +43,7 @@ function makeContext(config: Any = {}, extra: Any = {}) {
   service.onChange(() => log.push(['saveConfig']));
   const ctx: Any = {
     config: service,
+    access: createAccessPolicy({ roots: () => [] }),
     consoleLocations(emu: Any) {
       const main = emu.romsDir ? [{ location: emu.romsDir, remote: false }] : [];
       return [...main, ...(emu.sources || []).map((loc: string) => ({ location: loc, remote: /^https?:/.test(loc) }))];

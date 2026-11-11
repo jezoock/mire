@@ -9,7 +9,6 @@ import { findConsole } from '../../config/index.ts';
 import * as http from '../../net/http.ts';
 import disc from '../../discfiles.js';
 import { resolveLocation } from '../../lib/location.js';
-import { isInside } from '../../lib/paths.js';
 import { defaultRomSites } from '../../romsites.js';
 import { guessSystem } from '../../scraper.js';
 import type { MainContext } from '../context.ts';
@@ -43,7 +42,7 @@ export async function deleteGame(ctx: MainContext, ref: GameRef) {
     .map((p: { location: string }) => resolveLocation(p.location))
     .filter((l: { type: string }) => l.type === 'path')
     .map((l: { path: string }) => l.path);
-  if (!isInside(ref.path, roots))
+  if (!ctx.access.isInside(ref.path, roots))
     return { ok: false as const, error: `Ce fichier ne se trouve pas dans les dossiers de ${emu.name} : il n’a pas été supprimé.` };
   try {
     const st = await fsp.stat(ref.path);

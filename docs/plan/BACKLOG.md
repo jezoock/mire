@@ -36,14 +36,14 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | --- | --- | --- | --- | --- | --- | --- |
 | P1-01 | Squelette : arborescence, TypeScript, build | L | G1, D-01, D-02 | | faite | [#16](https://github.com/jezoock/mire/pull/16) |
 | P1-02 | `@mire/shared` : texte, URL, identifiants | M | P1-01 | | faite | [#18](https://github.com/jezoock/mire/pull/18) |
-| P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | en revue | [#24](https://github.com/jezoock/mire/pull/24) |
+| P1-03 | `@mire/shared` : formats et référentiel des systèmes | M | P1-02 | | faite | [#24](https://github.com/jezoock/mire/pull/24) |
 | P1-04 | Client HTTP unique | M | P1-01 | | faite | [#17](https://github.com/jezoock/mire/pull/17) |
 | P1-05 | Stockage JSON atomique | M | P1-01 | | faite | [#19](https://github.com/jezoock/mire/pull/19) |
 | P1-06 | Service de configuration | L | P1-02, P1-05 | | faite | [#22](https://github.com/jezoock/mire/pull/22) |
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | faite | [#23](https://github.com/jezoock/mire/pull/23) |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
 | P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | à faire | |
-| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | à faire | |
+| P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | en revue | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | à faire | |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | à faire | |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | à faire | |
@@ -166,3 +166,4 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | `adblock.start()` télécharge les listes de filtres au démarrage même quand le bloqueur est désactivé (`adblock.enabled: false`) ; le test de fumée dépose un moteur vide en cache pour l'éviter | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | ✅ Retenue au point G1 : intégrée à P1-13 |
 | Le test de fumée ne tourne que sous Linux (Xvfb) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | L'ajouter à des runners CI Windows et macOS quand la phase 1 sera avancée ; Widevine reste à vérifier à la main |
 | Les captures de référence varient de quelques pixels d'une exécution à l'autre (lissage des bords, écart de 16/255 au plus) | P0-09 ([#10](https://github.com/jezoock/mire/pull/10)) | Comparaison automatique avec seuil de tolérance, dans P2-21 |
+| Un lien symbolique placé dans un dossier autorisé est servi par `media://` (comparaison du chemin tel quel) ; risque faible : il faut déjà pouvoir écrire dans la bibliothèque | P1-10 ([#25](https://github.com/jezoock/mire/pull/25)) | Durcissement par `fs.realpath` (racines et fichier) dans une tâche dédiée, à tester sous Windows (`subst`, lecteurs réseau, lien vers un autre disque) ; variante : refuser seulement si le chemin réel sort des racines réelles et que `lstat` montre un lien |

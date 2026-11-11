@@ -11,6 +11,15 @@ let root = '';
 let n = 0;
 const fresh = () => path.join(root, `essai-${++n}`, 'donnees.json');
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Attend qu'une condition soit vraie (écriture différée terminée…) au lieu d'un délai fixe, trop court sur une
+// machine de CI chargée.
+async function waitFor(cond: () => boolean, ms = 2000): Promise<void> {
+  const end = Date.now() + ms;
+  while (!cond()) {
+    if (Date.now() > end) throw new Error(`condition non remplie après ${ms} ms`);
+    await wait(5);
+  }
+}
 const leftovers = (file: string) => fs.readdirSync(path.dirname(file)).filter((f) => f !== path.basename(file));
 
 before(() => {
@@ -161,7 +170,8 @@ describe('écritures différées (asynchrones)', () => {
     store.get().v = 3;
     store.save();
     assert.equal(fs.existsSync(file), false, 'rien n’est écrit avant le délai');
-    await wait(80);
+    await waitFor(() => fs.existsSync(file));
+    await store.flush();
     assert.equal(spy.mock.callCount(), 1);
     assert.equal(fs.readFileSync(file, 'utf8'), '{"v":3}');
   });
@@ -210,7 +220,8 @@ describe('écritures différées (asynchrones)', () => {
     const store = createJsonStore<object>(file, { defaults: {}, debounceMs: 20, space: 1 });
     store.set({ toJSON: () => ({ items: list }) });
     list.push(1, 2);
-    await wait(60);
+    await waitFor(() => fs.existsSync(file));
+    await store.flush();
     assert.equal(fs.readFileSync(file, 'utf8'), JSON.stringify({ items: [1, 2] }, null, 1));
   });
 
@@ -255,7 +266,7 @@ describe('écritures différées (asynchrones)', () => {
       await real(from, to);
     });
     store.set({ v: 1 });
-    await wait(30);
+    await waitFor(() => onError.mock.callCount() > 0);
     assert.equal(onError.mock.callCount(), 1);
     assert.equal(onError.mock.calls[0].arguments[1], file);
     assert.deepEqual(leftovers(file), [], 'le fichier temporaire est retiré');

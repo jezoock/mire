@@ -5,6 +5,7 @@
  * Les autres types restent larges : ils se préciseront avec les modules qui posséderont ces données.
  */
 import type { ConfigService } from '../config/service.ts';
+import type { AccessPolicy } from '../security/access-policy.ts';
 
 // Fonction du processus principal encore définie dans index.js.
 type Fn = (...args: any[]) => any;
@@ -23,6 +24,8 @@ export interface MainContext {
   electron: ElectronApis;
 
   readonly config: ConfigService;
+  /** Politique d'accès aux fichiers locaux. */
+  readonly access: AccessPolicy;
 
   // État de index.js (lu et écrit au moment de l'appel).
   readonly mainWindow: any;
