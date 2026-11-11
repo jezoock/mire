@@ -84,15 +84,20 @@ async function until(cond: () => boolean, ms = 2000) {
 
 interface SetupOptions {
   emulators?: Array<Record<string, unknown>>;
+  /** La session ne démarre rien : le téléchargement est demandé mais n'arrive jamais. */
+  silent?: boolean;
   extract?: (archive: string, dest: string) => Promise<void>;
 }
 
-function setup({ emulators = [], extract = async () => {} }: SetupOptions = {}) {
+function setup({ emulators = [], extract = async () => {}, silent = false }: SetupOptions = {}) {
   const dataDir = freshDir();
   const transfers: FakeItem[] = [];
+  const requested: string[] = [];
   const finished: DownloadRecord[] = [];
   const session = {
     downloadURL(url: string) {
+      requested.push(url);
+      if (silent) return;
       const item = new FakeItem(url);
       transfers.push(item);
       downloads.handleWebDownload(item);
@@ -110,7 +115,7 @@ function setup({ emulators = [], extract = async () => {} }: SetupOptions = {}) 
     onFinished: (it) => finished.push(it),
   });
   const transfer = (url: string) => transfers.find((t) => t.url === url)!;
-  return { dataDir, downloads, transfers, transfer, finished };
+  return { dataDir, downloads, transfers, transfer, finished, requested };
 }
 
 test('redémarrage : HTTP actif ou en pause → interrompu, torrent en extraction → terminé', async () => {
@@ -283,7 +288,7 @@ test('index de disque : un fichier cité sur un autre site n’est pas demandé'
   );
 });
 
-test('cache : télécharge, prévient à la fin, sans post-traitement ; visible dans la liste', async () => {
+test('cache : télécharge, prévient à la fin, sans post-traitement ni annonce ; visible dans la liste', async () => {
   const cacheDir = path.join(freshDir(), 'cache');
   const { downloads, transfer, finished } = setup({ emulators: [{ id: 'snes', name: 'SNES', romsDir: path.join(cacheDir, 'x'), extensions: [] }] });
   await downloads.start();
@@ -301,11 +306,8 @@ test('cache : télécharge, prévient à la fin, sans post-traitement ; visible 
   const r = await pending;
   assert.deepEqual(r, { ok: true, file: target, id: it.id });
   assert.equal(fs.readFileSync(target, 'utf8'), 'rom', 'archive gardée telle quelle');
-  assert.deepEqual(
-    finished.map((f) => f.id),
-    [it.id],
-  );
-  assert.deepEqual(it.installers, []);
+  assert.deepEqual(finished, [], 'pas d’annonce « téléchargé » pour une copie dans le cache');
+  assert.deepEqual([it.state, it.installers], ['done', []]);
 
   // Déjà dans le cache : rien n'est retéléchargé.
   assert.deepEqual(await downloads.fetchToCache('https://roms.test/Jeu.zip', target), { ok: true, file: target, cached: true });
@@ -333,6 +335,63 @@ test('cache : annulation et échec préviennent aussi ; adresse invalide refusé
     ok: false,
     error: 'Adresse invalide : elle doit commencer par http:// ou https://.',
   });
+  await downloads.stop();
+  await downloads.flush();
+});
+
+test('cache : un téléchargement qui ne démarre pas est abandonné avec une erreur, puis annulé s’il démarre tard', async () => {
+  const dir = freshDir();
+  const { downloads, requested } = setup({ silent: true });
+  await downloads.start();
+  const target = path.join(dir, 'lent.bin');
+  const r = await downloads.fetchToCache('https://lent.test/lent.bin', target, { startTimeout: 30 });
+  assert.deepEqual(requested, ['https://lent.test/lent.bin']);
+  assert.equal(r.ok, false);
+  assert.match((r as { error: string }).error, /n’a pas démarré/);
+  // Il démarre finalement : personne n'attend plus le fichier, il est annulé.
+  const late = new FakeItem('https://lent.test/lent.bin');
+  downloads.handleWebDownload(late);
+  await until(() => downloads.list().some((d) => d.state === 'cancelled'));
+  assert.equal(downloads.list().length, 1);
+  await downloads.stop();
+  await downloads.flush();
+});
+
+test('cache : deux demandes de la même copie en même temps se raccrochent au même téléchargement', async () => {
+  const dir = freshDir();
+  const { downloads, transfers } = setup();
+  await downloads.start();
+  const target = path.join(dir, 'Jeu.sfc');
+  const a: number[] = [];
+  const b: number[] = [];
+  const first = downloads.fetchToCache('https://roms.test/Jeu.sfc', target, { onProgress: (r) => a.push(r) });
+  const second = downloads.fetchToCache('https://roms.test/Jeu.sfc', target, { onProgress: (r) => b.push(r) });
+  assert.equal(transfers.length, 1, 'un seul téléchargement');
+  const t = transfers[0];
+  t.received = 10;
+  t.emit('updated', {}, 'progressing');
+  t.complete('rom');
+  const [r1, r2] = await Promise.all([first, second]);
+  assert.deepEqual(r1, r2);
+  assert.equal(r1.ok, true);
+  assert.deepEqual(a, b, 'les deux demandes suivent l’avancement');
+  assert.equal(a[0], 10);
+  await downloads.stop();
+  await downloads.flush();
+});
+
+test('deux demandes pour la même adresse vers deux fichiers : chacune garde son contexte', async () => {
+  const dir = freshDir();
+  const { downloads, transfers } = setup();
+  await downloads.start();
+  const p1 = downloads.fetchToCache('https://roms.test/x.bin', path.join(dir, 'a', 'x.bin'));
+  const p2 = downloads.fetchToCache('https://roms.test/x.bin', path.join(dir, 'b', 'x.bin'));
+  assert.deepEqual(
+    transfers.map((t) => t.savePath),
+    [path.join(dir, 'a', 'x.bin'), path.join(dir, 'b', 'x.bin')],
+  );
+  for (const t of transfers) t.complete('x');
+  assert.deepEqual([(await p1).ok, (await p2).ok], [true, true]);
   await downloads.stop();
   await downloads.flush();
 });

@@ -16,7 +16,17 @@ import { dataPaths } from '../storage/paths.ts';
 import { finishDownload } from './finish.ts';
 import { createHttpDownloader, type DownloadItemLike, type SessionLike } from './http.ts';
 import { createTorrentDownloader, torrentLabel, type ShellLike } from './torrent.ts';
-import type { AddResult, CacheResult, Destination, DownloadContext, Downloader, DownloaderHost, DownloadRecord, DownloadSettings } from './types.ts';
+import type {
+  AddResult,
+  CacheOptions,
+  CacheResult,
+  Destination,
+  DownloadContext,
+  Downloader,
+  DownloaderHost,
+  DownloadRecord,
+  DownloadSettings,
+} from './types.ts';
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const PENDING = 'pending'; // marque-page de téléchargement : en attente, ne démarre qu'à la demande
@@ -47,6 +57,8 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
   const items = new Map<string, DownloadRecord>(); // id → fiche affichée (enregistrée sur le disque)
   // Commande « télécharger dans le cache puis prévenir » : id de la fiche → qui attend sa fin.
   const waiters = new Map<string, { resolve: (r: CacheResult) => void; onProgress?: (received: number, total: number) => void }>();
+  // Copies dans le cache en cours, par adresse et fichier : une seconde demande se raccroche à la première.
+  const inflight = new Map<string, { promise: Promise<CacheResult>; listeners: Set<(received: number, total: number) => void> }>();
 
   const settings = (): DownloadSettings => ({ dir: '', torrentClient: 'mire', seed: false, ...(getConfig().downloads || {}) });
   const baseDir = () => settings().dir || defaultDir;
@@ -236,14 +248,40 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
   /**
    * Télécharge `url` vers `file` (copie d'un jeu en ligne dans le cache) et se résout quand le fichier est là,
    * ou que le téléchargement a échoué ou été annulé. Le téléchargement est visible et annulable dans
-   * Téléchargements. Un fichier déjà présent n'est pas retéléchargé.
+   * Téléchargements. Un fichier déjà présent n'est pas retéléchargé ; une seconde demande pour la même copie se
+   * raccroche à la première. Un téléchargement qui ne démarre pas dans le délai (`startTimeout`, 60 s par défaut)
+   * est abandonné avec une erreur ; s'il démarre plus tard, il est annulé.
    */
-  function fetchToCache(url: string, file: string, opts: { onProgress?: (received: number, total: number) => void } = {}): Promise<CacheResult> {
+  function fetchToCache(url: string, file: string, opts: CacheOptions = {}): Promise<CacheResult> {
     if (!isHttpUrl(url)) return Promise.resolve({ ok: false, error: 'Adresse invalide : elle doit commencer par http:// ou https://.' });
     if (fs.existsSync(file)) return Promise.resolve({ ok: true, file, cached: true });
-    return new Promise((resolve) => {
-      http.addUrl(url, { saveAs: file, cache: true, onStart: (it) => waiters.set(it.id, { resolve, onProgress: opts.onProgress }) });
-    });
+    const key = `${url}\n${file}`;
+    const running = inflight.get(key);
+    if (running) {
+      if (opts.onProgress) running.listeners.add(opts.onProgress);
+      return running.promise;
+    }
+    const listeners = new Set<(received: number, total: number) => void>(opts.onProgress ? [opts.onProgress] : []);
+    const promise = new Promise<CacheResult>((resolve) => {
+      let late = false;
+      const timer = setTimeout(() => {
+        late = true;
+        resolve({ ok: false, error: 'Le téléchargement n’a pas démarré : le site ne répond pas. Réessayez plus tard.' });
+      }, opts.startTimeout ?? 60_000);
+      const onProgress = (received: number, total: number) => listeners.forEach((l) => l(received, total));
+      http.addUrl(url, {
+        saveAs: file,
+        cache: true,
+        onStart: (it) => {
+          clearTimeout(timer);
+          // Démarré après l'abandon : personne n'attend plus ce fichier.
+          if (late) void cancel(it.id);
+          else waiters.set(it.id, { resolve, onProgress });
+        },
+      });
+    }).finally(() => inflight.delete(key));
+    inflight.set(key, { promise, listeners });
+    return promise;
   }
 
   // Au démarrage : les torrents qui étaient en cours reprennent.
