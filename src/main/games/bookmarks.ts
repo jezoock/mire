@@ -10,7 +10,7 @@ import type { Emulator, GameBookmark } from '@mire/shared';
 import type { GameBookmarkInput } from '@mire/shared/ipc';
 import { findConsole } from '../config/index.ts';
 import { walkDirs } from '../fs/walk.ts';
-import { guessSystem } from '../scraper.js';
+import { guessSystem } from '../scrape/index.ts';
 import type { GamesDeps } from './types.ts';
 
 /** Clé des infos d'un marque-page de jeu (même espace que `r:` et `g:` du scraper). */

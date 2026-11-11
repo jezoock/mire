@@ -1,0 +1,89 @@
+{
+  "https://api.themoviedb.org/3/genre/movie/list?language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": {
+      "genres": [
+        { "id": 35, "name": "Comédie" },
+        { "id": 10749, "name": "Romance" },
+        { "id": 18, "name": "Drame" }
+      ]
+    }
+  },
+  "https://api.themoviedb.org/3/genre/tv/list?language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": {
+      "genres": [
+        { "id": 18, "name": "Drame" },
+        { "id": 10759, "name": "Action & Adventure" },
+        { "id": 80, "name": "Crime" }
+      ]
+    }
+  },
+  "https://api.themoviedb.org/3/search/movie?query=Le+Fabuleux+Destin&year=2001&language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": {
+      "page": 1,
+      "results": [
+        {
+          "id": 999,
+          "title": "Le Destin",
+          "release_date": "1997-10-01",
+          "overview": "Autre film.",
+          "poster_path": "/destin.jpg",
+          "backdrop_path": null,
+          "genre_ids": [18]
+        },
+        {
+          "id": 194,
+          "title": "Le Fabuleux Destin d'Amélie Poulain",
+          "original_title": "Le Fabuleux Destin d'Amélie Poulain",
+          "release_date": "2001-04-25",
+          "overview": "Amélie, une jeune serveuse dans un bar de Montmartre…",
+          "poster_path": "/amelie.jpg",
+          "backdrop_path": "/amelie-fond.jpg",
+          "genre_ids": [35, 10749, 18]
+        }
+      ],
+      "total_results": 2
+    }
+  },
+  "https://api.themoviedb.org/3/search/tv?query=Le+Bureau+des+l%C3%A9gendes&language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": {
+      "page": 1,
+      "results": [
+        {
+          "id": 62014,
+          "name": "Le Bureau des Légendes",
+          "original_name": "Le Bureau des Légendes",
+          "first_air_date": "2015-04-27",
+          "overview": "Au sein de la DGSE, le département le plus important…",
+          "poster_path": "/bdl.jpg",
+          "backdrop_path": "/bdl-fond.jpg",
+          "genre_ids": [18, 80, 10759]
+        }
+      ]
+    }
+  },
+  "https://api.themoviedb.org/3/search/movie?query=Vacances&language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": { "page": 1, "results": [] }
+  },
+  "https://api.themoviedb.org/3/search/multi?query=Vacances&language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": { "page": 1, "results": [{ "id": 5, "media_type": "person", "name": "Vacances Personne" }] }
+  },
+  "https://api.themoviedb.org/3/movie/194?language=fr-FR&api_key=cle-tmdb-courte-0123456789": {
+    "json": {
+      "id": 194,
+      "title": "Le Fabuleux Destin d'Amélie Poulain",
+      "release_date": "2001-04-25",
+      "overview": "Amélie, une jeune serveuse dans un bar de Montmartre…",
+      "poster_path": "/amelie.jpg",
+      "backdrop_path": "/amelie-fond.jpg",
+      "genres": [
+        { "id": 35, "name": "Comédie" },
+        { "id": 10749, "name": "Romance" },
+        { "id": 18, "name": "Drame" }
+      ]
+    }
+  },
+  "https://image.tmdb.org/t/p/w342/amelie.jpg": { "image": "image/jpeg" },
+  "https://image.tmdb.org/t/p/w1280/amelie-fond.jpg": { "image": "image/jpeg" },
+  "https://image.tmdb.org/t/p/w342/bdl.jpg": { "image": "image/webp" },
+  "https://image.tmdb.org/t/p/w1280/bdl-fond.jpg": { "image": "image/png" }
+}

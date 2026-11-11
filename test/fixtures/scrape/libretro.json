@@ -1,0 +1,23 @@
+{
+  "https://thumbnails.libretro.com/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/Named_Boxarts/.index": {
+    "text": "Super Mario Kart (USA).png\r\nSuper Mario World (Japan).png\r\nSuper Mario World (USA).png\r\nSuper Mario World (Europe).png\r\n\r\n"
+  },
+  "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(Europe).png": {
+    "image": "image/png"
+  },
+  "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Boxarts/Super%20Mario%20World%20(USA).png": {
+    "image": "image/png"
+  },
+  "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Snaps/Super%20Mario%20World%20(Europe).png": {
+    "image": "image/png"
+  },
+  "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Super_Nintendo_Entertainment_System/master/Named_Titles/Super%20Mario%20World%20(USA).png": {
+    "image": "image/png"
+  },
+  "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/genre/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System.dat": {
+    "text": "clrmamepro (\n\tname \"Nintendo - Super Nintendo Entertainment System\"\n)\n\ngame (\n\tcomment \"Super Mario World (Europe)\"\n\tgenre \"Platform\"\n\tcrc 1234ABCD\n)\n\ngame (\n\tcomment \"Super Mario Kart (USA)\"\n\tgenre \"Racing\"\n)\n"
+  },
+  "https://raw.githubusercontent.com/libretro/libretro-database/master/metadat/releaseyear/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System.dat": {
+    "text": "game (\n\tcomment \"Super Mario World (Europe)\"\n\treleaseyear \"1992\"\n)\n\ngame (\n\tcomment \"Super Mario World (USA)\"\n\treleaseyear \"1991\"\n)\n"
+  }
+}

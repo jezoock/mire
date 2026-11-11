@@ -17,9 +17,9 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
 | `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `index.js`, stockage JSON |
 | `meta/img/` | Images choisies à la main | `index.js` |
-| `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | `scraper.js`, stockage JSON |
-| `scrape/img/` | Affiches et images de fond téléchargées | `scraper.js` |
-| `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | `scraper.js` |
+| `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | moteur de récupération (`scrape/`), stockage JSON |
+| `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
+| `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | moteur de récupération (`scrape/`) |
 | `telechargements.json` | Liste des téléchargements (en cours, terminés, en attente) | `downloads.js`, stockage JSON |
 | `torrents/` | Fichiers `.torrent` gardés pour reprendre un torrent | `downloads.js` |
 | `emulators/` | Émulateurs installés par la boutique, un dossier chacun | `store.js` |

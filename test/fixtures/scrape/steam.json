@@ -1,0 +1,43 @@
+{
+  "https://store.steampowered.com/api/storesearch/?term=Hades&l=french&cc=FR": {
+    "json": {
+      "total": 2,
+      "items": [
+        {
+          "type": "app",
+          "name": "Hades II",
+          "id": 1145350,
+          "tiny_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145350/capsule_231x87.jpg"
+        },
+        {
+          "type": "app",
+          "name": "Hades",
+          "id": 1145360,
+          "tiny_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/capsule_231x87.jpg"
+        }
+      ]
+    }
+  },
+  "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg": { "image": "image/jpeg" },
+  "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1145360/library_hero.jpg": { "image": "image/jpeg" },
+  "https://store.steampowered.com/api/appdetails?appids=1145360&l=french&cc=FR": {
+    "json": {
+      "1145360": {
+        "success": true,
+        "data": {
+          "name": "Hades",
+          "short_description": "Défiez le dieu des morts &amp; frayez-vous un chemin hors des Enfers dans ce <b>rogue-like</b> d&#39;exploration de donjons, &quot;par les créateurs de Bastion&quot;.",
+          "genres": [
+            { "id": "1", "description": "Action" },
+            { "id": "25", "description": "Aventure" },
+            { "id": "23", "description": "Indépendant" }
+          ],
+          "release_date": { "coming_soon": false, "date": "17 sept. 2020" },
+          "background_raw": "https://store.akamai.steamstatic.com/images/storepagebackground/app/1145360"
+        }
+      }
+    }
+  },
+  "https://cdn.akamai.steamstatic.com/steam/apps/620/header.jpg": { "image": "image/jpeg" },
+  "https://store.steampowered.com/api/appdetails?appids=620&l=french&cc=FR": { "status": 500, "text": "panne" }
+}

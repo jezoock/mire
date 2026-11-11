@@ -12,7 +12,7 @@ globalThis.fetch = () => {
 };
 
 const { createJsonStore } = require('../../src/main/storage/json-store.ts');
-const { createScraper } = require('../../src/main/scraper.js');
+const { createScraper } = require('../../src/main/scrape/index.ts');
 const { createDownloads } = require('../../src/main/downloads/index.ts');
 const { createStore } = require('../../src/main/store/index.ts');
 
