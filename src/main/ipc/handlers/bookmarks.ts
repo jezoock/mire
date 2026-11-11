@@ -45,7 +45,7 @@ export function bookmarksHandlers(ctx: MainContext) {
     bookmarkAdd: (data) => addBookmark(ctx, data),
     bookmarkRemove: (id) => removeBookmark(ctx, id),
     // Rouvre la page d'un marque-page dans la vue intégrée.
-    bookmarkOpen: (id) => ctx.webOpen(`bm:${id}`, null),
+    bookmarkOpen: (id) => ctx.web.open(`bm:${id}`, null),
     // Marque-pages de jeux : service des jeux (src/main/games/bookmarks.ts).
     gameBookmarkAdd: (data) => ctx.games.addBookmark(data),
     gameBookmarkSetConsole: (id, consoleId) => ctx.games.setBookmarkConsole(id, consoleId),

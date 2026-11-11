@@ -1,9 +1,4 @@
 {
-  "src/main/index.js": {
-    "no-useless-assignment": {
-      "count": 1
-    }
-  },
   "src/main/scraper.js": {
     "no-useless-escape": {
       "count": 1
