@@ -48,8 +48,8 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | faite | [#32](https://github.com/jezoock/mire/pull/32) |
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | faite | [#33](https://github.com/jezoock/mire/pull/33) |
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
-| P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | en revue | [#34](https://github.com/jezoock/mire/pull/34) |
-| P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
+| P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | faite | [#34](https://github.com/jezoock/mire/pull/34) |
+| P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | en revue | |
 | P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
@@ -155,7 +155,7 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 
 | Piste | Origine | Proposition |
 | --- | --- | --- |
-| `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Retenue au point G1 : intégrée à P1-16 |
+| `parseVideo` lit une année future dans le titre (`Blade Runner 2049` seul → « Blade Runner », 2049) | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Retenue au point G1, traitée dans P1-16 |
 | `RETROARCH_SYSTEMS` n'est pas exporté : le test des catalogues le retrouve via l'émulateur RetroArch | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Traitée par P1-18 : `RETROARCH_SYSTEMS` exporté par `src/main/store/catalog/` |
 | `GAME_FILE_RE` ne reconnaît pas `jeu.zip?dl=1` | P0-02 ([#3](https://github.com/jezoock/mire/pull/3)) | ✅ Traitée dans P1-12 : `windowOpenAction` teste le chemin de l'adresse, test ajouté pour `jeu.zip?dl=1` |
 | Node 22 décode mal Windows-1252 (octets 0x80 à 0x9F : €, ’, œ) ; le Node d'Electron 44 (24.21) est correct, l'application n'est pas touchée. Le test de `decodeText` concerné est sauté sous Node 22 | P0-03 ([#4](https://github.com/jezoock/mire/pull/4)) | ✅ Close : la CI (P0-04) exécute ce test sous Node 22 et 24 ; le défaut venait du Node du conteneur de développement |
@@ -182,3 +182,6 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Le handler `tvDetect` refait lui-même l'enregistrement du service trouvé et la recherche de son nom, en double de `detectOnce` du service de télévision ; le contexte IPC expose deux fonctions (`detectTvService`, `fetchChannels`) au lieu du service | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (le contexte expose `tv`, le service gagne une commande « détecter et choisir ») |
 | Le choix de la variante d'une chaîne selon la qualité préférée du service (`hd` par défaut) est fait par l'interface (`app.js`) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | Dans P2 (page Télévision) : le service de télévision rend la variante préférée, l'interface n'ordonne plus les qualités |
 | Détection SFR par `http://192.168.1.1/` : n'importe quelle box ou routeur à cette adresse répond, et SFR TV peut être choisi à tort au premier lancement (Freebox et Livebox ont un nom d'hôte propre et sont essayées avant) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (adresse propre à la box SFR, ou contrôle du contenu de la réponse) |
+| Après une récupération groupée annulée, l'annulation reste active : « Rechercher en ligne » d'un album (sans fiche choisie) ou d'un jeu de console sans liste de jaquettes s'arrête aussitôt, jusqu'à la récupération groupée suivante | P1-16 | Remettre l'annulation à zéro à la fin de `run` (ou annulation propre à chaque récupération) |
+| Si la lecture des jeux d'une console échoue pendant la préparation de `run`, la récupération reste marquée « en cours » et toute nouvelle récupération groupée est refusée jusqu'au redémarrage | P1-16 | Remettre `running` à faux en cas d'erreur (`try`/`finally`) |
+| « Effacer les infos » (`clear`) vide la base et les images, mais pas les caches en mémoire des fournisseurs : une série déjà vue dans la session reprend le chemin d'une affiche effacée ; la liste des genres TMDB vide (TMDB injoignable au premier essai) est gardée jusqu'au redémarrage | P1-16 | `clear` vide aussi les caches des fournisseurs (méthode `reset` facultative de `MetadataProvider`) ; ne pas garder une liste de genres vide |
