@@ -10,7 +10,7 @@ export function storeHandlers(ctx: MainContext) {
     storeUninstall: (id) => ctx.store.uninstall(id),
     storeGame: (id) => ctx.store.getGame(id),
     storeImport: async (emuIndex) => {
-      const emu = ctx.config.emulators[emuIndex];
+      const emu = ctx.config.get().emulators[emuIndex];
       if (!emu) return { ok: false, error: 'Console inconnue.' };
       const exts = (emu.extensions || []).map((e: unknown) => String(e).replace(/^\./, ''));
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
@@ -24,7 +24,7 @@ export function storeHandlers(ctx: MainContext) {
     storePickRoot: async () => {
       const p = await ctx.pickFolder();
       if (!p) return null;
-      return ctx.saveConfig({ ...ctx.config, store: { ...ctx.config.store, romsRoot: p } });
+      return ctx.config.update((c) => ({ ...c, store: { ...c.store, romsRoot: p } }));
     },
     biosAdd: async (id) => {
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {

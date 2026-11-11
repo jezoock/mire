@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { isHttpUrl, safeFileName } from '@mire/shared';
+import type { Game } from '@mire/shared';
 import type { CleanupReport, GameRef } from '@mire/shared/ipc';
 import * as http from '../../net/http.ts';
 import disc from '../../discfiles.js';
@@ -15,13 +16,14 @@ import type { IpcImplementations } from '../register.ts';
 
 // Supprime un jeu : fichier local effacé, ou jeu PC manuel retiré de la configuration.
 export async function deleteGame(ctx: MainContext, ref: GameRef) {
-  const { config } = ctx;
+  const config = ctx.config.get();
   if (ref.kind === 'game') {
-    if (ref.manualIndex != null && config.games[ref.manualIndex]) {
-      const next = structuredClone(config);
-      next.games.splice(ref.manualIndex, 1);
-      ctx.config = ctx.saveConfig(next);
-      return { ok: true as const, config: ctx.config };
+    const index = ref.manualIndex;
+    if (index != null && config.games[index]) {
+      const next = ctx.config.update((c) => {
+        c.games.splice(index, 1);
+      });
+      return { ok: true as const, config: next };
     }
     return {
       ok: false as const,
@@ -59,15 +61,15 @@ export async function deleteGame(ctx: MainContext, ref: GameRef) {
 
 // Nettoyage : vérifie que chaque jeu existe encore (fichier local présent, adresse en ligne joignable).
 export async function cleanupGames(ctx: MainContext, online?: boolean) {
-  const { config } = ctx;
+  const config = ctx.config.get();
   const result: CleanupReport = { missingLocal: [], missingRemote: [], removedManual: 0, checked: 0 };
-  const nextGames = [];
+  const nextGames: Game[] = [];
   for (const g of config.games) {
     result.checked++;
     if (/^[a-z]+:\/\//i.test(g.path) || fs.existsSync(g.path)) nextGames.push(g);
     else {
       result.removedManual++;
-      result.missingLocal.push(g.name);
+      result.missingLocal.push(g.name as string);
     }
   }
   for (let i = 0; i < config.emulators.length; i++) {
@@ -85,17 +87,14 @@ export async function cleanupGames(ctx: MainContext, online?: boolean) {
     }
   }
   if (result.removedManual) {
-    const next = structuredClone(ctx.config);
-    next.games = nextGames;
-    ctx.config = ctx.saveConfig(next);
-    result.config = ctx.config;
+    result.config = ctx.config.update((c) => ({ ...c, games: nextGames }));
   }
   return { ok: true as const, ...result };
 }
 
 // Jeu d'une source web : copie locale dans le dossier principal de la console.
 export async function downloadGame(ctx: MainContext, i: number, url: string) {
-  const emu = ctx.config.emulators[i];
+  const emu = ctx.config.get().emulators[i];
   const { downloads } = ctx;
   if (!emu) return { ok: false as const, error: 'Cette console n’existe plus dans la configuration.' };
   if (!emu.romsDir) return { ok: false as const, error: `Indiquez d’abord le dossier principal de ${emu.name} (Modifier la console).` };
@@ -109,7 +108,7 @@ export async function downloadGame(ctx: MainContext, i: number, url: string) {
     return { ok: false as const, error: `Index du jeu illisible (${(err as Error).message}).` };
   }
   const base = safeFileName(path.basename(files[0].rel, path.extname(files[0].rel)), { max: Infinity, fallback: '' });
-  const folder = path.join(emu.romsDir, base);
+  const folder = path.join(emu.romsDir as string, base);
   const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
   for (const f of todo) downloads.addUrl(f.url, { console: i, saveAs: path.join(folder, ...f.rel.split('/')), group: base, companionsQueued: true });
   return { ok: true as const, count: todo.length, total: files.length };
@@ -127,7 +126,7 @@ export function gamesHandlers(ctx: MainContext) {
     gameDelete: (ref) => deleteGame(ctx, ref),
     gamesCleanup: (online) => cleanupGames(ctx, online),
     romSites: (i) => {
-      const { config } = ctx;
+      const config = ctx.config.get();
       return {
         sites: ctx.consoleSites(i),
         custom: i === 'pc' ? true : Array.isArray(config.emulators[i]?.romSites),

@@ -6,12 +6,11 @@ export function tvHandlers(ctx: MainContext) {
   return {
     tvDetect: async () => {
       const id = await ctx.detectTvService();
-      if (id) ctx.config = ctx.saveConfig({ ...ctx.config, tv: { ...ctx.config.tv, active: id, detected: true } });
-      return { id, name: ctx.config.tv.services.find((t: { id: string }) => t.id === id)?.name || '' };
+      if (id) ctx.config.update((c) => ({ ...c, tv: { ...c.tv, active: id, detected: true } }));
+      return { id, name: ctx.config.get().tv.services.find((t) => t.id === id)?.name || '' };
     },
     tvSetActive: (id) => {
-      ctx.config = ctx.saveConfig({ ...ctx.config, tv: { ...ctx.config.tv, active: String(id || ''), detected: true } });
-      return ctx.config;
+      return ctx.config.update((c) => ({ ...c, tv: { ...c.tv, active: String(id || ''), detected: true } }));
     },
     tvChannels: (...args) => ctx.fetchChannels(...args),
   } satisfies Partial<IpcImplementations>;

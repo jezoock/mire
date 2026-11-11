@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { DEFAULT_CONFIG, normalizeConfig } from '../../src/main/lib/config.js';
+import { createConfigService, DEFAULT_CONFIG } from '../../src/main/config/index.ts';
 import { exportConfig, importConfig } from '../../src/main/ipc/handlers/config.ts';
 import { cleanupGames, deleteGame, downloadGame } from '../../src/main/ipc/handlers/games.ts';
 import {
@@ -33,16 +33,15 @@ const write = (rel: string, text = 'x') => {
 
 type Any = any;
 
-// Contexte factice : la configuration est normalisée et enregistrée en mémoire, comme saveConfig le fait sur disque.
+// Contexte factice : vrai service de configuration (fichier dans le dossier temporaire) ; chaque enregistrement est
+// noté « saveConfig » dans le journal.
 function makeContext(config: Any = {}, extra: Any = {}) {
   const log: Any[] = [];
+  const service = createConfigService({ file: path.join(tmp, `config-${Math.random().toString(36).slice(2)}.json`) });
+  service.replace(config);
+  service.onChange(() => log.push(['saveConfig']));
   const ctx: Any = {
-    config: normalizeConfig(config),
-    saveConfig(next: Any) {
-      ctx.config = normalizeConfig(next);
-      log.push(['saveConfig']);
-      return ctx.config;
-    },
+    config: service,
     consoleLocations(emu: Any) {
       const main = emu.romsDir ? [{ location: emu.romsDir, remote: false }] : [];
       return [...main, ...(emu.sources || []).map((loc: string) => ({ location: loc, remote: /^https?:/.test(loc) }))];
@@ -72,10 +71,10 @@ describe('deleteGame', () => {
     const r: Any = await deleteGame(ctx, { kind: 'game', manualIndex: 0 });
     assert.equal(r.ok, true);
     assert.deepEqual(
-      ctx.config.games.map((g: Any) => g.name),
+      ctx.config.get().games.map((g: Any) => g.name),
       ['B'],
     );
-    assert.equal(r.config, ctx.config);
+    assert.equal(r.config, ctx.config.get());
   });
 
   it('refuse un jeu trouvé dans un dossier, un jeu en ligne ou sans console', async () => {
@@ -121,10 +120,10 @@ describe('cleanupGames', () => {
       { ok: true, missingLocal: ['Disparu'], missingRemote: [], removedManual: 1, checked: 3 },
     );
     assert.deepEqual(
-      ctx.config.games.map((g: Any) => g.name),
+      ctx.config.get().games.map((g: Any) => g.name),
       ['Présent', 'Steam'],
     );
-    assert.equal(r.config, ctx.config);
+    assert.equal(r.config, ctx.config.get());
   });
 
   it('ne touche pas à la configuration quand tout est là', async () => {
@@ -181,10 +180,10 @@ describe('marque-pages de streaming', () => {
       { ...r.bookmark, id: '', added: 0 },
       { id: '', url: 'https://www.exemple.org/serie', title: 'Série', type: 'tv', season: 2, episode: 3, site: 'exemple.org', added: 0 },
     );
-    assert.deepEqual(ctx.config.bookmarks, [r.bookmark]);
+    assert.deepEqual(ctx.config.get().bookmarks, [r.bookmark]);
     assert.deepEqual(log[1], ['scrape', 'Série', { type: 'tv', title: 'Série', year: '' }]);
-    assert.deepEqual(removeBookmark(ctx, r.bookmark.id), { ok: true, config: ctx.config });
-    assert.deepEqual(ctx.config.bookmarks, []);
+    assert.deepEqual(removeBookmark(ctx, r.bookmark.id), { ok: true, config: ctx.config.get() });
+    assert.deepEqual(ctx.config.get().bookmarks, []);
   });
 
   it('s’ajoutent même si le scraping échoue', async () => {
@@ -218,7 +217,7 @@ describe('marque-pages de jeux', () => {
     assert.equal(r.bookmark.title, 'magnet:?xt=urn:btih:abc');
     assert.equal(r.bookmark.downloadId, 'p1');
     assert.deepEqual(log[0], ['addPending', 'magnet:?xt=urn:btih:abc', { name: r.bookmark.title, gameBookmark: r.bookmark.id, console: undefined }]);
-    assert.deepEqual(ctx.config.gameBookmarks, [r.bookmark]);
+    assert.deepEqual(ctx.config.get().gameBookmarks, [r.bookmark]);
   });
 
   it('déduisent le titre du lien et rattachent la console ouverte', () => {
@@ -234,13 +233,13 @@ describe('marque-pages de jeux', () => {
     const { ctx, log } = makeContext();
     const { bookmark }: Any = addGameBookmark(ctx, { source: 'https://exemple.org/jeu.zip', title: 'Jeu' });
     setGameBookmarkConsole(ctx, bookmark.id, '1');
-    assert.equal(ctx.config.gameBookmarks[0].console, 1);
+    assert.equal(ctx.config.get().gameBookmarks[0].console, 1);
     setGameBookmarkConsole(ctx, bookmark.id, 'pc');
-    assert.equal(ctx.config.gameBookmarks[0].console, 'pc');
+    assert.equal(ctx.config.get().gameBookmarks[0].console, 'pc');
     assert.match(downloadGameBookmark(ctx, 'inconnu').error!, /introuvable/);
     assert.deepEqual(downloadGameBookmark(ctx, bookmark.id), { ok: true });
-    assert.deepEqual(removeGameBookmark(ctx, bookmark.id), { ok: true, config: ctx.config });
-    assert.deepEqual(ctx.config.gameBookmarks, []);
+    assert.deepEqual(removeGameBookmark(ctx, bookmark.id), { ok: true, config: ctx.config.get() });
+    assert.deepEqual(ctx.config.get().gameBookmarks, []);
     assert.deepEqual(
       log.slice(1).map((l) => l[0] + (l[1] ? ` ${l[1]}` : '')),
       ['saveConfig', 'saveConfig', 'saveConfig', 'startPending p1', 'remove p1', 'saveConfig'],
@@ -257,7 +256,7 @@ describe('export et import de la configuration', () => {
     const file = path.join(tmp, 'export.json');
     const { ctx } = makeContext({ games: [{ name: 'A', path: 'a.exe' }] }, dialogs({ canceled: false, filePath: file }, null));
     assert.deepEqual(await exportConfig(ctx), { ok: true, path: file });
-    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), ctx.config);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), ctx.config.get());
     const canceled = makeContext({}, dialogs({ canceled: true }, null)).ctx;
     assert.deepEqual(await exportConfig(canceled), { ok: false, canceled: true });
   });
@@ -300,6 +299,6 @@ describe('export et import de la configuration', () => {
       r2.config.games.map((g: Any) => g.name),
       ['B', 'A'],
     );
-    assert.equal(r2.config, replace.config);
+    assert.equal(r2.config, replace.config.get());
   });
 });

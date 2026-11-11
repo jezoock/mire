@@ -13,8 +13,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 
 | Chemin | Contenu | Écrit par |
 | --- | --- | --- |
-| `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | `index.js` (service de configuration en P1-06) |
-| `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | `index.js` |
+| `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
+| `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
 | `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `index.js`, stockage JSON |
 | `meta/img/` | Images choisies à la main | `index.js` |
 | `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | `scraper.js`, stockage JSON |
@@ -31,6 +31,24 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 
 Le dossier `userData` contient aussi les dossiers propres à Chromium (cache, cookies, `Local Storage`…), gérés
 par Electron.
+
+## Configuration
+
+`src/main/config/` détient la configuration (`config.json`) ; ses types (`Config`, `WebSite`, `TvService`,
+`Emulator`…) sont dans `@mire/shared`.
+
+- `defaults.ts` (`DEFAULT_CONFIG`, valeurs admises) et `catalogs/` (`DEFAULT_TV`, `DEFAULT_WEB` : données, futur
+  contenu d'addons) ;
+- `migrations/` : une étape par version (`v2.ts` … `v5.ts`) et leur registre ; `migrate(brut)` rend
+  `{ config, from, changed }`. Nouvelle version : ajouter `vN.ts`, l'inscrire dans `MIGRATIONS`, monter
+  `CONFIG_VERSION` ;
+- `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète ;
+- `merge.ts` : import « compléter » ;
+- `service.ts` : `createConfigService({ file })`, seul point d'accès dans le processus principal. `load()` au
+  démarrage (fichier absent → valeurs par défaut écrites ; illisible → mis de côté en `config.json.illisible-<date>`) ;
+  `get()` ; `update(mutateur)` et `replace(config)` normalisent, écrivent (stockage JSON, écriture immédiate) puis
+  appellent chaque abonné de `onChange((suivante, précédente) => …)` une fois. Les modules reçoivent `get` (et
+  `replace` pour ceux qui enregistrent) ; les handlers IPC passent par `ctx.config`.
 
 ## Stockage JSON
 
