@@ -149,8 +149,8 @@ export interface IpcMethods {
   bookmarkAdd(data: BookmarkInput): Outcome<{ bookmark: Bookmark; scraped: boolean; config: MireConfig }>;
   bookmarkRemove(id: string): Outcome<{ config: MireConfig }>;
   bookmarkOpen(id: string): unknown;
-  gameBookmarkAdd(data: GameBookmarkInput): Outcome<{ bookmark: GameBookmark; needSystem: boolean; config: MireConfig }>;
-  gameBookmarkSetConsole(id: string, console: ConsoleRef): Outcome<{ config: MireConfig }>;
+  gameBookmarkAdd(data: GameBookmarkInput): Outcome<{ bookmark: GameBookmark; needSystem: boolean; scraped: boolean; config: MireConfig }>;
+  gameBookmarkSetConsole(id: string, console: ConsoleRef): Outcome<{ scraped: boolean; config: MireConfig }>;
   gameBookmarkRemove(id: string): Outcome<{ config: MireConfig }>;
   gameBookmarkDownload(id: string): Outcome;
   romListSource(console: string, only?: string): Outcome<Record<string, unknown>>;
@@ -186,7 +186,7 @@ export interface IpcMethods {
   searchStreaming(query: string): { ok: boolean; results?: unknown[]; reason?: string; error?: string };
 
   // Jeux
-  scanGameSources(): { games: unknown[]; status: unknown[] };
+  scanGameSources(): { games: unknown[]; status: Record<string, unknown> };
   launchGamePath(target: string): Outcome;
 
   // Métadonnées saisies à la main

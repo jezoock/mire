@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { isHttpUrl } from '@mire/shared';
-import disc from '../discfiles.js';
+import * as disc from '../games/disc/index.ts';
 import type { DownloadContext, DownloadRecord } from './types.ts';
 
 const ARCHIVES = new Set(['.zip', '.7z']);
@@ -113,10 +113,10 @@ async function unpack(it: DownloadRecord, files: string[], deps: FinishDeps): Pr
 }
 
 export async function finishDownload(it: DownloadRecord, files: string[], deps: FinishDeps): Promise<void> {
-  // Copie dans le cache (lancement d'un jeu en ligne) : le fichier sert tel quel.
+  // Copie dans le cache (lancement d'un jeu en ligne) : le fichier sert tel quel, et le jeu se lance aussitôt :
+  // pas d'annonce « téléchargé » (onFinished), seul celui qui l'a demandé est prévenu (par la fiche).
   if (it.cache) {
     deps.update(it, { state: 'done', doneAt: Date.now(), speed: 0, installers: [] });
-    deps.onFinished(it);
     return;
   }
   const out = await unpack(it, files, deps);

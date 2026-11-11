@@ -85,5 +85,12 @@ export interface Downloader {
   stop(): Promise<void>;
 }
 
+/** Options de la commande « télécharger dans le cache puis prévenir ». */
+export interface CacheOptions {
+  onProgress?: (received: number, total: number) => void;
+  /** Délai accordé au démarrage du téléchargement, en millisecondes (60 s par défaut). */
+  startTimeout?: number;
+}
+
 /** Résultat de la commande « télécharger dans le cache puis prévenir ». */
 export type CacheResult = { ok: true; file: string; id?: string; cached?: boolean } | { ok: false; error: string; id?: string; cancelled?: boolean };

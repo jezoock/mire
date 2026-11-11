@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { isHttpUrl, newId, safeFileName } from '@mire/shared';
-import disc from '../discfiles.js';
+import * as disc from '../games/disc/index.ts';
 import * as http from '../net/http.ts';
 import type { AddResult, DownloadContext, Downloader, DownloaderHost, DownloadRecord } from './types.ts';
 
@@ -54,11 +54,20 @@ export interface HttpDownloader extends Downloader {
 export function createHttpDownloader(host: DownloaderHost, { getSession, torrentInbox, onTorrentFile }: HttpDownloaderOptions): HttpDownloader {
   const { items, update } = host;
   const live = new Map<string, DownloadItemLike>();
-  const pendingUrls = new Map<string, DownloadContext>(); // adresse → contexte d'un téléchargement demandé par Mire
+  // Adresse → contextes des téléchargements demandés par Mire, dans l'ordre des demandes : deux demandes pour la
+  // même adresse donnent deux téléchargements, chacun avec son contexte.
+  const pendingUrls = new Map<string, DownloadContext[]>();
 
   function request(url: string, ctx: DownloadContext) {
-    pendingUrls.set(url, ctx);
+    pendingUrls.set(url, [...(pendingUrls.get(url) || []), ctx]);
     getSession().downloadURL(url);
+  }
+
+  function takePending(url: string): DownloadContext | undefined {
+    const queue = pendingUrls.get(url) || [];
+    const ctx = queue.shift();
+    if (!queue.length) pendingUrls.delete(url);
+    return ctx;
   }
 
   // Téléchargement demandé par Mire (jeu d'une source web, lien collé).
@@ -85,8 +94,7 @@ export function createHttpDownloader(host: DownloaderHost, { getSession, torrent
     const url = dl.getURL();
     const chain = dl.getURLChain ? dl.getURLChain() : [url];
     const key = chain.find((u) => pendingUrls.has(u));
-    const ctx: DownloadContext = (key ? pendingUrls.get(key) : ctxFromView) || {};
-    if (key) pendingUrls.delete(key);
+    const ctx: DownloadContext = (key ? takePending(key) : ctxFromView) || {};
     const filename = safeFileName(dl.getFilename());
 
     // Un fichier .torrent devient un téléchargement torrent.

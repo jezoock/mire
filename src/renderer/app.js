@@ -489,6 +489,7 @@ function scrapeKey(it) {
   if (it.kind === 'audio') return `a:${it.dir}`;
   if (it.kind === 'rom') return `r:${it.path}`;
   if (it.kind === 'game') return `g:${fold(it.name)}`;
+  if (it.kind === 'gamebm') return `b:${it.bookmarkId}`;
   if (it.kind === 'image') return `i:${it.path}`;
   return '';
 }
@@ -502,7 +503,7 @@ function withScrape(it) {
   const um = S.meta[key] || {};
   const tm = it.kind === 'audio' ? (S.meta[`t:${it.path}`] || {}) : {};
   const out = { ...it };
-  if ((it.kind === 'video' && !sc.series && sc.title) || (it.kind === 'game' && sc.title)) out.sTitle = sc.title;
+  if ((it.kind === 'video' && !sc.series && sc.title) || ((it.kind === 'game' || it.kind === 'gamebm') && sc.title)) out.sTitle = sc.title;
   // Épisode d'une série : le titre de série vient du scrap (ou du nom déduit), pour l'arborescence.
   if (it.kind === 'video' && (sc.series || it.seriesTitle)) out.sSeries = sc.title || it.seriesTitle || '';
   if (it.kind !== 'audio' && um.title) out.sTitle = um.title;
@@ -1215,8 +1216,9 @@ api.onDownloadAdded((r) => {
 });
 // Fin d'un torrent qui contient un programme d'installation : on propose de le lancer.
 api.onDownloadFinished(async (d) => {
-  // Un jeu bookmarké vient d'être téléchargé : on recharge config (sa carte « à télécharger » disparaît) et les jeux.
-  if (d.gameBookmark) { S.config = (await api.getConfig()).config; if (d.console != null) { const r = await api.listRoms(d.console).catch(() => null); if (r?.ok) S.localRoms[d.console] = r.roms; } if (S.section === 'games') render(); }
+  // Un jeu bookmarké vient d'être téléchargé : on recharge config (sa carte « à télécharger » disparaît), les fiches
+  // (celle du marque-page reportée sur le jeu) et les jeux.
+  if (d.gameBookmark) { S.config = (await api.getConfig()).config; S.scrape = (await api.scrapeData()) || {}; if (d.console != null) { const r = await api.listRoms(d.console).catch(() => null); if (r?.ok) S.localRoms[d.console] = r.roms; } if (S.section === 'games') render(); }
   if (d.console == null) toast(`${d.name} est téléchargé.`, { duration: 5000 });
   const installer = (d.installers || [])[0];
   if (d.kind !== 'torrent' || !installer) return;
@@ -1596,10 +1598,11 @@ async function bookmarkCurrentGame() {
   const r = await api.gameBookmarkAdd({ source: v.source.trim(), title: v.title.trim(), console: curConsole });
   if (!r?.ok) { toast(r?.error || 'Ajout impossible.', { duration: 7000 }); if (S.section === 'web') syncWeb(); return; }
   S.config = r.config;
-  S.scrape = (await api.scrapeData()) || {};
   await loadDownloads();
   // Système non déterminé : on le demande (console ouverte par défaut).
   if (r.needSystem) await askBookmarkConsole(r.bookmark.id, curConsole);
+  // Fiche trouvée pour le marque-page (à l'ajout, ou quand le système a été choisi) : affichée sur sa carte.
+  S.scrape = (await api.scrapeData()) || {};
   if (S.section === 'web') syncWeb();
   toast('Jeu ajouté à la liste. Téléchargez-le quand vous voulez.', { duration: 6000 });
 }
