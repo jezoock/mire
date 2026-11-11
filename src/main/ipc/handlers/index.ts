@@ -12,6 +12,7 @@ import { metaHandlers } from './meta.ts';
 import { scrapeHandlers } from './scrape.ts';
 import { storeHandlers } from './store.ts';
 import { tvHandlers } from './tv.ts';
+import { usageHandlers } from './usage.ts';
 import { webHandlers } from './web.ts';
 
 /** Fabriques des handlers, une par domaine ; chaque méthode du contrat appartient à un seul domaine. */
@@ -26,6 +27,7 @@ export const DOMAINS = {
   scrape: scrapeHandlers,
   store: storeHandlers,
   tv: tvHandlers,
+  usage: usageHandlers,
   web: webHandlers,
 };
 

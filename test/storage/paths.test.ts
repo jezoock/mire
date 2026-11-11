@@ -11,6 +11,7 @@ it('dataPaths : chemins historiques du dossier de données', () => {
   assert.deepEqual(p, {
     root,
     config: at('config.json'),
+    usage: at('usage.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

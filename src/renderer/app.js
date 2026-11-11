@@ -212,6 +212,8 @@ const S = {
   limit: PAGE,
   list: [],
   recent: [],
+  // Données d'usage, détenues par le processus principal (usage.json) : copie lue au démarrage.
+  usage: { recent: [], volume: 0.9, queries: [] },
   channels: null,
   tvWeb: null,
   tvLoading: false,
@@ -291,18 +293,42 @@ function hideToast() { toastEl.classList.remove('show'); }
 /* Historique « Reprendre »                                            */
 /* ------------------------------------------------------------------ */
 
-function getRecent() {
-  try { return JSON.parse(localStorage.getItem('recent') || '[]'); } catch { return []; }
-}
-function setRecent(list) {
-  try { localStorage.setItem('recent', JSON.stringify(list.slice(0, 18))); } catch { /* stockage plein */ }
-}
+// La liste est tenue par le processus principal ; la copie locale est mise à jour tout de suite pour l'affichage.
+function getRecent() { return S.usage.recent; }
 function addRecent(it) {
   const keep = ['path', 'name', 'kind', 'ext', 'cover', 'fanart', 'native', 'folder', 'dir', 'remote'];
   const entry = Object.fromEntries(keep.map((k) => [k, it[k] ?? null]));
-  setRecent([entry, ...getRecent().filter((x) => x.path !== it.path)]);
+  S.usage.recent = [entry, ...getRecent().filter((x) => x.path !== it.path)].slice(0, 18);
+  api.usageAddRecent(entry);
 }
-function removeRecent(p) { setRecent(getRecent().filter((x) => x.path !== p)); }
+function removeRecent(p) {
+  S.usage.recent = getRecent().filter((x) => x.path !== p);
+  api.usageRemoveRecent(p);
+}
+
+// Données d'usage laissées dans le localStorage par une version précédente : envoyées une seule fois au processus
+// principal, puis retirées. En cas d'échec, elles restent pour le lancement suivant.
+async function migrateLocalUsage() {
+  let legacy;
+  try {
+    const keys = Object.keys(localStorage);
+    if (!keys.some((k) => ['recent', 'queries', 'volume'].includes(k) || k.startsWith('resume:'))) return null;
+    const json = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+    const resume = Object.fromEntries(keys.filter((k) => k.startsWith('resume:')).map((k) => [k.slice(7), localStorage.getItem(k)]));
+    legacy = { recent: json('recent'), queries: json('queries'), volume: localStorage.getItem('volume'), resume };
+  } catch { return null; }
+  const r = await api.usageMigrate(legacy);
+  if (!r || r.ok === false) return null;
+  try {
+    for (const k of Object.keys(localStorage)) if (['recent', 'queries', 'volume'].includes(k) || k.startsWith('resume:')) localStorage.removeItem(k);
+  } catch { /* rien */ }
+  return r;
+}
+
+async function loadUsage() {
+  const r = (await migrateLocalUsage()) || (await api.usageGet());
+  if (r && r.ok !== false) S.usage = { recent: r.recent || [], volume: r.volume ?? 0.9, queries: r.queries || [] };
+}
 
 /* ------------------------------------------------------------------ */
 /* Navigation entre sections                                           */
@@ -2089,11 +2115,11 @@ api.onMireFocus(() => {
 /* Recherche globale                                                   */
 /* ------------------------------------------------------------------ */
 
-function getQueries() { try { return JSON.parse(localStorage.getItem('queries') || '[]'); } catch { return []; } }
+function getQueries() { return S.usage.queries; }
 function rememberQuery(q) {
   if (!q) return;
-  const list = [q, ...getQueries().filter((x) => fold(x) !== fold(q))].slice(0, 10);
-  try { localStorage.setItem('queries', JSON.stringify(list)); } catch { /* rien */ }
+  S.usage.queries = [q, ...getQueries().filter((x) => fold(x) !== fold(q))].slice(0, 10);
+  api.usageAddQuery(q);
 }
 
 function viewSearch() {
@@ -3325,7 +3351,7 @@ async function onActionClick(e) {
     case 'config-import': {
       const mode = t.dataset.mode || 'replace';
       const r = await api.configImport(mode);
-      if (r?.ok) { S.config = r.config; S.autoGames = []; S.localRoms = {}; toast('Configuration importée.'); scan(); loadLocalRoms(); go(S.section); }
+      if (r?.ok) { S.config = r.config; if (r.usage) S.usage = r.usage; S.autoGames = []; S.localRoms = {}; toast('Configuration importée.'); scan(); loadLocalRoms(); go(S.section); }
       else if (r && !r.canceled) toast(r?.error || 'Import impossible.', { duration: 8000 });
       break;
     }
@@ -3415,7 +3441,7 @@ async function onActionClick(e) {
       for (const b of $$('[data-action="menu-pos"]')) b.setAttribute('aria-pressed', String(b.dataset.id === pos));
       break;
     }
-    case 'clear-queries': try { localStorage.removeItem('queries'); } catch { /* rien */ } toast('Recherches récentes effacées'); break;
+    case 'clear-queries': S.usage.queries = []; api.usageClearQueries(); toast('Recherches récentes effacées'); break;
     case 'add-site': {
       const name = $('#ns-name').value.trim();
       let url = $('#ns-url').value.trim();
@@ -3682,7 +3708,7 @@ function setVolume(v, silent = false) {
   audio.volume = volume;
   video.volume = volume;
   for (const el of [$('#mini-vol'), $('#vp-vol')]) { el.value = String(volume); setRangeFill(el, volume); }
-  try { localStorage.setItem('volume', String(volume)); } catch { /* rien */ }
+  if (volume !== S.usage.volume) { S.usage.volume = volume; api.usageSetVolume(volume); }
   if (!silent && !videoLayer.hidden) osd(`Volume ${Math.round(volume * 100)} %`);
 }
 
@@ -3871,15 +3897,11 @@ async function loadSubtitles(it) {
   setSubtitle(fr);
 }
 
+// Le processus principal garde ou efface la position (règles dans src/main/usage) et groupe les écritures.
 function saveResume(it) {
-  const t = video.currentTime;
   const d = video.duration;
   if (!it || !Number.isFinite(d) || d < 300) return;
-  const key = `resume:${it.path}`;
-  try {
-    if (t > 30 && t < d - 90) localStorage.setItem(key, String(Math.floor(t)));
-    else localStorage.removeItem(key);
-  } catch { /* rien */ }
+  api.usageSaveResume(it.path, video.currentTime, d);
 }
 
 function checkSilence() {
@@ -3914,9 +3936,10 @@ function openVideo(list, i) {
   vpSeek.value = '0';
   setRangeFill(vpSeek, 0);
 
-  const saved = Number(localStorage.getItem(`resume:${it.path}`)) || 0;
+  const resume = api.usageResume(it.path);
   video.src = mediaUrl(it.path);
-  video.addEventListener('loadedmetadata', () => {
+  video.addEventListener('loadedmetadata', async () => {
+    const saved = Number(await resume) || 0;
     if (V.list[V.i] !== it) return;
     if (saved > 30 && saved < video.duration - 90) {
       video.currentTime = saved;
@@ -3981,7 +4004,7 @@ video.addEventListener('timeupdate', () => {
 });
 video.addEventListener('ended', () => {
   const it = V.list[V.i];
-  if (it) try { localStorage.removeItem(`resume:${it.path}`); } catch { /* rien */ }
+  if (it) api.usageClearResume(it.path);
   if (V.i < V.list.length - 1) openVideo(V.list, V.i + 1); else closeVideo();
 });
 video.addEventListener('error', () => {
@@ -4435,8 +4458,8 @@ function tick() {
   loadDownloads();
   loadLocalRoms();
 
-  const storedVolume = Number(localStorage.getItem('volume'));
-  setVolume(Number.isFinite(storedVolume) && localStorage.getItem('volume') !== null ? storedVolume : 0.9, true);
+  await loadUsage();
+  setVolume(S.usage.volume, true);
 
   go('home');
   $('.mire-bar')?.focus();

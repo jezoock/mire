@@ -4,9 +4,9 @@ import { mergeConfig, migrate } from '../../config/index.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
 
-// Export : copie du fichier de configuration là où l'utilisateur veut.
+// Export : la configuration, et les données d'usage sous la clé `usage`, là où l'utilisateur veut.
 export async function exportConfig(ctx: MainContext) {
-  const config = ctx.config.get();
+  const config = { ...ctx.config.get(), usage: ctx.usage.get() };
   const { mainWindow } = ctx;
   const r = await ctx.electron.dialog.showSaveDialog(mainWindow, {
     title: 'Exporter la configuration',
@@ -18,7 +18,15 @@ export async function exportConfig(ctx: MainContext) {
   return { ok: true as const, path: r.filePath };
 }
 
+// Sépare les données d'usage du reste du fichier importé (la configuration).
+function splitUsage(data: unknown): { usage: unknown; config: unknown } {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return { usage: undefined, config: data };
+  const { usage, ...config } = data as Record<string, unknown>;
+  return { usage, config };
+}
+
 // Import : remplace entièrement, ou complète (fusionne sites, consoles, jeux, sources sans doublon).
+// Les données d'usage suivent le même choix ; un fichier qui n'en a pas (export d'avant P1-09) les laisse telles quelles.
 export async function importConfig(ctx: MainContext, mode?: string) {
   const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
     title: 'Importer une configuration',
@@ -32,9 +40,14 @@ export async function importConfig(ctx: MainContext, mode?: string) {
   } catch {
     return { ok: false as const, error: 'Ce fichier n’est pas une configuration Mire valide (JSON illisible).' };
   }
-  const { config: migrated } = migrate(data);
+  const { usage, config: raw } = splitUsage(data);
+  const { config: migrated } = migrate(raw);
   const config = ctx.config.replace(mode === 'merge' ? mergeConfig(ctx.config.get(), migrated) : migrated);
-  return { ok: true as const, config };
+  if (usage !== undefined) {
+    if (mode === 'merge') ctx.usage.merge(usage);
+    else ctx.usage.replace(usage);
+  }
+  return { ok: true as const, config, usage: ctx.usage.snapshot() };
 }
 
 export function configHandlers(ctx: MainContext) {

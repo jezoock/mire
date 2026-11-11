@@ -93,6 +93,40 @@ export interface WebSession {
   color?: string;
 }
 
+/** Entrée de « Reprendre » : ce qu'il faut pour afficher la vignette et rouvrir le fichier. */
+export interface RecentEntry {
+  path: string;
+  name: string | null;
+  kind: string | null;
+  ext: string | null;
+  cover: string | null;
+  fanart: string | null;
+  native: boolean | null;
+  folder: string | null;
+  dir: string | null;
+  remote: boolean | null;
+}
+
+/** Données d'usage (usage.json) : « Reprendre », positions de reprise des vidéos, volume, recherches récentes. */
+export interface UsageData {
+  recent: RecentEntry[];
+  /** Position de reprise (secondes entières) par chemin de vidéo. */
+  resume: Record<string, number>;
+  volume: number;
+  queries: string[];
+}
+
+/** Ce que l'interface lit au démarrage (les positions de reprise se demandent vidéo par vidéo). */
+export type UsageSnapshot = Pick<UsageData, 'recent' | 'volume' | 'queries'>;
+
+/** Données d'usage encore dans le `localStorage` d'une version précédente (reprises une seule fois). */
+export interface LegacyUsage {
+  recent?: unknown;
+  resume?: Record<string, unknown>;
+  volume?: unknown;
+  queries?: unknown;
+}
+
 export interface Bounds {
   x: number;
   y: number;
@@ -111,7 +145,19 @@ export interface IpcMethods {
   saveConfig(next: MireConfig): MireConfig;
   revealConfig(): boolean;
   configExport(): Outcome<{ path: string }>;
-  configImport(mode?: 'replace' | 'merge'): Outcome<{ config: MireConfig }>;
+  configImport(mode?: 'replace' | 'merge'): Outcome<{ config: MireConfig; usage: UsageSnapshot }>;
+
+  // Données d'usage : « Reprendre », positions de reprise, volume, recherches récentes
+  usageGet(): UsageSnapshot;
+  usageMigrate(legacy: LegacyUsage): UsageSnapshot;
+  usageAddRecent(entry: RecentEntry): RecentEntry[];
+  usageRemoveRecent(path: string): RecentEntry[];
+  usageResume(path: string): number;
+  usageSaveResume(path: string, time: number, duration: number): boolean;
+  usageClearResume(path: string): boolean;
+  usageSetVolume(volume: number): number;
+  usageAddQuery(query: string): string[];
+  usageClearQueries(): boolean;
 
   // Bibliothèque et fichiers
   scanLibrary(): { items: MediaItem[]; status: unknown[] };
@@ -325,6 +371,17 @@ export const IPC_METHODS = {
 
   toggleFullscreen: 'window:fullscreen',
   quit: 'app:quit',
+
+  usageGet: 'usage:get',
+  usageMigrate: 'usage:migrate',
+  usageAddRecent: 'usage:addRecent',
+  usageRemoveRecent: 'usage:removeRecent',
+  usageResume: 'usage:resume',
+  usageSaveResume: 'usage:saveResume',
+  usageClearResume: 'usage:clearResume',
+  usageSetVolume: 'usage:setVolume',
+  usageAddQuery: 'usage:addQuery',
+  usageClearQueries: 'usage:clearQueries',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

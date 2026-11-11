@@ -8,6 +8,7 @@ import path from 'node:path';
 import { createConfigService, DEFAULT_CONFIG } from '../../src/main/config/index.ts';
 import { exportConfig, importConfig } from '../../src/main/ipc/handlers/config.ts';
 import { createAccessPolicy } from '../../src/main/security/access-policy.ts';
+import { createUsageService } from '../../src/main/usage/index.ts';
 import { addBookmark, removeBookmark } from '../../src/main/ipc/handlers/bookmarks.ts';
 import type { MainContext } from '../../src/main/ipc/context.ts';
 
@@ -33,8 +34,11 @@ function makeContext(config: Any = {}, extra: Any = {}) {
   const service = createConfigService({ file: path.join(tmp, `config-${Math.random().toString(36).slice(2)}.json`) });
   service.replace(config);
   service.onChange(() => log.push(['saveConfig']));
+  const usage = createUsageService({ file: path.join(tmp, `usage-${Math.random().toString(36).slice(2)}.json`), debounceMs: 5 });
+  usage.load();
   const ctx: Any = {
     config: service,
+    usage,
     access: createAccessPolicy({ roots: () => [] }),
     scraper: { one: async (job: Any) => (log.push(['scrape', job.item.name, job.override]), { ok: true }) },
     electron: { dialog: {}, shell: {}, app: {} },
@@ -87,11 +91,12 @@ describe('export et import de la configuration', () => {
     electron: { dialog: { showSaveDialog: async () => save, showOpenDialog: async () => open }, shell: {}, app: {} },
   });
 
-  it('export : écrit la configuration là où l’utilisateur l’a choisi', async () => {
+  it('export : écrit la configuration et les données d’usage là où l’utilisateur l’a choisi', async () => {
     const file = path.join(tmp, 'export.json');
     const { ctx } = makeContext({ games: [{ name: 'A', path: 'a.exe' }] }, dialogs({ canceled: false, filePath: file }, null));
+    ctx.usage.addRecent({ path: '/v/a.mkv', name: 'a.mkv' });
     assert.deepEqual(await exportConfig(ctx), { ok: true, path: file });
-    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), ctx.config.get());
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { ...ctx.config.get(), usage: ctx.usage.get() });
     const canceled = makeContext({}, dialogs({ canceled: true }, null)).ctx;
     assert.deepEqual(await exportConfig(canceled), { ok: false, canceled: true });
   });
@@ -135,5 +140,51 @@ describe('export et import de la configuration', () => {
       ['B', 'A'],
     );
     assert.equal(r2.config, replace.config.get());
+  });
+
+  it('export puis import sur une installation vierge : « Reprendre » et les positions de reprise sont restaurés', async () => {
+    const file = path.join(tmp, 'export.json');
+    const source = makeContext({}, dialogs({ canceled: false, filePath: file }, null)).ctx;
+    source.usage.addRecent({ path: '/v/b.mkv', name: 'b.mkv' });
+    source.usage.addRecent({ path: '/v/a.mkv', name: 'a.mkv' });
+    source.usage.saveResume('/v/a.mkv', 600, 3600);
+    source.usage.setVolume(0.5);
+    source.usage.addQuery('dune');
+    await exportConfig(source);
+    const blank = makeContext({}, dialogs(null, { canceled: false, filePaths: [file] })).ctx;
+    const r: Any = await importConfig(blank, 'replace');
+    assert.equal(r.ok, true);
+    assert.equal('usage' in r.config, false);
+    assert.deepEqual(blank.usage.get(), source.usage.get());
+    assert.deepEqual(r.usage, source.usage.snapshot());
+  });
+
+  it('import « compléter » : fusionne les données d’usage sans doublon ; un fichier sans données d’usage n’y touche pas', async () => {
+    const file = write(
+      'import.json',
+      JSON.stringify({
+        ...DEFAULT_CONFIG,
+        usage: { recent: [{ path: '/c' }, { path: '/a' }], resume: { '/a': 900, '/c': 50 }, volume: 1, queries: ['dune', 'Alien'] },
+      }),
+    );
+    const { ctx } = makeContext({}, dialogs(null, { canceled: false, filePaths: [file] }));
+    ctx.usage.addRecent({ path: '/a' });
+    ctx.usage.saveResume('/a', 100, 3600);
+    ctx.usage.addQuery('alien');
+    const r: Any = await importConfig(ctx, 'merge');
+    assert.deepEqual(
+      r.usage.recent.map((x: Any) => x.path),
+      ['/a', '/c'],
+    );
+    assert.deepEqual(ctx.usage.get().resume, { '/a': 100, '/c': 50 });
+    assert.equal(r.usage.volume, 0.9);
+    assert.deepEqual(r.usage.queries, ['alien', 'dune']);
+
+    const old = write('ancien.json', JSON.stringify(DEFAULT_CONFIG));
+    const kept = makeContext({}, dialogs(null, { canceled: false, filePaths: [old] })).ctx;
+    kept.usage.addRecent({ path: '/a' });
+    const before = kept.usage.get();
+    await importConfig(kept, 'replace');
+    assert.equal(kept.usage.get(), before);
   });
 });

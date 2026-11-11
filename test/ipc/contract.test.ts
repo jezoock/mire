@@ -124,6 +124,17 @@ const ORIGINAL_EVENTS: Record<string, string> = {
 // Méthodes ajoutées après P1-08 (absentes de l'ancien preload).
 const ADDED_METHODS: Record<string, string> = {
   gameSystems: 'games:systems', // P1-03 : référentiel des systèmes pour l'interface
+  // P1-09 : données d'usage tenues par le processus principal
+  usageGet: 'usage:get',
+  usageMigrate: 'usage:migrate',
+  usageAddRecent: 'usage:addRecent',
+  usageRemoveRecent: 'usage:removeRecent',
+  usageResume: 'usage:resume',
+  usageSaveResume: 'usage:saveResume',
+  usageClearResume: 'usage:clearResume',
+  usageSetVolume: 'usage:setVolume',
+  usageAddQuery: 'usage:addQuery',
+  usageClearQueries: 'usage:clearQueries',
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

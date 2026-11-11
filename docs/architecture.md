@@ -15,6 +15,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | --- | --- | --- |
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
+| `usage.json` | « Reprendre », positions de reprise des vidéos, volume, recherches récentes | service des données d'usage, stockage JSON |
 | `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `index.js`, stockage JSON |
 | `meta/img/` | Images choisies à la main | `index.js` |
 | `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | `scraper.js`, stockage JSON |
@@ -50,6 +51,21 @@ par Electron.
   appellent chaque abonné de `onChange((suivante, précédente) => …)` une fois. Les modules reçoivent `get` (et
   `replace` pour ceux qui enregistrent) ; les handlers IPC passent par `ctx.config`.
 
+## Données d'usage
+
+`src/main/usage/` détient « Reprendre » (18 au plus), les positions de reprise des vidéos (gardées entre 30 s et la
+fin moins 90 s, pour les vidéos de 5 min et plus), le volume (0,9 par défaut) et les recherches récentes (10 au
+plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures (`rules.ts`) ; le service
+(`createUsageService({ file })`) est passé aux handlers IPC par `ctx.usage` (canaux `usage:*`).
+
+- L'interface lit `usageGet()` au démarrage et garde une copie de « Reprendre », du volume et des recherches pour
+  l'affichage ; chaque modification part au processus principal. La position de reprise se demande vidéo par vidéo.
+- Au premier lancement après la mise à jour, l'interface envoie ce que gardait son `localStorage` (`recent`,
+  `resume:<chemin>`, `volume`, `queries`) à `usageMigrate`, puis retire ces clés.
+- L'export de configuration ajoute la clé `usage` ; l'import la retire avant la migration de la configuration.
+  « Remplacer » remplace les données d'usage, « compléter » les fusionne sans doublon (« Reprendre » par chemin,
+  recherches par texte, position de reprise existante gardée, volume inchangé). Un fichier sans `usage` n'y touche pas.
+
 ## Stockage JSON
 
 `createJsonStore(fichier, { defaults, debounceMs, onCorrupt, onError, space })` dans
@@ -68,7 +84,7 @@ par Electron.
   écriture ; une seule écriture est en cours à la fois par fichier, et si la valeur a été modifiée pendant ce temps,
   elle est réécrite ensuite. Un échec est signalé à `onError` (journal par défaut) et n'empêche pas les suivantes ;
 - **`flush()`** écrit tout de suite ce qui attend et se résout quand tout est sur le disque. À la fermeture
-  (`before-quit`), `index.js` suspend la sortie, attend `flush()` de `scrape/db.json` et `telechargements.json`
+  (`before-quit`), `index.js` suspend la sortie, attend `flush()` de `scrape/db.json`, `telechargements.json` et `usage.json`
   deux secondes au plus (`flushWithin`), puis quitte ;
 - le format est celui d'avant : `JSON.stringify(valeur, null, space)`, en UTF-8, sans saut de ligne final.
 
@@ -76,6 +92,7 @@ par Electron.
 | --- | --- | --- |
 | `scrape/db.json` | aucune | différée (400 ms) |
 | `telechargements.json` | 1 | différée (300 ms) ; la liste est relevée au moment de l'écriture |
+| `usage.json` | 1 | différée (1 s) : position de reprise toutes les 5 s, volume à chaque cran |
 | `emulators/installed.json` | 2 | immédiate |
 | `meta/meta.json` | 2 | immédiate |
 | `adblock/listes.json` | aucune | immédiate |
