@@ -38,7 +38,7 @@ export function createDrm({ components, platform = process.platform, timeoutMs =
           },
         ),
         new Promise<boolean>((resolve) => {
-          setTimeout(() => resolve(false), timeoutMs).unref?.();
+          setTimeout(() => resolve(false), timeoutMs);
         }),
       ]);
     },
