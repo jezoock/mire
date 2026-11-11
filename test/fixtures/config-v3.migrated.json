@@ -1,6 +1,6 @@
 {
   "raw": {
-    "version": 6,
+    "version": 7,
     "web": [
       {
         "id": "youtube",
@@ -39,7 +39,8 @@
     "ui": {
       "home": {
         "services": ["youtube"]
-      }
+      },
+      "language": "fr"
     },
     "tv": {
       "services": [

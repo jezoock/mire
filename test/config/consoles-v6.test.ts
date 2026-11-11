@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { consoleIdAt, createConfigService, findConsole, migrate, normalizeConfig } from '../../src/main/config/index.ts';
+import { CONFIG_VERSION, consoleIdAt, createConfigService, findConsole, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { assignConsoleIds } from '../../src/main/config/normalize/consoles.ts';
 
 const require = createRequire(import.meta.url);
@@ -107,7 +107,7 @@ test.describe('migration v5 → v6', () => {
     const { config, from, changed }: Any = migrate(raw);
     assert.equal(from, 5);
     assert.equal(changed, true);
-    assert.equal(config.version, 6);
+    assert.equal(config.version, CONFIG_VERSION);
     const [psx, snes, md] = config.emulators;
     assert.equal(psx.id, 'duckstation:psx');
     assert.match(snes.id, SLUG_ID('super-nintendo'));
@@ -187,9 +187,9 @@ test.describe('migration v5 → v6', () => {
     const config = service.load();
     const md = config.emulators[2];
     assert.equal(md.name, 'Mega Drive');
-    // La configuration migrée est réenregistrée tout de suite au format v6.
+    // La configuration migrée est réenregistrée tout de suite, au format courant.
     const saved = readJson(file);
-    assert.equal(saved.version, 6);
+    assert.equal(saved.version, CONFIG_VERSION);
     assert.equal(saved.emulators[2].id, md.id);
     assert.equal(saved.gameBookmarks[0].console, md.id);
 

@@ -1,9 +1,12 @@
 // Langue de l'interface (P1-28) : réglage ui.language (normalisation, auto), service du processus principal.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { canonicalLanguage, matchLanguage, normalizeLanguageSetting, resolveLanguage } from '@mire/shared/i18n';
 import type { Config } from '@mire/shared';
-import { DEFAULT_CONFIG, normalizeConfig } from '../../src/main/config/index.ts';
+import { createConfigService, DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { createLanguageService } from '../../src/main/i18n/index.ts';
 
 const AVAILABLE = ['fr', 'en'];
@@ -59,12 +62,48 @@ describe('ui.language : normalisation', () => {
     assert.equal(canonicalLanguage('zh-hant-tw'), 'zh-Hant-TW');
   });
 
-  it('auto par défaut, et par le service de configuration pour une configuration qui ne l’a pas encore', () => {
+  it('auto par défaut ; la normalisation complète une configuration qui ne l’a pas', () => {
     assert.equal(DEFAULT_CONFIG.ui.language, 'auto');
     assert.equal(normalizeConfig({}).ui.language, 'auto');
-    assert.equal(normalizeConfig({ version: 6, ui: { theme: 'minuit' } }).ui.language, 'auto');
+    assert.equal(normalizeConfig({ version: 7, ui: { theme: 'minuit' } }).ui.language, 'auto');
     assert.equal(normalizeConfig({ ui: { language: 'en_GB' } }).ui.language, 'en-GB');
     assert.equal(normalizeConfig({ ui: { language: ['fr'] } }).ui.language, 'auto');
+  });
+});
+
+describe('ui.language : migration v7 (installations existantes en français)', () => {
+  const migrated = (raw: unknown) => normalizeConfig(migrate(raw).config).ui.language;
+
+  it('une configuration v6 passe en français', () => {
+    assert.equal(migrated({ version: 6, ui: { theme: 'minuit' } }), 'fr');
+    assert.equal(migrated({ version: 6 }), 'fr');
+  });
+
+  it('quelle que soit sa version précédente', () => {
+    for (const version of [undefined, 1, 2, 3, 4, 5]) assert.equal(migrated({ version, ui: {} }), 'fr', String(version));
+  });
+
+  it('une langue déjà présente est conservée', () => {
+    assert.equal(migrated({ version: 6, ui: { language: 'en' } }), 'en');
+    assert.equal(migrated({ version: 6, ui: { language: 'auto' } }), 'auto');
+  });
+
+  it('une configuration déjà en v7 n’est pas migrée', () => {
+    assert.equal(migrated({ version: 7, ui: {} }), 'auto');
+  });
+
+  it('au démarrage : installation neuve en auto, configuration v6 en français (réenregistrée)', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-langue-'));
+    try {
+      const neuve = createConfigService({ file: path.join(tmp, 'neuve.json'), log: () => {} });
+      assert.equal(neuve.load().ui.language, 'auto');
+      const file = path.join(tmp, 'config.json');
+      fs.writeFileSync(file, JSON.stringify({ version: 6, ui: { theme: 'jour' } }));
+      assert.equal(createConfigService({ file, log: () => {} }).load().ui.language, 'fr');
+      assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).ui.language, 'fr');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 

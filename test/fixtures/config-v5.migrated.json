@@ -1,6 +1,6 @@
 {
   "raw": {
-    "version": 6,
+    "version": 7,
     "web": [
       {
         "id": "mon-site",
@@ -26,7 +26,8 @@
     },
     "ui": {
       "theme": "ecran",
-      "webFullscreen": true
+      "webFullscreen": true,
+      "language": "fr"
     }
   },
   "changed": true

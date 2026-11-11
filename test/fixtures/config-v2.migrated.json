@@ -1,6 +1,6 @@
 {
   "raw": {
-    "version": 6,
+    "version": 7,
     "web": [
       {
         "mode": "integrated",
@@ -55,7 +55,8 @@
       ]
     },
     "ui": {
-      "theme": "jour"
+      "theme": "jour",
+      "language": "fr"
     },
     "tv": {
       "services": [
