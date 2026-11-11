@@ -49,8 +49,8 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | faite | [#33](https://github.com/jezoock/mire/pull/33) |
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | faite | [#34](https://github.com/jezoock/mire/pull/34) |
-| P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | en revue | [#35](https://github.com/jezoock/mire/pull/35) |
-| P1-17 | Recherche « où regarder » | S | P1-16 | | à faire | |
+| P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | faite | [#35](https://github.com/jezoock/mire/pull/35) |
+| P1-17 | Recherche « où regarder » | S | P1-16 | | en revue | [#37](https://github.com/jezoock/mire/pull/37) |
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | faite | [#31](https://github.com/jezoock/mire/pull/31) |
@@ -185,3 +185,4 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Après une récupération groupée annulée, l'annulation reste active : « Rechercher en ligne » d'un album (sans fiche choisie) ou d'un jeu de console sans liste de jaquettes s'arrête aussitôt, jusqu'à la récupération groupée suivante | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | Remettre l'annulation à zéro à la fin de `run` (ou annulation propre à chaque récupération) |
 | Si la lecture des jeux d'une console échoue pendant la préparation de `run`, la récupération reste marquée « en cours » et toute nouvelle récupération groupée est refusée jusqu'au redémarrage | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | Remettre `running` à faux en cas d'erreur (`try`/`finally`) |
 | « Effacer les infos » (`clear`) vide la base et les images, mais pas les caches en mémoire des fournisseurs : une série déjà vue dans la session reprend le chemin d'une affiche effacée ; la liste des genres TMDB vide (TMDB injoignable au premier essai) est gardée jusqu'au redémarrage | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | `clear` vide aussi les caches des fournisseurs (méthode `reset` facultative de `MetadataProvider`) ; ne pas garder une liste de genres vide |
+| Deux clients TMDB sont créés avec la même clé : celui du moteur de récupération (`scrape/index.ts`) et celui de la recherche « où regarder » (`index.js`) | P1-17 ([#37](https://github.com/jezoock/mire/pull/37)) | Un seul client TMDB, prêté aux deux services quand le câblage de `index.js` sera regroupé |

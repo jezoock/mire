@@ -31,9 +31,9 @@ const { dataPaths } = require('./storage/paths.ts');
 const { createAccessPolicy } = require('./security/access-policy.ts');
 const { registerMediaScheme, registerMediaProtocol } = require('./media-protocol/index.ts');
 const { createWebManager, createDrm, createWebExtensions, createGoogleSignin, setupWebSession: setupWebSessionOf, chromeLikeUserAgent, nativeUserAgent, WEB_PARTITION } = require('./web/index.ts');
-const { providerMatches } = require('./lib/text.js');
+const { createTmdbClient } = require('./net/tmdb.ts');
+const { streamingSearchProvider } = require('./search/streaming.ts');
 const { registerIpc: registerIpcHandlers } = require('./ipc/handlers/index.ts');
-const { fold } = require('@mire/shared');
 const { EXT, MIME } = require('@mire/shared');
 
 const IS_WIN = process.platform === 'win32';
@@ -184,65 +184,10 @@ function setupWebSession() {
   });
 }
 
-/* ---------- Recherche dans les catalogues de streaming (TMDB + JustWatch) ---------- */
+/* ---------- Recherche « où regarder » (src/main/search/streaming.ts) ---------- */
 
-async function tmdbFetch(pathname, params = {}) {
-  const token = String(configService.get().search.tmdbToken || '').trim();
-  const url = new URL(`https://api.themoviedb.org/3${pathname}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const headers = { accept: 'application/json' };
-  // Jeton d'accès en lecture (long) ou ancienne clé API v3 (32 caractères).
-  if (token.length > 60) headers.authorization = `Bearer ${token}`;
-  else url.searchParams.set('api_key', token);
-  let res;
-  try { res = await fetch(url, { headers, signal: AbortSignal.timeout(9000) }); }
-  catch { throw new Error('Le catalogue TMDB est injoignable. Vérifiez la connexion Internet.'); }
-  if (res.status === 401) throw new Error('Clé TMDB refusée. Vérifiez-la dans Réglages.');
-  if (!res.ok) throw new Error(`TMDB a répondu avec le code ${res.status}.`);
-  return res.json();
-}
-
-function sourceForProvider(providerName) {
-  const p = fold(providerName).trim();
-  return configService.get().web.find((w) => {
-    const names = [w.name, ...(Array.isArray(w.providers) ? w.providers : [])].map((n) => fold(n).trim()).filter(Boolean);
-    return names.some((n) => providerMatches(p, n));
-  }) || null;
-}
-
-async function searchStreaming(query) {
-  const q = String(query || '').trim();
-  if (!q) return { ok: true, results: [] };
-  if (!String(configService.get().search.tmdbToken || '').trim()) return { ok: false, reason: 'nokey' };
-  const language = configService.get().search.language || 'fr-FR';
-  const region = String(configService.get().search.region || 'FR').toUpperCase();
-  const data = await tmdbFetch('/search/multi', { query: q, language, include_adult: 'false', page: '1' });
-  const items = (data.results || []).filter((r) => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 12);
-
-  const results = await Promise.all(items.map(async (r) => {
-    let offers = null;
-    try { offers = (await tmdbFetch(`/${r.media_type}/${r.id}/watch/providers`)).results?.[region] || null; } catch { /* sans info */ }
-    const seen = new Set();
-    const providers = [];
-    for (const o of [...(offers?.flatrate || []), ...(offers?.free || []), ...(offers?.ads || [])]) {
-      if (seen.has(o.provider_id)) continue;
-      seen.add(o.provider_id);
-      const src = sourceForProvider(o.provider_name);
-      providers.push({ name: o.provider_name, webId: src ? src.id : null });
-    }
-    providers.sort((a, b) => Number(!!b.webId) - Number(!!a.webId));
-    const date = r.release_date || r.first_air_date || '';
-    return {
-      key: `${r.media_type}-${r.id}`,
-      title: r.title || r.name || '',
-      year: date.slice(0, 4),
-      type: r.media_type,
-      poster: r.poster_path ? `https://image.tmdb.org/t/p/w342${r.poster_path}` : null,
-      providers,
-    };
-  }));
-  return { ok: true, results };
-}
+const streamingSearch = streamingSearchProvider(createTmdbClient({ key: () => configService.get().search.tmdbToken }));
+const searchStreaming = (query) => streamingSearch.search(query, { getConfig: () => configService.get() });
 
 /* ---------- Jeux et émulateurs (src/main/games) ---------- */
 
