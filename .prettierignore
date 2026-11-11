@@ -4,10 +4,8 @@ src/renderer/app.js
 src/renderer/styles.css
 src/main/store.js
 src/main/downloads.js
-src/main/adblock.js
 src/preload/preload.js
 src/main/discfiles.js
-src/main/romsites.js
 scripts/drm.js
 src/renderer/index.html
 src/renderer/fonts/

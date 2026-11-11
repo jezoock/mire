@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { isHttpUrl } from '@mire/shared';
 import * as http from '../net/http.ts';
-import { decodeText, srtToVtt } from '../lib/text.js';
+import { decodeText, srtToVtt } from '../lib/text.ts';
 import type { RemoteSubtitles } from './types.ts';
 
 export interface Subtitle {

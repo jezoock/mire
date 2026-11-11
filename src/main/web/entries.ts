@@ -1,17 +1,17 @@
 /**
  * Entrées des vues web : un identifiant de vue (`netflix`, `rom:snes-…`, `bm:…`, `tv:sfr`) donne l'entrée à
- * afficher. Les résolveurs sont rangés par préfixe ; ceux de Mire s'appuient sur lib/web-entry.js, un addon pourra
+ * afficher. Les résolveurs sont rangés par préfixe ; ceux de Mire s'appuient sur lib/web-entry.ts, un addon pourra
  * en ajouter d'autres. Sans préfixe connu, l'identifiant désigne un site enregistré.
  */
 import type { Config, LinkSite } from '@mire/shared';
 import { findConsole } from '../config/index.ts';
-import { romEntry, resolveWebEntry } from '../lib/web-entry.js';
+import { romEntry, resolveWebEntry } from '../lib/web-entry.ts';
 import type { EntryResolver, EntryResult, ResolveOptions, WebEntry } from './types.ts';
 
-// Les fonctions de lib/web-entry.js savent déjà distinguer les préfixes : chacun de ces résolveurs leur délègue.
+// Les fonctions de lib/web-entry.ts savent déjà distinguer les préfixes : chacun de ces résolveurs leur délègue.
 export const BUILTIN_RESOLVERS: readonly EntryResolver[] = ['rom:', 'bm:', 'tv:'].map((prefix) => ({
   prefix,
-  resolve: (id, config, opts) => resolveWebEntry(id, config, opts) as EntryResult,
+  resolve: (id, config, opts) => resolveWebEntry(id, config, opts),
 }));
 
 export function createEntryRegistry(extra: readonly EntryResolver[] = []) {
@@ -27,7 +27,7 @@ export function createEntryRegistry(extra: readonly EntryResolver[] = []) {
     resolve(id: unknown, config: Config, opts: ResolveOptions = {}): EntryResult {
       const s = String(id);
       const r = resolvers.find((x) => s.startsWith(x.prefix));
-      return r ? r.resolve(s, config, opts) : (resolveWebEntry(s, config, opts) as EntryResult);
+      return r ? r.resolve(s, config, opts) : resolveWebEntry(s, config, opts);
     },
     prefixes: () => resolvers.map((r) => r.prefix),
   };
@@ -51,7 +51,7 @@ export function consoleSites(config: Config, consoleId: unknown, defaults: SiteD
 
 /** Entrée « Ajouter des jeux » d'une console, sur le site demandé. */
 export function romEntryFor(config: Config, consoleId: string, siteIndex: number | undefined, defaults: SiteDefaults): WebEntry | null {
-  return romEntry(config, consoleId, consoleSites(config, consoleId, defaults), siteIndex) as WebEntry | null;
+  return romEntry(config, consoleId, consoleSites(config, consoleId, defaults), siteIndex);
 }
 
 /** Nom de la console d'une vue de sites de jeux. */

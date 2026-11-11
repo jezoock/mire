@@ -1,6 +1,6 @@
 /**
  * Arborescence du dossier de données de Mire (`userData` d'Electron), en un seul endroit.
- * À ne pas confondre avec `lib/paths.js` (contrôle qu'un chemin est dans un dossier autorisé).
+ * À ne pas confondre avec `lib/paths.ts` (contrôle qu'un chemin est dans un dossier autorisé).
  * Le détail de chaque fichier est décrit dans `docs/architecture.md`.
  */
 import path from 'node:path';

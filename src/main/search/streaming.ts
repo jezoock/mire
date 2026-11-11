@@ -5,7 +5,7 @@
 import { fold, type Config, type WebSite } from '@mire/shared';
 import { HttpError } from '../net/http.ts';
 import { tmdbImageUrl, type TmdbClient, type TmdbParams } from '../net/tmdb.ts';
-import { providerMatches } from '../lib/text.js';
+import { providerMatches } from '../lib/text.ts';
 
 /** Ce que l'appelant prête à un fournisseur de recherche. */
 export interface SearchContext {

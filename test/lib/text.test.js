@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { decodeText, srtToVtt, providerMatches } = require('../../src/main/lib/text.js');
+const { decodeText, srtToVtt, providerMatches } = require('../../src/main/lib/text.ts');
 
 test.describe('decodeText', () => {
   test('UTF-8, marque d’ordre retirée', () => {

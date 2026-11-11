@@ -25,8 +25,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `torrents/` | Fichiers `.torrent` gardés pour reprendre un torrent | `downloads.js` |
 | `emulators/` | Émulateurs installés par la boutique, un dossier chacun | `store.js` |
 | `emulators/installed.json` | Version et programme de chaque émulateur installé | `store.js`, stockage JSON |
-| `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `adblock.js` |
-| `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `adblock.js`, stockage JSON |
+| `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `src/main/web/adblock.ts` |
+| `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
 | `cache/roms/` | Jeux en ligne téléchargés pour être lancés | `index.js` |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | `store.js` |
 

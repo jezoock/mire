@@ -1,13 +1,19 @@
-'use strict';
+import type { Config, LinkSite } from '@mire/shared';
+import type { EntryResult, ResolveOptions, WebEntry } from '../web/types.ts';
 
 // Couleurs des vues web qui ne sont pas des sites enregistrés.
-const ROM_COLOR = '#6E88F7';
-const BOOKMARK_COLOR = '#9B6CF7';
-const TV_COLOR = '#E23B3B';
+export const ROM_COLOR = '#6E88F7';
+export const BOOKMARK_COLOR = '#9B6CF7';
+export const TV_COLOR = '#E23B3B';
+
+/** Ce que la résolution lit de la configuration (les tests passent une configuration partielle). */
+export type WebEntryConfig = Partial<Pick<Config, 'emulators' | 'bookmarks' | 'web'>> & {
+  tv?: { services?: Config['tv']['services'] };
+};
 
 // Entrée « Ajouter des jeux » d'une console (son identifiant, ou « pc ») : sites fournis par l'appelant
 // (ils dépendent du scraper).
-function romEntry(config, i, sites, siteIndex = 0) {
+export function romEntry(config: WebEntryConfig, i: string, sites: readonly LinkSite[] | null | undefined, siteIndex: unknown = 0): WebEntry | null {
   if (!sites || !sites.length) return null;
   const name = i === 'pc' ? 'Jeux PC' : (config.emulators || []).find((e) => e.id === i)?.name;
   if (name == null) return null;
@@ -26,7 +32,7 @@ function romEntry(config, i, sites, siteIndex = 0) {
 
 // Identifiant de vue web → entrée à afficher : { entry } ou { error }.
 // opts.romSites(i) donne les sites d'une console, opts.site le site choisi.
-function resolveWebEntry(id, config, opts = {}) {
+export function resolveWebEntry(id: unknown, config: WebEntryConfig, opts: ResolveOptions = {}): EntryResult {
   const s = String(id);
   if (s.startsWith('rom:')) {
     const i = s.slice(4);
@@ -47,5 +53,3 @@ function resolveWebEntry(id, config, opts = {}) {
   const entry = (config.web || []).find((w) => w.id === s);
   return entry ? { entry } : { error: 'Ce site n’existe plus dans la configuration.' };
 }
-
-module.exports = { romEntry, resolveWebEntry, ROM_COLOR, BOOKMARK_COLOR, TV_COLOR };
