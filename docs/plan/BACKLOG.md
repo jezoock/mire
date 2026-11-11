@@ -46,7 +46,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | faite | [#30](https://github.com/jezoock/mire/pull/30) |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | faite | [#32](https://github.com/jezoock/mire/pull/32) |
-| P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | en revue | |
+| P1-13 | Bloqueur de publicités en extension de vue web | M | P1-12 | 🧑 | en revue | [#33](https://github.com/jezoock/mire/pull/33) |
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | à faire | |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | à faire | |
@@ -176,6 +176,6 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Vue web fermée (Ctrl+W) pendant le plein écran du lecteur vidéo : l'état « plein écran de la page » n'est pas remis à zéro, la fenêtre peut rester en plein écran | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (remise à zéro dans `close` du gestionnaire) |
 | Configuration enregistrée : seuls les sites enregistrés ouverts reprennent leur entrée à jour ; un marque-page, un portail TV ou une console renommés gardent l'ancien nom tant que la vue est ouverte | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (résoudre de nouveau toutes les vues ouvertes par le registre d'entrées) |
 | L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
-| Réglages du bloqueur désactivé et jamais chargé : le texte d'état annonce « Les listes se téléchargent au premier lancement », alors qu'elles se téléchargent à l'activation | P1-13 | Dans P2-19 (réglages) ou P1-29 (textes) : « Les listes se téléchargent quand le bloqueur est activé » |
-| Activer le bloqueur la première fois attend les listes dix secondes au plus ; au-delà, les sites rechargés peuvent montrer des publicités jusqu'à la fin du téléchargement | P1-13 | À arbitrer (recharger les vues ouvertes une fois les listes prêtes) |
-| `onInjectCosmeticFilters` et le compteur de cadres masqués restent propres au bloqueur ; l'interface `WebExtension` n'a pas de point d'entrée pour le CSS injecté | P1-13 | Dans P3-24 (bloqueur en addon), si un autre addon en a besoin |
+| Réglages du bloqueur désactivé et jamais chargé : le texte d'état annonce « Les listes se téléchargent au premier lancement », alors qu'elles se téléchargent à l'activation | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P2-19 (réglages) ou P1-29 (textes) : « Les listes se téléchargent quand le bloqueur est activé » |
+| Activer le bloqueur la première fois attend les listes dix secondes au plus ; au-delà, les sites rechargés peuvent montrer des publicités jusqu'à la fin du téléchargement | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | À arbitrer (recharger les vues ouvertes une fois les listes prêtes) |
+| `onInjectCosmeticFilters` et le compteur de cadres masqués restent propres au bloqueur ; l'interface `WebExtension` n'a pas de point d'entrée pour le CSS injecté | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P3-24 (bloqueur en addon), si un autre addon en a besoin |
