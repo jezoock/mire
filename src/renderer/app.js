@@ -1900,17 +1900,17 @@ async function saveSettings() {
 /* Vue web intégrée                                                    */
 /* ------------------------------------------------------------------ */
 
-// Sites ouverts dans le menu : les services sous Streaming, les sites de jeux d'une console sous Jeux.
+// Sites ouverts dans le menu, sous leur page d'origine : les services sous Streaming, les portails TV sous
+// Télévision, les sites de jeux d'une console sous Jeux.
 function renderRailSessions() {
   const item = (x) => {
     const current = S.section === 'web' && S.webActive === x.id;
     return `<button class="rail-sub focusable" data-web="${esc(x.id)}" style="--c:${safeColor(x.color)}"${current ? ' aria-current="page"' : ''} title="${esc(x.name)}"><span class="dot"></span><span class="lbl">${esc(x.name)}</span></button>`;
   };
-  const isRom = (x) => String(x.id).startsWith('rom:');
-  const box = $('#rail-sessions');
-  const games = $('#rail-sessions-games');
-  if (box) box.innerHTML = S.webSessions.filter((x) => !isRom(x)).map(item).join('');
-  if (games) games.innerHTML = S.webSessions.filter(isRom).map(item).join('');
+  const boxes = { streaming: $('#rail-sessions'), tv: $('#rail-sessions-tv'), games: $('#rail-sessions-games') };
+  for (const [home, box] of Object.entries(boxes)) {
+    if (box) box.innerHTML = S.webSessions.filter((x) => webHome(x.id) === home).map(item).join('');
+  }
 }
 
 // Page d'où vient une vue web : Jeux pour les sites de jeux, Télévision pour les portails TV, sinon Streaming.
@@ -3605,6 +3605,8 @@ $('#rail').addEventListener('click', (e) => {
   if (sub) {
     const id = sub.dataset.web;
     if (id.startsWith('tv:')) openTvWeb({ id: id.slice(3) });
+    else if (id.startsWith('rom:')) openRomBrowser(id.slice(4));
+    else if (id.startsWith('bm:')) openBookmark(id.slice(3));
     else openWeb(id);
     return;
   }
@@ -4249,7 +4251,8 @@ function padContext() {
 }
 
 function cycleSection(d) {
-  const cur = SECTION_ORDER.indexOf(S.section === 'web' ? 'streaming' : S.section);
+  // Depuis un site, on part de sa page d'origine (Jeux, Télévision ou Streaming).
+  const cur = SECTION_ORDER.indexOf(S.section === 'web' ? webHome() : S.section);
   const next = SECTION_ORDER[(Math.max(0, cur) + d + SECTION_ORDER.length) % SECTION_ORDER.length];
   go(next, { focus: next === 'search' ? 'keep' : 'content' });
 }
