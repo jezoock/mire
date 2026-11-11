@@ -59,7 +59,7 @@ const renderer = {
 };
 
 const targets = [
-  { ...common, entryPoints: { 'main/index': 'src/main/index.js' } },
+  { ...common, entryPoints: { 'main/index': 'src/main/index.ts' } },
   {
     ...common,
     entryPoints: { 'preload/preload': 'src/preload/preload.js', 'preload/web-preload': 'src/preload/web-preload.js' },

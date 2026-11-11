@@ -1,5 +1,4 @@
 # Fichiers historiques : pas de reformatage complet, ils seront découpés en phase 1.
-src/main/index.js
 src/renderer/app.js
 src/renderer/styles.css
 src/main/store.js

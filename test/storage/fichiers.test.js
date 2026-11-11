@@ -86,7 +86,7 @@ test('emulators/installed.json : indentation 2', async () => {
   assert.equal(read(file), JSON.stringify(meta, null, 2));
 });
 
-// meta.json (index.js) et adblock/listes.json (adblock.js) chargent Electron : on vérifie les mêmes réglages
+// meta.json (meta/user-meta.ts, voir aussi test/meta) et adblock/listes.json (web/adblock.ts) : on vérifie les mêmes réglages
 // du stockage que dans ces modules contre l'expression d'écriture d'avant.
 test('meta/meta.json : indentation 2 ; adblock/listes.json : JSON compact', () => {
   const dataDir = freshDir();
