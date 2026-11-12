@@ -56,7 +56,7 @@ test.describe('resolvePlayer', () => {
 });
 
 // Lanceur simulé : enregistre les commandes, réussit ou échoue comme demandé.
-function fakeLauncher(result = { ok: true } as { ok: boolean; error?: string }) {
+function fakeLauncher(result = { ok: true } as { ok: boolean; error?: string; notFound?: boolean }) {
   const calls: { cmd: string; args: string[] }[] = [];
   const launcher: Launcher = {
     async launchProcess(cmd, args = []) {
@@ -94,7 +94,7 @@ test.describe('createPlayers', () => {
   });
 
   test('playExternal : refus hors bibliothèque, rien à lire, lecteur introuvable', async () => {
-    const { launcher, calls } = fakeLauncher({ ok: false, error: 'Programme introuvable : mpv' });
+    const { launcher, calls } = fakeLauncher({ ok: false, error: 'Programme introuvable : mpv', notFound: true });
     const p = createPlayers({ launcher, shell: fakeShell().shell, settings: settings(), isAllowed: () => false, detectEnv: () => noFiles('linux') });
     assert.equal((await p.playExternal('/ailleurs/a.avi')).error, 'Ce fichier ne fait pas partie de la bibliothèque.');
     assert.equal((await p.playExternal('')).error, 'Rien à lire.');
@@ -144,7 +144,7 @@ test.describe('createLauncher', () => {
   test('programme introuvable', async () => {
     const f = fakeSpawn(Object.assign(new Error('spawn x ENOENT'), { code: 'ENOENT' }));
     const l = createLauncher({ shell, platform: 'linux', spawn: f.spawn });
-    assert.deepEqual(await l.launchProcess('/jeux/x', []), { ok: false, error: 'Programme introuvable : /jeux/x' });
+    assert.deepEqual(await l.launchProcess('/jeux/x', []), { ok: false, error: 'Programme introuvable : /jeux/x', notFound: true });
   });
 
   test('réduire pendant le jeu : rappel au démarrage, rétablissement à la fermeture', async () => {
