@@ -18,6 +18,7 @@ import { registerConsoles, removeConsoles } from './consoles.ts';
 import { download, type InstallContext } from './installers/files.ts';
 import { installRetroArch } from './installers/retroarch.ts';
 import { installStandalone } from './installers/standalone.ts';
+import { t } from '../i18n/current.ts';
 
 export { EMULATORS, FREE_GAMES, RETROARCH_SYSTEMS } from './catalog/index.ts';
 export { githubLatest } from './installers/github-release.ts';
@@ -64,14 +65,13 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
 
   async function install(id: string, systemIds: string[] = []) {
     const emu = EMULATORS.find((e) => e.id === id);
-    if (!emu) return { ok: false, error: 'Émulateur inconnu.' };
-    if (PLATFORM === 'other')
-      return { ok: false, error: 'La boutique installe les émulateurs sous Windows et Linux. Sur ce système, installez-les depuis leur site.' };
-    if (busy.has(id)) return { ok: false, error: 'Installation déjà en cours.' };
+    if (!emu) return { ok: false, error: t('store.errors.unknownEmulator') };
+    if (PLATFORM === 'other') return { ok: false, error: t('store.errors.unsupportedPlatform') };
+    if (busy.has(id)) return { ok: false, error: t('store.errors.alreadyInstalling') };
     busy.add(id);
     try {
       if (emu.retroarch) {
-        if (!systemIds.length) throw new Error('Choisissez au moins une console.');
+        if (!systemIds.length) throw new Error(t('store.errors.chooseConsole'));
         await installRetroArch(ctx, emu, systemIds);
       } else {
         await installStandalone(ctx, emu);
@@ -105,7 +105,7 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
 
   function biosInfo(id: string) {
     const dir = biosDir(id);
-    if (!dir || !BIOS_HINTS[id]) return null;
+    if (!dir || !BIOS_HINTS.has(id)) return null;
     let files: string[] = [];
     try {
       files = fs
@@ -117,13 +117,13 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
     } catch {
       /* dossier pas encore créé */
     }
-    return { dir, hint: BIOS_HINTS[id], files };
+    return { dir, hint: t(`store.bios.${id}`), files };
   }
 
   // Copie les fichiers choisis dans le dossier des BIOS de l'émulateur.
   async function addBios(id: string, files: string[]) {
     const dir = biosDir(id);
-    if (!dir) return { ok: false, error: 'Cet émulateur n’utilise pas de BIOS.' };
+    if (!dir) return { ok: false, error: t('store.errors.noBios') };
     await fsp.mkdir(dir, { recursive: true });
     const copied: string[] = [];
     for (const f of files || []) {
@@ -147,7 +147,7 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
         return {
           id: e.id,
           name: e.name,
-          desc: e.desc,
+          desc: t(`store.emulators.${e.id}`),
           site: e.site,
           retroarch: !!e.retroarch,
           available: PLATFORM !== 'other' && (!!e.retroarch || !!e.source?.[PLATFORM]),
@@ -158,20 +158,21 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
           systems: e.systems.map((s) => ({ id: s.id, name: s.name, installed: installedStore.has(`${e.id}:${s.id}`) })),
         };
       }),
-      games: FREE_GAMES.map((g) => {
+      games: FREE_GAMES.map(({ basedOn, ...g }) => {
         const target = consoleFor(g.system);
         const sys = RETROARCH_SYSTEMS.find((s) => s.id === g.system);
         const installed = target ? fs.existsSync(path.join(target.romsDir, g.file)) : false;
-        return { ...g, systemName: sys ? sys.name : g.system, ready: !!target, installed };
+        const author = basedOn ? t('store.basedOn', { author: g.author, original: basedOn }) : g.author;
+        return { ...g, author, desc: t(`store.games.${g.id}`), systemName: sys ? sys.name : g.system, ready: !!target, installed };
       }),
     };
   }
 
   async function getGame(id: string) {
     const g = FREE_GAMES.find((x) => x.id === id);
-    if (!g) return { ok: false, error: 'Jeu inconnu.' };
+    if (!g) return { ok: false, error: t('store.errors.unknownGame') };
     const target = consoleFor(g.system);
-    if (!target) return { ok: false, error: 'Installez d’abord la console correspondante.' };
+    if (!target) return { ok: false, error: t('store.errors.installConsoleFirst') };
     const pid = `game:${id}`;
     progress(pid, 'download', { label: g.name });
     try {
@@ -188,7 +189,7 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
   // Copie vos propres fichiers de jeux dans le dossier d'une console.
   async function importFiles(consoleId: string, files: string[]) {
     const emu = getConfig().emulators.find((e: any) => e.id === consoleId);
-    if (!emu || !emu.romsDir) return { ok: false, error: 'Console inconnue ou sans dossier de jeux.' };
+    if (!emu || !emu.romsDir) return { ok: false, error: t('store.errors.unknownConsoleOrFolder') };
     await fsp.mkdir(emu.romsDir, { recursive: true });
     let n = 0;
     for (const f of files || []) {

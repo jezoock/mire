@@ -54,15 +54,15 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | faite | [#31](https://github.com/jezoock/mire/pull/31) |
-| P1-21 | Racine de composition | M | P1-06…P1-20 | | en revue | [#41](https://github.com/jezoock/mire/pull/41) |
-| P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | en revue | [#38](https://github.com/jezoock/mire/pull/38) |
-| P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | en revue | [#40](https://github.com/jezoock/mire/pull/40) |
+| P1-21 | Racine de composition | M | P1-06…P1-20 | | faite | [#41](https://github.com/jezoock/mire/pull/41) |
+| P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | faite | [#38](https://github.com/jezoock/mire/pull/38) |
+| P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | faite | [#40](https://github.com/jezoock/mire/pull/40) |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
 | P1-26 | Schéma des réglages | M | P1-06 | | faite | [#27](https://github.com/jezoock/mire/pull/27) |
 | P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
 | P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | faite | [#39](https://github.com/jezoock/mire/pull/39) |
-| P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | à faire | |
+| P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | en revue | [#42](https://github.com/jezoock/mire/pull/42) |
 | **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 (sauf P1-25) | | | |
 
 Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-24).
@@ -181,6 +181,10 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | `MainContext` garde `any` pour `scraper`, `store`, `downloads`, `adblock` : les typer fait apparaître des écarts avec le contrat IPC (`downloadsList`, `adblockStatus`, `scrape`…) | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (avec P1-29 ou une petite tâche dédiée) |
 | Les types « Like » des vues web (`WindowLike`, `ViewLike`) ne sont pas compatibles avec ceux d'Electron : `index.ts` passe par deux conversions `as unknown as` | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (assouplir les types « Like ») |
 | ESLint ne vérifie que les fichiers `.js` : le processus principal, désormais tout en TypeScript, n'est plus linté | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (typescript-eslint, nouvelle dépendance de développement) |
+| Menu macOS : uniquement des rôles Electron (`appMenu`, `editMenu`, `windowMenu`), dont Electron fixe les libellés en anglais ; les traduire changerait ce que voit un utilisateur en français | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans P2-23 (finitions de la localisation) : libellés des rôles pris dans les catalogues |
+| Les fiches déjà récupérées (genres, résumés TMDB et Steam) et les erreurs gardées dans la liste des téléchargements restent dans la langue du moment où elles ont été produites | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | À arbitrer (proposer de récupérer de nouveau les fiches après un changement de langue) |
+| Les annonces (« jeu ajouté », service de télévision détecté, progression de la boutique) sont rédigées par l'interface à partir des données du processus principal | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans la phase 2 (textes de l'interface) |
+| `search.language` n'a pas de réglage dans l'interface (vide = langue de l'interface) | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans P2-19 (réglages) ou P2-23, si on veut des fiches dans une autre langue que l'interface |
 | `onInjectCosmeticFilters` et le compteur de cadres masqués restent propres au bloqueur ; l'interface `WebExtension` n'a pas de point d'entrée pour le CSS injecté | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P3-24 (bloqueur en addon), si un autre addon en a besoin |
 | Le handler `tvDetect` refait lui-même l'enregistrement du service trouvé et la recherche de son nom, en double de `detectOnce` du service de télévision ; le contexte IPC expose deux fonctions (`detectTvService`, `fetchChannels`) au lieu du service | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (le contexte expose `tv`, le service gagne une commande « détecter et choisir ») |
 | Le choix de la variante d'une chaîne selon la qualité préférée du service (`hd` par défaut) est fait par l'interface (`app.js`) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | Dans P2 (page Télévision) : le service de télévision rend la variante préférée, l'interface n'ordonne plus les qualités |

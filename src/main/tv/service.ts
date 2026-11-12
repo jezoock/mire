@@ -8,35 +8,35 @@ import * as netHttp from '../net/http.ts';
 import { groupChannels, parseM3U } from './channels.ts';
 import { detectTvService } from './detect.ts';
 import type { ChannelsResult, TvDeps, TvProvider, TvProviderContext } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Playlist M3U lue dans Mire : adresse sur le réseau de la box, ou fichier local. */
 export const playlistProvider: TvProvider = {
   kind: 'playlist',
   async channels(svc, ctx) {
     const src = (svc.url || '').trim();
-    if (!src) return { ok: false, error: `Aucune adresse de playlist pour ${svc.name}.` };
+    if (!src) return { ok: false, error: t('tv.errors.noPlaylistUrl', { service: String(svc.name) }) };
     let text: string;
     if (isHttpUrl(src)) {
       try {
         text = await ctx.http.getText(src, { timeout: 8000 });
       } catch (err) {
         const e = err as { kind?: string; status?: number };
-        if (e.kind === 'status')
-          return { ok: false, error: `${svc.name} a répondu avec le code ${e.status}. Vérifiez l’adresse de la playlist dans les réglages de la page.` };
+        if (e.kind === 'status') return { ok: false, error: t('tv.errors.playlistStatus', { service: String(svc.name), status: String(e.status) }) };
         return {
           ok: false,
-          error: `${svc.name} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).`,
+          error: t('tv.errors.playlistUnreachable', { service: String(svc.name) }),
         };
       }
     } else {
       try {
         text = await ctx.readFile(src);
       } catch {
-        return { ok: false, error: `Fichier de playlist introuvable : ${src}` };
+        return { ok: false, error: t('tv.errors.playlistFileNotFound', { path: src }) };
       }
     }
     const channels = groupChannels(parseM3U(text));
-    if (!channels.length) return { ok: false, error: 'La playlist ne contient aucune chaîne.' };
+    if (!channels.length) return { ok: false, error: t('tv.errors.noChannels') };
     return { ok: true, channels };
   },
 };
@@ -74,7 +74,7 @@ export function createTv(deps: TvDeps) {
 
   async function channels(): Promise<ChannelsResult> {
     const svc = active();
-    if (!svc) return { ok: false, error: 'Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision.' };
+    if (!svc) return { ok: false, error: t('tv.errors.noService') };
     // Un service d'un autre genre que « web » est lu comme une playlist, comme avant l'introduction des fournisseurs.
     const provider = providers.find((p) => p.kind === svc.kind) || playlistProvider;
     return provider.channels(svc, ctx);

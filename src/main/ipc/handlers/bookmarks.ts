@@ -3,13 +3,14 @@ import { hostOf, isHttpUrl, newId } from '@mire/shared';
 import type { Bookmark, BookmarkInput } from '@mire/shared/ipc';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
+import { t } from '../../i18n/current.ts';
 
 // Marque-page d'une page de streaming : crée une entrée vidéo et la scrape aussitôt.
 export async function addBookmark(ctx: MainContext, data: BookmarkInput) {
   const url = String(data?.url || '').trim();
-  if (!isHttpUrl(url)) return { ok: false as const, error: 'Adresse de page invalide.' };
+  if (!isHttpUrl(url)) return { ok: false as const, error: t('bookmarks.errors.invalidUrl') };
   const title = String(data?.title || '').trim();
-  if (!title) return { ok: false as const, error: 'Donnez un titre à chercher (nom du film ou de la série).' };
+  if (!title) return { ok: false as const, error: t('bookmarks.errors.noTitle') };
   const type = data?.type === 'tv' ? 'tv' : 'movie';
   const site = hostOf(url).replace(/^www\./, '');
   const bm: Bookmark = {

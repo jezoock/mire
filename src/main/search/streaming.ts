@@ -6,6 +6,8 @@ import { fold, type Config, type WebSite } from '@mire/shared';
 import { HttpError } from '../net/http.ts';
 import { tmdbImageUrl, type TmdbClient, type TmdbParams } from '../net/tmdb.ts';
 import { providerMatches } from '../lib/text.ts';
+import { t } from '../i18n/current.ts';
+import { metadataLanguage } from '../i18n/metadata.ts';
 
 /** Ce que l'appelant prête à un fournisseur de recherche. */
 export interface SearchContext {
@@ -41,9 +43,9 @@ const MAX_RESULTS = 12;
 // Les erreurs du client HTTP reprennent les messages propres à cette recherche.
 function tmdbError(err: unknown): unknown {
   if (!(err instanceof HttpError)) return err;
-  if (err.kind !== 'status') return new Error('Le catalogue TMDB est injoignable. Vérifiez la connexion Internet.');
-  if (err.status === 401) return new Error('Clé TMDB refusée. Vérifiez-la dans Réglages.');
-  return new Error(`TMDB a répondu avec le code ${err.status}.`);
+  if (err.kind !== 'status') return new Error(t('search.errors.tmdbUnreachable'));
+  if (err.status === 401) return new Error(t('search.errors.tmdbKeyRefused'));
+  return new Error(t('search.errors.tmdbStatus', { status: String(err.status) }));
 }
 
 /** Site configuré correspondant à un service TMDB, par son nom ou ses `providers` (« =nom » : nom exact). */
@@ -98,7 +100,7 @@ export function streamingSearchProvider(client: TmdbClient): SearchProvider<Stre
       if (!q) return { ok: true, results: [] };
       if (!client.hasKey()) return { ok: false, reason: 'nokey' };
       const { search, web } = ctx.getConfig();
-      const language = search.language || 'fr-FR';
+      const language = metadataLanguage(search.language);
       const region = String(search.region || 'FR').toUpperCase();
       const data = await tmdb('/search/multi', { query: q, language, include_adult: 'false', page: '1' });
       const items = (data?.results || []).filter((r: any) => r.media_type === 'movie' || r.media_type === 'tv').slice(0, MAX_RESULTS);

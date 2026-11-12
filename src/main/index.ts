@@ -14,7 +14,7 @@ import { createDownloads } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { defaultRomSites } from './games/rom-sites.ts';
-import { createLanguageService } from './i18n/index.ts';
+import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
 import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
@@ -87,6 +87,8 @@ function start(pending: PendingFiles): Running {
   // Langue de l'interface : réglage ui.language, ou langue du système ; l'interface suit ses changements.
   const i18n = createLanguageService({ config, systemLanguages: () => app.getPreferredSystemLanguages(), dev: !app.isPackaged });
   i18n.onChange((info) => toUi('i18n:changed', info));
+  // Textes du processus principal (erreurs, boîtes de dialogue, boutique) dans la langue de l'interface.
+  useLanguage(i18n);
 
   // Vues web intégrées (src/main/web/setup.ts). Les types « Like » décrivent le sous-ensemble d'Electron utilisé.
   const webLayer = createWebLayer({

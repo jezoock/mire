@@ -11,6 +11,7 @@ import { searchTemplate, withSearchTemplate } from './learn-search.ts';
 import { padInputEvents, shortcutAction } from './shortcuts.ts';
 import type { KeyInput, Rect, ViewLike, WebContentsLike, WebEntry, WebManagerDeps } from './types.ts';
 import type { DownloadContext } from '../downloads/types.ts';
+import { t } from '../i18n/current.ts';
 
 // Préférences de toutes les vues : jamais d'accès à Node, isolation et bac à sable.
 export const WEB_PREFERENCES = Object.freeze({ partition: 'persist:web', contextIsolation: true, sandbox: true, nodeIntegration: false });
@@ -258,10 +259,10 @@ export function createWebManager(deps: WebManagerDeps) {
     wc.on('will-redirect', guard);
     wc.on('did-fail-load', (_e: unknown, code: number, desc: string, _url: string, isMainFrame: boolean) => {
       if (isMainFrame && code !== -3) {
-        toUi('web-error', { id: entry.id, message: `${entry.name} ne répond pas (${desc}). Vérifiez la connexion ou l’adresse du site.` });
+        toUi('web-error', { id: entry.id, message: t('web.errors.notResponding', { site: String(entry.name), reason: desc }) });
       }
     });
-    wc.on('render-process-gone', () => toUi('web-error', { id: entry.id, message: `${entry.name} s’est arrêté. Rechargez la page.` }));
+    wc.on('render-process-gone', () => toUi('web-error', { id: entry.id, message: t('web.errors.crashed', { site: String(entry.name) }) }));
     wc.on('focus', () => toUi('web-focus', true));
     wc.on('blur', () => toUi('web-focus', false));
     wc.on('enter-html-full-screen', () => setHtmlFullScreen(entry.id, true));
@@ -385,7 +386,7 @@ export function createWebManager(deps: WebManagerDeps) {
 
   function learnSearch(id?: string | null) {
     const w = views.get(id || state.activeId || '');
-    if (!w) return { ok: false as const, error: 'Aucun site ouvert.' };
+    if (!w) return { ok: false as const, error: t('web.errors.noSiteOpen') };
     const r = searchTemplate(w.view.webContents.getURL());
     if (!r.ok) return r;
     const { entry } = w;

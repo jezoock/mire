@@ -2,7 +2,7 @@
 import type { Config, HomeBar, Theme } from '@mire/shared';
 import { DEFAULT_TV } from './catalogs/tv.ts';
 
-export const CONFIG_VERSION = 7;
+export const CONFIG_VERSION = 8;
 
 // Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
 export const HOME_BARS: readonly HomeBar[] = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
@@ -37,7 +37,8 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
     // Une configuration d'avant la v7 passe en français (migrations/v7.ts).
     language: 'auto',
   },
-  search: { tmdbToken: '', region: 'FR', language: 'fr-FR' },
+  // Langue des fiches (TMDB, Steam) : vide = celle de l'interface (src/main/i18n/metadata.ts, migrations/v8.ts).
+  search: { tmdbToken: '', region: 'FR', language: '' },
   scrape: { auto: true },
   // Jeux : autoOnline affiche d'emblée les jeux en ligne en ouvrant une console.
   games: [],

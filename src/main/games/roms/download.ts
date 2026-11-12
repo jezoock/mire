@@ -5,12 +5,13 @@ import { safeFileName } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
 import * as disc from '../disc/index.ts';
 import type { GamesDeps } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 export async function downloadGame(deps: Pick<GamesDeps, 'config' | 'downloads'>, consoleId: string, url: string) {
   const emu = findConsole(deps.config.get(), consoleId);
   const downloads = deps.downloads();
-  if (!emu) return { ok: false as const, error: 'Cette console n’existe plus dans la configuration.' };
-  if (!emu.romsDir) return { ok: false as const, error: `Indiquez d’abord le dossier principal de ${emu.name} (Modifier la console).` };
+  if (!emu) return { ok: false as const, error: t('games.errors.consoleGone') };
+  if (!emu.romsDir) return { ok: false as const, error: t('games.errors.setMainFolderFirst', { console: String(emu.name) }) };
   const u = String(url || '');
   if (!disc.isDescriptor(u)) return { ...downloads.addUrl(u, { console: consoleId }), count: 1 };
   // Jeu sur disque : l'index et tous les fichiers qu'il cite, dans un dossier au nom du jeu.
@@ -18,7 +19,7 @@ export async function downloadGame(deps: Pick<GamesDeps, 'config' | 'downloads'>
   try {
     files = await disc.resolveRemote(u, (x) => downloads.fetchText(x));
   } catch (err) {
-    return { ok: false as const, error: `Index du jeu illisible (${(err as Error).message}).` };
+    return { ok: false as const, error: t('games.errors.indexUnreadable', { reason: (err as Error).message }) };
   }
   const base = safeFileName(path.basename(files[0].rel, path.extname(files[0].rel)), { max: Infinity, fallback: '' });
   const folder = path.join(emu.romsDir, base);

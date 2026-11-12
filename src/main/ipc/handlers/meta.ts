@@ -4,13 +4,14 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
+import { t } from '../../i18n/current.ts';
 
 // Image choisie sur le disque (bannière d'une console…) : copiée dans les données de Mire.
 export async function pickImageFile(ctx: MainContext, title?: string) {
   const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
-    title: title || 'Choisir une image',
+    title: title || t('dialogs.chooseAnImage'),
     properties: ['openFile'],
-    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'] }],
+    filters: [{ name: t('dialogs.filters.images'), extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'] }],
   });
   if (r.canceled || !r.filePaths[0]) return null;
   const src = r.filePaths[0];

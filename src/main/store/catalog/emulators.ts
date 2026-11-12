@@ -1,7 +1,7 @@
 /**
  * Émulateurs de la boutique. source.github : dépôt officiel, dont on prend la dernière version publiée ;
  * source.page : page de téléchargement où chercher le lien (Dolphin).
- * Données : futur contenu d'un addon (phase 3).
+ * Données : futur contenu d'un addon (phase 3). Descriptions : catalogues de textes (`store.emulators.<id>`).
  */
 import { RETROARCH_SYSTEMS, storeSystem } from './systems.ts';
 import type { StoreEmulator } from './types.ts';
@@ -10,7 +10,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'retroarch',
     name: 'RetroArch',
-    desc: 'Un seul programme pour les consoles 8 et 16 bits, les Game Boy et la Nintendo 64. Choisissez les consoles à ajouter.',
     site: 'https://www.retroarch.com',
     retroarch: true,
     systems: [...RETROARCH_SYSTEMS],
@@ -19,7 +18,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'duckstation',
     name: 'DuckStation',
-    desc: 'PlayStation. Demande le BIOS de votre console, à placer dans son dossier « bios ».',
     site: 'https://www.duckstation.org',
     source: { github: 'stenzek/duckstation', win32: /^duckstation-windows-x64-release\.zip$/, linux: /^DuckStation-x64\.AppImage$/ },
     exe: { win32: /^duckstation-qt-x64-ReleaseLTCG\.exe$/i, linux: /^DuckStation-x64\.AppImage$/ },
@@ -29,7 +27,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'pcsx2',
     name: 'PCSX2',
-    desc: 'PlayStation 2. Demande le BIOS de votre console.',
     site: 'https://pcsx2.net',
     source: { github: 'PCSX2/pcsx2', win32: /-windows-x64-Qt\.7z$/, linux: /-linux-appimage-x64-Qt\.AppImage$/ },
     exe: { win32: /^pcsx2-qt\.exe$/i, linux: /\.AppImage$/ },
@@ -39,7 +36,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'ppsspp',
     name: 'PPSSPP',
-    desc: 'PlayStation Portable.',
     site: 'https://www.ppsspp.org',
     source: { github: 'hrydgard/ppsspp', win32: /-Windows-x64\.zip$/, linux: /-anylinux-x86_64\.AppImage$/ },
     exe: { win32: /^PPSSPPWindows64\.exe$/i, linux: /\.AppImage$/ },
@@ -49,7 +45,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'dolphin',
     name: 'Dolphin',
-    desc: 'GameCube et Wii. Sous Windows, demande le « Visual C++ Redistributable » de Microsoft.',
     site: 'https://dolphin-emu.org',
     source: { page: 'https://dolphin-emu.org/download/', win32: /https:\/\/dl\.dolphin-emu\.org\/releases\/[\w.-]+\/dolphin-[\w.-]+-x64\.7z/ },
     exe: { win32: /^Dolphin\.exe$/i },
@@ -62,7 +57,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'melonds',
     name: 'melonDS',
-    desc: 'Nintendo DS.',
     site: 'https://melonds.kuribo64.net',
     source: { github: 'melonDS-emu/melonDS', win32: /-windows-x86_64\.zip$/, linux: /-appimage-x86_64\.zip$/ },
     exe: { win32: /^melonDS\.exe$/i, linux: /\.AppImage$/i },
@@ -72,7 +66,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'azahar',
     name: 'Azahar',
-    desc: 'Nintendo 3DS.',
     site: 'https://azahar-emu.org',
     source: { github: 'azahar-emu/azahar', win32: /^azahar-windows-msvc-[\w.]+\.zip$/ },
     exe: { win32: /^azahar\.exe$/i },
@@ -82,7 +75,6 @@ export const EMULATORS: readonly StoreEmulator[] = [
   {
     id: 'cemu',
     name: 'Cemu',
-    desc: 'Wii U.',
     site: 'https://cemu.info',
     source: { github: 'cemu-project/Cemu', win32: /-windows-x64\.zip$/, linux: /-x86_64\.AppImage$/ },
     exe: { win32: /^Cemu\.exe$/i, linux: /\.AppImage$/ },

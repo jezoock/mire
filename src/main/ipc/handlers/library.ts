@@ -4,6 +4,7 @@ import * as http from '../../net/http.ts';
 import { resolveLocation } from '../../library/location.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
+import { t } from '../../i18n/current.ts';
 
 export function libraryHandlers(ctx: MainContext) {
   return {
@@ -21,9 +22,9 @@ export function libraryHandlers(ctx: MainContext) {
       if (r.type === 'url') {
         try {
           const res = await http.request(r.url as string, { timeout: 10000 });
-          return { ok: res.ok, error: res.ok ? null : `Le serveur a répondu avec le code ${res.status}.` };
+          return { ok: res.ok, error: res.ok ? null : t('library.errors.serverStatus', { status: String(res.status) }) };
         } catch {
-          return { ok: false, error: 'Adresse injoignable.' };
+          return { ok: false, error: t('library.errors.addressUnreachable') };
         }
       }
       try {

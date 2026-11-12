@@ -4,6 +4,7 @@ import { substitute } from '../lib/args.ts';
 import { detectBrowser, detectPlayer, firstExisting, playerCandidates, programName, systemDetectEnv } from './detect.ts';
 import type { Launcher, ShellLike } from './launcher.ts';
 import type { DetectEnv, ExternalPlayer, LaunchResult, PlayerVariables, ProgramSetting } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Arguments par défaut de chaque lecteur : {url}, {title}, {start} (secondes ; argument retiré si 0). */
 export const PLAYER_PRESETS = {
@@ -52,12 +53,12 @@ export interface PlayersDeps {
 
 export function createPlayers({ launcher, shell, settings, isAllowed, detectEnv = systemDetectEnv }: PlayersDeps) {
   async function playExternal(target: unknown, title = '', start: unknown = 0): Promise<LaunchResult> {
-    if (typeof target !== 'string' || !target) return { ok: false, error: 'Rien à lire.' };
-    if (!isUrlTarget(target) && !isAllowed(target)) return { ok: false, error: 'Ce fichier ne fait pas partie de la bibliothèque.' };
+    if (typeof target !== 'string' || !target) return { ok: false, error: t('platform.errors.nothingToPlay') };
+    if (!isUrlTarget(target) && !isAllowed(target)) return { ok: false, error: t('platform.errors.notInLibrary') };
     const { cmd, args } = resolvePlayer(settings().externalPlayer, { url: target, title, start: Number(start) || 0 }, detectEnv());
     const r = await launcher.launchProcess(cmd, args);
-    if (!r.ok && r.error?.startsWith('Programme introuvable')) {
-      r.error = 'Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages.';
+    if (!r.ok && r.notFound) {
+      r.error = t('platform.errors.noExternalPlayer');
     }
     return r;
   }

@@ -20,6 +20,286 @@
       "fileCount": {
         "one": "{count} fichier",
         "other": "{count} fichiers"
+      },
+      "errors": {
+        "networkShareUnavailable": "Partage réseau inaccessible : {path}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.",
+        "folderNotFound": "Dossier introuvable : {path}",
+        "addressUnavailable": "Adresse inaccessible ({reason}).",
+        "crawlTimeout": "délai dépassé",
+        "crawlUnreachable": "serveur injoignable",
+        "crawlStatus": "le serveur a répondu avec le code {status}",
+        "playlistUnavailable": "Liste de lecture inaccessible.",
+        "serverStatus": "Le serveur a répondu avec le code {status}.",
+        "addressUnreachable": "Adresse injoignable."
+      },
+      "subtitles": "Sous-titres",
+      "streamingFolder": "Streaming"
+    },
+    "net": {
+      "errors": {
+        "timeout": "{host} met trop de temps à répondre.",
+        "aborted": "Requête annulée.",
+        "unreachable": "Impossible de joindre {host}. Vérifiez la connexion Internet.",
+        "status": "{host} a répondu avec le code {status}",
+        "downloadStatus": "Téléchargement impossible : {host} a répondu avec le code {status}."
+      }
+    },
+    "archive": {
+      "errors": {
+        "extractFailed": "Extraction impossible (code {code})."
+      }
+    },
+    "platform": {
+      "errors": {
+        "programNotFound": "Programme introuvable : {path}",
+        "nothingToPlay": "Rien à lire.",
+        "notInLibrary": "Ce fichier ne fait pas partie de la bibliothèque.",
+        "noExternalPlayer": "Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages."
+      }
+    },
+    "downloads": {
+      "torrentName": "Torrent",
+      "errors": {
+        "torrentFileNotFound": "Fichier .torrent introuvable.",
+        "noTorrentApp": "Aucun logiciel de torrent ne s'est ouvert ({reason}). Installez-en un (qBittorrent, Transmission…) ou choisissez le client intégré dans les réglages de Téléchargements.",
+        "torrentClientFailed": "Le client torrent intégré n'a pas pu démarrer ({reason}).",
+        "torrentUnreadable": "Torrent illisible ({reason}).",
+        "torrentError": "Erreur du torrent : {reason}",
+        "extractFailed": "Téléchargement terminé, mais l'archive n'a pas pu être décompressée ({reason}).",
+        "invalidUrl": "Adresse invalide : elle doit commencer par http:// ou https://.",
+        "interrupted": "Le téléchargement a été interrompu (connexion perdue ou fichier indisponible).",
+        "indexStatus": "code {status}",
+        "indexTooBig": "fichier trop gros pour un index",
+        "cancelled": "Téléchargement annulé.",
+        "installerNotFound": "Programme d’installation introuvable.",
+        "notStarted": "Le téléchargement n’a pas démarré : le site ne répond pas. Réessayez plus tard."
+      }
+    },
+    "games": {
+      "pcGames": "Jeux PC",
+      "errors": {
+        "deleteAutoFound": "Ce jeu est trouvé automatiquement dans un dossier : retirez le dossier dans les réglages, ou supprimez le jeu sur le disque.",
+        "deleteOnline": "Un jeu disponible en ligne ne peut pas être supprimé ici.",
+        "deleteNoConsole": "Ce jeu n’est rattaché à aucune console : il n’a pas été supprimé.",
+        "deleteOutsideConsole": "Ce fichier ne se trouve pas dans les dossiers de {console} : il n’a pas été supprimé.",
+        "deleteNotFile": "Seul un fichier de jeu peut être supprimé ici, pas un dossier.",
+        "deleteFailed": "Suppression impossible : {reason}",
+        "gameGone": "Ce jeu n’existe plus dans la configuration.",
+        "fileNotFound": "Fichier introuvable : {path}",
+        "notInGameFolders": "Ce jeu ne fait pas partie de vos dossiers de jeux.",
+        "pcLocation": "Les jeux PC doivent se trouver sur un disque ou un partage réseau.",
+        "consoleGone": "Cette console n’existe plus dans la configuration.",
+        "setMainFolderFirst": "Indiquez d’abord le dossier principal de {console} (Modifier la console).",
+        "indexUnreadable": "Index du jeu illisible ({reason}).",
+        "notFromSource": "Ce jeu ne provient pas d’une source de cette console.",
+        "notInConsoleFolders": "Ce jeu ne se trouve pas dans les dossiers de la console.",
+        "noRomFolder": "Aucun dossier de jeux indiqué pour {console}.",
+        "invalidLink": "Lien ou fichier invalide.",
+        "bookmarkNotFound": "Marque-page introuvable."
+      },
+      "romProgress": "{name} (fichier {index} sur {total})"
+    },
+    "web": {
+      "romSites": "Jeux : {console}",
+      "errors": {
+        "noRomSite": "Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».",
+        "bookmarkNotFound": "Marque-page introuvable.",
+        "tvServiceGone": "Ce service de télévision n’existe plus dans la configuration.",
+        "tvNotWeb": "{service} n’est pas un portail web : ses chaînes s’affichent dans la page Télévision.",
+        "siteGone": "Ce site n’existe plus dans la configuration.",
+        "notResponding": "{site} ne répond pas ({reason}). Vérifiez la connexion ou l’adresse du site.",
+        "crashed": "{site} s’est arrêté. Rechargez la page.",
+        "noSiteOpen": "Aucun site ouvert.",
+        "unreadableUrl": "Adresse de page illisible.",
+        "searchMireFirst": "Cherchez d’abord le mot « mire » avec le moteur de recherche du site, puis appuyez de nouveau sur ce bouton.",
+        "adblockListsFailed": "Aucune liste de filtres n’a pu être téléchargée. Vérifiez la connexion Internet."
+      }
+    },
+    "tv": {
+      "errors": {
+        "noPlaylistUrl": "Aucune adresse de playlist pour {service}.",
+        "playlistStatus": "{service} a répondu avec le code {status}. Vérifiez l’adresse de la playlist dans les réglages de la page.",
+        "playlistUnreachable": "{service} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).",
+        "playlistFileNotFound": "Fichier de playlist introuvable : {path}",
+        "noChannels": "La playlist ne contient aucune chaîne.",
+        "noService": "Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision."
+      }
+    },
+    "search": {
+      "errors": {
+        "tmdbUnreachable": "Le catalogue TMDB est injoignable. Vérifiez la connexion Internet.",
+        "tmdbKeyRefused": "Clé TMDB refusée. Vérifiez-la dans Réglages.",
+        "tmdbStatus": "TMDB a répondu avec le code {status}."
+      }
+    },
+    "scrape": {
+      "genres": {
+        "games": {
+          "platform": "Plateformes",
+          "action": "Action",
+          "sports": "Sport",
+          "rolePlaying": "Jeu de rôle",
+          "adventure": "Aventure",
+          "strategy": "Stratégie",
+          "racing": "Course",
+          "puzzle": "Réflexion",
+          "shooter": "Tir",
+          "shootEmUp": "Shoot’em up",
+          "board": "Jeu de plateau",
+          "beatEmUp": "Beat’em up",
+          "fighting": "Combat",
+          "simulation": "Simulation",
+          "compilation": "Compilation",
+          "gambling": "Casino",
+          "educational": "Éducatif",
+          "pinball": "Flipper",
+          "card": "Cartes",
+          "sportsWithAnimals": "Sport",
+          "huntingAndFishing": "Chasse et pêche",
+          "casualGame": "Jeu familial",
+          "various": "Divers",
+          "quiz": "Quiz",
+          "lightgunShooter": "Tir au pistolet",
+          "musicDancing": "Musique et danse",
+          "thinking": "Réflexion",
+          "adult": "Adulte"
+        },
+        "music": {
+          "electronic": "Électronique",
+          "hipHop": "Hip-hop",
+          "classical": "Classique",
+          "soundtrack": "Bande originale",
+          "frenchHouse": "French touch",
+          "house": "House",
+          "pop": "Pop",
+          "rock": "Rock",
+          "jazz": "Jazz",
+          "blues": "Blues",
+          "metal": "Metal",
+          "heavyMetal": "Metal",
+          "folk": "Folk",
+          "chansonFrancaise": "Chanson française",
+          "chanson": "Chanson française",
+          "reggae": "Reggae",
+          "soul": "Soul",
+          "funk": "Funk",
+          "rnb": "R&B",
+          "country": "Country",
+          "punk": "Punk",
+          "ambient": "Ambient",
+          "techno": "Techno",
+          "downtempo": "Downtempo",
+          "tripHop": "Trip-hop",
+          "alternativeRock": "Rock alternatif",
+          "indieRock": "Rock indé",
+          "indiePop": "Pop indé",
+          "world": "Musiques du monde",
+          "disco": "Disco",
+          "rap": "Rap"
+        }
+      },
+      "errors": {
+        "unknownSystemConfig": "Système de la console inconnu : ajoutez « system » dans sa configuration.",
+        "unknownSystem": "Système de la console inconnu : indiquez-le avec « Modifier la console ».",
+        "coversUnavailable": "La liste des jaquettes de ce système est indisponible pour le moment.",
+        "alreadyRunning": "Une récupération est déjà en cours.",
+        "noTitle": "Indiquez un titre à chercher.",
+        "unknownType": "Type inconnu.",
+        "status": "{host} : code {status}"
+      },
+      "tmdb": {
+        "skipped": "vidéos (clé TMDB absente)",
+        "noKey": "Ajoutez une clé TMDB dans Réglages pour chercher les films et séries.",
+        "series": "Série",
+        "movie": "Film"
+      }
+    },
+    "store": {
+      "emulators": {
+        "retroarch": "Un seul programme pour les consoles 8 et 16 bits, les Game Boy et la Nintendo 64. Choisissez les consoles à ajouter.",
+        "duckstation": "PlayStation. Demande le BIOS de votre console, à placer dans son dossier « bios ».",
+        "pcsx2": "PlayStation 2. Demande le BIOS de votre console.",
+        "ppsspp": "PlayStation Portable.",
+        "dolphin": "GameCube et Wii. Sous Windows, demande le « Visual C++ Redistributable » de Microsoft.",
+        "melonds": "Nintendo DS.",
+        "azahar": "Nintendo 3DS.",
+        "cemu": "Wii U."
+      },
+      "bios": {
+        "retroarch": "Selon les consoles : gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…",
+        "duckstation": "Le BIOS de votre PlayStation : scph1001.bin, scph5501.bin, scph7001.bin… (obligatoire).",
+        "pcsx2": "Le BIOS de votre PlayStation 2, par exemple SCPH-70004.bin (obligatoire).",
+        "melonds": "bios7.bin, bios9.bin et firmware.bin (facultatif : melonDS a un BIOS libre intégré). Indiquez-les ensuite dans melonDS, Configuration, Émulation.",
+        "dolphin": "IPL.bin de votre GameCube (facultatif), à placer dans le sous-dossier de sa région (EUR, USA, JAP).",
+        "azahar": "aes_keys.txt et fichiers système de votre 3DS (facultatif).",
+        "cemu": "keys.txt, avec les clés de vos jeux Wii U (pour les jeux chiffrés)."
+      },
+      "games": {
+        "nova": "Plateformes : un écureuil qui copie les pouvoirs de ses ennemis.",
+        "thwaite": "Défendez vos villages contre une pluie de missiles.",
+        "croom": "Jeu de mémoire : retrouvez les paires de cartes.",
+        "libbet": "Réflexion : passez sur chaque case du sol sans rester coincé.",
+        "ucity": "Construisez et gérez votre ville, dans l’esprit de SimCity.",
+        "cavestory": "Le grand jeu d’aventure gratuit, adapté pour la Mega Drive, en français."
+      },
+      "basedOn": "{author}, d’après {original}",
+      "errors": {
+        "unknownEmulator": "Émulateur inconnu.",
+        "unsupportedPlatform": "La boutique installe les émulateurs sous Windows et Linux. Sur ce système, installez-les depuis leur site.",
+        "alreadyInstalling": "Installation déjà en cours.",
+        "chooseConsole": "Choisissez au moins une console.",
+        "noBios": "Cet émulateur n’utilise pas de BIOS.",
+        "unknownGame": "Jeu inconnu.",
+        "installConsoleFirst": "Installez d’abord la console correspondante.",
+        "unknownConsoleOrFolder": "Console inconnue ou sans dossier de jeux.",
+        "notForThisSystem": "{name} n’est pas proposé pour ce système.",
+        "assetNotFound": "Fichier de {name} introuvable dans la version {version}.",
+        "unknownSource": "Source inconnue.",
+        "programNotFound": "{name} est téléchargé, mais son programme est introuvable.",
+        "retroarchNotFound": "RetroArch est téléchargé, mais son programme est introuvable dans l’archive.",
+        "pageChanged": "La page de téléchargement de {name} a changé. Installez-le depuis {site}.",
+        "noRelease": "Aucune version publiée pour {repo}.",
+        "unknownConsole": "Console inconnue."
+      },
+      "progress": {
+        "latestVersion": "Recherche de la dernière version",
+        "extracting": "Extraction",
+        "extractingRetroarch": "Extraction de RetroArch",
+        "core": "Module {core}"
+      }
+    },
+    "dialogs": {
+      "filters": {
+        "programs": "Programmes",
+        "applications": "Applications",
+        "gamesAndShortcuts": "Jeux et raccourcis",
+        "images": "Images",
+        "allFiles": "Tous les fichiers",
+        "media": "Vidéos, musiques et images",
+        "mireConfig": "Configuration Mire"
+      },
+      "chooseFolder": "Choisir un dossier",
+      "openFiles": "Ouvrir des fichiers",
+      "chooseImage": "Choisir l’image",
+      "chooseBackground": "Choisir le fond d’écran",
+      "chooseAnImage": "Choisir une image",
+      "exportConfig": "Exporter la configuration",
+      "importConfig": "Importer une configuration",
+      "importGames": "Importer des jeux pour {console}",
+      "chooseBios": "Choisir le ou les fichiers BIOS",
+      "chooseTorrent": "Choisir un fichier .torrent",
+      "downloadFolder": "Dossier des téléchargements"
+    },
+    "config": {
+      "errors": {
+        "invalidFile": "Ce fichier n’est pas une configuration Mire valide (JSON illisible).",
+        "invalid": "Configuration invalide."
+      }
+    },
+    "bookmarks": {
+      "errors": {
+        "invalidUrl": "Adresse de page invalide.",
+        "noTitle": "Donnez un titre à chercher (nom du film ou de la série)."
       }
     }
   }

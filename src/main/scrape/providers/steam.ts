@@ -1,9 +1,15 @@
 /** Jeux PC : recherche et fiches du magasin Steam (sans clé). */
 import { fold, rankByTitle } from '@mire/shared';
-import type { JobContext, MetadataProvider, ScrapeItem, ScrapeOutcome, ScrapeOverride } from '../types.ts';
+import { metadataLanguage, steamLocale } from '../../i18n/metadata.ts';
+import type { JobContext, MetadataProvider, ProviderContext, ScrapeItem, ScrapeOutcome, ScrapeOverride } from '../types.ts';
 
-const searchUrl = (term: string) => `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=french&cc=FR`;
-const detailsUrl = (appId: string) => `https://store.steampowered.com/api/appdetails?appids=${appId}&l=french&cc=FR`;
+// Langue et pays du magasin : ceux des fiches (langue de l'interface, sauf `search.language` fixé).
+const locale = (ctx: ProviderContext) => {
+  const { l, cc } = steamLocale(metadataLanguage(ctx.getConfig().search.language));
+  return `l=${l}&cc=${cc}`;
+};
+const searchUrl = (term: string, ctx: ProviderContext) => `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&${locale(ctx)}`;
+const detailsUrl = (appId: string, ctx: ProviderContext) => `https://store.steampowered.com/api/appdetails?appids=${appId}&${locale(ctx)}`;
 const assets = (appId: string, file: string) => [
   `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/${file}`,
   `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/${file}`,
@@ -37,7 +43,7 @@ async function scrapePcGame(game: ScrapeItem, override: ScrapeOverride | undefin
     title = override.pick.title || title;
   } else if (!appId || override) {
     const term = override?.title || game.name;
-    const data = await io.getJson(searchUrl(term));
+    const data = await io.getJson(searchUrl(term, ctx));
     const it = rankByTitle(data?.items || [], term, (x: any) => x.name)[0];
     if (!it) return null;
     appId = String(it.id);
@@ -47,7 +53,7 @@ async function scrapePcGame(game: ScrapeItem, override: ScrapeOverride | undefin
   if (!image) return null;
   let details: any = null;
   try {
-    details = (await io.getJson(detailsUrl(appId)))?.[appId]?.data || null;
+    details = (await io.getJson(detailsUrl(appId, ctx)))?.[appId]?.data || null;
   } catch {
     /* sans détails */
   }
@@ -87,7 +93,7 @@ export function steamProvider(): MetadataProvider {
     scrape: (game, override, ctx) => scrapePcGame(game, override, ctx),
     byId: (pick, game, ctx) => scrapePcGame(game, { pick }, ctx),
     async candidates({ query }, ctx) {
-      const data = await ctx.io.getJson(searchUrl(query));
+      const data = await ctx.io.getJson(searchUrl(query, ctx));
       return rankByTitle(data?.items || [], query, (x: any) => x.name)
         .slice(0, 12)
         .map((it: any) => ({

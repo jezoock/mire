@@ -2,7 +2,7 @@
  * Client HTTP unique du processus principal : toutes les requêtes sortantes passent par ici.
  * - identité « Mire/1.0 » envoyée par défaut ;
  * - délai maximal par requête (corps de la réponse compris) ;
- * - erreurs en français, avec leur nature (`HttpError.kind`) pour que chaque appelant garde ses propres
+ * - erreurs dans la langue de l'interface, avec leur nature (`HttpError.kind`) pour que chaque appelant garde ses propres
  *   messages quand il en a.
  */
 import fs from 'node:fs';
@@ -11,6 +11,7 @@ import path from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { hostOf } from '@mire/shared';
+import { t } from '../i18n/current.ts';
 
 export const USER_AGENT = 'Mire/1.0 (lecteur multimédia personnel)';
 
@@ -52,7 +53,7 @@ export class HttpError extends Error {
 const hostOrUrl = (url: string): string => hostOf(url) || url;
 
 /** Erreur « code de réponse » avec le message habituel (« exemple.fr a répondu avec le code 500 »). */
-export function statusError(url: string, status: number, message = `${hostOrUrl(url)} a répondu avec le code ${status}`): HttpError {
+export function statusError(url: string, status: number, message = t('net.errors.status', { host: hostOrUrl(url), status: String(status) })): HttpError {
   return new HttpError('status', url, message, { status });
 }
 
@@ -68,10 +69,10 @@ interface Call {
 function failure(call: Call, err: unknown, reading = false): unknown {
   if (err instanceof HttpError) return err;
   const host = hostOrUrl(call.url);
-  if (call.timeoutSignal?.aborted) return new HttpError('timeout', call.url, `${host} met trop de temps à répondre.`, { cause: err });
-  if (call.external?.aborted) return new HttpError('aborted', call.url, 'Requête annulée.', { cause: err });
+  if (call.timeoutSignal?.aborted) return new HttpError('timeout', call.url, t('net.errors.timeout', { host }), { cause: err });
+  if (call.external?.aborted) return new HttpError('aborted', call.url, t('net.errors.aborted'), { cause: err });
   if (reading) return err;
-  return new HttpError('unreachable', call.url, `Impossible de joindre ${host}. Vérifiez la connexion Internet.`, { cause: err });
+  return new HttpError('unreachable', call.url, t('net.errors.unreachable', { host }), { cause: err });
 }
 
 function prepare(url: string, opts: RequestOptions): Call {
@@ -164,7 +165,7 @@ export async function downloadToFile(url: string, dest: string, opts: DownloadOp
   const call = prepare(url, opts);
   const res = await send(call, opts);
   if (!res.ok || !res.body) {
-    throw statusError(url, res.status, `Téléchargement impossible : ${hostOrUrl(url)} a répondu avec le code ${res.status}.`);
+    throw statusError(url, res.status, t('net.errors.downloadStatus', { host: hostOrUrl(url), status: String(res.status) }));
   }
   const total = Number(res.headers.get('content-length')) || 0;
   let received = 0;

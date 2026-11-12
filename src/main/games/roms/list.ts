@@ -13,6 +13,7 @@ import { crawlHttp } from '../../library/providers/http-index.ts';
 import { locationError, resolveLocation } from '../../library/location.ts';
 import * as disc from '../disc/index.ts';
 import type { ConsoleLocation, GameDownloads, Rom } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 const MAX_ROMS = 20000;
 
@@ -128,14 +129,14 @@ async function attachImages(roms: Rom[], imagesDir: string): Promise<void> {
 
 export async function listRoms(deps: ListDeps, consoleId: unknown, opts: ListOptions = {}): Promise<ListResult> {
   const emu = findConsole(deps.config.get(), consoleId);
-  if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
+  if (!emu) return { ok: false, error: t('games.errors.consoleGone') };
   let places = consoleLocations(emu);
   if (opts.only) places = places.filter((p) => p.location === opts.only);
   else if (!opts.online) places = places.filter((p) => !p.remote);
   const locations = places.map((p) => p.location);
   if (!locations.length) {
     if (!opts.online && consoleLocations(emu).some((p) => p.remote)) return { ok: true, roms: [], errors: [], noLocal: true };
-    return { ok: false, error: `Aucun dossier de jeux indiqué pour ${emu.name}.` };
+    return { ok: false, error: t('games.errors.noRomFolder', { console: String(emu.name) }) };
   }
 
   const found = await collect(locations, extSet(emu));

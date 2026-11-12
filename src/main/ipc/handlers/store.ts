@@ -3,6 +3,7 @@ import fsp from 'node:fs/promises';
 import { findConsole } from '../../config/index.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
+import { t } from '../../i18n/current.ts';
 
 export function storeHandlers(ctx: MainContext) {
   return {
@@ -12,12 +13,12 @@ export function storeHandlers(ctx: MainContext) {
     storeGame: (id) => ctx.store.getGame(id),
     storeImport: async (consoleId) => {
       const emu = findConsole(ctx.config.get(), consoleId);
-      if (!emu) return { ok: false, error: 'Console inconnue.' };
+      if (!emu) return { ok: false, error: t('store.errors.unknownConsole') };
       const exts = (emu.extensions || []).map((e: unknown) => String(e).replace(/^\./, ''));
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
-        title: `Importer des jeux pour ${emu.name}`,
+        title: t('dialogs.importGames', { console: String(emu.name) }),
         properties: ['openFile', 'multiSelections'],
-        filters: [...(exts.length ? [{ name: emu.name, extensions: exts }] : []), { name: 'Tous les fichiers', extensions: ['*'] }],
+        filters: [...(exts.length ? [{ name: emu.name, extensions: exts }] : []), { name: t('dialogs.filters.allFiles'), extensions: ['*'] }],
       });
       if (r.canceled) return { ok: true, count: 0 };
       return ctx.store.importFiles(consoleId, r.filePaths);
@@ -29,7 +30,7 @@ export function storeHandlers(ctx: MainContext) {
     },
     biosAdd: async (id) => {
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
-        title: 'Choisir le ou les fichiers BIOS',
+        title: t('dialogs.chooseBios'),
         properties: ['openFile', 'multiSelections'],
       });
       if (r.canceled || !r.filePaths.length) return { ok: false, canceled: true };

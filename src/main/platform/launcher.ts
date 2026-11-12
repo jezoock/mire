@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isUrlTarget } from '@mire/shared';
 import type { LaunchOptions, LaunchResult } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Ce que le lanceur demande à l'interface système d'Electron (`shell`). */
 export interface ShellLike {
@@ -51,7 +52,9 @@ export function createLauncher(deps: LauncherDeps): Launcher {
         return;
       }
       child.once('error', (err: NodeJS.ErrnoException) => {
-        resolve({ ok: false, error: err.code === 'ENOENT' ? `Programme introuvable : ${cmd}` : err.message });
+        resolve(
+          err.code === 'ENOENT' ? { ok: false, error: t('platform.errors.programNotFound', { path: cmd }), notFound: true } : { ok: false, error: err.message },
+        );
       });
       child.once('spawn', () => {
         const restore = hideWhileRunning && minimizeWhileRunning ? minimizeWhileRunning() : undefined;

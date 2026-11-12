@@ -101,7 +101,9 @@ export interface UiSettings {
 
 export interface SearchSettings {
   tmdbToken: string;
+  /** Pays des disponibilités (« où regarder »). */
   region: string;
+  /** Langue des fiches TMDB et Steam (`fr-FR`, `en-US`) ; vide = celle de l'interface. */
   language: string;
 }
 

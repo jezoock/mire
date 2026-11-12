@@ -4,10 +4,12 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import * as http from '../net/http.ts';
 import type { ScrapeIo } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Un code d'erreur garde le message habituel de la récupération (« api.themoviedb.org : code 500 »). */
 export function scrapeError(err: unknown): unknown {
-  if (err instanceof http.HttpError && err.kind === 'status') return new Error(`${err.host} : code ${err.status}`, { cause: err });
+  if (err instanceof http.HttpError && err.kind === 'status')
+    return new Error(t('scrape.errors.status', { host: err.host, status: String(err.status) }), { cause: err });
   return err;
 }
 

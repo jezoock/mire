@@ -4,6 +4,7 @@
  */
 import type { Config, LinkSite } from '@mire/shared';
 import type { WebEntry } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 export type LearnResult = { ok: true; template: string } | { ok: false; error: string };
 
@@ -13,12 +14,12 @@ export function searchTemplate(url: string): LearnResult {
   try {
     origin = new URL(url).origin;
   } catch {
-    return { ok: false, error: 'Adresse de page illisible.' };
+    return { ok: false, error: t('web.errors.unreadableUrl') };
   }
   const rest = url.slice(origin.length);
   const idx = rest.toLowerCase().indexOf('mire');
   if (idx < 0) {
-    return { ok: false, error: 'Cherchez d’abord le mot « mire » avec le moteur de recherche du site, puis appuyez de nouveau sur ce bouton.' };
+    return { ok: false, error: t('web.errors.searchMireFirst') };
   }
   return { ok: true, template: origin + rest.slice(0, idx) + '{q}' + rest.slice(idx + 4) };
 }

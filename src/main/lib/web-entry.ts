@@ -1,5 +1,6 @@
 import type { Config, LinkSite } from '@mire/shared';
 import type { EntryResult, ResolveOptions, WebEntry } from '../web/types.ts';
+import { t } from '../i18n/current.ts';
 
 // Couleurs des vues web qui ne sont pas des sites enregistrés.
 export const ROM_COLOR = '#6E88F7';
@@ -15,12 +16,12 @@ export type WebEntryConfig = Partial<Pick<Config, 'emulators' | 'bookmarks' | 'w
 // (ils dépendent du scraper).
 export function romEntry(config: WebEntryConfig, i: string, sites: readonly LinkSite[] | null | undefined, siteIndex: unknown = 0): WebEntry | null {
   if (!sites || !sites.length) return null;
-  const name = i === 'pc' ? 'Jeux PC' : (config.emulators || []).find((e) => e.id === i)?.name;
+  const name = i === 'pc' ? t('games.pcGames') : (config.emulators || []).find((e) => e.id === i)?.name;
   if (name == null) return null;
   const si = Math.max(0, Math.min(Number(siteIndex) || 0, sites.length - 1));
   return {
     id: `rom:${i}`,
-    name: `Jeux : ${name}`,
+    name: t('web.romSites', { console: name }),
     url: sites[si].url,
     search: sites[si].search || '',
     color: ROM_COLOR,
@@ -37,19 +38,19 @@ export function resolveWebEntry(id: unknown, config: WebEntryConfig, opts: Resol
   if (s.startsWith('rom:')) {
     const i = s.slice(4);
     const entry = romEntry(config, i, opts.romSites ? opts.romSites(i) : [], opts.site);
-    return entry ? { entry } : { error: 'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».' };
+    return entry ? { entry } : { error: t('web.errors.noRomSite') };
   }
   if (s.startsWith('bm:')) {
     const bm = (config.bookmarks || []).find((b) => `bm:${b.id}` === s);
-    if (!bm) return { error: 'Marque-page introuvable.' };
+    if (!bm) return { error: t('web.errors.bookmarkNotFound') };
     return { entry: { id: s, name: bm.title || bm.site, url: bm.url, mode: 'integrated', color: BOOKMARK_COLOR, search: '' } };
   }
   if (s.startsWith('tv:')) {
-    const svc = (config.tv?.services || []).find((t) => `tv:${t.id}` === s);
-    if (!svc) return { error: 'Ce service de télévision n’existe plus dans la configuration.' };
-    if (svc.kind !== 'web' || !svc.url) return { error: `${svc.name} n’est pas un portail web : ses chaînes s’affichent dans la page Télévision.` };
+    const svc = (config.tv?.services || []).find((x) => `tv:${x.id}` === s);
+    if (!svc) return { error: t('web.errors.tvServiceGone') };
+    if (svc.kind !== 'web' || !svc.url) return { error: t('web.errors.tvNotWeb', { service: String(svc.name) }) };
     return { entry: { id: s, name: svc.name, url: svc.url, mode: 'integrated', color: TV_COLOR, search: '' } };
   }
   const entry = (config.web || []).find((w) => w.id === s);
-  return entry ? { entry } : { error: 'Ce site n’existe plus dans la configuration.' };
+  return entry ? { entry } : { error: t('web.errors.siteGone') };
 }

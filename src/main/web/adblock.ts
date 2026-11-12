@@ -19,6 +19,7 @@ import * as http from '../net/http.ts';
 import { createJsonStore } from '../storage/json-store.ts';
 import { dataPaths } from '../storage/paths.ts';
 import type { ExtensionSession, RequestDetails, RequestResponse, WebExtension } from './extensions.ts';
+import { t } from '../i18n/current.ts';
 
 // Liste FR : la liste qu'Adblock Plus ajoute à EasyList pour les sites français.
 const EXTRA_LISTS = ['https://easylist-downloads.adblockplus.org/liste_fr.txt'];
@@ -218,7 +219,7 @@ export function createAdblock({
         loaded.push(urls[i]);
       } else failed.push(urls[i]);
     });
-    if (!texts.length) throw new Error('Aucune liste de filtres n’a pu être téléchargée. Vérifiez la connexion Internet.');
+    if (!texts.length) throw new Error(t('web.errors.adblockListsFailed'));
     const engine = ElectronBlocker.parse(texts.join('\n'), { loadNetworkFilters: true, loadCosmeticFilters: true, enableCompression: true });
     try {
       const resources = await fetchResources(fetchImpl);
