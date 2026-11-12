@@ -33,10 +33,7 @@ L’outil de fabrication (electron-builder) est téléchargé à la demande, uni
 
 ### Pour les développeurs
 
-- Le code est dans `src/` (`main/` : processus principal, `preload/`, `renderer/` : interface) et les paquets partagés dans `packages/` (espaces de travail npm). `npm run build` construit l’application dans `dist/` avec esbuild ; `npm start` construit puis lance Mire ; `npm run dev` reconstruit à chaque modification et lance Mire (relancez Mire après un changement du processus principal, actualisez la fenêtre avec Ctrl+R après un changement de l’interface).
-- `npm run lint`, `npm run format:check`, `npm run typecheck` (TypeScript) et `npm test` : vérifications rapides, sans Electron. Les tests en TypeScript (`*.test.ts`) s’exécutent directement grâce à la suppression des types intégrée à Node (Node 22.18 ou plus récent).
-- `npm run test:e2e` : test de fumée. Mire est construit, puis démarre avec la configuration de démonstration de `test/e2e/fixtures/`, chaque section est ouverte au clavier et les captures de référence sont enregistrées dans `test/e2e/__screenshots__/` (à regarder à chaque changement d’interface). Sous Linux sans écran : `xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e`.
-- Variable d’environnement `MIRE_USER_DATA` : dossier de données à utiliser à la place de celui de Mire (configuration, caches, sessions des sites). Pratique pour essayer une configuration sans toucher à la vôtre, par exemple `MIRE_USER_DATA=/tmp/mire-essai npm start`.
+L’organisation du code, les scripts, les tests et la CI sont décrits plus bas, dans [Développer Mire](#développer-mire). L’architecture est détaillée dans [`docs/architecture.md`](docs/architecture.md).
 
 ## Rien n’est installé d’office
 
@@ -490,6 +487,81 @@ Tout est enregistré dans un fichier `config.json`. Le bouton **Afficher le fich
 
 Si le fichier devient illisible, Mire le met de côté sous un autre nom et repart des réglages par défaut.
 
+## Développer Mire
+
+Il faut Node.js 22.18 ou plus récent : les fichiers TypeScript (`.ts`) s’exécutent directement, sans compilation, grâce à la suppression des types intégrée à Node. Après `npm install`, `npm start` construit puis lance Mire.
+
+### Arborescence
+
+```
+src/
+  main/        processus principal (TypeScript), un dossier par domaine ; index.ts relie les services
+  preload/     preload.js (fenêtre principale) et web-preload.js (sites ouverts dans Mire)
+  renderer/    interface : app.js (interface historique), core/, state/, api/, domain/, nav/, players/, ui/
+packages/
+  shared/      @mire/shared : types, fonctions pures, contrat IPC, schéma des réglages, catalogues de textes
+test/          tests unitaires (même découpage que src/), e2e/ (test de fumée), fixtures/
+scripts/       build.mjs (esbuild), i18n-check.mjs, drm.js (signature Widevine)
+docs/          architecture.md, i18n.md, settings-schema.md, analyse/ et plan/ (refonte)
+vendor/        dépendances remplacées de WebTorrent (voir plus bas)
+dist/          construction (générée, non versionnée)
+release/       installateurs de npm run dist (générés)
+```
+
+Le rôle de chaque module, les flux principaux, le contrat IPC et les règles de sécurité sont dans [`docs/architecture.md`](docs/architecture.md).
+
+### Scripts npm
+
+| Commande | Ce qu’elle fait |
+| --- | --- |
+| `npm start` | Construit `dist/` puis lance Mire. |
+| `npm run build` | Construit `dist/` avec esbuild : processus principal et preloads en CommonJS, interface en un seul script. |
+| `npm run dev` | Reconstruit à chaque modification et lance Mire. Après un changement du processus principal, relancez Mire ; après un changement de l’interface, actualisez la fenêtre (<kbd>Ctrl</kbd>+<kbd>R</kbd>). |
+| `npm run lint` | ESLint (fichiers `.js` et `.mjs`). `npm run lint:fix` corrige ce qui peut l’être. |
+| `npm run format:check` | Vérifie le formatage Prettier. `npm run format` le corrige. |
+| `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/`. |
+| `npm run i18n:check` | Vérifie les catalogues de textes (voir plus bas). |
+| `npm test` | Tests unitaires. |
+| `npm run test:e2e` | Test de fumée dans Electron (voir plus bas). |
+| `npm run dist` | Fabrique l’installateur dans `release/`. |
+| `npm run drm:compte`, `drm:connexion`, `drm:signer` | Signature Widevine (voir « Services protégés »). |
+
+### Dossier de données : `MIRE_USER_DATA`
+
+Mire range ses données (configuration, caches, sessions des sites…) dans le dossier de données d’Electron. La variable d’environnement `MIRE_USER_DATA` en désigne un autre. Pratique pour essayer une configuration sans toucher à la vôtre :
+
+```
+MIRE_USER_DATA=/tmp/mire-essai npm start
+```
+
+Le contenu de ce dossier est décrit dans [`docs/architecture.md`](docs/architecture.md#dossier-de-données).
+
+### Tests
+
+**Tests unitaires** (`npm test`) : le lanceur de tests intégré à Node (`node:test`) exécute `test/**/*.test.js` et `test/**/*.test.ts`. Ils tournent sans Electron et sans Internet : les services reçoivent de fausses dépendances, et les tests réseau parlent à un petit serveur local. Un test de décodage Windows-1252 est sauté si le Node utilisé décode mal ce jeu de caractères (constaté avec un Node 22 compilé avec l’ICU du système) ; les Node officiels 22 et 24 le passent.
+
+**Test de fumée** (`npm run test:e2e`) : Mire est construit, puis lancé dans Electron par Playwright, avec la configuration de démonstration de `test/e2e/fixtures/` (copiée dans un dossier temporaire, passé par `MIRE_USER_DATA`). Le test ouvre chaque section au clavier et vérifie qu’elle est remplie. Il vérifie aussi qu’aucune requête ne sort sur le réseau, sauf le téléchargement de Widevine. Il faut le moteur Electron : `npm start` le télécharge au premier lancement. Sous Linux sans écran :
+
+```
+xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e
+```
+
+**Captures** : le test de fumée enregistre une capture de chaque section, de l’accueil dans chaque thème et du panneau de réglages des Vidéos, dans `test/e2e/__screenshots__/` (versionnées). Il ne les compare pas encore aux précédentes : regardez le changement dans Git après une modification de l’interface. La fenêtre a une taille fixe et l’heure est figée, mais le rendu dépend de l’environnement (système, polices, carte graphique) : les captures varient de quelques pixels d’une exécution à l’autre, et davantage d’une machine à l’autre. Ne versionnez pas des captures qui n’ont changé que pour cette raison.
+
+### Catalogues de textes : `i18n:check`
+
+Tout nouveau texte affiché passe par les catalogues de `packages/shared/src/i18n/locales/`, en français et en anglais. `npm run i18n:check` vérifie que les deux catalogues ont les mêmes clés et les mêmes variables (`{nom}`), qu’aucun texte n’est vide et que les métadonnées sont complètes. Les règles d’écriture des clés et des textes sont dans [`docs/i18n.md`](docs/i18n.md).
+
+### Intégration continue
+
+La CI (`.github/workflows/ci.yml`) tourne à chaque push et à chaque pull request :
+
+- **Lint et formatage** (Node 24) : `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run i18n:check` ;
+- **Tests** : `npm test` sous Node 22 et sous Node 24 ;
+- **Test de fumée Electron** (Node 24) : téléchargement du moteur Electron, puis `npm run test:e2e` sous `xvfb-run`. Les captures sont publiées en artefact (`captures-e2e`), même en cas d’échec.
+
+Widevine et la signature VMP ne se testent que sur une vraie machine Windows ou macOS.
+
 ## Dépendances remplacées (dossier `vendor/`)
 
 WebTorrent tire quelques modules natifs ou fragiles qui n’ont pas leur place dans Mire. Ils sont remplacés, via la section `overrides` de `package.json`, par de petits paquets locaux du dossier `vendor/` :
@@ -512,4 +584,4 @@ Résultat : `npm install` n’exécute aucun script d’installation venant de c
 - Les pochettes intégrées aux fichiers MP3 ne sont pas lues : placez un `cover.jpg` dans le dossier de l’album.
 - La fenêtre principale s’ouvre en plein écran si vous cochez l’option dans Réglages ; <kbd>F11</kbd> bascule à tout moment. <kbd>F12</kbd> ouvre les outils de développement.
 
-La police Archivo est distribuée sous licence SIL Open Font License (voir `renderer/fonts/OFL.txt`).
+La police Archivo est distribuée sous licence SIL Open Font License (voir `src/renderer/fonts/OFL.txt`).
