@@ -9,6 +9,7 @@ import type { GameSource } from '@mire/shared';
 import { walkDirs } from '../../fs/walk.ts';
 import { locationError, resolveLocation } from '../../library/location.ts';
 import type { GameSourceProvider, PcGame, SourceStatus } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 /** Utilitaires livrés avec les jeux, jamais proposés comme jeu. */
 export const JUNK_EXE =
@@ -97,7 +98,7 @@ export async function scanGameSources(
     const loc = resolveLocation(src.location);
     const provider = providers.find((p) => p.canHandle(loc));
     if (!provider) {
-      status[src.id] = { ok: false, error: 'Les jeux PC doivent se trouver sur un disque ou un partage réseau.', count: 0 };
+      status[src.id] = { ok: false, error: t('games.errors.pcLocation'), count: 0 };
       continue;
     }
     try {

@@ -25,7 +25,6 @@ export type EmulatorSource = { github: string; win32?: RegExp; linux?: RegExp } 
 export interface StoreEmulator {
   id: string;
   name: string;
-  desc: string;
   site: string;
   /** RetroArch : installé depuis le buildbot, avec un cœur par console choisie. */
   retroarch?: boolean;
@@ -44,7 +43,8 @@ export interface FreeGame {
   /** Identifiant d'un système RetroArch de la boutique. */
   system: string;
   author: string;
-  desc: string;
+  /** Jeu adapté d'un autre : auteur de l'original. */
+  basedOn?: string;
   url: string;
   file: string;
 }

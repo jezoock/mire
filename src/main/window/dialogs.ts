@@ -3,6 +3,7 @@ import { EXT } from '@mire/shared';
 import type { LibraryItem } from '../library/types.ts';
 import type { ElectronApis } from '../ipc/context.ts';
 import type { ImageField } from '../meta/user-meta.ts';
+import { t } from '../i18n/current.ts';
 
 type Filter = { name: string; extensions: string[] };
 
@@ -11,11 +12,19 @@ export function fileFilters(kind: unknown, platform: NodeJS.Platform): Filter[] 
   const win = platform === 'win32';
   const mac = platform === 'darwin';
   const filters: Record<string, Filter[]> = {
-    program: win ? [{ name: 'Programmes', extensions: ['exe'] }] : mac ? [{ name: 'Applications', extensions: ['app'] }] : [],
-    game: win ? [{ name: 'Jeux et raccourcis', extensions: ['exe', 'lnk', 'url', 'bat', 'cmd'] }] : mac ? [{ name: 'Applications', extensions: ['app'] }] : [],
-    image: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }],
+    program: win
+      ? [{ name: t('dialogs.filters.programs'), extensions: ['exe'] }]
+      : mac
+        ? [{ name: t('dialogs.filters.applications'), extensions: ['app'] }]
+        : [],
+    game: win
+      ? [{ name: t('dialogs.filters.gamesAndShortcuts'), extensions: ['exe', 'lnk', 'url', 'bat', 'cmd'] }]
+      : mac
+        ? [{ name: t('dialogs.filters.applications'), extensions: ['app'] }]
+        : [],
+    image: [{ name: t('dialogs.filters.images'), extensions: ['jpg', 'jpeg', 'png', 'webp'] }],
   };
-  return [...(filters[String(kind)] || []), { name: 'Tous les fichiers', extensions: ['*'] }];
+  return [...(filters[String(kind)] || []), { name: t('dialogs.filters.allFiles'), extensions: ['*'] }];
 }
 
 /** Extensions des vidéos, musiques et images que Mire sait lire (sans le point). */
@@ -35,7 +44,7 @@ export interface DialogsDeps {
 export function createDialogs({ dialog, window, platform = process.platform, itemFromPath }: DialogsDeps) {
   return {
     async pickFolder(): Promise<string | null> {
-      const r = await dialog.showOpenDialog(window(), { title: 'Choisir un dossier', properties: ['openDirectory'] });
+      const r = await dialog.showOpenDialog(window(), { title: t('dialogs.chooseFolder'), properties: ['openDirectory'] });
       return r.canceled ? null : r.filePaths[0];
     },
     async pickFile(kind: unknown): Promise<string | null> {
@@ -44,11 +53,11 @@ export function createDialogs({ dialog, window, platform = process.platform, ite
     },
     async openMedia(): Promise<LibraryItem[]> {
       const r = await dialog.showOpenDialog(window(), {
-        title: 'Ouvrir des fichiers',
+        title: t('dialogs.openFiles'),
         properties: ['openFile', 'multiSelections'],
         filters: [
-          { name: 'Vidéos, musiques et images', extensions: mediaExtensions() },
-          { name: 'Tous les fichiers', extensions: ['*'] },
+          { name: t('dialogs.filters.media'), extensions: mediaExtensions() },
+          { name: t('dialogs.filters.allFiles'), extensions: ['*'] },
         ],
       });
       if (r.canceled) return [];
@@ -57,9 +66,9 @@ export function createDialogs({ dialog, window, platform = process.platform, ite
     /** Image ou fond d'écran d'un élément (infos modifiées à la main) : chemin choisi, ou `null`. */
     async chooseMetaImage(field: ImageField): Promise<string | null> {
       const r = await dialog.showOpenDialog(window(), {
-        title: field === 'image' ? 'Choisir l’image' : 'Choisir le fond d’écran',
+        title: field === 'image' ? t('dialogs.chooseImage') : t('dialogs.chooseBackground'),
         properties: ['openFile'],
-        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'] }],
+        filters: [{ name: t('dialogs.filters.images'), extensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif'] }],
       });
       if (r.canceled || !r.filePaths[0]) return null;
       return r.filePaths[0];

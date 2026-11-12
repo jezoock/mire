@@ -7,6 +7,7 @@
  */
 import path from 'node:path';
 import { safeDecode, isHttpUrl } from '@mire/shared';
+import { t } from '../i18n/current.ts';
 
 export type ResolvedLocation = { type: 'url'; url: string } | { type: 'path'; path: string; network: boolean };
 
@@ -41,6 +42,6 @@ export function resolveLocation(loc: unknown, { platform = process.platform, uid
 
 /** Message affiché quand le dossier ou le partage d'une source est inaccessible. */
 export function locationError(loc: string, r: { network?: boolean }): string {
-  if (r.network) return `Partage réseau inaccessible : ${loc}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.`;
-  return `Dossier introuvable : ${loc}`;
+  if (r.network) return t('library.errors.networkShareUnavailable', { path: loc });
+  return t('library.errors.folderNotFound', { path: loc });
 }

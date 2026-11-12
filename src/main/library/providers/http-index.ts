@@ -6,12 +6,13 @@ import * as http from '../../net/http.ts';
 import { addSeriesInfo } from '../item.ts';
 import { isM3uUrl } from './m3u.ts';
 import type { LibraryItem, ScanContext, SourceProvider } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 // Raison affichée quand la première page d'index ne se charge pas.
 function crawlError(err: { kind?: string; status?: number; message: string }): string {
-  if (err.kind === 'timeout') return 'délai dépassé';
-  if (err.kind === 'unreachable') return 'serveur injoignable';
-  if (err.kind === 'status') return `le serveur a répondu avec le code ${err.status}`;
+  if (err.kind === 'timeout') return t('library.errors.crawlTimeout');
+  if (err.kind === 'unreachable') return t('library.errors.crawlUnreachable');
+  if (err.kind === 'status') return t('library.errors.crawlStatus', { status: String(err.status) });
   return err.message;
 }
 
@@ -31,7 +32,7 @@ export async function crawlHttp(startUrl: string, onDir: CrawlVisitor, maxDirs =
     try {
       html = await http.getText(dirUrl, { timeout: 15000 });
     } catch (err) {
-      if (first) throw new Error(`Adresse inaccessible (${crawlError(err as Error)}).`);
+      if (first) throw new Error(t('library.errors.addressUnavailable', { reason: crawlError(err as Error) }));
       continue;
     }
     first = false;

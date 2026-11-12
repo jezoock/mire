@@ -1,6 +1,7 @@
 /** Gestionnaire de téléchargements. */
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';
+import { t } from '../../i18n/current.ts';
 
 export function downloadsHandlers(ctx: MainContext) {
   return {
@@ -12,7 +13,7 @@ export function downloadsHandlers(ctx: MainContext) {
     },
     downloadsAddTorrentFile: async (dlCtx) => {
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
-        title: 'Choisir un fichier .torrent',
+        title: t('dialogs.chooseTorrent'),
         properties: ['openFile'],
         filters: [{ name: 'Torrents', extensions: ['torrent'] }],
       });
@@ -28,7 +29,7 @@ export function downloadsHandlers(ctx: MainContext) {
     downloadsRunInstaller: (id, file) => ctx.downloads.runInstaller(id, file),
     downloadsPickDir: async () => {
       const r = await ctx.electron.dialog.showOpenDialog(ctx.mainWindow, {
-        title: 'Dossier des téléchargements',
+        title: t('dialogs.downloadFolder'),
         properties: ['openDirectory', 'createDirectory'],
       });
       return r.canceled ? null : r.filePaths[0];

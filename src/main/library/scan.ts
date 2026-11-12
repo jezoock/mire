@@ -10,6 +10,7 @@ import { localProvider } from './providers/local.ts';
 import { httpIndexProvider } from './providers/http-index.ts';
 import { m3uProvider } from './providers/m3u.ts';
 import type { LibraryItem, RemoteSubtitles, ScanContext, ScanResult, SourceProvider, SourceStatus, SourceTarget } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Nombre maximal d'éléments d'une analyse. */
 export const MAX_ITEMS = 150000;
@@ -53,8 +54,8 @@ export function bookmarkItem(b: Bookmark): LibraryItem {
     name: b.title || b.url,
     ext: '',
     kind: 'video',
-    folder: b.site || 'Streaming',
-    dir: b.site || 'Streaming',
+    folder: b.site || t('library.streamingFolder'),
+    dir: b.site || t('library.streamingFolder'),
     native: false,
     cover: null,
     fanart: null,

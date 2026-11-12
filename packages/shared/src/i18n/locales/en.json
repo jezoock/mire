@@ -20,6 +20,286 @@
       "fileCount": {
         "one": "{count} file",
         "other": "{count} files"
+      },
+      "errors": {
+        "networkShareUnavailable": "Network share unavailable: {path}. Check that the computer sharing it is on and that you're connected to it.",
+        "folderNotFound": "Folder not found: {path}",
+        "addressUnavailable": "Can't open this address ({reason}).",
+        "crawlTimeout": "timed out",
+        "crawlUnreachable": "server unreachable",
+        "crawlStatus": "the server responded with code {status}",
+        "playlistUnavailable": "Can't open this playlist.",
+        "serverStatus": "The server responded with code {status}.",
+        "addressUnreachable": "Can't reach this address."
+      },
+      "subtitles": "Subtitles",
+      "streamingFolder": "Streaming"
+    },
+    "net": {
+      "errors": {
+        "timeout": "{host} is taking too long to respond.",
+        "aborted": "Request cancelled.",
+        "unreachable": "Can't reach {host}. Check your internet connection.",
+        "status": "{host} responded with code {status}",
+        "downloadStatus": "Download failed: {host} responded with code {status}."
+      }
+    },
+    "archive": {
+      "errors": {
+        "extractFailed": "Could not extract the archive (code {code})."
+      }
+    },
+    "platform": {
+      "errors": {
+        "programNotFound": "Program not found: {path}",
+        "nothingToPlay": "Nothing to play.",
+        "notInLibrary": "This file isn't part of your library.",
+        "noExternalPlayer": "No external player found. Install VLC or mpv, or set its location in Settings."
+      }
+    },
+    "downloads": {
+      "torrentName": "Torrent",
+      "errors": {
+        "torrentFileNotFound": ".torrent file not found.",
+        "noTorrentApp": "No torrent app opened ({reason}). Install one (qBittorrent, Transmission…) or choose the built-in client in the Downloads settings.",
+        "torrentClientFailed": "The built-in torrent client couldn't start ({reason}).",
+        "torrentUnreadable": "Can't read this torrent ({reason}).",
+        "torrentError": "Torrent error: {reason}",
+        "extractFailed": "Download finished, but the archive couldn't be extracted ({reason}).",
+        "invalidUrl": "Invalid address: it must start with http:// or https://.",
+        "interrupted": "The download stopped (connection lost or file unavailable).",
+        "indexStatus": "code {status}",
+        "indexTooBig": "file too big for an index",
+        "cancelled": "Download cancelled.",
+        "installerNotFound": "Installer not found.",
+        "notStarted": "The download didn't start: the site isn't responding. Try again later."
+      }
+    },
+    "games": {
+      "pcGames": "PC games",
+      "errors": {
+        "deleteAutoFound": "This game is found automatically in a folder: remove the folder in the settings, or delete the game from the disk.",
+        "deleteOnline": "An online game can't be deleted here.",
+        "deleteNoConsole": "This game isn't linked to any console: it wasn't deleted.",
+        "deleteOutsideConsole": "This file isn't in the {console} folders: it wasn't deleted.",
+        "deleteNotFile": "Only a game file can be deleted here, not a folder.",
+        "deleteFailed": "Couldn't delete: {reason}",
+        "gameGone": "This game is no longer in the configuration.",
+        "fileNotFound": "File not found: {path}",
+        "notInGameFolders": "This game isn't in your game folders.",
+        "pcLocation": "PC games must be on a disk or a network share.",
+        "consoleGone": "This console is no longer in the configuration.",
+        "setMainFolderFirst": "First set the main folder for {console} (Edit console).",
+        "indexUnreadable": "Can't read the game index ({reason}).",
+        "notFromSource": "This game doesn't come from one of this console's sources.",
+        "notInConsoleFolders": "This game isn't in the console's folders.",
+        "noRomFolder": "No game folder set for {console}.",
+        "invalidLink": "Invalid link or file.",
+        "bookmarkNotFound": "Bookmark not found."
+      },
+      "romProgress": "{name} (file {index} of {total})"
+    },
+    "web": {
+      "romSites": "Games: {console}",
+      "errors": {
+        "noRomSite": "No site set up for this console. Add one in \"Edit console\".",
+        "bookmarkNotFound": "Bookmark not found.",
+        "tvServiceGone": "This TV service is no longer in the configuration.",
+        "tvNotWeb": "{service} isn't a web portal: its channels are shown on the TV page.",
+        "siteGone": "This site is no longer in the configuration.",
+        "notResponding": "{site} isn't responding ({reason}). Check your connection or the site's address.",
+        "crashed": "{site} stopped working. Reload the page.",
+        "noSiteOpen": "No site open.",
+        "unreadableUrl": "Can't read the page address.",
+        "searchMireFirst": "First search for the word \"mire\" with the site's search engine, then press this button again.",
+        "adblockListsFailed": "None of the filter lists could be downloaded. Check your internet connection."
+      }
+    },
+    "tv": {
+      "errors": {
+        "noPlaylistUrl": "No playlist address for {service}.",
+        "playlistStatus": "{service} responded with code {status}. Check the playlist address in the page's settings.",
+        "playlistUnreachable": "{service} isn't responding. Playlist TV only works when the computer is on the box's network (Wi-Fi or cable).",
+        "playlistFileNotFound": "Playlist file not found: {path}",
+        "noChannels": "The playlist has no channels.",
+        "noService": "No TV service chosen. Choose one in the TV page settings."
+      }
+    },
+    "search": {
+      "errors": {
+        "tmdbUnreachable": "Can't reach the TMDB catalog. Check your internet connection.",
+        "tmdbKeyRefused": "TMDB key refused. Check it in Settings.",
+        "tmdbStatus": "TMDB responded with code {status}."
+      }
+    },
+    "scrape": {
+      "genres": {
+        "games": {
+          "platform": "Platform",
+          "action": "Action",
+          "sports": "Sports",
+          "rolePlaying": "Role-Playing (RPG)",
+          "adventure": "Adventure",
+          "strategy": "Strategy",
+          "racing": "Racing",
+          "puzzle": "Puzzle",
+          "shooter": "Shooter",
+          "shootEmUp": "Shoot'em Up",
+          "board": "Board",
+          "beatEmUp": "Beat'em Up",
+          "fighting": "Fighting",
+          "simulation": "Simulation",
+          "compilation": "Compilation",
+          "gambling": "Gambling",
+          "educational": "Educational",
+          "pinball": "Pinball",
+          "card": "Card",
+          "sportsWithAnimals": "Sports with Animals",
+          "huntingAndFishing": "Hunting and Fishing",
+          "casualGame": "Casual Game",
+          "various": "Various",
+          "quiz": "Quiz",
+          "lightgunShooter": "Lightgun Shooter",
+          "musicDancing": "Music / Dancing",
+          "thinking": "Thinking",
+          "adult": "Adult"
+        },
+        "music": {
+          "electronic": "Electronic",
+          "hipHop": "Hip hop",
+          "classical": "Classical",
+          "soundtrack": "Soundtrack",
+          "frenchHouse": "French house",
+          "house": "House",
+          "pop": "Pop",
+          "rock": "Rock",
+          "jazz": "Jazz",
+          "blues": "Blues",
+          "metal": "Metal",
+          "heavyMetal": "Heavy metal",
+          "folk": "Folk",
+          "chansonFrancaise": "Chanson française",
+          "chanson": "Chanson",
+          "reggae": "Reggae",
+          "soul": "Soul",
+          "funk": "Funk",
+          "rnb": "R&B",
+          "country": "Country",
+          "punk": "Punk",
+          "ambient": "Ambient",
+          "techno": "Techno",
+          "downtempo": "Downtempo",
+          "tripHop": "Trip hop",
+          "alternativeRock": "Alternative rock",
+          "indieRock": "Indie rock",
+          "indiePop": "Indie pop",
+          "world": "World",
+          "disco": "Disco",
+          "rap": "Rap"
+        }
+      },
+      "errors": {
+        "unknownSystemConfig": "Unknown console system: add \"system\" to its configuration.",
+        "unknownSystem": "Unknown console system: set it with \"Edit console\".",
+        "coversUnavailable": "The cover list for this system isn't available right now.",
+        "alreadyRunning": "Already looking up details.",
+        "noTitle": "Enter a title to search for.",
+        "unknownType": "Unknown type.",
+        "status": "{host}: code {status}"
+      },
+      "tmdb": {
+        "skipped": "videos (no TMDB key)",
+        "noKey": "Add a TMDB key in Settings to look up movies and series.",
+        "series": "Series",
+        "movie": "Movie"
+      }
+    },
+    "store": {
+      "emulators": {
+        "retroarch": "One program for 8-bit and 16-bit consoles, the Game Boy family and the Nintendo 64. Choose the consoles to add.",
+        "duckstation": "PlayStation. Needs the BIOS from your console, placed in its \"bios\" folder.",
+        "pcsx2": "PlayStation 2. Needs the BIOS from your console.",
+        "ppsspp": "PlayStation Portable.",
+        "dolphin": "GameCube and Wii. On Windows, needs the Microsoft \"Visual C++ Redistributable\".",
+        "melonds": "Nintendo DS.",
+        "azahar": "Nintendo 3DS.",
+        "cemu": "Wii U."
+      },
+      "bios": {
+        "retroarch": "Depending on the console: gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…",
+        "duckstation": "The BIOS from your PlayStation: scph1001.bin, scph5501.bin, scph7001.bin… (required).",
+        "pcsx2": "The BIOS from your PlayStation 2, for example SCPH-70004.bin (required).",
+        "melonds": "bios7.bin, bios9.bin and firmware.bin (optional: melonDS has a free built-in BIOS). Then set them in melonDS, Config, Emu settings.",
+        "dolphin": "IPL.bin from your GameCube (optional), placed in the subfolder for its region (EUR, USA, JAP).",
+        "azahar": "aes_keys.txt and system files from your 3DS (optional).",
+        "cemu": "keys.txt, with the keys of your Wii U games (for encrypted games)."
+      },
+      "games": {
+        "nova": "Platformer: a squirrel who copies the powers of its enemies.",
+        "thwaite": "Defend your villages from a rain of missiles.",
+        "croom": "Memory game: find the matching pairs of cards.",
+        "libbet": "Puzzle: step on every tile of the floor without getting stuck.",
+        "ucity": "Build and run your own city, in the spirit of SimCity.",
+        "cavestory": "The great free adventure game, ported to the Mega Drive, in French."
+      },
+      "basedOn": "{author}, based on {original}",
+      "errors": {
+        "unknownEmulator": "Unknown emulator.",
+        "unsupportedPlatform": "The store installs emulators on Windows and Linux. On this system, install them from their website.",
+        "alreadyInstalling": "Already installing.",
+        "chooseConsole": "Choose at least one console.",
+        "noBios": "This emulator doesn't use a BIOS.",
+        "unknownGame": "Unknown game.",
+        "installConsoleFirst": "Install the matching console first.",
+        "unknownConsoleOrFolder": "Unknown console, or it has no game folder.",
+        "notForThisSystem": "{name} isn't available for this system.",
+        "assetNotFound": "No {name} file found in version {version}.",
+        "unknownSource": "Unknown source.",
+        "programNotFound": "{name} was downloaded, but its program can't be found.",
+        "retroarchNotFound": "RetroArch was downloaded, but its program can't be found in the archive.",
+        "pageChanged": "The {name} download page has changed. Install it from {site}.",
+        "noRelease": "No published version for {repo}.",
+        "unknownConsole": "Unknown console."
+      },
+      "progress": {
+        "latestVersion": "Looking for the latest version",
+        "extracting": "Extracting",
+        "extractingRetroarch": "Extracting RetroArch",
+        "core": "Core {core}"
+      }
+    },
+    "dialogs": {
+      "filters": {
+        "programs": "Programs",
+        "applications": "Applications",
+        "gamesAndShortcuts": "Games and shortcuts",
+        "images": "Images",
+        "allFiles": "All files",
+        "media": "Videos, music and images",
+        "mireConfig": "Mire configuration"
+      },
+      "chooseFolder": "Choose a folder",
+      "openFiles": "Open files",
+      "chooseImage": "Choose the image",
+      "chooseBackground": "Choose the background",
+      "chooseAnImage": "Choose an image",
+      "exportConfig": "Export the configuration",
+      "importConfig": "Import a configuration",
+      "importGames": "Import games for {console}",
+      "chooseBios": "Choose the BIOS file or files",
+      "chooseTorrent": "Choose a .torrent file",
+      "downloadFolder": "Download folder"
+    },
+    "config": {
+      "errors": {
+        "invalidFile": "This file isn't a valid Mire configuration (unreadable JSON).",
+        "invalid": "Invalid configuration."
+      }
+    },
+    "bookmarks": {
+      "errors": {
+        "invalidUrl": "Invalid page address.",
+        "noTitle": "Give a title to search for (name of the movie or series)."
       }
     }
   }

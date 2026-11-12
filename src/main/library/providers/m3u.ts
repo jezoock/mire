@@ -4,6 +4,7 @@ import { KIND, NATIVE, safeDecode } from '@mire/shared';
 import * as http from '../../net/http.ts';
 import { parseM3U } from '../../tv/channels.ts';
 import type { SourceProvider } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 /** Vrai si l'adresse désigne une liste de lecture (.m3u, .m3u8). Une adresse invalide n'en est pas une. */
 export function isM3uUrl(url: string): boolean {
@@ -24,7 +25,7 @@ export const m3uProvider: SourceProvider = {
     try {
       text = await http.getText(url, { timeout: 15000 });
     } catch {
-      throw new Error('Liste de lecture inaccessible.');
+      throw new Error(t('library.errors.playlistUnavailable'));
     }
     const listName = safeDecode(new URL(url).pathname.split('/').pop() as string).replace(/\.m3u8?$/i, '');
     const fallbackKind = kinds.has('video') ? 'video' : kinds.has('audio') ? 'audio' : 'image';

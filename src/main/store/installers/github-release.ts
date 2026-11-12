@@ -3,6 +3,7 @@
  * redirige vers l'étiquette, puis la liste des fichiers vient de la page `expanded_assets`.
  */
 import * as http from '../../net/http.ts';
+import { t } from '../../i18n/current.ts';
 
 export interface ReleaseAsset {
   name: string;
@@ -32,7 +33,7 @@ export function parseReleaseAssets(html: string, repo: string): ReleaseAsset[] {
 export async function githubLatest(repo: string): Promise<Release> {
   const res = await http.request(`https://github.com/${repo}/releases/latest`, { redirect: 'manual', timeout: 20000 });
   const tag = tagFromLocation(res.headers.get('location') || '');
-  if (!tag) throw new Error(`Aucune version publiée pour ${repo}.`);
+  if (!tag) throw new Error(t('store.errors.noRelease', { repo }));
   const html = await http.getText(`https://github.com/${repo}/releases/expanded_assets/${encodeURIComponent(tag)}`, { timeout: 20000 });
   return { tag, assets: parseReleaseAssets(html, repo) };
 }

@@ -31,6 +31,7 @@ import type {
   ScrapeProgress,
   ScrapeRecord,
 } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Un titre introuvable est réessayé au bout de 14 jours. */
 export const MISS_RETRY_MS = 14 * 24 * 3600 * 1000;
@@ -155,7 +156,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
   }
 
   async function run(opts: RunOptions = {}): Promise<RunResult> {
-    if (state.running) return { ok: false, error: 'Une récupération est déjà en cours.' };
+    if (state.running) return { ok: false, error: t('scrape.errors.alreadyRunning') };
     state.running = true;
     state.cancel = false;
     const { kinds = ['videos', 'music', 'games'] } = opts;
@@ -202,9 +203,9 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
   // Toutes les fiches qui correspondent à une recherche, pour laisser choisir la bonne.
   async function candidates({ kind, item, query, year, artist }: CandidatesJob): Promise<CandidatesResult> {
     const q = String(query || '').trim();
-    if (!q) return { ok: false, error: 'Indiquez un titre à chercher.' };
+    if (!q) return { ok: false, error: t('scrape.errors.noTitle') };
     const provider = providerFor(kind);
-    if (!provider) return { ok: false, error: 'Type inconnu.' };
+    if (!provider) return { ok: false, error: t('scrape.errors.unknownType') };
     const missing = provider.requires?.(ctx);
     if (missing) return { ok: false, error: missing.error };
     try {

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { RETROARCH_SYSTEMS, type InstallPlatform, type StoreEmulator } from '../catalog/index.ts';
 import { download, findFile, type InstallContext } from './files.ts';
 import { githubLatest } from './github-release.ts';
+import { t } from '../../i18n/current.ts';
 
 const BUILDBOT = 'https://buildbot.libretro.com';
 
@@ -29,12 +30,12 @@ async function installProgram(ctx: InstallContext, emu: StoreEmulator, dir: stri
   const label = `RetroArch ${version}`;
   ctx.progress(emu.id, 'download', { label });
   await download(retroarchUrl(version, ctx.platform), file, (received, total) => ctx.progress(emu.id, 'download', { label, received, total }));
-  ctx.progress(emu.id, 'extract', { label: 'Extraction de RetroArch' });
+  ctx.progress(emu.id, 'extract', { label: t('store.progress.extractingRetroarch') });
   await ctx.extract(file, dir);
   await fsp.unlink(file).catch(() => {});
   const pattern = emu.exe[ctx.platform];
   const exe = pattern ? await findFile(dir, pattern) : null;
-  if (!exe) throw new Error('RetroArch est téléchargé, mais son programme est introuvable dans l’archive.');
+  if (!exe) throw new Error(t('store.errors.retroarchNotFound'));
   if (ctx.platform !== 'win32') await fsp.chmod(exe, 0o755);
   ctx.meta.retroarch = { version, exe, systems: [], at: Date.now() };
   return exe;
@@ -51,7 +52,7 @@ export async function installRetroArch(ctx: InstallContext, emu: StoreEmulator, 
     const coreFile = path.join(coresDir, `${core}_libretro.${ext}`);
     if (fs.existsSync(coreFile)) continue;
     const zip = path.join(ctx.tmpRoot, `${core}.zip`);
-    const label = `Module ${core}`;
+    const label = t('store.progress.core', { core: String(core) });
     ctx.progress(emu.id, 'download', { label });
     await download(coreUrl(String(core), ctx.platform), zip, (received, total) => ctx.progress(emu.id, 'download', { label, received, total }));
     await ctx.extract(zip, coresDir);

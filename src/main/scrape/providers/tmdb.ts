@@ -4,6 +4,8 @@ import { tmdbImageUrl, type TmdbClient, type TmdbParams } from '../../net/tmdb.t
 import { scrapeError } from '../io.ts';
 import { parseVideo } from '../parse.ts';
 import type { JobContext, MetadataProvider, ProviderContext, ScrapeItem, ScrapeOverride } from '../types.ts';
+import { t } from '../../i18n/current.ts';
+import { metadataLanguage } from '../../i18n/metadata.ts';
 
 interface Found {
   title: string;
@@ -19,20 +21,23 @@ interface Found {
 const yearOf = (r: any): string => (r.release_date || r.first_air_date || '').slice(0, 4);
 
 export function tmdbProvider(client: TmdbClient): MetadataProvider {
-  const language = (ctx: ProviderContext) => ctx.getConfig().search.language || 'fr-FR';
+  // Langue des fiches : celle de l'interface, sauf si `search.language` est fixé (src/main/i18n/metadata.ts).
+  const language = (ctx: ProviderContext) => metadataLanguage(ctx.getConfig().search.language);
   const tmdb = (pathname: string, params: TmdbParams = {}) =>
     client.get(pathname, params, { timeout: 12000, notFoundAsNull: true }).catch((err) => Promise.reject(scrapeError(err)));
 
-  // Liste des genres, lue une fois (même vide si TMDB n'a pas répondu).
-  let genreMap: Map<number, string> | null = null;
+  // Liste des genres, lue une fois par langue (même vide si TMDB n'a pas répondu).
+  const genreMaps = new Map<string, Map<number, string>>();
   async function tmdbGenres(ctx: ProviderContext): Promise<Map<number, string>> {
-    if (genreMap) return genreMap;
     const lang = language(ctx);
-    const [m, t] = await Promise.all([
+    const known = genreMaps.get(lang);
+    if (known) return known;
+    const [movies, series] = await Promise.all([
       tmdb('/genre/movie/list', { language: lang }).catch(() => null),
       tmdb('/genre/tv/list', { language: lang }).catch(() => null),
     ]);
-    genreMap = new Map([...(m?.genres || []), ...(t?.genres || [])].map((g: any) => [g.id, g.name]));
+    const genreMap = new Map<number, string>([...(movies?.genres || []), ...(series?.genres || [])].map((g: any) => [g.id, g.name]));
+    genreMaps.set(lang, genreMap);
     return genreMap;
   }
   async function genreNames(ids: number[] | undefined, ctx: ProviderContext): Promise<string> {
@@ -130,8 +135,7 @@ export function tmdbProvider(client: TmdbClient): MetadataProvider {
     kinds: ['video'],
     group: 'videos',
     concurrency: 4,
-    requires: () =>
-      client.hasKey() ? null : { skipped: 'vidéos (clé TMDB absente)', error: 'Ajoutez une clé TMDB dans Réglages pour chercher les films et séries.' },
+    requires: () => (client.hasKey() ? null : { skipped: t('scrape.tmdb.skipped'), error: t('scrape.tmdb.noKey') }),
     key: (item: ScrapeItem) => `v:${item.path}`,
     collect: (opts) => opts.videos || [],
 
@@ -199,13 +203,13 @@ export function tmdbProvider(client: TmdbClient): MetadataProvider {
       ).slice(0, 12);
       return ranked.map((r: any) => {
         const media = tvOnly ? 'tv' : r.media_type;
-        const t = r.title || r.name;
+        const title = r.title || r.name;
         const original = r.original_title || r.original_name;
         return {
           id: `${media}:${r.id}`,
-          title: t,
+          title,
           year: yearOf(r),
-          sub: [media === 'tv' ? 'Série' : 'Film', original && original !== t ? original : ''].filter(Boolean).join(', '),
+          sub: [media === 'tv' ? t('scrape.tmdb.series') : t('scrape.tmdb.movie'), original && original !== title ? original : ''].filter(Boolean).join(', '),
           image: r.poster_path ? tmdbImageUrl(r.poster_path, 'w154') : null,
         };
       });

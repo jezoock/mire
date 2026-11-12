@@ -2,43 +2,44 @@
 import { cleanTitle, rankByTitle } from '@mire/shared';
 import { rateLimited } from '../../net/http.ts';
 import type { MetadataProvider, ScrapeItem } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 const MB = 'https://musicbrainz.org/ws/2/release-group/';
 const coverUrl = (id: string) => `https://coverartarchive.org/release-group/${id}/front-250`;
 
-// Étiquettes MusicBrainz courantes → français.
-const MUSIC_GENRES: Record<string, string> = {
-  electronic: 'Électronique',
-  'hip hop': 'Hip-hop',
-  classical: 'Classique',
-  soundtrack: 'Bande originale',
-  'french house': 'French touch',
-  house: 'House',
-  pop: 'Pop',
-  rock: 'Rock',
-  jazz: 'Jazz',
-  blues: 'Blues',
-  metal: 'Metal',
-  'heavy metal': 'Metal',
-  folk: 'Folk',
-  'chanson française': 'Chanson française',
-  chanson: 'Chanson française',
-  reggae: 'Reggae',
-  soul: 'Soul',
-  funk: 'Funk',
-  'r&b': 'R&B',
-  country: 'Country',
-  punk: 'Punk',
-  ambient: 'Ambient',
-  techno: 'Techno',
-  downtempo: 'Downtempo',
-  'trip hop': 'Trip-hop',
-  'alternative rock': 'Rock alternatif',
-  'indie rock': 'Rock indé',
-  'indie pop': 'Pop indé',
-  world: 'Musiques du monde',
-  disco: 'Disco',
-  rap: 'Rap',
+// Étiquettes MusicBrainz courantes → clé du catalogue (scrape.genres.music) ; l’anglais garde les étiquettes.
+export const MUSIC_GENRES: Readonly<Record<string, string>> = {
+  electronic: 'electronic',
+  'hip hop': 'hipHop',
+  classical: 'classical',
+  soundtrack: 'soundtrack',
+  'french house': 'frenchHouse',
+  house: 'house',
+  pop: 'pop',
+  rock: 'rock',
+  jazz: 'jazz',
+  blues: 'blues',
+  metal: 'metal',
+  'heavy metal': 'heavyMetal',
+  folk: 'folk',
+  'chanson française': 'chansonFrancaise',
+  chanson: 'chanson',
+  reggae: 'reggae',
+  soul: 'soul',
+  funk: 'funk',
+  'r&b': 'rnb',
+  country: 'country',
+  punk: 'punk',
+  ambient: 'ambient',
+  techno: 'techno',
+  downtempo: 'downtempo',
+  'trip hop': 'tripHop',
+  'alternative rock': 'alternativeRock',
+  'indie rock': 'indieRock',
+  'indie pop': 'indiePop',
+  world: 'world',
+  disco: 'disco',
+  rap: 'rap',
 };
 
 const capitalize = (x: string) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
@@ -48,7 +49,8 @@ const artists = (g: any): string => (g['artist-credit'] || []).map((a: any) => a
 // Étiquette la plus citée, traduite.
 function genreOf(g: any): string {
   const tag: string = [...(g?.tags || [])].sort((a: any, b: any) => (b.count || 0) - (a.count || 0))[0]?.name || '';
-  return MUSIC_GENRES[tag.toLowerCase()] || capitalize(tag);
+  const id = MUSIC_GENRES[tag.toLowerCase()];
+  return id ? t(`scrape.genres.music.${id}`) : capitalize(tag);
 }
 
 const searchUrl = (title: string, artist: string | undefined, limit: number) => {

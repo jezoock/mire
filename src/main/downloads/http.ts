@@ -10,6 +10,7 @@ import { isHttpUrl, newId, safeFileName } from '@mire/shared';
 import * as disc from '../games/disc/index.ts';
 import * as http from '../net/http.ts';
 import type { AddResult, DownloadContext, Downloader, DownloaderHost, DownloadRecord } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 type Listener = (event: unknown, state: string) => void;
 
@@ -72,7 +73,7 @@ export function createHttpDownloader(host: DownloaderHost, { getSession, torrent
 
   // Téléchargement demandé par Mire (jeu d'une source web, lien collé).
   function addUrl(url: string, ctx: DownloadContext = {}): AddResult {
-    if (!isHttpUrl(url)) return { ok: false, error: 'Adresse invalide : elle doit commencer par http:// ou https://.' };
+    if (!isHttpUrl(url)) return { ok: false, error: t('downloads.errors.invalidUrl') };
     request(url, ctx);
     return { ok: true };
   }
@@ -176,7 +177,7 @@ export function createHttpDownloader(host: DownloaderHost, { getSession, torrent
         return;
       }
       if (state !== 'completed') {
-        update(it, { state: 'error', speed: 0, error: 'Le téléchargement a été interrompu (connexion perdue ou fichier indisponible).' });
+        update(it, { state: 'error', speed: 0, error: t('downloads.errors.interrupted') });
         return;
       }
       update(it, { received: dl.getReceivedBytes(), total: dl.getReceivedBytes(), speed: 0 });
@@ -192,10 +193,10 @@ export function createHttpDownloader(host: DownloaderHost, { getSession, torrent
       buf = await http.getBuffer(url, { timeout: 20000, userAgent: null, fetch: (u, init) => getSession().fetch(u, init) });
     } catch (err) {
       const e = err as http.HttpError;
-      if (e.kind === 'status') throw new Error(`code ${e.status}`, { cause: err });
+      if (e.kind === 'status') throw new Error(t('downloads.errors.indexStatus', { status: String(e.status) }), { cause: err });
       throw err;
     }
-    if (buf.length > 2 * 1024 * 1024) throw new Error('fichier trop gros pour un index');
+    if (buf.length > 2 * 1024 * 1024) throw new Error(t('downloads.errors.indexTooBig'));
     return disc.decode(buf);
   }
 

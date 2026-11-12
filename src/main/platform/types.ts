@@ -3,6 +3,8 @@
 export interface LaunchResult {
   ok: boolean;
   error?: string;
+  /** Le programme à lancer n'existe pas (le message seul ne suffit pas : il est traduit). */
+  notFound?: boolean;
 }
 
 export interface LaunchOptions {

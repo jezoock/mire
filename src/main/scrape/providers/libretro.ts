@@ -7,40 +7,50 @@ import path from 'node:path';
 import { bigramDice, fold, guessSystem, stripTags, titleKey } from '@mire/shared';
 import { ScrapeRefusal } from '../refusal.ts';
 import type { JobContext, MetadataProvider, ProviderContext, ScrapeItem, ScrapeOutcome, ScrapeOverride } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 const INDEX_TTL_MS = 30 * 24 * 3600 * 1000;
 
-// Genres de jeux libretro (anglais) → français.
-const GAME_GENRES: Record<string, string> = {
-  platform: 'Plateformes',
-  action: 'Action',
-  sports: 'Sport',
-  'role-playing (rpg)': 'Jeu de rôle',
-  adventure: 'Aventure',
-  strategy: 'Stratégie',
-  racing: 'Course',
-  puzzle: 'Réflexion',
-  shooter: 'Tir',
-  "shoot'em up": 'Shoot’em up',
-  board: 'Jeu de plateau',
-  "beat'em up": 'Beat’em up',
-  fighting: 'Combat',
-  simulation: 'Simulation',
-  compilation: 'Compilation',
-  gambling: 'Casino',
-  educational: 'Éducatif',
-  pinball: 'Flipper',
-  card: 'Cartes',
-  'sports with animals': 'Sport',
-  'hunting and fishing': 'Chasse et pêche',
-  'casual game': 'Jeu familial',
-  various: 'Divers',
-  quiz: 'Quiz',
-  'lightgun shooter': 'Tir au pistolet',
-  'music / dancing': 'Musique et danse',
-  thinking: 'Réflexion',
-  adult: 'Adulte',
+// Genres de jeux libretro (anglais) → clé du catalogue (scrape.genres.games) ; l’anglais garde les valeurs de libretro.
+export const GAME_GENRES: Readonly<Record<string, string>> = {
+  platform: 'platform',
+  action: 'action',
+  sports: 'sports',
+  'role-playing (rpg)': 'rolePlaying',
+  adventure: 'adventure',
+  strategy: 'strategy',
+  racing: 'racing',
+  puzzle: 'puzzle',
+  shooter: 'shooter',
+  "shoot'em up": 'shootEmUp',
+  board: 'board',
+  "beat'em up": 'beatEmUp',
+  fighting: 'fighting',
+  simulation: 'simulation',
+  compilation: 'compilation',
+  gambling: 'gambling',
+  educational: 'educational',
+  pinball: 'pinball',
+  card: 'card',
+  'sports with animals': 'sportsWithAnimals',
+  'hunting and fishing': 'huntingAndFishing',
+  'casual game': 'casualGame',
+  various: 'various',
+  quiz: 'quiz',
+  'lightgun shooter': 'lightgunShooter',
+  'music / dancing': 'musicDancing',
+  thinking: 'thinking',
+  adult: 'adult',
 };
+
+/**
+ * Genre libretro dans la langue de l'interface ; un genre absent de la table est gardé tel quel. Traduit à la
+ * lecture : le cache disque garde la valeur de libretro (un ancien cache, déjà en français, reste lisible).
+ */
+function gameGenre(raw: string): string {
+  const id = GAME_GENRES[raw.toLowerCase()];
+  return id ? t(`scrape.genres.games.${id}`) : raw;
+}
 
 /** « Super Mario World (Europe) (En,Fr) [!] » → « super mario world ». */
 export const romKey = (s: string): string => titleKey(stripTags(fold(s)));
@@ -167,7 +177,7 @@ export function libretroProvider(): MetadataProvider {
         for (const m of txt.matchAll(/comment\s+"([^"]+)"\s+(?:genre|releaseyear)\s+"([^"]+)"/g)) {
           const k = romKey(m[1]);
           const cur = map.get(k) || {};
-          if (!cur[field]) cur[field] = field === 'genre' ? GAME_GENRES[m[2].toLowerCase()] || m[2] : m[2];
+          if (!cur[field]) cur[field] = m[2];
           map.set(k, cur);
         }
       } catch {
@@ -181,7 +191,7 @@ export function libretroProvider(): MetadataProvider {
 
   async function scrapeRom(rom: ScrapeItem, override: ScrapeOverride | undefined, ctx: JobContext): Promise<ScrapeOutcome> {
     const system = systemOf(rom, ctx);
-    if (!system) throw new ScrapeRefusal('Système de la console inconnu : ajoutez « system » dans sa configuration.');
+    if (!system) throw new ScrapeRefusal(t('scrape.errors.unknownSystemConfig'));
     const { key, io } = ctx;
     const name: string = override?.title || rom.name;
     let image: string | null = null;
@@ -217,7 +227,7 @@ export function libretroProvider(): MetadataProvider {
         (await io.saveImage(thumbUrl(system, 'Named_Snaps', matched), `${key}:bg`)) ||
         (await io.saveImage(thumbUrl(system, 'Named_Titles', matched), `${key}:bg`));
     }
-    return { title, image, backdrop, genre: facts.genre || '', year: facts.year || '', source: 'libretro' };
+    return { title, image, backdrop, genre: facts.genre ? gameGenre(facts.genre) : '', year: facts.year || '', source: 'libretro' };
   }
 
   return {
@@ -244,9 +254,9 @@ export function libretroProvider(): MetadataProvider {
 
     async candidates({ item, query }, ctx) {
       const system = systemOf(item || {}, ctx);
-      if (!system) throw new ScrapeRefusal('Système de la console inconnu : indiquez-le avec « Modifier la console ».');
+      if (!system) throw new ScrapeRefusal(t('scrape.errors.unknownSystem'));
       const list = await boxartIndex(system, ctx);
-      if (!list) throw new ScrapeRefusal('La liste des jaquettes de ce système est indisponible pour le moment.');
+      if (!list) throw new ScrapeRefusal(t('scrape.errors.coversUnavailable'));
       const k = romKey(query);
       const scored = list
         .map((n) => ({ n, s: bigramDice(k, romKey(n)) + (romKey(n) === k ? 1 : 0) - regionScore(n) * 0.01 }))

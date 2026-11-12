@@ -27,6 +27,7 @@ import type {
   DownloadRecord,
   DownloadSettings,
 } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 const ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
 const PENDING = 'pending'; // marque-page de téléchargement : en attente, ne démarre qu'à la demande
@@ -103,7 +104,7 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
       it.state === 'done'
         ? { ok: true, file: it.file as string, id: it.id }
         : it.state === 'cancelled'
-          ? { ok: false, cancelled: true, error: 'Téléchargement annulé.', id: it.id }
+          ? { ok: false, cancelled: true, error: t('downloads.errors.cancelled'), id: it.id }
           : it.state === 'error'
             ? { ok: false, error: it.error, id: it.id }
             : null;
@@ -240,7 +241,7 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
   }
   async function runInstaller(id: string, file?: string) {
     const it = items.get(id);
-    if (!it || !file || !(it.installers || []).includes(file)) return { ok: false, error: 'Programme d’installation introuvable.' };
+    if (!it || !file || !(it.installers || []).includes(file)) return { ok: false, error: t('downloads.errors.installerNotFound') };
     const err = await shell.openPath(file);
     return err ? { ok: false, error: err } : { ok: true };
   }
@@ -253,7 +254,7 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
    * est abandonné avec une erreur ; s'il démarre plus tard, il est annulé.
    */
   function fetchToCache(url: string, file: string, opts: CacheOptions = {}): Promise<CacheResult> {
-    if (!isHttpUrl(url)) return Promise.resolve({ ok: false, error: 'Adresse invalide : elle doit commencer par http:// ou https://.' });
+    if (!isHttpUrl(url)) return Promise.resolve({ ok: false, error: t('downloads.errors.invalidUrl') });
     if (fs.existsSync(file)) return Promise.resolve({ ok: true, file, cached: true });
     const key = `${url}\n${file}`;
     const running = inflight.get(key);
@@ -266,7 +267,7 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
       let late = false;
       const timer = setTimeout(() => {
         late = true;
-        resolve({ ok: false, error: 'Le téléchargement n’a pas démarré : le site ne répond pas. Réessayez plus tard.' });
+        resolve({ ok: false, error: t('downloads.errors.notStarted') });
       }, opts.startTimeout ?? 60_000);
       const onProgress = (received: number, total: number) => listeners.forEach((l) => l(received, total));
       http.addUrl(url, {

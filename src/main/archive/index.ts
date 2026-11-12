@@ -5,6 +5,7 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { t } from '../i18n/current.ts';
 
 export interface ArchiveOptions {
   /** Programme 7za livré avec Mire (hors de `app.asar` dans une application empaquetée). */
@@ -45,7 +46,7 @@ export function createArchive({ sevenZipPath, copyPath, platform = process.platf
     await new Promise<void>((resolve, reject) => {
       const p = spawn(bin, ['x', '-y', `-o${dest}`, archive], { stdio: 'ignore', windowsHide: true });
       p.on('error', reject);
-      p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`Extraction impossible (code ${code}).`))));
+      p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(t('archive.errors.extractFailed', { code: String(code) })))));
     });
   }
 

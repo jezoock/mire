@@ -9,6 +9,7 @@ import path from 'node:path';
 import { isHttpUrl } from '@mire/shared';
 import * as disc from '../games/disc/index.ts';
 import type { DownloadContext, DownloadRecord } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 const ARCHIVES = new Set(['.zip', '.7z']);
 
@@ -105,7 +106,7 @@ async function unpack(it: DownloadRecord, files: string[], deps: FinishDeps): Pr
       it.extracted = true;
       out.push(folder);
     } catch (err) {
-      deps.update(it, { state: 'error', error: `Téléchargement terminé, mais l'archive n'a pas pu être décompressée (${(err as Error).message}).` });
+      deps.update(it, { state: 'error', error: t('downloads.errors.extractFailed', { reason: (err as Error).message }) });
       return null;
     }
   }

@@ -5,6 +5,7 @@ import { isHttpUrl } from '@mire/shared';
 import * as http from '../net/http.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
 import type { RemoteSubtitles } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 export interface Subtitle {
   label: string;
@@ -22,7 +23,7 @@ export interface SubtitleOptions {
 // Libellé et langue d'après ce qui suit le nom de la vidéo (film.fr.srt → « fr »).
 function describe(rest: string, vtt: string): Subtitle {
   const lang = (rest.split(/[._\s-]/)[0] || '').toLowerCase();
-  return { label: rest || 'Sous-titres', lang: /^[a-z]{2,3}$/.test(lang) ? lang : '', vtt };
+  return { label: rest || t('library.subtitles'), lang: /^[a-z]{2,3}$/.test(lang) ? lang : '', vtt };
 }
 
 async function remoteSubtitles(videoUrl: string, remote: RemoteSubtitles): Promise<Subtitle[]> {

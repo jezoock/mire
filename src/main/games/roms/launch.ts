@@ -11,6 +11,7 @@ import { substitute } from '../../lib/args.ts';
 import type { LaunchResult } from '../../platform/index.ts';
 import * as disc from '../disc/index.ts';
 import type { GamesDeps } from '../types.ts';
+import { t } from '../../i18n/current.ts';
 
 type Deps = Pick<GamesDeps, 'config' | 'access' | 'launcher' | 'downloads' | 'romCacheDir' | 'toUi'>;
 
@@ -40,13 +41,13 @@ export async function cacheRemoteRom(deps: Deps, emu: Emulator, url: string): Pr
   try {
     files = await disc.resolveRemote(url, (x) => downloads.fetchText(x));
   } catch (err) {
-    return { ok: false, error: `Index du jeu illisible (${(err as Error).message}).` };
+    return { ok: false, error: t('games.errors.indexUnreadable', { reason: (err as Error).message }) };
   }
   const folder = path.join(consoleDir, path.basename(fileName, path.extname(fileName)));
   const todo = files.filter((f) => !fs.existsSync(path.join(folder, ...f.rel.split('/'))));
   for (const [n, f] of todo.entries()) {
     const dest = path.join(folder, ...f.rel.split('/'));
-    const label = todo.length > 1 ? `${fileName} (fichier ${n + 1} sur ${todo.length})` : fileName;
+    const label = todo.length > 1 ? t('games.romProgress', { name: fileName, index: String(n + 1), total: String(todo.length) }) : fileName;
     deps.toUi('rom-progress', { name: label, phase: 'download' });
     const r = await downloads.fetchToCache(f.url, dest, { onProgress: progress(deps, label) });
     if (!r.ok) return { ok: false, error: `${path.basename(dest)} : ${r.error}` };
@@ -57,15 +58,15 @@ export async function cacheRemoteRom(deps: Deps, emu: Emulator, url: string): Pr
 
 export async function launchRom(deps: Deps, consoleId: unknown, romPath: string): Promise<LaunchResult> {
   const emu = findConsole(deps.config.get(), consoleId);
-  if (!emu) return { ok: false, error: 'Cette console n’existe plus dans la configuration.' };
+  if (!emu) return { ok: false, error: t('games.errors.consoleGone') };
   let target = romPath;
   if (isHttpUrl(romPath)) {
-    if (!isFromSource(emu, romPath)) return { ok: false, error: 'Ce jeu ne provient pas d’une source de cette console.' };
+    if (!isFromSource(emu, romPath)) return { ok: false, error: t('games.errors.notFromSource') };
     const cached = await cacheRemoteRom(deps, emu, romPath);
     if (!cached.ok) return cached;
     target = cached.file;
   } else if (!deps.access.isAllowed(romPath)) {
-    return { ok: false, error: 'Ce jeu ne se trouve pas dans les dossiers de la console.' };
+    return { ok: false, error: t('games.errors.notInConsoleFolders') };
   }
   const args = substitute(Array.isArray(emu.args) && emu.args.length ? emu.args : ['{rom}'], { rom: target });
   const cwd = path.isAbsolute(emu.path) ? path.dirname(emu.path) : undefined;

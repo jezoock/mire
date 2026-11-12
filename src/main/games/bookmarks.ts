@@ -12,6 +12,7 @@ import { findConsole } from '../config/index.ts';
 import { walkDirs } from '../fs/walk.ts';
 import { guessSystem } from '../scrape/index.ts';
 import type { GamesDeps } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 /** Clé des infos d'un marque-page de jeu (même espace que `r:` et `g:` du scraper). */
 export const bookmarkKey = (id: string) => `b:${id}`;
@@ -32,7 +33,7 @@ export function addGameBookmark(deps: Deps, data: GameBookmarkInput) {
   const source = String(data?.source || '').trim();
   const isMagnet = /^magnet:\?/i.test(source);
   const isTorrentFile = source.toLowerCase().endsWith('.torrent');
-  if (!isMagnet && !isHttpUrl(source) && !isTorrentFile) return { ok: false as const, error: 'Lien ou fichier invalide.' };
+  if (!isMagnet && !isHttpUrl(source) && !isTorrentFile) return { ok: false as const, error: t('games.errors.invalidLink') };
   const kind = isMagnet || isTorrentFile ? 'torrent' : 'http';
   const curConsole = data?.console == null ? null : String(data.console);
   // Console de jeux (pas « pc ») : son identifiant, même si elle n'existe plus.
@@ -88,7 +89,7 @@ export function removeGameBookmark(deps: Pick<GamesDeps, 'config' | 'downloads' 
 
 export function downloadGameBookmark(deps: Deps, id: string) {
   const bm = deps.config.get().gameBookmarks.find((b) => b.id === id);
-  if (!bm) return { ok: false as const, error: 'Marque-page introuvable.' };
+  if (!bm) return { ok: false as const, error: t('games.errors.bookmarkNotFound') };
   deps.downloads().startPending(bm.downloadId as string);
   return { ok: true as const };
 }

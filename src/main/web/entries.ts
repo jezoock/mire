@@ -7,6 +7,7 @@ import type { Config, LinkSite } from '@mire/shared';
 import { findConsole } from '../config/index.ts';
 import { romEntry, resolveWebEntry } from '../lib/web-entry.ts';
 import type { EntryResolver, EntryResult, ResolveOptions, WebEntry } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 // Les fonctions de lib/web-entry.ts savent déjà distinguer les préfixes : chacun de ces résolveurs leur délègue.
 export const BUILTIN_RESOLVERS: readonly EntryResolver[] = ['rom:', 'bm:', 'tv:'].map((prefix) => ({
@@ -56,5 +57,5 @@ export function romEntryFor(config: Config, consoleId: string, siteIndex: number
 
 /** Nom de la console d'une vue de sites de jeux. */
 export function consoleName(config: Config, consoleId: string): string {
-  return consoleId === 'pc' ? 'Jeux PC' : findConsole(config, consoleId)?.name || '';
+  return consoleId === 'pc' ? t('games.pcGames') : findConsole(config, consoleId)?.name || '';
 }

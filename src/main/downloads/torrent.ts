@@ -7,6 +7,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { newId } from '@mire/shared';
 import type { AddResult, DownloadContext, Downloader, DownloaderHost, DownloadRecord } from './types.ts';
+import { t } from '../i18n/current.ts';
 
 export interface ShellLike {
   openExternal(url: string): Promise<void>;
@@ -28,9 +29,9 @@ const isMagnet = (source: string) => /^magnet:\?/i.test(source);
 export function torrentLabel(source: string): string {
   if (isMagnet(source)) {
     try {
-      return new URLSearchParams(source.slice(8)).get('dn') || 'Torrent';
+      return new URLSearchParams(source.slice(8)).get('dn') || t('downloads.torrentName');
     } catch {
-      return 'Torrent';
+      return t('downloads.torrentName');
     }
   }
   return path
@@ -80,7 +81,7 @@ export function createTorrentDownloader(host: DownloaderHost, { shell, torrentDi
   // source : lien magnet, ou chemin d'un fichier .torrent.
   async function addTorrent(source: string, ctx: DownloadContext = {}, existing: DownloadRecord | null = null): Promise<AddResult> {
     const magnet = isMagnet(source);
-    if (!magnet && !fs.existsSync(source)) return { ok: false, error: 'Fichier .torrent introuvable.' };
+    if (!magnet && !fs.existsSync(source)) return { ok: false, error: t('downloads.errors.torrentFileNotFound') };
 
     // Logiciel installé : Mire lui confie le lien ou le fichier, sans suivre la progression.
     if (host.settings().torrentClient === 'system' && !existing) {
@@ -93,7 +94,7 @@ export function createTorrentDownloader(host: DownloaderHost, { shell, torrentDi
       } catch (err) {
         return {
           ok: false,
-          error: `Aucun logiciel de torrent ne s'est ouvert (${(err as Error).message}). Installez-en un (qBittorrent, Transmission…) ou choisissez le client intégré dans les réglages de Téléchargements.`,
+          error: t('downloads.errors.noTorrentApp', { reason: (err as Error).message }),
         };
       }
       const it: DownloadRecord = {
@@ -122,7 +123,7 @@ export function createTorrentDownloader(host: DownloaderHost, { shell, torrentDi
     try {
       c = await getClient();
     } catch (err) {
-      return { ok: false, error: `Le client torrent intégré n'a pas pu démarrer (${(err as Error).message}).` };
+      return { ok: false, error: t('downloads.errors.torrentClientFailed', { reason: (err as Error).message }) };
     }
 
     // Même torrent (même empreinte) : on reprend sa fiche au lieu d'en créer une seconde.
@@ -167,13 +168,13 @@ export function createTorrentDownloader(host: DownloaderHost, { shell, torrentDi
       const addSource = magnet || fs.existsSync(source) ? source : kept;
       torrent = c.add(addSource, { path: dest.dir });
     } catch (err) {
-      update(it, { state: 'error', error: `Torrent illisible (${(err as Error).message}).` });
+      update(it, { state: 'error', error: t('downloads.errors.torrentUnreadable', { reason: (err as Error).message }) });
       return { ok: false, error: it.error };
     }
     live.set(it.id, torrent);
     torrent.on('error', (err: Error) => {
       live.delete(it.id);
-      update(it, { state: 'error', speed: 0, error: `Erreur du torrent : ${err.message}` });
+      update(it, { state: 'error', speed: 0, error: t('downloads.errors.torrentError', { reason: err.message }) });
     });
     torrent.on('metadata', async () => {
       // Le fichier .torrent est gardé : la reprise n'a plus besoin de retrouver les métadonnées.
