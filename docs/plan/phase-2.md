@@ -20,7 +20,10 @@ Principes :
 - **thèmes** : un habillage Mire compilé avec le moteur dot-stash, et les cinq thèmes (Écran éteint, Plein jour,
   Minuit, Velours, Contraste élevé) en jeux de jetons (propriétés CSS) appliqués à l'exécution ;
 - **textes** : tous par les catalogues de P1-28, en français et en anglais, passés aux composants par leurs
-  attributs (`label`, `labels`, gabarits avec `{count}`) avec la langue (`lang`) pour les pluriels.
+  attributs (`label`, `labels`, gabarits avec `{count}`) avec la langue (`lang`) pour les pluriels. L'interface
+  traduit avec le service de traduction posé par P2-04 (catalogues reçus du processus principal) ;
+- **TypeScript** : `@mire/ui` hérite de `tsconfig.base.json` et passe par `npm run typecheck` ; la vérification
+  des variables inutilisées et des branches oubliées est faite par le compilateur (D-12), pas par ESLint.
 
 Stratégie : migration **progressive**. Les composants sont des balises standards : la coquille héberge d'abord
 les vues historiques (`mire-legacy-view`), puis chaque tâche remplace une vue. L'application reste utilisable et
@@ -28,26 +31,28 @@ testable après chaque PR. Les captures de P0-09 servent de référence ; l'habi
 écart visible est justifié dans la PR et ses captures sont mises à jour.
 
 Prérequis : point d'étape **G2** ; phase 1 terminée (au minimum P1-08, P1-22 à P1-24 et P1-26) ; une release de
-dot-stash avec son archive et son moteur SCSS (DS-01, DS-02). Après P2-01 à P2-04, point d'étape **G2b** avant
-de migrer les vues.
+dot-stash avec son archive et son moteur SCSS (DS-01, DS-02), dépôt dot-stash public (DS-08, D-13). Après P2-01
+à P2-04, point d'étape **G2b** avant de migrer les vues.
 
 ---
 
 ## P2-01 — Intégration de dot-stash et `@mire/ui`
 
-- **Dépend de** : G2, DS-01, DS-02 · **Taille** : M
+- **Dépend de** : G2, DS-01, DS-02, DS-08 · **Taille** : M
 - **Objectif** : prouver la chaîne complète dans Electron et trancher les questions techniques avant d'écrire des
   composants.
 - **À faire**
   1. Dépendance `dot-stash` installée depuis l'archive de la release (adresse versionnée, empreinte dans
-     `package-lock.json`) ; mise à jour documentée dans le README (changer la version, `npm install`).
+     `package-lock.json`, dépôt public : aucun jeton, D-13) ; mise à jour documentée dans le README (changer la
+     version, `npm install`).
   2. Chargement des composants dans le renderer avec la CSP actuelle (`script-src 'self'`, `file://`) : essayer
      le chargeur paresseux copié dans `dist/renderer/` ; sinon des imports par composant (`dist-custom-elements`,
      tâche B-122 de dot-stash) intégrés au bundle esbuild du renderer (P1-22). Mesurer le temps de démarrage.
   3. Paquet `packages/ui` (`@mire/ui`) : Stencil (version de dot-stash, figée), sortie en light DOM
      (`shadow: false`), feuille de style compilée avec le moteur SCSS de dot-stash (`sass` en dépendance de
      développement) ; composant de démonstration `mire-demo` affiché dans une vue existante (cohabitation avec le
-     gabarit HTML historique).
+     gabarit HTML historique). Son `tsconfig.json` hérite de `tsconfig.base.json` et `npm run typecheck` le
+     vérifie (D-12).
   4. Tests de composants : l'outil de dot-stash (Vitest, tests unitaires et navigateur) intégré à `npm test` et à
      la CI, ou une alternative sans nouvelle dépendance si elle suffit ; justifier le choix (D-03 : dépendances
      minimales).
@@ -55,7 +60,7 @@ de migrer les vues.
   6. `docs/adr/0001-dot-stash.md` : livraison, chargement, `@mire/ui`, conventions (préfixe `mire-`, classes et
      modificateurs à la manière de dot-stash, événements `mire*`), tests, mode `watch`.
 - **Critères d'acceptation** : `npm start` affiche le composant de démonstration et un `ds-trigger` fonctionnel ;
-  CSP inchangée ; ADR relu au point G2b.
+  CSP inchangée ; `npm run typecheck` couvre `packages/ui` ; ADR relu au point G2b.
 
 ---
 
@@ -89,7 +94,9 @@ de migrer les vues.
   de la manette clique l'élément focalisé (`ds-trigger` gère lui-même Entrée et Espace : pas de double
   déclenchement) ; B et Retour ; portée limitée à la boîte de dialogue au premier plan (`ds-modal`) ; restauration
   du focus au retour d'un lecteur ; contextes de la manette (liste, vidéo, images, site, dialogue) ; défilement
-  de la liste au stick droit.
+  de la liste au stick droit ; règle des éléments désactivés : aujourd'hui `pickNeighbor` n'écarte que ceux dont
+  la propriété `disabled` est vraie, un composant désactivé par l'attribut `disabled` ou par `aria-disabled`
+  resterait une destination (piste de P1-24) : décider et tester la règle pour les `ds-*` et `mire-*`.
 - **Critères d'acceptation** : tests du service (navigateur) ; 🧑 parcours manette complet sur les vues migrées et
   historiques (les deux coexistent).
 
@@ -109,10 +116,19 @@ de migrer les vues.
     asynchrones (état « en cours » du `ds-trigger`) ;
   - pont temporaire : les `data-action` des vues historiques appellent les mêmes méthodes, pour que les deux
     interfaces cohabitent ;
+  - les modules `nav/` et `players/` (P1-24) reçoivent aujourd'hui les actions de l'interface (retour, modifier,
+    lecteur externe, vue web…) par des objets de rappels fournis par `app.js` : ces rappels deviennent des appels
+    aux méthodes des contrôleurs ;
+  - service de traduction de l'interface (`src/renderer/i18n/` ou `@mire/ui`) : catalogues demandés au
+    démarrage par `api.i18nGet()`, moteur de `@mire/shared/i18n`, fonction `t()` et langue courante pour les
+    contrôleurs et les composants ; suit `api.onLanguageChange` (événement `i18n:changed`) ; tient à jour
+    l'attribut `lang` du document (aujourd'hui `<html lang="fr">` en dur). Les vues historiques restent en
+    français jusqu'à leur migration ;
   - script de vérification (`npm run check:actions`, en CI) : chaque `action` d'un `ds-trigger` des gabarits
     désigne une méthode existante du contrôleur visé.
-- **Critères d'acceptation** : tests des contrôleurs (méthodes appelées avec des clés, erreurs) ; le script de
-  vérification passe ; captures identiques.
+- **Critères d'acceptation** : tests des contrôleurs (méthodes appelées avec des clés, erreurs) et du service de
+  traduction (catalogues reçus, changement de langue, `lang` du document) ; le script de vérification passe ;
+  captures identiques.
 
 ---
 
@@ -177,6 +193,17 @@ anglais**.
 Dépendances : toutes dépendent de P2-07 ; P2-13 avant P2-10 (le lecteur est ouvert depuis les vidéos) ;
 P2-11 et P2-13 partagent le volume (P1-24). 🧑 pour P2-13 et P2-14 (lecture réelle, Widevine).
 
+Points particuliers (pistes du BACKLOG) :
+
+- **P2-13** : les textes du lecteur et de la manette (affichage sur la vidéo, rappel des boutons, messages),
+  déplacés tels quels dans `players/` et `nav/` par P1-24, passent par les catalogues ;
+- **P2-14** : le nom et la couleur d'une vue `rom:`, `bm:` ou `tv:` viennent de l'état publié par le processus
+  principal (`web-state` : `name`, `color`) ; l'interface ne les reconstitue plus avec ses propres couleurs ;
+- **P2-15** : la variante d'une chaîne (qualité préférée du service, `hd` par défaut) est choisie par le service
+  de télévision du processus principal ; l'interface n'ordonne plus les qualités ;
+- **P2-15, P2-16, P2-17** : les annonces (service de télévision détecté, « jeu ajouté », progression de la
+  boutique) sont rédigées par les catalogues à partir des données du processus principal.
+
 ---
 
 ## P2-19 — Réglages
@@ -185,6 +212,15 @@ P2-11 et P2-13 partagent le volume (P1-24). 🧑 pour P2-13 et P2-14 (lecture r�
 - **À faire** : page Réglages et panneaux de page générés depuis le schéma de P1-26 (`ds-field`, `ds-select`,
   `ds-toggle`, `ds-toggle-group`) ; cartes de thème avec aperçu réel ; listes ordonnables (`ds-sortable`) ;
   sources ; configuration (import, export).
+  - **Textes du schéma par les catalogues** : les libellés et aides du schéma sont aujourd'hui du français écrit
+    en dur (`SettingsText = string`) ; ils deviennent des clés de catalogue tirées des identifiants
+    (`settingsTextKey`, déjà prévu par P1-26), avec leurs textes en français et en anglais, et le type
+    `SettingsText` devient une clé ; `docs/settings-schema.md` mis à jour.
+  - **Réglages de langue dans le schéma** : `ui.language` (« Automatique », puis les langues disponibles) et
+    `search.language` (langue des fiches : vide = comme l'interface), dont P2-23 a besoin ; le schéma n'a
+    aujourd'hui ni l'un ni l'autre.
+  - Texte d'état du bloqueur désactivé et jamais chargé : « Les listes se téléchargent quand le bloqueur est
+    activé » (aujourd'hui « au premier lancement », inexact depuis P1-13).
 - **Changement visible à valider en revue** : tous les champs s'enregistrent dès qu'ils changent ; seul l'éditeur
   JSON « Sites, jeux et consoles » garde son bouton « Enregistrer ».
 
@@ -221,9 +257,12 @@ P2-11 et P2-13 partagent le volume (P1-24). 🧑 pour P2-13 et P2-14 (lecture r�
 
 ## P2-23 — Sélecteur de langue et finitions de la localisation
 
-- **Dépend de** : P2-19, P1-28, P1-29 · **Taille** : S
+- **Dépend de** : P2-19, P2-21, P1-28, P1-29 · **Taille** : S
 - **À faire** : choix de la langue dans Réglages (« Automatique », français, anglais, puis les packs installés en
-  phase 3) avec bascule immédiate ; attribut `lang` du document (pluriels des composants dot-stash) ;
+  phase 3) avec bascule immédiate, et de la langue des fiches (`search.language` : « Comme l'interface » ou une
+  langue) ; attribut `lang` du document (posé par le service de P2-04) vérifié pour les pluriels des composants
+  dot-stash ; menu de macOS : les libellés des rôles Electron (`appMenu`, `editMenu`, `windowMenu`), fixés en
+  anglais par Electron, pris dans les catalogues ;
   vérification des mises en page avec les textes anglais (souvent plus courts, parfois plus longs : boutons,
   en-têtes, menu en carrousel) ; captures de référence en anglais ajoutées au test de bout en bout ;
   `npm run i18n:check` vert.

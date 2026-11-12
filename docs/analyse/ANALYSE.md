@@ -330,6 +330,8 @@ Validées au point d'étape G0 (29 octobre 2026), sauf D-05, décidée le 10 nov
 | D-09 | Dépôt d'addons | **`jezoock/mire-addons`**, déjà créé (public). ✅ |
 | D-10 | Mode de travail | **Une tâche = une branche = une PR vers `main`**, suivi dans `docs/plan/BACKLOG.md` ; issues GitHub en option. ✅ validé |
 | D-11 | Langues | **Français et anglais intégrés comme langues de base** ; les autres langues sont des packs de langue installables (addons de données). Socle et processus principal en phase 1 (P1-28, P1-29), interface en phase 2 (critère commun + P2-23), packs en phase 3 (P3-29). ✅ demandé le 29/10/2026 |
+| D-12 | Vérification du TypeScript | **Par le compilateur** : `tsconfig.base.json` active `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch` et `noImplicitReturns`, vérifiés par `npm run typecheck` (en CI) pour tout le TypeScript, `@mire/ui` compris. ESLint reste limité au JavaScript : pas de typescript-eslint (D-03). ✅ décidée au point G2 le 12/11/2026 |
+| D-13 | Livraison de dot-stash | **Le dépôt `jezoock/dot-stash` devient public** : Mire installe l'archive attachée à une release par son adresse, épinglée par version, sans jeton (P2-01). ✅ décidée au point G2 le 12/11/2026 |
 
 ## 11. Risques
 
