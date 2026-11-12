@@ -1,6 +1,6 @@
 /** Lecteurs externes (mpv, VLC) et navigateur externe : préréglages d'arguments, choix du programme, lancement. */
 import { isUrlTarget } from '@mire/shared';
-import { substitute } from '../lib/args.js';
+import { substitute } from '../lib/args.ts';
 import { detectBrowser, detectPlayer, firstExisting, playerCandidates, programName, systemDetectEnv } from './detect.ts';
 import type { Launcher, ShellLike } from './launcher.ts';
 import type { DetectEnv, ExternalPlayer, LaunchResult, PlayerVariables, ProgramSetting } from './types.ts';

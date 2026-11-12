@@ -59,7 +59,7 @@ export function configHandlers(ctx: MainContext) {
       const saved = ctx.config.replace(next);
       const { mainWindow } = ctx;
       if (mainWindow && saved.ui.fullscreen !== wasFullscreen) mainWindow.setFullScreen(!!saved.ui.fullscreen);
-      ctx.web.refreshEntries(saved);
+      // Les sites ouverts reprennent leur entrée à jour par l'abonnement à la configuration (src/main/index.ts).
       if (mainWindow) mainWindow.setBackgroundColor(ctx.themeBackground());
       return saved;
     },

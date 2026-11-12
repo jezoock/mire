@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { romEntry, resolveWebEntry } = require('../../src/main/lib/web-entry.js');
+const { romEntry, resolveWebEntry } = require('../../src/main/lib/web-entry.ts');
 const { DEFAULT_TV } = require('../../src/main/config/catalogs/tv.ts');
 
 const SITES = [

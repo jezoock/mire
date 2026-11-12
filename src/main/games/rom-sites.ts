@@ -1,4 +1,3 @@
-'use strict';
 /**
  * Sites proposés d'office par « Ajouter des jeux », selon le système de la console.
  * Uniquement des sites qui distribuent des jeux légalement : homebrew, domaine public,
@@ -9,9 +8,10 @@
  *
  * Les tables sont indexées par identifiant de système (nom libretro, voir SYSTEMS dans @mire/shared).
  */
+import type { LinkSite } from '@mire/shared';
 
 // PDRoms : homebrew et domaine public, page de chaque plateforme (adresses vérifiées sur le site).
-const PDROMS = {
+const PDROMS: Record<string, string> = {
   'Nintendo - Nintendo Entertainment System': 'nintendo-entertainment-system-nes-famicom',
   'Nintendo - Super Nintendo Entertainment System': 'super-nintendo-snes-super-famicom',
   'Nintendo - Game Boy': 'nintendo-game-boy-gb-gbc',
@@ -34,7 +34,7 @@ const PDROMS = {
 };
 
 // Homebrew Hub (gbdev) : paramètres « q » et « platform » relevés dans le code du site.
-const HOMEBREW_HUB = {
+const HOMEBREW_HUB: Record<string, string> = {
   'Nintendo - Game Boy': 'GB',
   'Nintendo - Game Boy Color': 'GBC',
   'Nintendo - Game Boy Advance': 'GBA',
@@ -42,10 +42,10 @@ const HOMEBREW_HUB = {
 };
 
 // Universal-DB : homebrew Nintendo DS et 3DS.
-const UNIVERSAL_DB = { 'Nintendo - Nintendo DS': 'ds', 'Nintendo - Nintendo 3DS': '3ds' };
+const UNIVERSAL_DB: Record<string, string> = { 'Nintendo - Nintendo DS': 'ds', 'Nintendo - Nintendo 3DS': '3ds' };
 
 // itch.io : nombreux jeux récents pour consoles rétro, gratuits ou vendus par leurs auteurs.
-const ITCH_WORDS = {
+const ITCH_WORDS: Record<string, string> = {
   'Nintendo - Nintendo Entertainment System': 'nes',
   'Nintendo - Super Nintendo Entertainment System': 'snes',
   'Nintendo - Game Boy': 'game boy',
@@ -59,11 +59,15 @@ const ITCH_WORDS = {
   'Atari - 2600': 'atari 2600',
 };
 
-function defaultRomSites(system) {
-  const sites = [];
+export function defaultRomSites(system: string): LinkSite[] {
+  const sites: LinkSite[] = [];
   if (HOMEBREW_HUB[system]) {
     const p = HOMEBREW_HUB[system];
-    sites.push({ name: 'Homebrew Hub', url: `https://hh.gbdev.io/search?platform=${p}&typetag=game`, search: `https://hh.gbdev.io/search?q={q}&platform=${p}&typetag=game` });
+    sites.push({
+      name: 'Homebrew Hub',
+      url: `https://hh.gbdev.io/search?platform=${p}&typetag=game`,
+      search: `https://hh.gbdev.io/search?q={q}&platform=${p}&typetag=game`,
+    });
   }
   if (UNIVERSAL_DB[system]) {
     sites.push({ name: 'Universal-DB', url: `https://db.universal-team.net/${UNIVERSAL_DB[system]}`, search: '' });
@@ -78,4 +82,4 @@ function defaultRomSites(system) {
   return sites;
 }
 
-module.exports = { defaultRomSites, _test: { PDROMS, HOMEBREW_HUB, UNIVERSAL_DB, ITCH_WORDS } };
+export const _test = { PDROMS, HOMEBREW_HUB, UNIVERSAL_DB, ITCH_WORDS };

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { substitute } = require('../../src/main/lib/args.js');
+const { substitute } = require('../../src/main/lib/args.ts');
 
 test.describe('substitute', () => {
   test('remplace les variables connues', () => {

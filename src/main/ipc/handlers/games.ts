@@ -1,7 +1,7 @@
 /** Jeux : sources, lancement, consoles, sites de jeux, suppression, nettoyage et copie locale d'un jeu en ligne. */
 import { SYSTEMS } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
-import { defaultRomSites } from '../../romsites.js';
+import { defaultRomSites } from '../../games/rom-sites.ts';
 import { guessSystem } from '../../scrape/index.ts';
 import type { MainContext } from '../context.ts';
 import type { IpcImplementations } from '../register.ts';

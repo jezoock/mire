@@ -42,7 +42,7 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-06 | Service de configuration | L | P1-02, P1-05 | | faite | [#22](https://github.com/jezoock/mire/pull/22) |
 | P1-07 | Identifiants stables des consoles (migration v6) | L | P1-06, P1-08 | | faite | [#23](https://github.com/jezoock/mire/pull/23) |
 | P1-08 | Contrat IPC typé | M | P1-01 | | faite | [#21](https://github.com/jezoock/mire/pull/21) |
-| P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | en revue | [#36](https://github.com/jezoock/mire/pull/36) |
+| P1-09 | Données d'usage côté processus principal | S | P1-05, P1-08, D-06 | | faite | [#36](https://github.com/jezoock/mire/pull/36) |
 | P1-10 | Sécurité des chemins et protocole `media://` | M | P1-06 | | faite | [#25](https://github.com/jezoock/mire/pull/25) |
 | P1-11 | Plateforme : lancement de programmes, lecteurs, navigateurs | S | P1-01 | 🧑 | faite | [#30](https://github.com/jezoock/mire/pull/30) |
 | P1-12 | Vues web intégrées | L | P1-02, P1-08 | 🧑 | faite | [#32](https://github.com/jezoock/mire/pull/32) |
@@ -50,18 +50,18 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-14 | Bibliothèque : sources, parcours, sous-titres | M | P1-03, P1-04, P1-10 | | faite | [#29](https://github.com/jezoock/mire/pull/29) |
 | P1-15 | Télévision | S | P1-04, P1-12, P1-14 | 🧑 | faite | [#34](https://github.com/jezoock/mire/pull/34) |
 | P1-16 | Moteur de métadonnées et fournisseurs | L | P1-03, P1-04, P1-05 | 🧑 | faite | [#35](https://github.com/jezoock/mire/pull/35) |
-| P1-17 | Recherche « où regarder » | S | P1-16 | | en revue | [#37](https://github.com/jezoock/mire/pull/37) |
+| P1-17 | Recherche « où regarder » | S | P1-16 | | faite | [#37](https://github.com/jezoock/mire/pull/37) |
 | P1-18 | Archives et boutique | M | P1-03, P1-04, P1-07 | 🧑 | faite | [#26](https://github.com/jezoock/mire/pull/26) |
 | P1-19 | Téléchargements | L | P1-05, P1-07, P1-18 | 🧑 | faite | [#28](https://github.com/jezoock/mire/pull/28) |
 | P1-20 | Jeux | L | P1-07, P1-10, P1-11, P1-14, P1-19 | 🧑 | faite | [#31](https://github.com/jezoock/mire/pull/31) |
-| P1-21 | Racine de composition | M | P1-06…P1-20 | | à faire | |
+| P1-21 | Racine de composition | M | P1-06…P1-20 | | en revue | [#41](https://github.com/jezoock/mire/pull/41) |
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | en revue | [#38](https://github.com/jezoock/mire/pull/38) |
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | en revue | [#40](https://github.com/jezoock/mire/pull/40) |
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | à faire | |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
 | P1-26 | Schéma des réglages | M | P1-06 | | faite | [#27](https://github.com/jezoock/mire/pull/27) |
 | P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
-| P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | en revue | [#39](https://github.com/jezoock/mire/pull/39) |
+| P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | faite | [#39](https://github.com/jezoock/mire/pull/39) |
 | P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | à faire | |
 | **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 (sauf P1-25) | | | |
 
@@ -108,7 +108,7 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 | ID | Tâche | Taille | Dépend de | dot-stash | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | DS-00 | Poser le tag `v0.1.0` sur le commit de fusion de la 0.1.0 (action de ta part) | XS | — | B-117 | faite (tag `v0.1.0` posé sur dot-stash) | |
-| DS-01 | Release : archive construite attachée à la release GitHub, installation par adresse | S | DS-00 | B-119, B-120 | à faire | |
+| DS-01 | Release : archive construite attachée à la release GitHub, installation par adresse | S | DS-00 | B-119, B-120 | faite | [dot-stash#4](https://github.com/jezoock/dot-stash/pull/4) |
 | DS-02 | Moteur SCSS dans le paquet (`scss/` dans `files` et `exports`) | XS | — | à créer | à faire | |
 | DS-03 | `ds-range` : curseur habillé, remplissage jusqu'à la valeur | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
@@ -178,6 +178,9 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
 | Réglages du bloqueur désactivé et jamais chargé : le texte d'état annonce « Les listes se téléchargent au premier lancement », alors qu'elles se téléchargent à l'activation | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P2-19 (réglages) ou P1-29 (textes) : « Les listes se téléchargent quand le bloqueur est activé » |
 | Activer le bloqueur la première fois attend les listes dix secondes au plus ; au-delà, les sites rechargés peuvent montrer des publicités jusqu'à la fin du téléchargement | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | À arbitrer (recharger les vues ouvertes une fois les listes prêtes) |
+| `MainContext` garde `any` pour `scraper`, `store`, `downloads`, `adblock` : les typer fait apparaître des écarts avec le contrat IPC (`downloadsList`, `adblockStatus`, `scrape`…) | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (avec P1-29 ou une petite tâche dédiée) |
+| Les types « Like » des vues web (`WindowLike`, `ViewLike`) ne sont pas compatibles avec ceux d'Electron : `index.ts` passe par deux conversions `as unknown as` | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (assouplir les types « Like ») |
+| ESLint ne vérifie que les fichiers `.js` : le processus principal, désormais tout en TypeScript, n'est plus linté | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (typescript-eslint, nouvelle dépendance de développement) |
 | `onInjectCosmeticFilters` et le compteur de cadres masqués restent propres au bloqueur ; l'interface `WebExtension` n'a pas de point d'entrée pour le CSS injecté | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P3-24 (bloqueur en addon), si un autre addon en a besoin |
 | Le handler `tvDetect` refait lui-même l'enregistrement du service trouvé et la recherche de son nom, en double de `detectOnce` du service de télévision ; le contexte IPC expose deux fonctions (`detectTvService`, `fetchChannels`) au lieu du service | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (le contexte expose `tv`, le service gagne une commande « détecter et choisir ») |
 | Le choix de la variante d'une chaîne selon la qualité préférée du service (`hd` par défaut) est fait par l'interface (`app.js`) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | Dans P2 (page Télévision) : le service de télévision rend la variante préférée, l'interface n'ordonne plus les qualités |

@@ -1,13 +1,10 @@
 # Fichiers historiques : pas de reformatage complet, ils seront découpés en phase 1.
-src/main/index.js
 src/renderer/app.js
 src/renderer/styles.css
 src/main/store.js
 src/main/downloads.js
-src/main/adblock.js
 src/preload/preload.js
 src/main/discfiles.js
-src/main/romsites.js
 scripts/drm.js
 src/renderer/index.html
 src/renderer/fonts/

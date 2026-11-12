@@ -7,7 +7,7 @@ import path from 'node:path';
 import { isHttpUrl, safeDecode, safeFileName, slug } from '@mire/shared';
 import type { Emulator } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
-import { substitute } from '../../lib/args.js';
+import { substitute } from '../../lib/args.ts';
 import type { LaunchResult } from '../../platform/index.ts';
 import * as disc from '../disc/index.ts';
 import type { GamesDeps } from '../types.ts';

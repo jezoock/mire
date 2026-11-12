@@ -23,4 +23,6 @@ export { chromeLikeUserAgent, nativeUserAgent } from './user-agent.ts';
 export { padInputEvents, PAD_KEYS, shortcutAction, type ShortcutAction } from './shortcuts.ts';
 export { searchTemplate, withSearchTemplate, type LearnResult } from './learn-search.ts';
 export { createDrm, type Drm, type DrmStatus } from './drm.ts';
+export { createAdblock, type Adblock, type AdblockStatus } from './adblock.ts';
+export { createWebLayer, type WebLayer, type WebLayerDeps } from './setup.ts';
 export type * from './types.ts';

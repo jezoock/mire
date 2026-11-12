@@ -8,7 +8,7 @@
  * chaque changement de configuration) : une vignette affichée ne refait pas tout le calcul (constat A6).
  */
 import path from 'node:path';
-import { isInside } from '../lib/paths.js';
+import { isInside } from '../lib/paths.ts';
 
 export interface AccessPolicyOptions {
   /** Racines autorisées, recalculées seulement après `invalidate()`. */
@@ -21,7 +21,7 @@ export interface AccessPolicyOptions {
 export interface AccessPolicy {
   /** Vrai si l'interface peut lire ou lancer ce fichier. */
   isAllowed(file: unknown): boolean;
-  /** Vrai si `file` est strictement sous l'une des `roots` (règle de `lib/paths.js`, selon la plateforme). */
+  /** Vrai si `file` est strictement sous l'une des `roots` (règle de `lib/paths.ts`, selon la plateforme). */
   isInside(file: unknown, roots: string[]): boolean;
   /** Autorise un fichier ouvert explicitement par l'utilisateur. */
   allowFile(file: string): void;

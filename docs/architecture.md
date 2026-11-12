@@ -16,8 +16,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
 | `usage.json` | « Reprendre », positions de reprise des vidéos, volume, recherches récentes | service des données d'usage, stockage JSON |
-| `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `index.js`, stockage JSON |
-| `meta/img/` | Images choisies à la main | `index.js` |
+| `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `src/main/meta/user-meta.ts`, stockage JSON |
+| `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
 | `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | moteur de récupération (`scrape/`), stockage JSON |
 | `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
 | `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | moteur de récupération (`scrape/`) |
@@ -25,9 +25,9 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `torrents/` | Fichiers `.torrent` gardés pour reprendre un torrent | `downloads.js` |
 | `emulators/` | Émulateurs installés par la boutique, un dossier chacun | `store.js` |
 | `emulators/installed.json` | Version et programme de chaque émulateur installé | `store.js`, stockage JSON |
-| `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `adblock.js` |
-| `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `adblock.js`, stockage JSON |
-| `cache/roms/` | Jeux en ligne téléchargés pour être lancés | `index.js` |
+| `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `src/main/web/adblock.ts` |
+| `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
+| `cache/roms/` | Jeux en ligne téléchargés pour être lancés | jeux (`src/main/games/`) |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | `store.js` |
 
 Le dossier `userData` contient aussi les dossiers propres à Chromium (cache, cookies, `Local Storage`…), gérés
@@ -84,7 +84,7 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
   écriture ; une seule écriture est en cours à la fois par fichier, et si la valeur a été modifiée pendant ce temps,
   elle est réécrite ensuite. Un échec est signalé à `onError` (journal par défaut) et n'empêche pas les suivantes ;
 - **`flush()`** écrit tout de suite ce qui attend et se résout quand tout est sur le disque. À la fermeture
-  (`before-quit`), `index.js` suspend la sortie, attend `flush()` de `scrape/db.json`, `telechargements.json` et `usage.json`
+  (`before-quit`), `src/main/app/lifecycle.ts` suspend la sortie, attend `flush()` de `scrape/db.json`, `telechargements.json` et `usage.json`
   deux secondes au plus (`flushWithin`), puis quitte ;
 - le format est celui d'avant : `JSON.stringify(valeur, null, space)`, en UTF-8, sans saut de ligne final.
 

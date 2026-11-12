@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { defaultRomSites, _test: tables } = require('../src/main/romsites');
+const { defaultRomSites, _test: tables } = require('../../src/main/games/rom-sites.ts');
 const { GAME_FILE_RE, systemById } = require('@mire/shared');
 
 const names = (system) => defaultRomSites(system).map((s) => s.name);

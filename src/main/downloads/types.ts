@@ -57,7 +57,6 @@ export interface DownloadSettings {
   dir: string;
   torrentClient: string;
   seed: boolean;
-  [key: string]: unknown;
 }
 
 /** Ce que le gestionnaire met à disposition de ses moteurs. */

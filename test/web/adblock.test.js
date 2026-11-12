@@ -11,7 +11,7 @@ let createAdblock;
 before(() => {
   // Hors d'Electron, le paquet « electron » ne sert qu'à trouver (voire télécharger) le moteur : on le remplace.
   require.cache[require.resolve('electron')] = { id: 'electron', filename: 'electron', loaded: true, exports: {} };
-  ({ createAdblock } = require('../../src/main/adblock.js'));
+  ({ createAdblock } = require('../../src/main/web/adblock.ts'));
 });
 
 const pages = (id) => ({ 7: 'https://site.example/', 8: 'https://autorise.example/' })[id];
