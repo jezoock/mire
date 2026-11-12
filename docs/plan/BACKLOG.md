@@ -60,10 +60,10 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | faite | [#43](https://github.com/jezoock/mire/pull/43) |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
 | P1-26 | Schéma des réglages | M | P1-06 | | faite | [#27](https://github.com/jezoock/mire/pull/27) |
-| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | en revue | [#44](https://github.com/jezoock/mire/pull/44) |
+| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | faite | [#44](https://github.com/jezoock/mire/pull/44) |
 | P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | faite | [#39](https://github.com/jezoock/mire/pull/39) |
 | P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | faite | [#42](https://github.com/jezoock/mire/pull/42) |
-| **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 (sauf P1-25) | | | |
+| **G2** | **Point d'étape : fin de la phase 1** — ✅ validé le 12/11/2026 (décisions D-12 et D-13, fiches de la phase 2 complétées) | | P1-01…P1-29 (sauf P1-25) | | | |
 
 Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-24).
 
@@ -73,7 +73,7 @@ Approche décidée le 10/11/2026 (D-05, `docs/analyse/D-05-dot-stash.md`) ; fich
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P2-01 | Intégration de dot-stash et `@mire/ui` | M | G2, DS-01, DS-02 | | à faire | |
+| P2-01 | Intégration de dot-stash et `@mire/ui` | M | G2, DS-01, DS-02, DS-08 | | à faire | |
 | P2-02 | Habillage Mire et thèmes en jeux de jetons | M | P2-01 | | à faire | |
 | P2-03 | Navigation clavier et manette sur les composants | L | P2-01, P1-24 | 🧑 | à faire | |
 | P2-04 | Contrôleurs et actions (`ds-trigger`) | M | P2-01, P1-22, P1-23 | | à faire | |
@@ -96,7 +96,7 @@ Approche décidée le 10/11/2026 (D-05, `docs/analyse/D-05-dot-stash.md`) ; fich
 | P2-20 | Éditeurs | M | P2-06, P2-10, P2-16 | | à faire | |
 | P2-21 | Retrait de l'interface historique et audits | M | P2-08…P2-20 | 🧑 | à faire | |
 | P2-22 | Guide « Créer un thème » | S | P2-02, P2-21 | | à faire | |
-| P2-23 | Sélecteur de langue et finitions de la localisation | S | P2-19, P1-28, P1-29 | | à faire | |
+| P2-23 | Sélecteur de langue et finitions de la localisation | S | P2-19, P2-21, P1-28, P1-29 | | à faire | |
 | **G3** | **Point d'étape : fin de la phase 2, ADR addons, dépôt `mire-addons`** | | P2-01…P2-23 | | | |
 
 ### Dans dot-stash (dépôt `jezoock/dot-stash`)
@@ -115,6 +115,7 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 | DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-07 | Imports par composant (`dist-custom-elements`), si P2-01 en a besoin | S | — | B-122, B-123 | selon P2-01 | |
+| DS-08 | Rendre le dépôt public (action de ta part, D-13) : l'archive de la release s'installe par son adresse sans jeton | XS | DS-01 | — | à faire | |
 
 ## Phase 3 — Addons
 
@@ -175,23 +176,23 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Retirer un marque-page de jeu oublie sa fiche mais pas son image (comme `forget` du scraper) | P1-20 ([#31](https://github.com/jezoock/mire/pull/31)) | À arbitrer |
 | Vue web fermée (Ctrl+W) pendant le plein écran du lecteur vidéo : l'état « plein écran de la page » n'est pas remis à zéro, la fenêtre peut rester en plein écran | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (remise à zéro dans `close` du gestionnaire) |
 | Configuration enregistrée : seuls les sites enregistrés ouverts reprennent leur entrée à jour ; un marque-page, un portail TV ou une console renommés gardent l'ancien nom tant que la vue est ouverte | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | À arbitrer (résoudre de nouveau toutes les vues ouvertes par le registre d'entrées) |
-| L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | Dans P2 (vue web en composants) : utiliser `name` et `color` de l'état |
-| Réglages du bloqueur désactivé et jamais chargé : le texte d'état annonce « Les listes se téléchargent au premier lancement », alors qu'elles se téléchargent à l'activation | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P2-19 (réglages) ou P1-29 (textes) : « Les listes se téléchargent quand le bloqueur est activé » |
+| L'interface (`viewWeb`) reconstitue le nom et la couleur des vues `rom:`, `bm:` et `tv:` avec ses propres couleurs, en double de `lib/web-entry.js` ; l'état publié (`web-state`) les contient déjà | P1-12 ([#32](https://github.com/jezoock/mire/pull/32)) | ✅ Intégrée à P2-14 au point G2 |
+| Réglages du bloqueur désactivé et jamais chargé : le texte d'état annonce « Les listes se téléchargent au premier lancement », alors qu'elles se téléchargent à l'activation | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | ✅ Intégrée à P2-19 au point G2 (texte de l'interface) |
 | Activer le bloqueur la première fois attend les listes dix secondes au plus ; au-delà, les sites rechargés peuvent montrer des publicités jusqu'à la fin du téléchargement | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | À arbitrer (recharger les vues ouvertes une fois les listes prêtes) |
 | `MainContext` garde `any` pour `scraper`, `store`, `downloads`, `adblock` : les typer fait apparaître des écarts avec le contrat IPC (`downloadsList`, `adblockStatus`, `scrape`…) | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (avec P1-29 ou une petite tâche dédiée) |
 | Les types « Like » des vues web (`WindowLike`, `ViewLike`) ne sont pas compatibles avec ceux d'Electron : `index.ts` passe par deux conversions `as unknown as` | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (assouplir les types « Like ») |
-| ESLint ne vérifie que les fichiers `.js` : le processus principal, désormais tout en TypeScript, n'est plus linté | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | À arbitrer (typescript-eslint, nouvelle dépendance de développement) |
-| Menu macOS : uniquement des rôles Electron (`appMenu`, `editMenu`, `windowMenu`), dont Electron fixe les libellés en anglais ; les traduire changerait ce que voit un utilisateur en français | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans P2-23 (finitions de la localisation) : libellés des rôles pris dans les catalogues |
+| ESLint ne vérifie que les fichiers `.js` : le processus principal, désormais tout en TypeScript, n'est plus linté | P1-21 ([#41](https://github.com/jezoock/mire/pull/41)) | ✅ Décidée au point G2 (D-12) : options de vérification du compilateur dans `tsconfig.base.json`, sans typescript-eslint |
+| Menu macOS : uniquement des rôles Electron (`appMenu`, `editMenu`, `windowMenu`), dont Electron fixe les libellés en anglais ; les traduire changerait ce que voit un utilisateur en français | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | ✅ Intégrée à P2-23 au point G2 |
 | Les fiches déjà récupérées (genres, résumés TMDB et Steam) et les erreurs gardées dans la liste des téléchargements restent dans la langue du moment où elles ont été produites | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | À arbitrer (proposer de récupérer de nouveau les fiches après un changement de langue) |
-| Les annonces (« jeu ajouté », service de télévision détecté, progression de la boutique) sont rédigées par l'interface à partir des données du processus principal | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans la phase 2 (textes de l'interface) |
-| `search.language` n'a pas de réglage dans l'interface (vide = langue de l'interface) | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | Dans P2-19 (réglages) ou P2-23, si on veut des fiches dans une autre langue que l'interface |
+| Les annonces (« jeu ajouté », service de télévision détecté, progression de la boutique) sont rédigées par l'interface à partir des données du processus principal | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | ✅ Intégrée aux points particuliers de P2-08 à P2-18 au point G2 |
+| `search.language` n'a pas de réglage dans l'interface (vide = langue de l'interface) | P1-29 ([#42](https://github.com/jezoock/mire/pull/42)) | ✅ Intégrée au point G2 : réglage dans le schéma (P2-19), choix dans Réglages (P2-23) |
 | `onInjectCosmeticFilters` et le compteur de cadres masqués restent propres au bloqueur ; l'interface `WebExtension` n'a pas de point d'entrée pour le CSS injecté | P1-13 ([#33](https://github.com/jezoock/mire/pull/33)) | Dans P3-24 (bloqueur en addon), si un autre addon en a besoin |
 | Le handler `tvDetect` refait lui-même l'enregistrement du service trouvé et la recherche de son nom, en double de `detectOnce` du service de télévision ; le contexte IPC expose deux fonctions (`detectTvService`, `fetchChannels`) au lieu du service | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (le contexte expose `tv`, le service gagne une commande « détecter et choisir ») |
-| Le choix de la variante d'une chaîne selon la qualité préférée du service (`hd` par défaut) est fait par l'interface (`app.js`) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | Dans P2 (page Télévision) : le service de télévision rend la variante préférée, l'interface n'ordonne plus les qualités |
-| Navigation spatiale : un élément est écarté s'il est masqué ou si sa propriété `disabled` est vraie ; un composant personnalisé désactivé par l'attribut `disabled` ou par `aria-disabled` (sans propriété `disabled`) resterait une destination | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | Dans P2-03 (navigation sur les composants) : décider de la règle pour les `ds-*` |
+| Le choix de la variante d'une chaîne selon la qualité préférée du service (`hd` par défaut) est fait par l'interface (`app.js`) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | ✅ Intégrée à P2-15 au point G2 |
+| Navigation spatiale : un élément est écarté s'il est masqué ou si sa propriété `disabled` est vraie ; un composant personnalisé désactivé par l'attribut `disabled` ou par `aria-disabled` (sans propriété `disabled`) resterait une destination | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | ✅ Intégrée à P2-03 au point G2 |
 | Seule la première manette connectée est lue (`getGamepads()[0]`) : une seconde manette branchée est ignorée | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | À arbitrer |
-| Les modules `nav/` et `players/` reçoivent les actions de l'interface (retour, modifier, lecteur externe, vue web…) par des objets de rappels fournis par `app.js` | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | Dans P2-04 (contrôleurs) : remplacer ces rappels par les méthodes des contrôleurs |
-| Textes des lecteurs et de la manette écrits en dur (affichage sur la vidéo, rappel des boutons, messages) ; déplacés tels quels | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | Dans la phase 2 (textes de l'interface) |
+| Les modules `nav/` et `players/` reçoivent les actions de l'interface (retour, modifier, lecteur externe, vue web…) par des objets de rappels fournis par `app.js` | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | ✅ Intégrée à P2-04 au point G2 |
+| Textes des lecteurs et de la manette écrits en dur (affichage sur la vidéo, rappel des boutons, messages) ; déplacés tels quels | P1-24 ([#43](https://github.com/jezoock/mire/pull/43)) | ✅ Intégrée à P2-13 au point G2 |
 | Détection SFR par `http://192.168.1.1/` : n'importe quelle box ou routeur à cette adresse répond, et SFR TV peut être choisi à tort au premier lancement (Freebox et Livebox ont un nom d'hôte propre et sont essayées avant) | P1-15 ([#34](https://github.com/jezoock/mire/pull/34)) | À arbitrer (adresse propre à la box SFR, ou contrôle du contenu de la réponse) |
 | Après une récupération groupée annulée, l'annulation reste active : « Rechercher en ligne » d'un album (sans fiche choisie) ou d'un jeu de console sans liste de jaquettes s'arrête aussitôt, jusqu'à la récupération groupée suivante | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | Remettre l'annulation à zéro à la fin de `run` (ou annulation propre à chaque récupération) |
 | Si la lecture des jeux d'une console échoue pendant la préparation de `run`, la récupération reste marquée « en cours » et toute nouvelle récupération groupée est refusée jusqu'au redémarrage | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | Remettre `running` à faux en cas d'erreur (`try`/`finally`) |

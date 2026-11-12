@@ -173,7 +173,7 @@ describe('script d’avant-page agrégé', () => {
           throw new Error('panne');
         },
       }),
-      ext('b', { beforePageScript: (url, top) => `b(${JSON.stringify(top)});` }),
+      ext('b', { beforePageScript: (_url, top) => `b(${JSON.stringify(top)});` }),
     ];
     const code = beforePageScriptOf(list, 'https://cadre/', 'https://page/');
     assert.equal(code, 'try {\na("https://cadre/");\n} catch (e) {}\ntry {\nb("https://page/");\n} catch (e) {}');

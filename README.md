@@ -517,9 +517,9 @@ Le rôle de chaque module, les flux principaux, le contrat IPC et les règles de
 | `npm start` | Construit `dist/` puis lance Mire. |
 | `npm run build` | Construit `dist/` avec esbuild : processus principal et preloads en CommonJS, interface en un seul script. |
 | `npm run dev` | Reconstruit à chaque modification et lance Mire. Après un changement du processus principal, relancez Mire ; après un changement de l’interface, actualisez la fenêtre (<kbd>Ctrl</kbd>+<kbd>R</kbd>). |
-| `npm run lint` | ESLint (fichiers `.js` et `.mjs`). `npm run lint:fix` corrige ce qui peut l’être. |
+| `npm run lint` | ESLint (fichiers `.js` et `.mjs` ; le TypeScript est vérifié par `npm run typecheck`). `npm run lint:fix` corrige ce qui peut l’être. |
 | `npm run format:check` | Vérifie le formatage Prettier. `npm run format` le corrige. |
-| `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/`. |
+| `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/`. Mode strict, et refus des variables et paramètres inutilisés (un paramètre imposé mais inutile commence par `_`), des `case` qui tombent dans le suivant et des fonctions qui ne rendent pas toujours une valeur. |
 | `npm run i18n:check` | Vérifie les catalogues de textes (voir plus bas). |
 | `npm test` | Tests unitaires. |
 | `npm run test:e2e` | Test de fumée dans Electron (voir plus bas). |
