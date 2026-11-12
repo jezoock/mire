@@ -57,10 +57,10 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 | P1-21 | Racine de composition | M | P1-06…P1-20 | | faite | [#41](https://github.com/jezoock/mire/pull/41) |
 | P1-22 | Renderer : modules, outils, état, client API | M | P1-01, P1-08 | | faite | [#38](https://github.com/jezoock/mire/pull/38) |
 | P1-23 | Renderer : logique de domaine testée | M | P1-22, P1-03 | | faite | [#40](https://github.com/jezoock/mire/pull/40) |
-| P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | en revue | [#43](https://github.com/jezoock/mire/pull/43) |
+| P1-24 | Renderer : navigation, clavier, manette, lecteurs | M | P1-22 | 🧑 | faite | [#43](https://github.com/jezoock/mire/pull/43) |
 | P1-25 | Renderer : vues et actions par domaine | L | — | | abandonnée (D-05 : remplacée par la phase 2) | |
 | P1-26 | Schéma des réglages | M | P1-06 | | faite | [#27](https://github.com/jezoock/mire/pull/27) |
-| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | à faire | |
+| P1-27 | Documentation d'architecture | S | P1-21, P1-26 | | en cours | |
 | P1-28 | Localisation : socle (catalogues, langue de l'interface) | M | P1-01, P1-06, D-11 | | faite | [#39](https://github.com/jezoock/mire/pull/39) |
 | P1-29 | Localisation du processus principal (français et anglais) | L | P1-28, P1-21 | | faite | [#42](https://github.com/jezoock/mire/pull/42) |
 | **G2** | **Point d'étape : fin de la phase 1** | | P1-01…P1-29 (sauf P1-25) | | | |
@@ -197,3 +197,5 @@ Améliorations notées dans les PR, à arbitrer (une piste retenue devient une t
 | Si la lecture des jeux d'une console échoue pendant la préparation de `run`, la récupération reste marquée « en cours » et toute nouvelle récupération groupée est refusée jusqu'au redémarrage | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | Remettre `running` à faux en cas d'erreur (`try`/`finally`) |
 | « Effacer les infos » (`clear`) vide la base et les images, mais pas les caches en mémoire des fournisseurs : une série déjà vue dans la session reprend le chemin d'une affiche effacée ; la liste des genres TMDB vide (TMDB injoignable au premier essai) est gardée jusqu'au redémarrage | P1-16 ([#35](https://github.com/jezoock/mire/pull/35)) | `clear` vide aussi les caches des fournisseurs (méthode `reset` facultative de `MetadataProvider`) ; ne pas garder une liste de genres vide |
 | Deux clients TMDB sont créés avec la même clé : celui du moteur de récupération (`scrape/index.ts`) et celui de la recherche « où regarder » (`index.js`) | P1-17 ([#37](https://github.com/jezoock/mire/pull/37)) | Un seul client TMDB, prêté aux deux services quand le câblage de `index.js` sera regroupé |
+| L'en-tête de `packages/shared/src/ipc.ts` cite les canaux synchrones `mire:scriptlets` et `mire:signin-ua`, remplacés par `mire:before-page` (`src/main/web/session.ts`) ; le type de l'événement `onWebAdblocked` (`{ host }`) ne dit pas que `id` est aussi envoyé | P1-27 | Corriger le commentaire et le type (petite tâche, ou avec la prochaine modification du contrat) |
+| `.prettierignore` liste encore des fichiers qui n'existent plus (`src/main/store.js`, `src/main/downloads.js`, `src/main/discfiles.js`) | P1-27 | Retirer ces lignes (petite tâche) |
