@@ -472,7 +472,7 @@ Tout est enregistré dans un fichier `config.json`. Le bouton **Afficher le fich
 
 - `externalPlayer.path` et `externalPlayer.args` : le lecteur externe et ses arguments. Variables disponibles : `{url}`, `{title}`, `{start}` (position de départ en secondes). Laissez `args` vide pour les réglages automatiques adaptés à VLC ou à mpv.
 - `browser.path` et `browser.args` : le navigateur de secours, pour les sites en mode `"browser"`, avec la variable `{url}`. Pour Firefox, qui n’a pas de mode application, mettez par exemple `"args": ["--kiosk", "{url}"]`.
-- `search.tmdbToken`, `search.region`, `search.language` : la clé TMDB, le pays des disponibilités (`FR`, `BE`, `CH`…) et la langue des titres (`fr-FR`).
+- `search.tmdbToken`, `search.region`, `search.language` : la clé TMDB, le pays des disponibilités (`FR`, `BE`, `CH`…) et la langue des titres (vide : celle de l’interface ; sinon par exemple `fr-FR`).
 - `library.sources` : les sources de la bibliothèque, chacune avec son type (`video`, `audio` ou `image`) et son emplacement ; `gameSources` : les dossiers de jeux PC. Les deux se gèrent dans Réglages.
 - Pour chaque console, `sources` : liste d’emplacements supplémentaires (dossiers, partages réseau, adresses web), en plus de `romsDir`.
 - `ui.menu.position` (`left`, `right`, `top`, `bottom`) et `ui.menu.autohide` : position du menu et mode rétractable.
