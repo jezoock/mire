@@ -1,11 +1,14 @@
 /* Mire : interface. Affichage des sections, lecteurs intégrés, navigation clavier et manette. */
 import { $, $$, esc } from './core/dom.ts';
-import { clamp, fmtBytes, fmtEta, fmtSize, fmtTime, plural } from './core/format.ts';
+import { clamp, fmtSize, fmtTime, plural } from './core/format.ts';
 import { ICON } from './core/icons.ts';
 import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
 import { toast } from './ui/toast.ts';
 import { I, PAGE, Q, S, V } from './state/index.ts';
 import { api } from './api/index.ts';
+import { fold } from '@mire/shared';
+import * as D from './domain/index.ts';
+import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
@@ -13,21 +16,13 @@ import { api } from './api/index.ts';
 
 // Les fichiers locaux passent par media:// ; les sources web sont lues directement.
 const mediaUrl = (p) => (/^https?:\/\//i.test(p) ? p : `media://local/?p=${encodeURIComponent(p)}`);
-const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
-const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-const parentName = (dir) => { const parts = String(dir || '').split(/[\\/]/).filter(Boolean); return parts.length >= 2 ? parts[parts.length - 2] : ''; };
-const GENERIC_DIR = /^(saison|season|s\d{1,2}|disc|disque|cd|dvd|partie|part|volume|vol)\b/i;
-
-// « Saison 1 » seul ne dit rien : on ajoute le dossier parent (le nom de la série).
-function folderLabel(it) {
-  const parent = GENERIC_DIR.test(it.folder || '') ? parentName(it.dir) : '';
-  return parent ? { title: parent, sub: it.folder } : { title: it.folder, sub: '' };
-}
-const folderText = (it) => { const f = folderLabel(it); return f.sub ? `${f.title}, ${f.sub}` : f.title; };
-
-// « 01 - One More Time » → « One More Time »
-const cleanTrack = (name) => name.replace(/^(?:\d{1,2}[-.])?\d{1,3}\s*[-._)]\s*|^\d{2}\s+(?=\S)/, '') || name;
+// Logique sans DOM ni état (domain/) : ces raccourcis lui passent les données de S.
+const infos = () => ({ scrape: S.scrape, meta: S.meta });
+const withScrape = (it) => D.withScrape(it, infos());
+const filterQ = (items, text) => D.filterQ(items, S.query, text);
+const pcGameEntries = () => D.pcGameEntries(S.config.games, S.autoGames, infos());
+const allLocalGames = () => D.allLocalGames({ games: S.config.games, autoGames: S.autoGames, emulators: S.config.emulators, localRoms: S.localRoms, gameBookmarks: S.config.gameBookmarks }, infos());
 
 /* ------------------------------------------------------------------ */
 /* État                                                                */
@@ -274,10 +269,10 @@ function headerTools(sec) {
 
 // Sources disponibles pour la recherche d'une section.
 function searchSourcesFor(sec) {
-  if (sec === 'videos') return sourcesOfList(S.videos.map(withScrape));
-  if (sec === 'music') return sourcesOfList(S.tracks.map(withScrape));
-  if (sec === 'images') return sourcesOfList(S.images.map(withScrape));
-  if (sec === 'games' && S.romsOf == null) return sourcesOfList(allLocalGames());
+  if (sec === 'videos') return D.sourcesOf(S.videos.map(withScrape));
+  if (sec === 'music') return D.sourcesOf(S.tracks.map(withScrape));
+  if (sec === 'images') return D.sourcesOf(S.images.map(withScrape));
+  if (sec === 'games' && S.romsOf == null) return D.sourcesOf(allLocalGames());
   return [];
 }
 
@@ -291,9 +286,9 @@ function headerToolsRight(sec) {
 
   if (sec === 'videos') {
     if (S.videoSeries != null) return ''; // dans une série : pas de filtres globaux
-    const vids = filterQ(bySource(S.videos.map(withScrape)), () => true);
+    const vids = filterQ(D.bySource(S.videos.map(withScrape), S.videoSource), () => true);
     genreMenu(vids);
-    const sources = videoSources(S.videos.map(withScrape));
+    const sources = D.sourcesOf(S.videos.map(withScrape));
     if (sources.length > 1) parts.push(hdrMenu(ICON.source, 'Filtrer par source', 'video-source', [['', 'Toutes les sources'], ...sources.map((x) => [x, x])], S.videoSource, !!S.videoSource));
     parts.push(hdrMenu(ICON.sort, 'Trier', 'video-sort', [['title', 'Titre (A→Z)'], ['year', 'Année (récent)'], ['source', 'Source']], S.videoSort, S.videoSort !== 'title'));
     return parts.join('');
@@ -304,7 +299,7 @@ function headerToolsRight(sec) {
     const inConsole = S.romsOf != null;
     // Filtre par système (liste unifiée seulement).
     if (!inConsole) {
-      const systems = gameSystems(allLocalGames());
+      const systems = D.gameSystems(allLocalGames(), S.config.emulators);
       if (systems.length > 1) parts.push(hdrMenu(ICON.layers, 'Filtrer par système', 'game-system', [['', 'Tous les systèmes'], ...systems.map((sy) => [sy.key, `${sy.name} (${sy.count})`])], S.gameSystem, !!S.gameSystem));
     }
     // Filtre par genre.
@@ -356,45 +351,6 @@ function render({ resetScroll = false } = {}) {
 /* Briques d'affichage                                                 */
 /* ------------------------------------------------------------------ */
 
-const labelOf = (it) => it.sTitle || it.displayName || (it.kind === 'audio' ? cleanTrack(it.name) : it.name);
-
-// Ajoute à un élément l'image, le titre officiel et l'année récupérés en ligne.
-function scrapeKey(it) {
-  if (it.kind === 'video') return `v:${it.path}`;
-  if (it.kind === 'audio') return `a:${it.dir}`;
-  if (it.kind === 'rom') return `r:${it.path}`;
-  if (it.kind === 'game') return `g:${fold(it.name)}`;
-  if (it.kind === 'gamebm') return `b:${it.bookmarkId}`;
-  if (it.kind === 'image') return `i:${it.path}`;
-  return '';
-}
-// Clé des modifications manuelles : un morceau se modifie seul, l'album a sa propre fiche.
-const metaKey = (it, kind = it.kind) => (kind === 'track' ? `t:${it.path}` : kind === 'album' ? `a:${it.dir}` : scrapeKey(it));
-
-// Ajoute à un élément ses infos : celles que vous avez saisies passent avant celles récupérées en ligne.
-function withScrape(it) {
-  const key = scrapeKey(it);
-  const sc = S.scrape[key] || {};
-  const um = S.meta[key] || {};
-  const tm = it.kind === 'audio' ? (S.meta[`t:${it.path}`] || {}) : {};
-  const out = { ...it };
-  if ((it.kind === 'video' && !sc.series && sc.title) || ((it.kind === 'game' || it.kind === 'gamebm') && sc.title)) out.sTitle = sc.title;
-  // Épisode d'une série : le titre de série vient du scrap (ou du nom déduit), pour l'arborescence.
-  if (it.kind === 'video' && (sc.series || it.seriesTitle)) out.sSeries = sc.title || it.seriesTitle || '';
-  if (it.kind !== 'audio' && um.title) out.sTitle = um.title;
-  if (tm.title) out.sTitle = tm.title;
-  out.sYear = um.year || sc.year || '';
-  out.sGenre = tm.genre || um.genre || sc.genre || '';
-  out.sOverview = um.overview || sc.overview || '';
-  out.sArtist = um.artist || sc.artist || '';
-  out.sImage = sc.image || null;
-  out.uImage = um.image || null;
-  out.sBackdrop = um.backdrop || it.fanart || sc.backdrop || null;
-  return out;
-}
-
-const genresOf = (it) => String(it.sGenre || '').split(',').map((g) => g.trim()).filter(Boolean);
-
 const byGenre = (items) => (S.genre ? items.filter((it) => genresOf(it).includes(S.genre)) : items);
 
 function art(it, ratio, extra = '') {
@@ -407,13 +363,6 @@ function tile(it, i, action, ratio, { sub = '', noText = false } = {}) {
   const label = labelOf(it);
   const text = noText ? '' : `<span class="tile-t">${esc(label)}</span>${sub ? `<span class="tile-s">${esc(sub)}</span>` : ''}`;
   return `<button class="tile focusable" data-action="${action}" data-index="${i}"${noText ? ` aria-label="${esc(label)}" title="${esc(label)}"` : ''}>${art(it, ratio)}${text}</button>`;
-}
-
-function filterQ(items, text) {
-  const q = fold(S.query);
-  if (!q) return items;
-  const words = q.split(/\s+/).filter(Boolean);
-  return items.filter((it) => { const h = fold(text(it)); return words.every((w) => h.includes(w)); });
 }
 
 function moreButton(total) {
@@ -536,25 +485,18 @@ function viewVideos() {
   const vids = S.videos.map(withScrape);
 
   // Arborescence : série → saison → épisodes. On descend avec S.videoSeries puis S.videoSeason.
-  const seriesKeyOf = (v) => (v.sSeries || v.seriesTitle) ? fold(v.sSeries || v.seriesTitle) : null;
   if (S.videoSeries != null) {
-    const eps = vids.filter((v) => seriesKeyOf(v) === S.videoSeries);
+    const eps = D.episodesOfSeries(vids, S.videoSeries);
     if (!eps.length) { S.videoSeries = null; S.videoSeason = null; }
     else return viewSeries(eps);
   }
 
-  const items = sortVideos(byGenre(filterQ(bySearchSource('videos', bySource(vids)), (v) => `${v.name} ${v.sTitle || ''} ${v.sSeries || ''} ${folderText(v)} ${v.sGenre}`)));
+  const items = D.sortVideos(byGenre(filterQ(bySearchSource('videos', D.bySource(vids, S.videoSource)), (v) => `${v.name} ${v.sTitle || ''} ${v.sSeries || ''} ${folderText(v)} ${v.sGenre}`)), S.videoSort);
   S.list = items;
   if (!items.length) return S.query ? noResults('Aucune vidéo.') : noResults('Aucune vidéo trouvée dans vos sources.');
 
   // Les épisodes d'une même série sont réunis en une seule tuile « série ».
-  const seen = new Set();
-  const cards = [];
-  for (const v of items) {
-    const sk = seriesKeyOf(v);
-    if (sk) { if (seen.has(sk)) continue; seen.add(sk); cards.push({ series: true, key: sk, item: v, count: items.filter((x) => seriesKeyOf(x) === sk).length }); }
-    else cards.push({ series: false, item: v });
-  }
+  const cards = D.videoCards(items);
   S.videoCards = cards;
   const first = cards[0] ? (cards[0].series ? { kind: 'series', item: cards[0].item, count: cards[0].count } : { kind: 'video', item: cards[0].item }) : null;
   const tiles = cards.slice(0, S.limit).map((c, i) => c.series
@@ -578,12 +520,12 @@ function seriesTile(c, i) {
 function viewSeries(eps) {
   const title = eps[0].sSeries || eps[0].seriesTitle || 'Série';
   const back = `<div class="btn-row back"><button class="btn btn-ghost focusable" data-action="back-videos">Retour aux vidéos</button></div>`;
-  const seasons = [...new Set(eps.map((e) => e.season || 0))].sort((a, b) => a - b);
+  const seasons = D.seasonsOf(eps);
 
   if (S.videoSeason == null && seasons.length > 1) {
     // Plusieurs saisons : on les liste.
     const tiles = seasons.map((sn, i) => {
-      const n = eps.filter((e) => (e.season || 0) === sn).length;
+      const n = D.episodesOfSeason(eps, sn).length;
       return `<button class="tile focusable" data-action="open-season" data-index="${i}" data-season="${sn}">
         <span class="art r-poster"><span class="art-mono">${sn ? 'S' + sn : '?'}</span><span class="tile-badge">${plural(n, 'épisode')}</span></span>
         <span class="tile-t">${sn ? 'Saison ' + sn : 'Épisodes'}</span></button>`;
@@ -595,7 +537,7 @@ function viewSeries(eps) {
 
   // Une seule saison, ou saison choisie : les épisodes.
   const season = S.videoSeason != null ? S.videoSeason : seasons[0];
-  const list = eps.filter((e) => (e.season || 0) === (season || 0)).sort((a, b) => (a.episode || 0) - (b.episode || 0));
+  const list = D.episodesOfSeason(eps, season);
   S.list = list;
   const seasonBack = seasons.length > 1 ? `<button class="btn btn-ghost focusable" data-action="back-season">Retour aux saisons</button>` : '';
   const tiles = list.map((e, i) => tile(e, i, 'play-video', 'r-poster', { sub: [e.episode ? `Épisode ${e.episode}` : '', genresOf(e)[0]].filter(Boolean).join(', ') })).join('');
@@ -605,45 +547,8 @@ function viewSeries(eps) {
     <div class="grid grid-poster">${tiles}</div>`;
 }
 
-// Source comme critère : filtre (ne garder qu'une source) et tri.
-function bySource(vids) {
-  if (!S.videoSource) return vids;
-  return vids.filter((v) => sourceOf(v) === S.videoSource);
-}
-function sourceOf(v) {
-  if (v.bookmark || v.downloadBookmark) return 'Streaming';
-  if (v.remote) return 'En ligne';
-  if (v.auto || v.manualIndex != null || v.kind === 'game') return 'Jeux PC';
-  return v.dir ? sourceRoot(v) : 'Dossiers';
-}
-// Racine d'un chemin : le dossier ou le serveur d'où vient l'élément (pour grouper par source).
-function sourceRoot(v) {
-  const p = String(v.dir || v.path || '');
-  if (/^https?:\/\//i.test(p)) { try { return new URL(p).hostname.replace(/^www\./, ''); } catch { return 'En ligne'; } }
-  return 'Dossiers';
-}
-function videoSources(vids) {
-  return [...new Set(vids.map(sourceOf))];
-}
-
-// Sources présentes dans une liste, pour le menu « source de recherche » de l'en-tête.
-function sourcesOfList(items) {
-  return [...new Set(items.map(sourceOf))];
-}
 // Restreint une liste à la source de recherche choisie pour la section.
-function bySearchSource(sec, items) {
-  const src = S.searchSource[sec];
-  if (!src) return items;
-  return items.filter((it) => sourceOf(it) === src);
-}
-function sortVideos(items) {
-  const s = S.videoSort || 'title';
-  const arr = [...items];
-  if (s === 'title') arr.sort((a, b) => collator.compare(labelOf(a), labelOf(b)));
-  else if (s === 'year') arr.sort((a, b) => (Number(b.sYear) || 0) - (Number(a.sYear) || 0));
-  else if (s === 'source') arr.sort((a, b) => collator.compare(sourceOf(a), sourceOf(b)) || collator.compare(labelOf(a), labelOf(b)));
-  return arr;
-}
+const bySearchSource = (sec, items) => D.bySource(items, S.searchSource[sec]);
 
 // Panneau d'infos de l'élément sélectionné (Vidéos, Images, Jeux).
 function remoteRomButton(ref) {
@@ -884,43 +789,6 @@ function consoleOf(id) {
 const gameSub = (g) => (g.kind === 'rom' ? [g.sYear, g.systemName].filter(Boolean).join(', ') : [g.sYear, genresOf(g)[0]].filter(Boolean).join(', '));
 const refOfGame = (g, i) => (g.kind === 'rom' ? { kind: 'rom', item: g, emu: g.consoleId } : g.kind === 'gamebm' ? { kind: 'gamebm', item: g } : { kind: 'game', item: g });
 
-// Jeux PC (manuels + trouvés dans les dossiers) et jeux de console présents en local, dans une seule liste.
-function allLocalGames() {
-  const pc = pcGameEntries().map((g) => ({ ...g, systemKey: 'pc', systemName: 'Jeux PC' }));
-  const roms = [];
-  for (const emu of S.config.emulators) {
-    for (const r of (S.localRoms[emu.id] || [])) roms.push(withScrape({ ...r, kind: 'rom', consoleId: emu.id, systemKey: `emu:${emu.id}`, systemName: emu.name }));
-  }
-  // Marque-pages de jeux en attente de téléchargement : des cartes avec un bouton Télécharger.
-  const pending = (S.config.gameBookmarks || []).filter((b) => !b.done).map((b) => {
-    const consoleId = b.console != null && b.console !== 'pc' ? b.console : null;
-    const systemKey = b.console === 'pc' ? 'pc' : consoleId != null ? `emu:${consoleId}` : 'pending';
-    const systemName = b.console === 'pc' ? 'Jeux PC' : consoleId != null ? (consoleOf(consoleId)?.name || 'Console') : 'À télécharger';
-    return withScrape({ kind: 'gamebm', name: b.title, path: `gbm:${b.id}`, bookmarkId: b.id, dlSource: b.source, systemKey, systemName, pending: true });
-  });
-  return [...pc, ...roms, ...pending].sort((a, b) => collator.compare(labelOf(a), labelOf(b)));
-}
-
-// Jeux PC seuls (ajoutés à la main, puis trouvés dans les dossiers).
-function pcGameEntries() {
-  const manual = S.config.games.map((g, i) => ({ name: g.name, path: g.path, image: g.image || null, args: g.args, manualIndex: i, dir: g.path, kind: 'game' }));
-  const known = new Set(manual.map((g) => g.path));
-  const auto = S.autoGames.filter((g) => !known.has(g.path)).map((g) => ({ ...g, image: null, dir: g.path, kind: 'game', auto: true }));
-  return [...manual, ...auto].map(withScrape).sort((a, b) => collator.compare(labelOf(a), labelOf(b)));
-}
-
-// Systèmes présents dans la liste (pour le filtre), jeux PC d'abord puis les consoles.
-function gameSystems(all) {
-  const out = [];
-  const pc = all.filter((g) => g.systemKey === 'pc').length;
-  if (pc) out.push({ key: 'pc', name: 'Jeux PC', count: pc });
-  for (const emu of S.config.emulators) {
-    const n = all.filter((g) => g.systemKey === `emu:${emu.id}`).length;
-    out.push({ key: `emu:${emu.id}`, name: emu.name, count: n, consoleId: emu.id });
-  }
-  return out;
-}
-
 function viewRoms() {
   const emu = consoleOf(S.romsOf);
   const sites = S.romSites[S.romsOf] || [];
@@ -975,28 +843,11 @@ const sourceLabel = (l) => { try { return new URL(l).hostname.replace(/^www\./, 
 
 /* ---------- Téléchargements ---------- */
 
-const DL_ACTIVE = new Set(['waiting', 'downloading', 'extracting']);
-const DL_STATE = { pending: 'En attente de téléchargement', waiting: 'En attente', downloading: 'En cours', paused: 'En pause', extracting: 'Décompression', done: 'Terminé', error: 'Erreur', cancelled: 'Annulé', interrupted: 'Interrompu', external: 'Confié au logiciel de torrent' };
-
-function dlMeta(d) {
-  const parts = [DL_STATE[d.state] || d.state];
-  if (d.total) parts.push(d.state === 'done' ? fmtBytes(d.total) : `${fmtBytes(d.received || 0)} sur ${fmtBytes(d.total)}`);
-  else if (d.received) parts.push(fmtBytes(d.received));
-  if (d.state === 'downloading' && d.speed) parts.push(`${fmtBytes(d.speed)}/s`);
-  if (d.kind === 'torrent' && DL_ACTIVE.has(d.state)) parts.push(plural(d.peers || 0, 'pair', 'pairs'));
-  if (d.state === 'downloading' && d.eta) parts.push(`reste ${fmtEta(d.eta)}`);
-  parts.push(d.consoleName ? `vers ${d.consoleName}` : d.dir ? 'vers Téléchargements' : '');
-  if (d.group) parts.push(`fait partie de « ${d.group} »`);
-  if (d.companions) parts.push(`${plural(d.companions, 'fichier du jeu ajouté', 'fichiers du jeu ajoutés')}`);
-  if (d.extracted) parts.push('archive décompressée');
-  return parts.filter(Boolean).join(' · ');
-}
-
 function dlRow(d) {
   const pct = d.total ? Math.min(100, Math.round(((d.received || 0) / d.total) * 100)) : d.state === 'done' ? 100 : 0;
   const b = (action, label, extra = '') => `<button class="btn btn-sm focusable" data-action="${action}" data-id="${esc(d.id)}"${extra}>${label}</button>`;
   const actions = [];
-  if (DL_ACTIVE.has(d.state) && d.state !== 'extracting') actions.push(b('dl-pause', 'Pause'), b('dl-cancel', 'Annuler'));
+  if (D.DL_ACTIVE.has(d.state) && d.state !== 'extracting') actions.push(b('dl-pause', 'Pause'), b('dl-cancel', 'Annuler'));
   if (d.state === 'paused') actions.push(b('dl-resume', 'Reprendre'), b('dl-cancel', 'Annuler'));
   if (['error', 'interrupted', 'cancelled'].includes(d.state)) actions.push(b('dl-resume', 'Réessayer'), b('dl-remove', 'Retirer'));
   if (d.state === 'done') {
@@ -1009,7 +860,7 @@ function dlRow(d) {
     <span class="dl-kind">${d.kind === 'torrent' ? 'Torrent' : 'HTTP'}</span>
     <div class="dl-main">
       <div class="dl-name" title="${esc(d.name || '')}">${esc(d.name || 'Téléchargement')}</div>
-      <div class="dl-meta" id="dl-${esc(d.id)}-meta">${esc(dlMeta(d))}</div>
+      <div class="dl-meta" id="dl-${esc(d.id)}-meta">${esc(D.dlMeta(d))}</div>
       ${d.error ? `<div class="dl-error">${esc(d.error)}</div>` : ''}
       ${d.state !== 'external' ? `<div class="dl-bar"><i id="dl-${esc(d.id)}-bar" style="width:${pct}%"></i></div>` : ''}
     </div>
@@ -1019,7 +870,7 @@ function dlRow(d) {
 
 function viewDownloads() {
   const list = S.downloads;
-  const running = list.filter((d) => DL_ACTIVE.has(d.state) || d.state === 'paused' || d.state === 'pending');
+  const running = list.filter((d) => D.DL_ACTIVE.has(d.state) || d.state === 'paused' || d.state === 'pending');
   const others = list.filter((d) => !running.includes(d));
   const dests = [['', 'Dossier des téléchargements'], ...S.config.emulators.map((e) => [e.id, `Console : ${e.name}`])];
   const client = S.dlSettings.torrentClient === 'system' ? 'confiés à votre logiciel de torrent' : 'téléchargés par le client intégré de Mire';
@@ -1037,7 +888,7 @@ function viewDownloads() {
 }
 
 function updateDlBadge() {
-  const n = S.downloads.filter((d) => DL_ACTIVE.has(d.state)).length;
+  const n = S.downloads.filter((d) => D.DL_ACTIVE.has(d.state)).length;
   const badge = $('#dl-badge');
   if (badge) { badge.hidden = !n; badge.textContent = String(n); }
 }
@@ -1064,7 +915,7 @@ api.onDownload((d) => {
     const bar = $(`#dl-${CSS.escape(d.id)}-bar`);
     if (bar) bar.style.width = `${pct}%`;
     const meta = $(`#dl-${CSS.escape(d.id)}-meta`);
-    if (meta) meta.textContent = dlMeta(d);
+    if (meta) meta.textContent = D.dlMeta(d);
     return;
   }
   clearTimeout(dlRenderTimer);
@@ -1595,10 +1446,6 @@ async function openRomBrowser(i, { site, url } = {}) {
   if (S.section === 'web') render(); else go('web');
 }
 
-function searchUrlFor(w, q) {
-  return w.search ? w.search.split('{q}').join(encodeURIComponent(q)) : '';
-}
-
 function pickVariant(c) {
   const pref = (S.config.tv.services.find((t) => t.id === S.config.tv.active)?.quality) || 'hd';
   const order = { hd: ['hd', 'sd', 'other', 'ld'], sd: ['sd', 'other', 'hd', 'ld'], ld: ['ld', 'sd', 'other', 'hd'] }[pref] || ['hd', 'sd', 'other', 'ld'];
@@ -1979,23 +1826,9 @@ async function ensureSearchSources() {
   if (S.section === 'search' && S.gq) refreshSearch();
 }
 
-function allRoms() {
-  const out = [];
-  S.config.emulators.forEach((e) => { for (const r of S.romsCache[e.id] || []) out.push({ ...r, emu: e.id, emuName: e.name }); });
-  return out;
-}
-
 function localResults(q) {
-  const words = fold(q).split(/\s+/).filter(Boolean);
-  const match = (text) => { const h = fold(text); return words.every((w) => h.includes(w)); };
-  return {
-    videos: S.videos.map(withScrape).filter((v) => match(`${v.name} ${v.sTitle || ''} ${folderText(v)}`)).slice(0, 24),
-    tracks: S.tracks.filter((t) => match(`${t.name} ${folderText(t)}`)).slice(0, 12),
-    images: S.images.filter((i) => match(`${i.name} ${i.folder}`)).slice(0, 24),
-    channels: (S.channels || []).filter((c) => match(`${c.number ?? ''} ${c.name}`)).slice(0, 12),
-    games: pcGameEntries().filter((g) => match(`${g.name} ${g.sTitle || ''} ${g.sGenre}`)).slice(0, 12),
-    roms: allRoms().map((r) => withScrape({ ...r, kind: 'rom' })).filter((r) => match(`${r.displayName} ${r.emuName}`)).slice(0, 24),
-  };
+  const data = { videos: S.videos, tracks: S.tracks, images: S.images, channels: S.channels, games: pcGameEntries(), roms: D.allRoms(S.config.emulators, S.romsCache) };
+  return D.localResults(q, data, infos());
 }
 
 function gsSection(title, count, body, id = '') {
@@ -2115,10 +1948,10 @@ function openTmdbResult(r) {
   const mine = r.providers.filter((pv) => pv.webId);
   if (mine.length) {
     const w = S.config.web.find((x) => x.id === mine[0].webId);
-    openWeb(w.id, searchUrlFor(w, r.title) || undefined);
+    openWeb(w.id, D.searchUrlFor(w, r.title) || undefined);
     if (mine.length > 1) {
       const w2 = S.config.web.find((x) => x.id === mine[1].webId);
-      setTimeout(() => toast(`Aussi disponible sur ${w2.name}`, { action: `Ouvrir ${w2.name}`, onAction: () => openWeb(w2.id, searchUrlFor(w2, r.title) || undefined) }), 2600);
+      setTimeout(() => toast(`Aussi disponible sur ${w2.name}`, { action: `Ouvrir ${w2.name}`, onAction: () => openWeb(w2.id, D.searchUrlFor(w2, r.title) || undefined) }), 2600);
     }
     return;
   }
@@ -2339,7 +2172,7 @@ function panelSpec(section) {
           <div class="btn-row"><button type="button" class="btn btn-sm focusable" data-action="add-game">Ajouter un jeu à la main</button></div></section>
           <section class="pset"><h3 class="pset-h">Sites pour télécharger des jeux PC</h3>
           <p class="set-help">Mire ne propose aucun site d’office. Ajoutez ceux que vous voulez : « Ajouter des jeux PC » les ouvrira dans un navigateur intégré, avec recherche et téléchargement, comme pour les consoles. Un par ligne : « Nom | adresse | adresse de recherche avec {q} ».</p>
-          <textarea class="input focusable" id="pc-sites" rows="4" placeholder="Nom | https://… | https://…?q={q}">${esc(sitesToText(c.pcSites))}</textarea>
+          <textarea class="input focusable" id="pc-sites" rows="4" placeholder="Nom | https://… | https://…?q={q}">${esc(D.sitesToText(c.pcSites))}</textarea>
           <div class="btn-row"><button type="button" class="btn btn-sm focusable" data-action="save-pc-sites">Enregistrer les sites</button></div></section>` },
         { id: 'infos', label: 'Infos et jaquettes', html: () => scrapeBlock('games', 'Jaquettes, genres, années et fonds : libretro pour les consoles, Steam pour les jeux PC.') },
         { id: 'maint', label: 'Entretien', html: () => `<section class="pset"><h3 class="pset-h">Liste des jeux</h3>
@@ -2681,7 +2514,7 @@ async function editRef(ref) {
   });
   if (manualGame) {
     fields.push({ id: 'gpath', label: 'Programme ou raccourci', value: manualGame.path, browse: 'file', full: true });
-    fields.push({ id: 'gargs', label: 'Arguments', value: joinArgs(manualGame.args || []), full: true });
+    fields.push({ id: 'gargs', label: 'Arguments', value: D.joinArgs(manualGame.args || []), full: true });
   }
   const canScrape = ['video', 'album', 'rom', 'game'].includes(kind);
   const actions = [
@@ -2753,7 +2586,7 @@ async function editRef(ref) {
         if (m) S.meta[key] = m; else delete S.meta[key];
         if (manualGame) {
           const next = structuredClone(S.config);
-          next.games[it.manualIndex] = { ...manualGame, path: val.gpath || manualGame.path, args: parseArgs(val.gargs || '') };
+          next.games[it.manualIndex] = { ...manualGame, path: val.gpath || manualGame.path, args: D.parseArgs(val.gargs || '') };
           S.config = await api.saveConfig(next);
         }
         return false;
@@ -2772,40 +2605,21 @@ async function editRef(ref) {
 
 /* ---------- Modifier une console : programme, dossiers et sources de jeux ---------- */
 
-const LIBRETRO_SYSTEMS = [
-  'Nintendo - Nintendo Entertainment System', 'Nintendo - Super Nintendo Entertainment System', 'Nintendo - Game Boy', 'Nintendo - Game Boy Color',
-  'Nintendo - Game Boy Advance', 'Nintendo - Nintendo 64', 'Nintendo - Nintendo DS', 'Nintendo - Nintendo 3DS', 'Nintendo - GameCube', 'Nintendo - Wii', 'Nintendo - Wii U',
-  'Sega - Mega Drive - Genesis', 'Sega - Master System - Mark III', 'Sega - Game Gear', 'Sega - Saturn', 'Sega - Dreamcast',
-  'Sony - PlayStation', 'Sony - PlayStation 2', 'Sony - PlayStation Portable', 'NEC - PC Engine - TurboGrafx 16', 'Atari - 2600', 'SNK - Neo Geo Pocket Color',
-];
-const joinArgs = (args) => (args || []).map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ');
-const parseArgs = (txt) => [...String(txt).matchAll(/"([^"]*)"|(\S+)/g)].map((m) => (m[1] != null ? m[1] : m[2]));
-
-const sitesToText = (list) => (list || []).map((x) => [x.name, x.url, x.search].filter(Boolean).join(' | ')).join('\n');
-function parseSites(text) {
-  return String(text || '').split('\n').map((line) => line.split('|').map((x) => x.trim())).filter((p) => p.some(Boolean)).map((p) => {
-    const url = p.find((x) => /^https?:\/\//i.test(x) && !x.includes('{q}')) || '';
-    const search = p.find((x) => /^https?:\/\//i.test(x) && x.includes('{q}')) || '';
-    const name = p.find((x) => x && !/^https?:\/\//i.test(x)) || (url ? new URL(url).hostname : '');
-    return { name, url, search };
-  }).filter((x) => x.url);
-}
-
 async function editConsole(i) {
   const e = consoleOf(i);
   if (!e) return;
   let banner = e.banner || '';
   const siteInfo = await api.romSites(i);
-  const sitesText = sitesToText(siteInfo?.sites);
+  const sitesText = D.sitesToText(siteInfo?.sites);
   const res = await openForm({
     title: `Modifier la console ${e.name}`,
     help: 'Les sources supplémentaires peuvent être des dossiers, des partages réseau ou des adresses web (une page qui liste les fichiers). Un jeu d’une source web est téléchargé une fois dans le cache de Mire avant d’être lancé.',
     wide: true,
     fields: [
       { id: 'name', label: 'Nom', value: e.name, required: true },
-      { id: 'system', label: 'Système (pour les jaquettes et genres)', value: e.system || '', options: LIBRETRO_SYSTEMS },
+      { id: 'system', label: 'Système (pour les jaquettes et genres)', value: e.system || '', options: D.SYSTEM_IDS },
       { id: 'path', label: 'Émulateur', value: e.path, browse: 'file', full: true, required: true },
-      { id: 'args', label: 'Arguments ({rom} = chemin du jeu)', value: joinArgs(e.args?.length ? e.args : ['{rom}']), full: true },
+      { id: 'args', label: 'Arguments ({rom} = chemin du jeu)', value: D.joinArgs(e.args?.length ? e.args : ['{rom}']), full: true },
       { id: 'romsDir', label: 'Dossier principal des jeux (téléchargements et imports)', value: e.romsDir || '', browse: 'folder', full: true },
       { id: 'sources', type: 'list', label: 'Sources supplémentaires', value: e.sources || [], placeholder: '\\\\NAS\\Jeux\\SNES, smb://nas/jeux ou http://…/snes/' },
       { id: 'extensions', label: 'Extensions des jeux (séparées par des virgules)', value: (e.extensions || []).join(', '), full: true },
@@ -2846,7 +2660,7 @@ async function editConsole(i) {
     name: v.name || e.name,
     system: v.system,
     path: v.path || e.path,
-    args: parseArgs(v.args || '{rom}'),
+    args: D.parseArgs(v.args || '{rom}'),
     romsDir: v.romsDir,
     sources: v.sources,
     extensions: v.extensions.split(/[,;\s]+/).filter(Boolean).map((x) => (x.startsWith('.') ? x : `.${x}`).toLowerCase()),
@@ -2854,7 +2668,7 @@ async function editConsole(i) {
     banner,
   };
   // Sites : on ne garde une liste propre à la console que si elle diffère de celle proposée par Mire.
-  const parsedSites = parseSites(v.romSites);
+  const parsedSites = D.parseSites(v.romSites);
   if (!v.romSites.trim() || JSON.stringify(parsedSites) === JSON.stringify(siteInfo?.defaults || [])) delete next.emulators[at].romSites;
   else next.emulators[at].romSites = parsedSites;
   delete S.romSites[i];
@@ -3169,7 +2983,7 @@ async function onActionClick(e) {
       break;
     }
     case 'save-pc-sites': {
-      const sites = parseSites($('#pc-sites').value);
+      const sites = D.parseSites($('#pc-sites').value);
       S.config = await api.saveConfig({ ...S.config, pcSites: sites });
       toast(`${plural(sites.length, 'site enregistré', 'sites enregistrés')}.`);
       break;
@@ -3257,7 +3071,7 @@ async function onActionClick(e) {
       const site = (S.romSites[cid] || [])[Number(t.dataset.id)];
       if (!site) break;
       if (!site.search) { openRomBrowser(cid, { site: Number(t.dataset.id) }); setTimeout(() => toast(`La recherche de ${site.name} n’est pas encore connue : cherchez le mot « mire » sur le site, puis appuyez sur la loupe.`, { duration: 9000 }), 2600); break; }
-      openRomBrowser(cid, { site: Number(t.dataset.id), url: searchUrlFor(site, S.query) });
+      openRomBrowser(cid, { site: Number(t.dataset.id), url: D.searchUrlFor(site, S.query) });
       break;
     }
     case 'scrape-section': {
@@ -3445,7 +3259,7 @@ async function onActionClick(e) {
       rememberQuery(S.gq);
       const w = S.config.web.find((x) => x.id === t.dataset.id);
       if (!w) break;
-      const url = searchUrlFor(w, S.gq);
+      const url = D.searchUrlFor(w, S.gq);
       if (!url) setTimeout(() => toast(`Pour chercher sur ${w.name} depuis Mire : cherchez le mot « mire » sur le site, puis appuyez sur « Mémoriser la recherche ».`, { duration: 10000 }), 2600);
       openWeb(w.id, url || undefined);
       break;
