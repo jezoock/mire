@@ -5,6 +5,7 @@ import { $, $$, esc } from '../../src/renderer/core/dom.ts';
 import { clamp, fmtBytes, fmtEta, fmtSize, fmtTime, plural } from '../../src/renderer/core/format.ts';
 import { BARS, barFor, monogram, onColor, safeColor } from '../../src/renderer/core/colors.ts';
 import { ICON } from '../../src/renderer/core/icons.ts';
+import { mediaUrl } from '../../src/renderer/core/media.ts';
 
 describe('core/dom', () => {
   it('esc échappe les caractères spéciaux du HTML', () => {
@@ -128,5 +129,14 @@ describe('core/icons', () => {
     for (const [name, svg] of Object.entries(ICON)) {
       assert.match(svg, /^<svg viewBox="0 0 24 24" aria-hidden="true">.*<\/svg>$/, name);
     }
+  });
+});
+
+describe('core/media', () => {
+  it('mediaUrl : fichiers locaux par media://, adresses web telles quelles', () => {
+    assert.equal(mediaUrl('C:\\Films\\Été & co.mkv'), 'media://local/?p=C%3A%5CFilms%5C%C3%89t%C3%A9%20%26%20co.mkv');
+    assert.equal(mediaUrl('/home/moi/a b.mp3'), 'media://local/?p=%2Fhome%2Fmoi%2Fa%20b.mp3');
+    assert.equal(mediaUrl('https://exemple.fr/v.mp4'), 'https://exemple.fr/v.mp4');
+    assert.equal(mediaUrl('HTTP://exemple.fr/v.mp4'), 'HTTP://exemple.fr/v.mp4');
   });
 });
