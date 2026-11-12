@@ -1,21 +1,28 @@
-/* Mire : interface. Affichage des sections, lecteurs intégrés, navigation clavier et manette. */
+/* Mire : interface. Affichage des sections et actions ; les lecteurs intégrés (players/) et la navigation au clavier
+   et à la manette (nav/) sont branchés plus bas, avec ce qu'ils attendent de l'interface. */
 import { $, $$, esc } from './core/dom.ts';
-import { clamp, fmtSize, fmtTime, plural } from './core/format.ts';
+import { fmtSize, plural } from './core/format.ts';
 import { ICON } from './core/icons.ts';
 import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
 import { toast } from './ui/toast.ts';
-import { I, PAGE, Q, S, V } from './state/index.ts';
+import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
 import { fold } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
+import { mediaUrl } from './core/media.ts';
+import { focusFirst, focusSelectorOf, isShown } from './nav/spatial.ts';
+import { initKeyboard } from './nav/keyboard.ts';
+import { initGamepad, startGamepad } from './nav/gamepad.ts';
+import { nextSection } from './nav/gamepad-data.ts';
+import { setVolume } from './players/volume.ts';
+import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
+import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
+import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
 /* ------------------------------------------------------------------ */
-
-// Les fichiers locaux passent par media:// ; les sources web sont lues directement.
-const mediaUrl = (p) => (/^https?:\/\//i.test(p) ? p : `media://local/?p=${encodeURIComponent(p)}`);
 
 // Logique sans DOM ni état (domain/) : ces raccourcis lui passent les données de S.
 const infos = () => ({ scrape: S.scrape, meta: S.meta });
@@ -221,15 +228,6 @@ function back() {
     go('home');
     $('.mire-bar')?.focus();
   }
-}
-
-function focusSelectorOf(el) {
-  if (!el || !viewEl.contains(el)) return null;
-  const parts = ['action', 'index', 'console', 'go', 'id']
-    .filter((k) => el.dataset[k] != null)
-    .map((k) => `[data-${k}="${CSS.escape(el.dataset[k])}"]`);
-  if (parts.length) return parts.join('');
-  return el.id ? `#${CSS.escape(el.id)}` : null;
 }
 
 // Outils placés dans l'en-tête, à gauche de la recherche : filtres et actions propres à la section.
@@ -1682,7 +1680,7 @@ function slotRect() {
   return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 function webShouldShow() {
-  return S.section === 'web' && !!S.webActive && videoLayer.hidden && imageLayer.hidden;
+  return S.section === 'web' && !!S.webActive && !isVideoOpen() && !isImagesOpen();
 }
 function showWebInSlot(focus = false) {
   if (!webShouldShow()) { api.webHide(); return; }
@@ -3339,704 +3337,67 @@ searchEl.addEventListener('keydown', (e) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* Volume partagé                                                      */
+/* Lecteurs intégrés, clavier et manette (players/, nav/)              */
 /* ------------------------------------------------------------------ */
 
-const audio = new Audio();
-audio.preload = 'auto';
-const video = $('#video');
-let volume = 0.9;
+initAudio({ openExternal, addRecent });
+initVideo({ openExternal, openBookmark, addRecent, syncWeb, render: () => render() });
+initImages({ openExternal, addRecent, syncWeb, render: () => render() });
 
-function setRangeFill(el, ratio) { el.style.setProperty('--p', `${clamp(ratio, 0, 1) * 100}%`); }
-
-function setVolume(v, silent = false) {
-  volume = clamp(Math.round(v * 100) / 100, 0, 1);
-  audio.volume = volume;
-  video.volume = volume;
-  for (const el of [$('#mini-vol'), $('#vp-vol')]) { el.value = String(volume); setRangeFill(el, volume); }
-  if (volume !== S.usage.volume) { S.usage.volume = volume; api.usageSetVolume(volume); }
-  if (!silent && !videoLayer.hidden) osd(`Volume ${Math.round(volume * 100)} %`);
-}
-
-/* ------------------------------------------------------------------ */
-/* Musique                                                             */
-/* ------------------------------------------------------------------ */
-
-const mini = $('#mini');
-const miniPlay = $('#mini-play');
-const miniRange = $('#mini-range');
-let miniSeeking = false;
-
-function playQueue(list, i) {
-  Q.list = list;
-  Q.i = i;
-  loadTrack();
-}
-
-function loadTrack() {
-  const t = Q.list[Q.i];
-  if (!t) return;
-  if (!t.native) { openExternal(t); return; }
-  audio.src = mediaUrl(t.path);
-  audio.play().catch(() => { /* lecture bloquée */ });
-  addRecent(t);
-
-  mini.hidden = false;
-  document.body.classList.add('has-mini');
-  $('#mini-title').textContent = cleanTrack(t.name);
-  $('#mini-sub').textContent = Q.list.length > 1 ? `${folderText(t)}, ${Q.i + 1} sur ${Q.list.length}` : folderText(t);
-  const cover = $('#mini-cover');
-  const coverPath = t.cover || S.scrape[`a:${t.dir}`]?.image;
-  if (coverPath) { cover.hidden = false; cover.src = mediaUrl(coverPath); } else { cover.hidden = true; cover.removeAttribute('src'); }
-  markPlaying();
-  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: cleanTrack(t.name), album: t.folder });
-}
-
-function stepTrack(d) {
-  if (!Q.list.length) return;
-  if (d < 0 && audio.currentTime > 3) { audio.currentTime = 0; return; }
-  const j = Q.i + d;
-  if (j < 0) { audio.currentTime = 0; return; }
-  if (j >= Q.list.length) { audio.pause(); audio.currentTime = 0; return; }
-  Q.i = j;
-  loadTrack();
-}
-
-function toggleAudio() {
-  if (!audio.getAttribute('src')) return;
-  if (audio.paused) audio.play().catch(() => {}); else audio.pause();
-}
-
-function stopMusic() {
-  audio.pause();
-  audio.removeAttribute('src');
-  audio.load();
-  Q.list = [];
-  Q.i = -1;
-  mini.hidden = true;
-  document.body.classList.remove('has-mini');
-  markPlaying();
-  if (document.activeElement === document.body || mini.contains(document.activeElement)) focusFirst();
-}
-
-function markPlaying() {
-  if (S.section !== 'music') return;
-  const cur = Q.list[Q.i]?.path;
-  for (const el of $$('.track', viewEl)) el.classList.toggle('is-playing', !!cur && S.list[Number(el.dataset.index)]?.path === cur);
-}
-
-audio.addEventListener('ended', () => stepTrack(1));
-audio.addEventListener('play', () => { miniPlay.innerHTML = ICON.pause; });
-audio.addEventListener('pause', () => { miniPlay.innerHTML = ICON.play; });
-audio.addEventListener('timeupdate', () => {
-  if (miniSeeking) return;
-  const d = audio.duration;
-  const r = Number.isFinite(d) && d > 0 ? audio.currentTime / d : 0;
-  miniRange.value = String(Math.round(r * 1000));
-  setRangeFill(miniRange, r);
-  $('#mini-cur').textContent = fmtTime(audio.currentTime);
-  $('#mini-dur').textContent = fmtTime(d);
-});
-audio.addEventListener('error', () => {
-  if (!audio.getAttribute('src')) return;
-  const t = Q.list[Q.i];
-  if (!t) return;
-  toast(`${t.name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe`, { duration: 5000 });
-  api.playExternal(t.path, t.name, 0);
-});
-
-miniPlay.addEventListener('click', toggleAudio);
-$('#mini-prev').addEventListener('click', () => stepTrack(-1));
-$('#mini-next').addEventListener('click', () => stepTrack(1));
-$('#mini-close').addEventListener('click', stopMusic);
-miniRange.addEventListener('input', () => {
-  miniSeeking = true;
-  const r = Number(miniRange.value) / 1000;
-  setRangeFill(miniRange, r);
-  $('#mini-cur').textContent = fmtTime(r * (audio.duration || 0));
-});
-miniRange.addEventListener('change', () => {
-  if (Number.isFinite(audio.duration)) audio.currentTime = (Number(miniRange.value) / 1000) * audio.duration;
-  miniSeeking = false;
-});
-$('#mini-vol').addEventListener('input', (e) => setVolume(Number(e.target.value), true));
-
-/* ------------------------------------------------------------------ */
-/* Lecteur vidéo                                                       */
-/* ------------------------------------------------------------------ */
-
-const videoLayer = $('#video-layer');
-const vpPlay = $('#vp-play');
-const vpSeek = $('#vp-seek');
-const vpSubs = $('#vp-subs');
-
-// Remonte les sous-titres quand les commandes sont affichées, pour qu'ils ne passent pas dessous.
-function liftCues(up) {
-  if (V.cuesUp === up) return;
-  V.cuesUp = up;
-  for (const t of video.textTracks) {
-    if (!t.cues) continue;
-    for (const c of t.cues) c.line = up ? -5 : 'auto';
-  }
-}
-
-function osd(text) {
-  const el = $('#vp-osd');
-  el.textContent = text;
-  el.classList.add('show');
-  clearTimeout(osd.timer);
-  osd.timer = setTimeout(() => el.classList.remove('show'), 900);
-}
-
-function wakeVideo() {
-  videoLayer.classList.remove('idle');
-  liftCues(true);
-  clearTimeout(V.hideTimer);
-  V.hideTimer = setTimeout(() => {
-    if (!video.paused) { videoLayer.classList.add('idle'); liftCues(false); }
-  }, 3000);
-}
-
-function clearSubtitleTracks() {
-  for (const tr of $$('track', video)) tr.remove();
-  for (const u of V.blobs) URL.revokeObjectURL(u);
-  V.blobs = [];
-  V.subLabels = [];
-  V.subIndex = -1;
-  V.cuesUp = null;
-  vpSubs.hidden = true;
-}
-
-function setSubtitle(k) {
-  V.subIndex = k;
-  [...video.textTracks].forEach((t, j) => { t.mode = j === k ? 'showing' : 'disabled'; });
-  $('#vp-subs-lbl').textContent = k >= 0 ? `Sous-titres : ${V.subLabels[k]}` : 'Sous-titres : non';
-}
-
-function cycleSubtitles() {
-  if (!V.subLabels.length) return;
-  const k = V.subIndex + 1 >= V.subLabels.length ? -1 : V.subIndex + 1;
-  setSubtitle(k);
-  osd(k >= 0 ? `Sous-titres : ${V.subLabels[k]}` : 'Sous-titres désactivés');
-}
-
-async function loadSubtitles(it) {
-  const subs = await api.subtitles(it.path);
-  if (V.list[V.i] !== it || !Array.isArray(subs) || !subs.length) return;
-  for (const s of subs) {
-    const url = URL.createObjectURL(new Blob([s.vtt], { type: 'text/vtt' }));
-    V.blobs.push(url);
-    V.subLabels.push(s.label);
-    const tr = document.createElement('track');
-    tr.kind = 'subtitles';
-    tr.label = s.label;
-    if (s.lang) tr.srclang = s.lang;
-    tr.src = url;
-    tr.addEventListener('load', () => { const up = V.cuesUp; V.cuesUp = null; liftCues(!!up); });
-    video.appendChild(tr);
-  }
-  vpSubs.hidden = false;
-  // Français activé d'office s'il existe.
-  const fr = subs.findIndex((s) => ['fr', 'fre', 'fra'].includes(s.lang) || /fr|fran/i.test(s.label));
-  setSubtitle(fr);
-}
-
-// Le processus principal garde ou efface la position (règles dans src/main/usage) et groupe les écritures.
-function saveResume(it) {
-  const d = video.duration;
-  if (!it || !Number.isFinite(d) || d < 300) return;
-  api.usageSaveResume(it.path, video.currentTime, d);
-}
-
-function checkSilence() {
-  if (videoLayer.hidden || video.paused) return;
-  if (typeof video.webkitAudioDecodedByteCount === 'number' && video.webkitAudioDecodedByteCount === 0 && video.currentTime > 2) {
-    toast('Pas de son ? La piste audio de ce fichier n’est sans doute pas lisible ici.', {
-      action: 'Ouvrir dans le lecteur externe',
-      onAction: () => { const it = V.list[V.i]; const t = video.currentTime; closeVideo(); openExternal(it, t); },
-      duration: 10000,
-    });
-  }
-}
-
-function openVideo(list, i) {
-  const it = list[i];
-  if (!it) return;
-  if (it.bookmark) { openBookmark(it.bookmarkId); return; }
-  if (!it.native) { openExternal(it); return; }
-  if (videoLayer.hidden) V.returnSel = focusSelectorOf(document.activeElement);
-  else saveResume(V.list[V.i]);
-
-  V.list = list;
-  V.i = i;
-  audio.pause();
-  clearSubtitleTracks();
-  videoLayer.hidden = false;
-  syncWeb();
-  $('#vp-title').textContent = it.sTitle ? `${it.sTitle}${it.sYear ? ` (${it.sYear})` : ''}` : it.name;
-  $('#vp-sub').textContent = list.length > 1 ? `${folderText(it)}, ${i + 1} sur ${list.length}` : folderText(it);
-  $('#vp-prev').disabled = i <= 0;
-  $('#vp-next').disabled = i >= list.length - 1;
-  vpSeek.value = '0';
-  setRangeFill(vpSeek, 0);
-
-  const resume = api.usageResume(it.path);
-  video.src = mediaUrl(it.path);
-  video.addEventListener('loadedmetadata', async () => {
-    const saved = Number(await resume) || 0;
-    if (V.list[V.i] !== it) return;
-    if (saved > 30 && saved < video.duration - 90) {
-      video.currentTime = saved;
-      toast(`Reprise à ${fmtTime(saved)}`, { action: 'Reprendre au début', onAction: () => { video.currentTime = 0; } });
-    }
-  }, { once: true });
-  video.play().catch(() => {});
-  addRecent(it);
-  loadSubtitles(it);
-  clearTimeout(V.silentTimer);
-  V.silentTimer = setTimeout(checkSilence, 7000);
-  videoLayer.focus();
-  wakeVideo();
-}
-
-function closeVideo() {
-  if (videoLayer.hidden) return;
-  saveResume(V.list[V.i]);
-  video.pause();
-  video.removeAttribute('src');
-  video.load();
-  clearSubtitleTracks();
-  clearTimeout(V.silentTimer);
-  clearTimeout(V.hideTimer);
-  videoLayer.hidden = true;
-  videoLayer.classList.remove('idle');
-  V.list = [];
-  V.i = -1;
-  syncWeb();
-  if (S.section === 'home') render();
-  const back = V.returnSel && viewEl.querySelector(V.returnSel);
-  if (back) back.focus(); else focusFirst();
-}
-
-function stepVideo(d) {
-  const j = V.i + d;
-  if (j >= 0 && j < V.list.length) openVideo(V.list, j);
-}
-
-function togglePlay() {
-  if (video.paused) video.play().catch(() => {}); else video.pause();
-  osd(video.paused ? 'Pause' : 'Lecture');
-}
-
-function seekBy(s) {
-  if (!Number.isFinite(video.duration)) return;
-  video.currentTime = clamp(video.currentTime + s, 0, video.duration - 0.5);
-  osd(`${s > 0 ? '+' : '−'}${Math.abs(s)} s  ${fmtTime(video.currentTime)}`);
-}
-
-video.addEventListener('play', () => { vpPlay.innerHTML = ICON.pause; wakeVideo(); });
-video.addEventListener('pause', () => { vpPlay.innerHTML = ICON.play; wakeVideo(); });
-video.addEventListener('timeupdate', () => {
-  const d = video.duration;
-  if (!V.seeking) {
-    const r = Number.isFinite(d) && d > 0 ? video.currentTime / d : 0;
-    vpSeek.value = String(Math.round(r * 1000));
-    setRangeFill(vpSeek, r);
-  }
-  $('#vp-time').textContent = `${fmtTime(video.currentTime)} / ${fmtTime(d)}`;
-  if (Date.now() - V.lastSave > 5000) { V.lastSave = Date.now(); saveResume(V.list[V.i]); }
-});
-video.addEventListener('ended', () => {
-  const it = V.list[V.i];
-  if (it) api.usageClearResume(it.path);
-  if (V.i < V.list.length - 1) openVideo(V.list, V.i + 1); else closeVideo();
-});
-video.addEventListener('error', () => {
-  if (videoLayer.hidden || !video.getAttribute('src')) return;
-  const it = V.list[V.i];
-  closeVideo();
-  toast(`Format non lu par le lecteur intégré : ${it.name} s’ouvre dans le lecteur externe`, { duration: 5000 });
-  api.playExternal(it.path, it.name, 0).then((r) => { if (!r.ok) toast(r.error, { duration: 7000 }); });
-});
-video.addEventListener('click', togglePlay);
-video.addEventListener('dblclick', () => api.toggleFullscreen());
-
-vpSeek.addEventListener('input', () => {
-  V.seeking = true;
-  const r = Number(vpSeek.value) / 1000;
-  setRangeFill(vpSeek, r);
-  $('#vp-time').textContent = `${fmtTime(r * (video.duration || 0))} / ${fmtTime(video.duration)}`;
-});
-vpSeek.addEventListener('change', () => {
-  if (Number.isFinite(video.duration)) video.currentTime = (Number(vpSeek.value) / 1000) * video.duration;
-  V.seeking = false;
-  videoLayer.focus();
-});
-$('#vp-vol').addEventListener('input', (e) => setVolume(Number(e.target.value), true));
-$('#vp-vol').addEventListener('change', () => videoLayer.focus());
-videoLayer.addEventListener('mousemove', wakeVideo);
-videoLayer.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-act]');
-  if (!b) return;
-  const act = b.dataset.act;
-  if (act === 'close') closeVideo();
-  else if (act === 'play') togglePlay();
-  else if (act === 'prev') stepVideo(-1);
-  else if (act === 'next') stepVideo(1);
-  else if (act === 'subs') cycleSubtitles();
-  else if (act === 'fs') api.toggleFullscreen();
-  else if (act === 'external') { const it = V.list[V.i]; const t = video.currentTime; closeVideo(); openExternal(it, t); }
-  if (!videoLayer.hidden) videoLayer.focus();
-});
-
-function videoKey(key, fromPad) {
-  wakeVideo();
-  const a = document.activeElement;
-  if (!fromPad && (key === 'Enter' || key === ' ') && a && a !== videoLayer && videoLayer.contains(a) && a.matches('button')) return false;
-  switch (key) {
-    case ' ': case 'k': case 'Enter': case 'MediaPlayPause': togglePlay(); return true;
-    case 'ArrowLeft': seekBy(-10); return true;
-    case 'ArrowRight': seekBy(10); return true;
-    case 'j': seekBy(-60); return true;
-    case 'l': seekBy(60); return true;
-    case 'ArrowUp': setVolume(volume + 0.05); return true;
-    case 'ArrowDown': setVolume(volume - 0.05); return true;
-    case 'm': video.muted = !video.muted; osd(video.muted ? 'Son coupé' : 'Son rétabli'); return true;
-    case 'f': api.toggleFullscreen(); return true;
-    case 's': case 'Y': cycleSubtitles(); return true;
-    case 'n': case 'PageDown': stepVideo(1); return true;
-    case 'p': case 'PageUp': stepVideo(-1); return true;
-    case 'Escape': case 'Backspace': closeVideo(); return true;
-    default: return false;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Visionneuse d'images                                                */
-/* ------------------------------------------------------------------ */
-
-const imageLayer = $('#image-layer');
-const ivImg = $('#iv-img');
-
-function wakeImages() {
-  imageLayer.classList.remove('idle');
-  clearTimeout(I.hideTimer);
-  I.hideTimer = setTimeout(() => imageLayer.classList.add('idle'), 3000);
-}
-
-function showImage() {
-  const it = I.list[I.i];
-  if (!it) return;
-  ivImg.src = mediaUrl(it.path);
-  $('#iv-title').textContent = it.name;
-  $('#iv-count').textContent = `${I.i + 1} sur ${I.list.length}, ${it.folder}`;
-  const nxt = I.list[I.i + 1];
-  if (nxt?.native) new Image().src = mediaUrl(nxt.path);
-}
-
-function openImages(list, i) {
-  const it = list[i];
-  if (!it) return;
-  if (!it.native) { openExternal(it); return; }
-  I.returnSel = focusSelectorOf(document.activeElement);
-  I.list = list.filter((x) => x.native);
-  I.i = Math.max(0, I.list.indexOf(it));
-  imageLayer.hidden = false;
-  syncWeb();
-  showImage();
-  addRecent(it);
-  imageLayer.focus();
-  wakeImages();
-}
-
-function stepImage(d) {
-  if (!I.list.length) return;
-  I.i = (I.i + d + I.list.length) % I.list.length;
-  showImage();
-}
-
-function toggleSlideshow(force) {
-  const on = force ?? !I.timer;
-  clearInterval(I.timer);
-  I.timer = on ? setInterval(() => stepImage(1), 5000) : 0;
-  $('#iv-slide-lbl').textContent = on ? 'Arrêter le diaporama' : 'Diaporama';
-  $('#iv-slide [data-icon]').innerHTML = on ? ICON.pause : ICON.play;
-}
-
-function closeImages() {
-  toggleSlideshow(false);
-  clearTimeout(I.hideTimer);
-  imageLayer.hidden = true;
-  imageLayer.classList.remove('idle');
-  ivImg.removeAttribute('src');
-  syncWeb();
-  if (S.section === 'home') render();
-  const back = I.returnSel && viewEl.querySelector(I.returnSel);
-  if (back) back.focus(); else focusFirst();
-}
-
-ivImg.addEventListener('error', () => { if (!imageLayer.hidden && ivImg.getAttribute('src')) toast('Cette image ne peut pas être affichée.'); });
-imageLayer.addEventListener('mousemove', wakeImages);
-imageLayer.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-act]');
-  if (!b) return;
-  const act = b.dataset.act;
-  if (act === 'close') closeImages();
-  else if (act === 'prev') stepImage(-1);
-  else if (act === 'next') stepImage(1);
-  else if (act === 'slideshow') toggleSlideshow();
-  if (!imageLayer.hidden) imageLayer.focus();
-});
-
-function imageKey(key, fromPad) {
-  wakeImages();
-  const a = document.activeElement;
-  if (!fromPad && (key === 'Enter' || key === ' ') && a && a !== imageLayer && imageLayer.contains(a)) return false;
-  switch (key) {
-    case 'ArrowLeft': case 'PageUp': stepImage(-1); return true;
-    case 'ArrowRight': case 'PageDown': stepImage(1); return true;
-    case ' ': case 'Enter': case 'MediaPlayPause': toggleSlideshow(); return true;
-    case 'f': api.toggleFullscreen(); return true;
-    case 'Escape': case 'Backspace': closeImages(); return true;
-    default: return false;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Navigation spatiale (flèches, manette)                              */
-/* ------------------------------------------------------------------ */
-
-const isShown = (el) => el.getClientRects().length > 0 && !el.disabled;
-
-// Premier élément du contenu ; le panneau d'infos et les onglets ne passent qu'en dernier recours.
-function focusFirst() {
-  const all = $$('.focusable', viewEl).filter(isShown);
-  const el = all.find((x) => !x.closest('.focus-info, .tabs')) || all[0] || $('.rail-item[aria-current]');
-  el?.focus();
-}
-
-const overlap = (a1, a2, b1, b2) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2));
-
-function moveFocus(dir, scope = document) {
-  const els = $$('.focusable', scope).filter(isShown);
-  const cur = document.activeElement;
-  if (!els.includes(cur)) { ($$('.focusable', viewEl).find(isShown) || els[0])?.focus(); return; }
-  const r = cur.getBoundingClientRect();
-  let best = null;
-  let bestScore = Infinity;
-  for (const el of els) {
-    if (el === cur) continue;
-    const b = el.getBoundingClientRect();
-    let main;
-    let cross;
-    if (dir === 'right') { if (b.left < r.right - 2) continue; main = b.left - r.right; cross = overlap(r.top, r.bottom, b.top, b.bottom); }
-    else if (dir === 'left') { if (b.right > r.left + 2) continue; main = r.left - b.right; cross = overlap(r.top, r.bottom, b.top, b.bottom); }
-    else if (dir === 'down') { if (b.top < r.bottom - 2) continue; main = b.top - r.bottom; cross = overlap(r.left, r.right, b.left, b.right); }
-    else { if (b.bottom > r.top + 2) continue; main = r.top - b.bottom; cross = overlap(r.left, r.right, b.left, b.right); }
-    const align = dir === 'left' || dir === 'right' ? Math.abs(b.top - r.top) : Math.abs(b.left - r.left);
-    const score = Math.max(0, main) + cross * 3 + align * 0.02;
-    if (score < bestScore) { bestScore = score; best = el; }
-  }
-  if (best) {
-    best.focus({ preventScroll: true });
-    best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  }
-}
-
-function handleKey(key, fromPad = false) {
-  const dlg = topDialog();
-  if (dlg) {
-    const inField = document.activeElement?.matches?.('input, textarea, select');
-    const dirs = inField ? { ArrowUp: 'up', ArrowDown: 'down' } : { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
-    if (dirs[key]) { moveFocus(dirs[key], dlg); return true; }
-    if (key === 'Escape' && fromPad) { dlg.dispatchEvent(new Event('cancel', { cancelable: true })); return true; }
-    if (key === 'Enter' && fromPad) { document.activeElement?.click(); return true; }
-    return false;
-  }
-  if (!videoLayer.hidden) return videoKey(key, fromPad);
-  if (!imageLayer.hidden) return imageKey(key, fromPad);
-
-  const a = document.activeElement;
-  const tag = a?.tagName;
-  const typing = tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && !['checkbox', 'range', 'button'].includes(a.type));
-  if (typing) {
-    if (key === 'Escape') { a.blur(); focusFirst(); return true; }
-    if (tag === 'INPUT' && (key === 'ArrowDown' || key === 'ArrowUp')) { moveFocus(key === 'ArrowDown' ? 'down' : 'up'); return true; }
-    if (!fromPad) return false;
-  }
-
-  if (S.section === 'web' && key === 'ArrowDown' && a?.closest('.webbar')) { api.webFocus(); return true; }
-  switch (key) {
-    case 'ArrowUp': moveFocus('up'); return true;
-    case 'ArrowDown': moveFocus('down'); return true;
-    case 'ArrowLeft': moveFocus('left'); return true;
-    case 'ArrowRight': moveFocus('right'); return true;
-    case 'Enter':
-      // Validation identique au clavier, à la télécommande et à la manette.
-      if (fromPad || (a && (a.tagName === 'BUTTON' || (a.tagName === 'INPUT' && a.type === 'checkbox')))) { a?.click(); return true; }
-      return false;
-    case 'Escape': case 'Backspace': back(); return true;
-    case 'PageDown': viewEl.scrollBy({ top: viewEl.clientHeight * 0.8 }); return true;
-    case 'PageUp': viewEl.scrollBy({ top: -viewEl.clientHeight * 0.8 }); return true;
-    case 'MediaPlayPause': toggleAudio(); return true;
-    case '/': go('search'); return true;
-    case 'e': case 'ContextMenu': { const ref = refFromEl(a); if (ref) { editRef(ref); return true; } return false; }
-    case 'Delete': { const ref = refFromEl(a); if (deletableGame(ref)) { deleteGameRef(ref); return true; } return false; }
-    default: return false;
-  }
-}
-
-document.addEventListener('keydown', (e) => {
-  document.body.classList.remove('mouse');
-  S.pendingFocus = false;
-  if (e.altKey || e.ctrlKey || e.metaKey) return;
-  if (handleKey(e.key, false)) e.preventDefault();
-});
-window.addEventListener('mousemove', (e) => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 2) document.body.classList.add('mouse'); }, { passive: true });
-window.addEventListener('mousedown', () => document.body.classList.add('mouse'));
-
-/* Manette (API Gamepad) : croix ou stick gauche, A valider, B retour, Start lecture/pause, LB/RB précédent/suivant. */
-const pad = { prev: {}, repeatAt: {} };
-
-/* ---------- Manette : commandes selon le contexte, et rappel des boutons à l'écran ---------- */
-
-// Dans un site, la manette pilote la page : croix = flèches, A = Entrée, X ou Start = Espace,
-// B = page précédente, Y = Échap, LB/RB = élément précédent/suivant, Select ou Home = revenir aux menus de Mire.
-const WEB_PAD = { up: 'Up', down: 'Down', left: 'Left', right: 'Right', a: 'Enter', x: 'Space', start: 'Space', b: 'Back', y: 'Escape', lb: 'ShiftTab', rb: 'Tab' };
-const VIDEO_PAD = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Enter', start: ' ', b: 'Escape', y: 's', lb: 'PageUp', rb: 'PageDown', lt: 'j', rt: 'l' };
-const IMAGE_PAD = { left: 'ArrowLeft', right: 'ArrowRight', lb: 'ArrowLeft', rb: 'ArrowRight', a: ' ', start: ' ', b: 'Escape' };
-const LIST_PAD = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'Enter', b: 'Escape', y: '/', lt: 'PageUp', rt: 'PageDown', start: 'MediaPlayPause' };
-const SECTION_ORDER = ['home', 'search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
-
+// Contexte des touches et de la manette : la dernière boîte de dialogue ouverte, puis les lecteurs, puis le site affiché.
 function padContext() {
   if (topDialog()) return 'dialog';
-  if (!videoLayer.hidden) return 'video';
-  if (!imageLayer.hidden) return 'image';
+  if (isVideoOpen()) return 'video';
+  if (isImagesOpen()) return 'image';
   if (S.section === 'web' && webShouldShow()) return 'web';
   return 'list';
 }
 
-function cycleSection(d) {
-  // Depuis un site, on part de sa page d'origine (Jeux, Télévision ou Streaming).
-  const cur = SECTION_ORDER.indexOf(S.section === 'web' ? webHome() : S.section);
-  const next = SECTION_ORDER[(Math.max(0, cur) + d + SECTION_ORDER.length) % SECTION_ORDER.length];
-  go(next, { focus: next === 'search' ? 'keep' : 'content' });
+function editFocused(el) {
+  const ref = refFromEl(el);
+  if (ref) editRef(ref);
+  return !!ref;
 }
 
-function padPress(k) {
-  const ctx = padContext();
-  if (ctx === 'web') {
-    if (k === 'select' || k === 'home') { if (S.webFocused) api.webNav('mire'); else api.webFocus(); return; }
-    if (S.webFocused && WEB_PAD[k]) { api.webKey(WEB_PAD[k]); return; }
-    if (LIST_PAD[k]) handleKey(LIST_PAD[k], true);
-    return;
-  }
-  if (ctx === 'dialog') {
-    const box = topDialog();
-    const dir = { up: 'up', down: 'down', left: 'left', right: 'right' }[k];
-    if (dir) moveFocus(dir, box);
-    else if (k === 'a') document.activeElement?.click?.();
-    else if (k === 'b') box.dispatchEvent(new Event('cancel', { cancelable: true }));
-    return;
-  }
-  if (ctx === 'video') { if (VIDEO_PAD[k]) handleKey(VIDEO_PAD[k], true); return; }
-  if (ctx === 'image') { if (IMAGE_PAD[k]) handleKey(IMAGE_PAD[k], true); return; }
-  if (k === 'x') { const ref = refFromEl(document.activeElement); if (ref) editRef(ref); return; }
-  if (k === 'lb' || k === 'rb') { cycleSection(k === 'lb' ? -1 : 1); return; }
-  if (k === 'select') { $('.rail-item[aria-current]')?.focus(); return; }
-  if (LIST_PAD[k]) handleKey(LIST_PAD[k], true);
-}
-
-function padFamily(id) {
-  const s = String(id || '').toLowerCase();
-  if (/xbox|xinput|045e/.test(s)) return 'xbox';
-  // Les manettes Sony s'annoncent souvent comme « Wireless Controller … Vendor: 054c ».
-  if (/054c|playstation|dualsense|dualshock|^wireless controller/.test(s)) return 'ps';
-  if (/057e|nintendo|switch|pro controller|joy-con/.test(s)) return 'nintendo';
-  return 'xbox';
-}
-// Libellés des boutons par famille (selon leur position : en bas = valider, à droite = retour…).
-const PAD_GLYPHS = {
-  xbox: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', select: 'Affichage' },
-  ps: { a: '✕', b: '○', x: '□', y: '△', lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2', select: 'Créer' },
-  nintendo: { a: 'B', b: 'A', x: 'Y', y: 'X', lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR', select: '−' },
-};
-const PAD_HINTS = {
-  list: [['a', 'Ouvrir'], ['b', 'Retour'], ['x', 'Modifier'], ['y', 'Rechercher'], ['lb rb', 'Section']],
-  video: [['a', 'Pause'], ['lt rt', '1 min'], ['lb rb', 'Autre vidéo'], ['y', 'Sous-titres'], ['b', 'Fermer']],
-  image: [['a', 'Diaporama'], ['lb rb', 'Image'], ['b', 'Fermer']],
-  dialog: [['a', 'Valider'], ['b', 'Annuler']],
-};
-const padbar = $('#padbar');
-let padCtxShown = '';
-function updatePadbar(force = false) {
-  const ctx = S.pad ? padContext() : '';
-  const key = `${ctx}|${S.pad?.family || ''}`;
-  if (!force && key === padCtxShown) return;
-  padCtxShown = key;
-  const hints = PAD_HINTS[ctx];
-  document.body.classList.toggle('has-pad', !!(S.pad && hints));
-  if (!S.pad || !hints) { padbar.hidden = true; return; }
-  const g = PAD_GLYPHS[S.pad.family];
-  padbar.innerHTML = hints.map(([btns, label]) => `<span class="ph">${btns.split(' ').map((b) => `<span class="pb${g[b].length > 2 ? ' long' : ''}">${esc(g[b])}</span>`).join('')}${esc(label)}</span>`).join('');
-  padbar.hidden = false;
-}
-
-const PAD_NAMES = { xbox: 'Xbox', ps: 'PlayStation', nintendo: 'Nintendo' };
-function setPad(gp) {
-  const family = padFamily(gp.id);
-  const isNew = !S.pad || S.pad.id !== gp.id;
-  S.pad = { id: gp.id, family };
-  if (isNew) toast(`Manette ${PAD_NAMES[family]} détectée. Les commandes s’affichent en bas de l’écran.`, { duration: 4500 });
-  updatePadbar(true);
-}
-window.addEventListener('gamepadconnected', (e) => setPad(e.gamepad));
-window.addEventListener('gamepaddisconnected', () => {
-  const left = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
-  if (left.length) setPad(left[0]);
-  else { S.pad = null; updatePadbar(true); toast('Manette déconnectée'); }
+initKeyboard({
+  dialog: topDialog,
+  overlayKey: (key, fromPad) => (isVideoOpen() ? videoKey(key, fromPad) : isImagesOpen() ? imageKey(key, fromPad) : null),
+  webBarDown: (el) => {
+    if (S.section !== 'web' || !el?.closest('.webbar')) return false;
+    api.webFocus();
+    return true;
+  },
+  back,
+  search: () => go('search'),
+  playPause: toggleAudio,
+  edit: editFocused,
+  remove: (el) => {
+    const ref = refFromEl(el);
+    if (!deletableGame(ref)) return false;
+    deleteGameRef(ref);
+    return true;
+  },
 });
 
-function pollPads(now) {
-  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
-  const usable = document.visibilityState === 'visible' && (document.hasFocus() || (S.section === 'web' && S.webFocused));
-  if (pads.length && !S.pad) setPad(pads[0]);
-  if (pads.length && usable) {
-    const gp = pads[0];
-    const btn = (n) => !!gp.buttons[n]?.pressed || (gp.buttons[n]?.value || 0) > 0.5;
-    const ax = gp.axes[0] || 0;
-    const ay = gp.axes[1] || 0;
-    const state = {
-      up: btn(12) || ay < -0.6, down: btn(13) || ay > 0.6, left: btn(14) || ax < -0.6, right: btn(15) || ax > 0.6,
-      a: btn(0), b: btn(1), x: btn(2), y: btn(3), lb: btn(4), rb: btn(5), lt: btn(6), rt: btn(7), select: btn(8), start: btn(9), home: btn(16),
-    };
-    for (const [k, pressed] of Object.entries(state)) {
-      const repeats = ['up', 'down', 'left', 'right', 'lt', 'rt'].includes(k);
-      if (pressed && !pad.prev[k]) {
-        document.body.classList.remove('mouse');
-        S.pendingFocus = false;
-        padPress(k);
-        pad.repeatAt[k] = now + 380;
-      } else if (pressed && repeats && now >= pad.repeatAt[k]) {
-        padPress(k);
-        pad.repeatAt[k] = now + 110;
-      }
-      pad.prev[k] = pressed;
-    }
-    // Stick droit : défilement de la liste.
-    const ry = gp.axes[3] || 0;
-    if (Math.abs(ry) > 0.3 && padContext() === 'list') viewEl.scrollBy(0, ry * 22);
-  }
-  updatePadbar();
-  requestAnimationFrame(pollPads);
-}
+initGamepad({
+  context: padContext,
+  dialog: topDialog,
+  // Depuis un site, on part de sa page d'origine (Jeux, Télévision ou Streaming).
+  cycleSection: (d) => {
+    const next = nextSection(S.section === 'web' ? webHome() : S.section, d);
+    go(next, { focus: next === 'search' ? 'keep' : 'content' });
+  },
+  edit: editFocused,
+  webKey: (key) => api.webKey(key),
+  webToggle: (toSite) => (toSite ? api.webFocus() : api.webNav('mire')),
+});
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
-  ms.setActionHandler('play', () => (videoLayer.hidden ? audio.play().catch(() => {}) : video.play().catch(() => {})));
-  ms.setActionHandler('pause', () => (videoLayer.hidden ? audio.pause() : video.pause()));
-  ms.setActionHandler('previoustrack', () => (videoLayer.hidden ? stepTrack(-1) : stepVideo(-1)));
-  ms.setActionHandler('nexttrack', () => (videoLayer.hidden ? stepTrack(1) : stepVideo(1)));
+  ms.setActionHandler('play', () => (isVideoOpen() ? video.play().catch(() => {}) : audio.play().catch(() => {})));
+  ms.setActionHandler('pause', () => (isVideoOpen() ? video.pause() : audio.pause()));
+  ms.setActionHandler('previoustrack', () => (isVideoOpen() ? stepVideo(-1) : stepTrack(-1)));
+  ms.setActionHandler('nexttrack', () => (isVideoOpen() ? stepVideo(1) : stepTrack(1)));
 }
 
 /* ------------------------------------------------------------------ */
@@ -4102,7 +3463,7 @@ function tick() {
   loadLocalRoms();
 
   await loadUsage();
-  setVolume(S.usage.volume, true);
+  setVolume(S.usage.volume);
 
   go('home');
   $('.mire-bar')?.focus();
@@ -4115,7 +3476,7 @@ function tick() {
   const pending = await api.takePendingFiles();
   if (pending?.length) openItems(pending);
 
-  requestAnimationFrame(pollPads);
+  startGamepad();
   scan();
 
   // Page de démarrage choisie dans Réglages.
