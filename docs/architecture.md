@@ -56,6 +56,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
 | `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert. |
+| `catalog/` | Catalogue d'éléments (P2-01) : clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`). Voir « Catalogue d'éléments ». |
 | `meta/` | Infos modifiées à la main (`meta/meta.json`) et images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
 | `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
@@ -93,7 +94,7 @@ Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
 **Dans `start`** :
 
 1. Chemins du dossier de données (`dataPaths`).
-2. Services de configuration et d'usage (créés, pas encore lus).
+2. Services de configuration et d'usage, catalogue d'éléments (créés, pas encore lus).
 3. Politique d'accès. Un abonné à `config.onChange` la remet à zéro et met à jour les sites ouverts.
 4. Fenêtre principale (créée, pas encore ouverte) ; elle fournit `toUi`, qui envoie un événement à l'interface.
 5. Bibliothèque, boîtes de dialogue, infos modifiées à la main, télévision.
@@ -102,7 +103,7 @@ Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
    (`useLanguage`).
 8. Couche web (`createWebLayer`) : Widevine et gestionnaire des vues.
 9. Recherche « où regarder », service des jeux.
-10. Lecture des données : `config.load()`, `usage.load()`, `meta.load()`.
+10. Lecture des données : `config.load()`, `usage.load()`, `meta.load()`, `catalog.load()`.
 11. Archives, moteur de récupération d'infos, puis `access.invalidate()` : les racines autorisées se calculeront à
     la première question.
 12. Boutique, puis téléchargements. Les téléchargements reprennent (`downloads.start()`), la box de télévision est
@@ -117,8 +118,8 @@ sont alors passés par un accesseur (`downloads: () => downloads`), lu au moment
 
 `start` rend trois points d'entrée au cycle de vie : deuxième lancement (les fichiers sont ouverts dans la fenêtre
 existante), clic sur l'icône du Dock (macOS), et `beforeQuit`. Avant de quitter, les téléchargements s'arrêtent et
-les écritures différées de `scrape/db.json`, `telechargements.json` et `usage.json` sont attendues deux secondes au
-plus.
+les écritures différées de `scrape/db.json`, `telechargements.json`, `usage.json` et du catalogue sont attendues
+deux secondes au plus.
 
 ## Interface (renderer)
 
@@ -153,6 +154,7 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 | Point d'entrée | Contenu |
 | --- | --- |
 | `@mire/shared` | Fonctions pures et référentiels : texte (`fold`, noms de fichiers, épisodes), adresses (`hostOf`, `isHttpUrl`), identifiants (`newId`), formats de fichiers (`KIND`, `NATIVE`, `MIME`, `EXT`), systèmes de jeu (`guessSystem`, alias, noms) ; types de la configuration (`Config`, `WebSite`, `TvService`, `Emulator`…). |
+| `@mire/shared` (`element.ts`) | Types du catalogue d'éléments : `Element`, `ElementKey`, `ElementSourceRef`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, `ValueOrigin` (origine d'un tag ou d'une info : `file`, `source`, `tagger`, `metadata`, `user`). |
 | `@mire/shared/ipc` | Contrat IPC : tables des méthodes et des événements, leurs types, `createApi`. |
 | `@mire/shared/settings/schema` | Schéma des réglages (voir `docs/settings-schema.md`). |
 | `@mire/shared/i18n` | Moteur de traduction, formats, choix de la langue, catalogues intégrés `fr` et `en`, vérification des catalogues (voir `docs/i18n.md`). |
@@ -368,6 +370,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
 | `usage.json` | « Reprendre », positions de reprise des vidéos, volume, recherches récentes | service des données d'usage, stockage JSON |
+| `catalog/sources/<plugin>--<emplacement>-<empreinte>.json` | Catalogue d'éléments : résultat de la dernière analyse de chaque emplacement de source (`{ version, source, scanned, elements }`) | catalogue (`src/main/catalog/`), stockage JSON (écriture différée) |
 | `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `src/main/meta/user-meta.ts`, stockage JSON |
 | `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
 | `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | moteur de récupération (`scrape/`), stockage JSON |
@@ -384,6 +387,41 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 
 Le dossier `userData` contient aussi les dossiers propres à Chromium (cache, cookies, `Local Storage`…), gérés
 par Electron.
+
+## Catalogue d'éléments
+
+`src/main/catalog/` pose le modèle de l'architecture cible (« Éléments, tags et infos ») : tout ce que Mire peut ouvrir
+deviendra un élément (`Element`, types dans `@mire/shared`). À ce stade (P2-01), le catalogue existe et se lit au
+démarrage, mais aucune source ne l'alimente encore (P2-02, P2-03) et l'interface historique ne s'en sert pas.
+
+- **Clés stables** (`keys.ts`) : `<genre>:<partie>[|<partie>…]`, jamais d'après le rang ni le nom affiché. Une règle
+  par genre d'élément :
+
+  | Genre | Clé | Exemple |
+  | --- | --- | --- |
+  | Fichier local ou partage réseau | `local:<chemin>` | `local:/films/Intouchables.mkv`, `local:c:/films/intouchables.mkv` |
+  | Fichier d'un serveur web | `remote:<adresse>` | `remote:https://nas.local/films/a.mkv` |
+  | Entrée d'une liste M3U | `m3u:<liste>\|<adresse du flux>` | `m3u:https://box/liste.m3u\|http://box/stream?id=1` |
+  | Jeu de console | `rom:<console>\|<fichier ou adresse>` | `rom:retroarch:snes\|d:/roms/snes/zelda.sfc` |
+  | Jeu PC (dossier ou ajouté à la main) | `pc:<programme>` | `pc:c:/games/celeste/celeste.exe` |
+  | Chaîne de télévision | `tv:<service>\|<numéro>` (sans numéro : la plus petite adresse de ses flux) | `tv:freebox\|2` |
+  | Site | `web:<identifiant du site>` | `web:netflix` |
+  | Marque-page d'une page / d'un jeu | `bm:<id>` / `gamebm:<id>` | `bm:a1b2c3` |
+
+  Chemins : normalisés (`.`, `..`, séparateurs doublés et final retirés) ; sous Windows, sans casse et avec des `/`
+  (la plateforme est un paramètre, ce qui permet de tester les deux règles partout). Adresses : forme canonique de
+  `URL`, sans fragment. `%` et `|` sont échappés dans toutes les parties sauf la dernière.
+- **Stockage** (`index.ts`, `createCatalog({ dir })`) : en mémoire, par emplacement de source
+  (`{ plugin, instance }`). `setSource(source, éléments)` reçoit la liste complète d'une analyse et en déduit les
+  ajouts, changements et retraits ; un élément déjà connu garde sa date d'ajout (`added`). Une clé fournie par deux
+  emplacements reste tant que l'un d'eux la fournit ; l'élément est celui du premier. `removeSource(source)` retire
+  un emplacement et son fichier. `element(clé)` rend une copie, ou `null`.
+- **Événements** : `onChange(({ added, changed, removed }) => …)`, des listes de clés, une fois par analyse qui change
+  quelque chose.
+- **Persistance** (`persistence.ts`) : un fichier par emplacement dans `userData/catalog/sources/`, écrit par le
+  stockage JSON (atomique, différé d'une seconde). Au démarrage, `load()` relit tous les fichiers ; un fichier
+  illisible ou d'une autre version est écarté (journal), un élément mal formé aussi.
+- **IPC** : `catalogElement(clé)` (canal `catalog:element`, le `catalog.element(key)` de l'architecture cible).
 
 ## Configuration
 
@@ -436,8 +474,8 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
   écriture ; une seule écriture est en cours à la fois par fichier, et si la valeur a été modifiée pendant ce temps,
   elle est réécrite ensuite. Un échec est signalé à `onError` (journal par défaut) et n'empêche pas les suivantes ;
 - **`flush()`** écrit tout de suite ce qui attend et se résout quand tout est sur le disque. À la fermeture
-  (`before-quit`), `src/main/app/lifecycle.ts` suspend la sortie, attend `flush()` de `scrape/db.json`, `telechargements.json` et `usage.json`
-  deux secondes au plus (`flushWithin`), puis quitte ;
+  (`before-quit`), `src/main/app/lifecycle.ts` suspend la sortie, attend `flush()` de `scrape/db.json`,
+  `telechargements.json`, `usage.json` et du catalogue deux secondes au plus (`flushWithin`), puis quitte ;
 - le format est celui d'avant : `JSON.stringify(valeur, null, space)`, en UTF-8, sans saut de ligne final.
 
 | Fichier | Indentation | Écriture |

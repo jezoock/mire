@@ -11,6 +11,9 @@ export interface DataPaths {
   config: string;
   /** « Reprendre », positions de reprise, volume, recherches récentes (P1-09). */
   usage: string;
+  /** Catalogue d'éléments : un fichier par emplacement de source (P2-01). */
+  catalogDir: string;
+  catalogSources: string;
   /** Infos modifiées à la main (titre, genre, images…) et leurs images. */
   metaDir: string;
   meta: string;
@@ -43,6 +46,8 @@ export function dataPaths(root: string): DataPaths {
     root,
     config: at('config.json'),
     usage: at('usage.json'),
+    catalogDir: at('catalog'),
+    catalogSources: at('catalog', 'sources'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

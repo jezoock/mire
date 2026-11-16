@@ -9,6 +9,7 @@ import { path7za } from '7zip-bin';
 import { MIME, type SystemHint } from '@mire/shared';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
+import { createCatalog } from './catalog/index.ts';
 import { createConfigService } from './config/index.ts';
 import { createDownloads } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
@@ -58,6 +59,8 @@ function start(pending: PendingFiles): Running {
   // Configuration et données d'usage (« Reprendre », positions, volume, recherches récentes).
   const config = createConfigService({ file: files.config });
   const usage = createUsageService({ file: files.usage });
+  // Catalogue d'éléments : alimenté par les sources à partir de P2-02 ; l'interface historique ne s'en sert pas.
+  const catalog = createCatalog({ dir: files.catalogSources });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
   // et les fichiers ouverts explicitement (boîte de dialogue, glisser-déposer).
@@ -125,6 +128,7 @@ function start(pending: PendingFiles): Running {
   config.load();
   usage.load();
   meta.load();
+  catalog.load();
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
   const scraper = createScraper({ dataDir: userData, getConfig: config.get, listRoms: games.listRoms, onProgress: (p) => toUi('scrape-progress', p) });
@@ -159,7 +163,7 @@ function start(pending: PendingFiles): Running {
   const adblock = webLayer.start();
 
   // Les handlers IPC (src/main/ipc/handlers/) reçoivent les services par leur contexte.
-  const services = { config, usage, i18n, access, window, pending, meta, files, library, dialogs, web, scraper, store, downloads, adblock };
+  const services = { config, usage, i18n, catalog, access, window, pending, meta, files, library, dialogs, web, scraper, store, downloads, adblock };
   const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
   window.open();
@@ -175,7 +179,7 @@ function start(pending: PendingFiles): Running {
     },
     beforeQuit() {
       downloads.stop().catch(() => {});
-      const flushes = [scraper, downloads, usage].map((m) => () => m.flush());
+      const flushes = [scraper, downloads, usage, catalog].map((m) => () => m.flush());
       return flushWithin(flushes, 2000);
     },
   };

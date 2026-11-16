@@ -3,6 +3,7 @@
  * (src/main/index.ts). La fenêtre, les fichiers en attente et les infos manuelles sont lus au moment de l'appel.
  */
 import type { PendingFiles } from '../app/lifecycle.ts';
+import type { Catalog } from '../catalog/index.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -24,6 +25,7 @@ export interface MainServices {
   config: ConfigService;
   usage: UsageService;
   i18n: LanguageService;
+  catalog: Catalog;
   access: AccessPolicy;
   window: Pick<MainWindow, 'get' | 'themeBackground'>;
   pending: PendingFiles;
@@ -49,6 +51,7 @@ export function mainContext(s: MainServices): MainContext {
     config: s.config,
     usage: s.usage,
     i18n: s.i18n,
+    catalog: s.catalog,
     access: s.access,
     get mainWindow() {
       return s.window.get();

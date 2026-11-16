@@ -85,7 +85,7 @@ Fiches dans `phase-2.md`.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P2-01 | Modèle d'élément et catalogue | M | G2c |  | à faire | |
+| P2-01 | Modèle d'élément et catalogue | M | G2c |  | en revue | |
 | P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | à faire | |
 | P2-03 | Jeux, télévision et sites → éléments | M | P2-02 |  | à faire | |
 | P2-04 | Moteur de tags et d'infos | L | P2-02 |  | à faire | |

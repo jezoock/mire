@@ -26,6 +26,10 @@ const ALLOWED = new Set([
   'Préfixe de vue web déjà utilisé :  … ',
   'Système inconnu :  … ',
   'Fenêtre principale absente.',
+  // Clés et éléments du catalogue mal formés par une source (P2-01).
+  'Clé d’élément :  …  manquant.',
+  'adresse de la chaîne',
+  'Catalogue : élément sans clé.',
   // Fichier de données illisible : passé au journal (`onCorrupt`).
   'le contenu n’est pas un objet JSON',
   // Corps des réponses du protocole media:// : lus par le lecteur, jamais affichés.

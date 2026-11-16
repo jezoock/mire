@@ -14,6 +14,7 @@ function services() {
     config: { name: 'config' },
     usage: { name: 'usage' },
     i18n: { name: 'i18n' },
+    catalog: { name: 'catalog' },
     access: { name: 'access' },
     window: { get: () => win, themeBackground: fn('theme') },
     pending: createPendingFiles(['a.mkv']),
@@ -76,7 +77,7 @@ describe('mainContext', () => {
     assert.equal(ctx.configPath(), '/data/config.json');
     assert.equal(ctx.metaDir(), '/data/meta');
     assert.equal(ctx.locationError, locationError);
-    for (const key of ['config', 'usage', 'i18n', 'access', 'web', 'scraper', 'store', 'downloads', 'adblock', 'games']) {
+    for (const key of ['config', 'usage', 'i18n', 'catalog', 'access', 'web', 'scraper', 'store', 'downloads', 'adblock', 'games']) {
       assert.deepEqual((ctx as any)[key], { name: key }, key);
     }
   });
