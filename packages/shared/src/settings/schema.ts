@@ -1,7 +1,7 @@
 /**
  * Schéma des réglages : chaque réglage de Mire décrit une seule fois (bloc, type de champ, chemin dans la
- * configuration, valeur par défaut, libellé). Il servira au rendu des réglages de la phase 2 (P2-19) et aux
- * réglages fournis par les addons (P3-04). Le rendu actuel (`src/renderer/app.js`) ne s'en sert pas encore.
+ * configuration, valeur par défaut, libellé). Il servira au rendu des réglages de la phase 4 (P4-20) et aux
+ * réglages fournis par les plugins (P3-04). Le rendu actuel (`src/renderer/app.js`) ne s'en sert pas encore.
  * Explications : `docs/settings-schema.md`.
  */
 import type { SettingsBlock, SettingsField, SettingsFieldType, SettingsSchema } from './types.ts';

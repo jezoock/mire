@@ -318,7 +318,7 @@ restant fonctionnelle et testable après chaque tâche.
 ## 10. Décisions
 
 Validées au point d'étape G0 (29 octobre 2026), sauf D-05, décidée le 10 novembre 2026. D-12 et D-13 ont été prises
-au point G2 ; D-14 à D-22 sont proposées au point G2c (16 novembre 2026), après le tri de tous les éléments de Mire
+au point G2 ; D-14 à D-23 sont proposées au point G2c (16 novembre 2026), après le tri de tous les éléments de Mire
 (`docs/plan/inventaire-plugins.md`), et validées par la fusion de la PR qui les introduit. Détails :
 `docs/architecture-cible.md`.
 
@@ -340,12 +340,13 @@ au point G2 ; D-14 à D-22 sont proposées au point G2c (16 novembre 2026), apr�
 | D-14 | Plugins | **Tout ce qui ajoute quelque chose à Mire devient un plugin**, sauf le cœur listé dans `docs/plan/inventaire-plugins.md` (tri du 16/11/2026) : 29 plugins inclus, livrés avec Mire, et 114 à installer depuis un dépôt. Le mot « plugin » remplace « addon » ; le dépôt officiel reste `jezoock/mire-addons` (D-09). Le Centre remplace Téléchargements et Boutique. |
 | D-15 | Classement | **Plus de sections** : chaque élément porte des tags (`video`, `series`…) et des infos (série, saison, artiste, console…). Une page affiche les éléments qui portent ses tags et les regroupe d'après leurs infos, sur plusieurs niveaux ; une liste ordonnée est le regroupement fait à la main. Le catalogue, les tags et les pages vivent dans le processus principal ; des pages prêtes à l'emploi (plugin inclus) remplacent les sections. |
 | D-16 | Écrans et explorateur | Accueil, Recherche, Centre et Réglages restent des écrans du cœur. **Un explorateur en colonnes** (façon Finder) montre et gère tous les éléments, dans les dossiers autorisés. Il ne prend aucun thème, seulement les palettes, et sert de **mode secours** : raccourci capté par le processus principal, option au démarrage, retour automatique si le thème plante. |
-| D-17 | Thèmes | Un thème dessine l'accueil, les pages et les éléments. Le format **sans code** est au cœur : palette, polices, images, sons, mise en page parmi les composants de Mire. Le **thème Mire**, construit avec dot-stash, est le thème par défaut (plugin inclus). Les anciens thèmes deviennent des palettes. Thèmes avec leur propre code : question ouverte Q-01. |
+| D-17 | Thèmes | Un thème dessine l'accueil, les pages et les éléments. Le format **sans code** est au cœur : palette, polices, images, sons, mise en page parmi les composants de Mire. Le **thème Mire**, construit avec dot-stash, est le thème par défaut (plugin inclus). Les anciens thèmes deviennent des palettes. Thèmes avec leur propre code : D-23. |
 | D-18 | Exécution des plugins (précise D-07) | Trois niveaux. **Données seules** : rien ne s'exécute, tout dépôt. **Code limité** : dans un hôte isolé (processus de rendu caché, sandboxé, sans Node ni réseau), avec l'API de Mire et ses permissions, tout dépôt. **Code sensible** (Node, programmes, réseau local, suppression, vues web, téléchargements) : dans le processus principal, depuis le dépôt officiel signé ou après accord explicite. Un prototype valide l'hôte isolé avant sa réalisation. |
 | D-19 | Dépendances et télévision | Un plugin peut dépendre d'autres plugins ; le Centre les installe ensemble. La télévision par liste M3U et par portail web deviennent des plugins installés par le pack de chaque box. La détection automatique de la box est retirée au profit d'un choix dans l'assistant du premier lancement. |
 | D-20 | Langues (modifie D-11) | **L'anglais est au cœur** (langue de repli) ; **le français devient un pack de langue**. Son catalogue reste dans le dépôt de Mire : la règle « français et anglais dans la même PR » ne change pas. Mire installe au premier lancement le pack de la langue du système. |
 | D-21 | Contenus | Mire propose des émulateurs, y compris les plus populaires des consoles récentes, mais **jamais de BIOS, de firmware ni de clés** ; les rappels de BIOS sont livrés avec chaque émulateur. JustStream et Voir-Anime quittent le dépôt officiel et le catalogue intégré. Le téléchargement de vidéos YouTube est mis de côté. |
 | D-22 | Plan | Les phases 2 et 3 sont remplacées par cinq phases : éléments, tags et pages ; socle des plugins ; interface (dot-stash, explorateur, thèmes) ; extraction en plugins ; nouveaux plugins. Une vue de page générique remplace les migrations de sections P2-08 à P2-12 et P2-15 à P2-18. Fiches détaillées dans la PR qui suit la validation de G2c. |
+| D-23 | Thèmes avec leur propre code (question Q-01) | **Oui, avec une API large** : un thème avec code peut ne ressembler en rien au thème Mire (visuels et agencement, menu compris) et accède à tout le contenu de la bibliothèque. Il lit tout le catalogue ; il ouvre, lit et lance les éléments ; il pilote la lecture ; il modifie tags, infos, listes et favoris ; il reçoit clavier, souris et manette ; il joint les hôtes Internet qu'il déclare. Il tourne dans un cadre isolé plein fenêtre (niveau code limité). Restent refusés : Node et fichiers directs, réglages et secrets, suppression de fichiers, installation de plugins, sites ouverts, blocage du mode secours. ✅ demandé le 16/11/2026 |
 
 ## 11. Risques
 
@@ -353,7 +354,7 @@ au point G2 ; D-14 à D-22 sont proposées au point G2c (16 novembre 2026), apr�
 | --- | --- |
 | Régressions invisibles pendant la refacto (aucun test aujourd'hui) | Phase 0 : tests de caractérisation + test de fumée Electron + captures de référence avant de toucher au code |
 | Conflits entre tâches menées en parallèle sur `main.js` | Découpage par domaine ; fusionner les PR une à une et rebaser les suivantes |
-| Navigation manette cassée par le Shadow DOM | Service de focus prototypé dès P2-01, avant toute migration de vue |
+| Navigation manette cassée par le Shadow DOM | Service de focus prototypé dès P4-01 et P4-03, avant toute construction d'écran |
 | Fonctions impossibles à vérifier dans un conteneur (Widevine, box Freebox, vraie manette, Windows/macOS) | Marquées « validation manuelle » dans le backlog ; checklist fournie dans la PR |
 | Surface d'attaque des addons (code exécuté avec les droits de l'app) | Addons de données d'abord, intégrité + signature, permissions déclarées, isolation possible (D-07) |
 | Hôte isolé des plugins trop lent ou trop gourmand (D-18) | Prototype mesuré avant la réalisation (point G4) ; autre voie étudiée : `utilityProcess` |
