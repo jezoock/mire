@@ -5,10 +5,13 @@ frontend de streaming, télévision et jeux, pilotable au clavier, à la souris 
 
 ## Où en est le projet
 
-Le projet est en cours de refonte, en trois phases : refacto modulaire, frontend avec la librairie de composants
-dot-stash (`jezoock/dot-stash`), extraction d'addons.
+Le projet est en cours de refonte. La phase 1 (refacto modulaire) est terminée. Les phases suivantes sont
+re-planifiées depuis le point G2c (D-22) : éléments, tags et pages ; socle des plugins ; interface avec la librairie
+de composants dot-stash (`jezoock/dot-stash`), explorateur et thèmes ; extraction en plugins ; nouveaux plugins.
 
 - Architecture (modules, flux, contrat IPC, sécurité) : `docs/architecture.md`
+- Architecture visée après le point G2c (plugins, tags et pages, explorateur, thèmes) : `docs/architecture-cible.md` ;
+  tri de tous les éléments de Mire : `docs/plan/inventaire-plugins.md`
 - Analyse du code existant : `docs/analyse/ANALYSE.md`
 - Mode d'emploi du plan (phases, points d'étape, lancer une tâche) : `docs/plan/README.md`
 - Tableau de suivi de toutes les tâches : `docs/plan/BACKLOG.md`
