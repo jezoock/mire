@@ -59,7 +59,7 @@ function start(pending: PendingFiles): Running {
   // Configuration et données d'usage (« Reprendre », positions, volume, recherches récentes).
   const config = createConfigService({ file: files.config });
   const usage = createUsageService({ file: files.usage });
-  // Catalogue d'éléments : alimenté par les sources à partir de P2-02 ; l'interface historique ne s'en sert pas.
+  // Catalogue d'éléments : alimenté par les analyses de la bibliothèque ; l'interface historique ne s'en sert pas.
   const catalog = createCatalog({ dir: files.catalogSources });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
@@ -78,7 +78,8 @@ function start(pending: PendingFiles): Running {
   const window = createMainWindow({ BrowserWindow, shell, nativeTheme, config, files: pages, web: () => web, onClosed });
   const { toUi } = window;
 
-  const library = createLibraryService({ config, access });
+  // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments.
+  const library = createLibraryService({ config, access, catalog });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   const meta = createUserMeta({ file: files.meta, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
   const tv = createTv({ config, http, toUi });

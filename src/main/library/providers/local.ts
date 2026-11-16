@@ -14,6 +14,7 @@ export const MAX_DEPTH = 16;
 
 const extOf = (name: string) => path.extname(name).toLowerCase();
 const baseOf = (name: string) => path.basename(name, path.extname(name)).toLowerCase();
+const SUBTITLE_EXTS = new Set(['.srt', '.vtt']);
 
 // Éléments d'un dossier : affiches et fanart rattachés, images d'illustration écartées.
 function itemsOfDir(dir: string, entries: Dirent[], kinds: ReadonlySet<MediaKind>, ctx: ScanContext): void {
@@ -34,6 +35,8 @@ function itemsOfDir(dir: string, entries: Dirent[], kinds: ReadonlySet<MediaKind
     if (kind === 'video') videoBases.add(baseOf(e.name));
   }
   const isPosterOfVideo = (b: string) => videoBases.has(b) || videoBases.has(b.replace(/-(poster|fanart|thumb|landscape)$/, ''));
+  // Même règle que la recherche de sous-titres à l'ouverture (subtitles.ts) : nom qui commence par celui de la vidéo.
+  const subs = ctx.localSubtitles ? entries.filter((e) => e.isFile() && SUBTITLE_EXTS.has(extOf(e.name))) : [];
 
   for (const e of files) {
     const ext = extOf(e.name);
@@ -58,6 +61,12 @@ function itemsOfDir(dir: string, entries: Dirent[], kinds: ReadonlySet<MediaKind
       addSeriesInfo(item, dir);
       item.cover = imagesByBase.get(b) || imagesByBase.get(`${b}-poster`) || folderCover;
       item.fanart = imagesByBase.get(`${b}-fanart`) || folderFanart;
+      const mine = subs.filter((x) => baseOf(x.name).startsWith(b));
+      if (mine.length)
+        ctx.localSubtitles?.set(
+          item.path,
+          mine.map((x) => path.join(dir, x.name)),
+        );
     }
     if (kind === 'audio') {
       item.cover = folderCover;

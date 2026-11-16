@@ -34,6 +34,13 @@ interface Instance {
 
 const sameElement = (a: Element | undefined, b: Element | undefined) => JSON.stringify(a) === JSON.stringify(b);
 
+/** Mêmes éléments (l'ordre n'y entre pas). */
+function sameElements(a: Map<ElementKey, Element>, b: Map<ElementKey, Element>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [key, e] of b) if (!sameElement(a.get(key), e)) return false;
+  return true;
+}
+
 export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnored }: CatalogOptions) {
   const ignored = onIgnored ?? ((file: string, reason: string) => console.error(`Catalogue : ${file} écarté (${reason}).`));
   const instances = new Map<string, Instance>();
@@ -131,18 +138,26 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
     /**
      * Résultat d'une analyse d'un emplacement : la liste complète de ses éléments. Ceux qui manquent sont retirés ;
      * un élément déjà connu garde sa date d'ajout. Deux éléments de même clé dans une même analyse : le dernier
-     * l'emporte.
+     * l'emporte. Le fichier de l'emplacement n'est réécrit que si ses éléments ont changé (les analyses répétées
+     * d'une grosse bibliothèque ne réécrivent rien).
      */
     setSource(source: ElementSourceRef, inputs: Iterable<ElementInput>): CatalogChange {
       const ref = { plugin: source.plugin, instance: source.instance };
       const id = sourceId(ref);
-      const prev = instances.get(id)?.elements;
+      const known = instances.get(id);
       const elements = new Map<ElementKey, Element>();
       for (const input of inputs) {
         if (typeof input.key !== 'string' || !input.key) throw new Error('Catalogue : élément sans clé.');
-        const added = prev?.get(input.key)?.added ?? input.added ?? now();
-        elements.set(input.key, { ...structuredClone(input), source: { ...ref }, added });
+        const added = known?.elements.get(input.key)?.added ?? input.added ?? now();
+        elements.set(input.key, { ...input, source: { ...ref }, added });
       }
+      // Rien n'a changé (cas le plus courant) : ni copie, ni calcul des changements, ni écriture.
+      if (known && sameElements(known.elements, elements)) {
+        known.scanned = now();
+        return { added: [], changed: [], removed: [] };
+      }
+      // Copie : la source garde la main sur les objets qu'elle a donnés.
+      for (const [key, e] of elements) elements.set(key, structuredClone(e));
       const inst = { ref, elements, scanned: now() };
       const change = apply(id, inst);
       persist(id, inst);
