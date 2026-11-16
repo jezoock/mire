@@ -86,7 +86,7 @@ Fiches dans `phase-2.md`.
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | P2-01 | Modèle d'élément et catalogue | M | G2c |  | faite | [#48](https://github.com/jezoock/mire/pull/48) |
-| P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | en revue | |
+| P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | faite | [#50](https://github.com/jezoock/mire/pull/50) |
 | P2-03 | Jeux, télévision et sites → éléments | M | P2-02 |  | à faire | |
 | P2-04 | Moteur de tags et d'infos | L | P2-02 |  | à faire | |
 | P2-05 | Tags automatiques existants | M | P2-04 |  | à faire | |
