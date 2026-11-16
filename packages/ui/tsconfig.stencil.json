@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "esnext",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src"]
+}

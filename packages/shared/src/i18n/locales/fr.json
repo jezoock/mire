@@ -10,6 +10,33 @@
       "cancel": "Annuler",
       "close": "Fermer"
     },
+    "demo": {
+      "title": "Démonstration de l’interface",
+      "component": {
+        "heading": "Composant de démonstration",
+        "action": "Ajouter un",
+        "count": {
+          "one": "{count} clic",
+          "other": "{count} clics"
+        }
+      },
+      "palettes": {
+        "ecran": "Écran éteint",
+        "jour": "Plein jour",
+        "minuit": "Minuit",
+        "velours": "Velours",
+        "contraste": "Contraste élevé"
+      },
+      "samples": {
+        "button": "Lire",
+        "link": "Plus d’infos",
+        "badge": "Nouveau",
+        "toggle": "Sous-titres",
+        "range": "Volume",
+        "loader": "Chargement",
+        "thumb": "Voyage dans la Lune"
+      }
+    },
     "settings": {
       "language": {
         "label": "Langue",

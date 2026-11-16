@@ -120,7 +120,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | à faire | |
+| P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | en revue | |
 | P4-02 | Habillage du cœur et palettes | M | P4-01 |  | à faire | |
 | P4-03 | Navigation clavier et manette sur les composants | L | P4-01, P1-24 | 🧑 | à faire | |
 | P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | à faire | |
