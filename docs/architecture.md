@@ -1,7 +1,8 @@
 # Architecture de Mire
 
 Ce document décrit Mire à la fin de la phase 1 de la refonte (point d'étape G2). Il est tenu à jour à chaque
-changement d'architecture. Pour installer et lancer le projet, voir la section « Développer Mire » du README.
+changement d'architecture. L'architecture visée (plugins, éléments et tags, pages, explorateur, thèmes) est décrite
+dans `docs/architecture-cible.md`. Pour installer et lancer le projet, voir la section « Développer Mire » du README.
 
 ## Vue d'ensemble
 

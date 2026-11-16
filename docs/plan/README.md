@@ -12,6 +12,12 @@ dans une conversation indépendante. L'analyse qui justifie ce plan est dans `do
 | 2 — Frontend avec dot-stash | Remplacer l'interface, vue par vue, par les composants de dot-stash (`ds-*`) et des composants `mire-*` ; actions par `ds-trigger` ; thèmes en jeux de jetons (décision D-05). | `phase-2.md` |
 | 3 — Addons | Hôte d'addons, SDK, dépôt `mire-addons`, extraction des catalogues et fournisseurs en addons. | `phase-3.md` |
 
+> **Re-planification en cours (point G2c, 16/11/2026).** Les phases 2 et 3 ci-dessus sont remplacées par cinq
+> phases : éléments, tags et pages ; socle des plugins ; interface (dot-stash, explorateur, thèmes) ; extraction en
+> plugins ; nouveaux plugins. Architecture et découpage : `docs/architecture-cible.md` ; tri de tous les éléments :
+> `inventaire-plugins.md`. Les fiches des nouvelles phases arrivent dans la PR qui suit la validation de G2c ; en
+> attendant, aucune tâche des phases 2 et 3 ne se lance.
+
 ## Les points d'étape
 
 On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est une revue avec toi.
@@ -21,6 +27,7 @@ On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est
 | **G0** | ✅ 29/10/2026 | L'analyse, les décisions D-01 à D-10 (`ANALYSE.md` § 10), le découpage en tâches |
 | **G1** | Fin de la phase 0 | CI verte, tests de caractérisation et captures de référence en place, correctifs livrés → feu vert phase 1 |
 | **G2** | Fin de la phase 1 | Bilan de la refacto (arborescence, contrats) ; confirmation des fiches de la phase 2 (D-05 décidée le 10/11/2026) |
+| **G2c** | 16/11/2026 | Nouvelle architecture : tout ce qui ajoute quelque chose devient un plugin, tags et pages à la place des sections, explorateur et thèmes (`docs/architecture-cible.md`, décisions D-14 à D-22) |
 | **G2b** | Après P2-01 à P2-04 | Revue de l'intégration de dot-stash (ADR), des thèmes, de la navigation et des contrôleurs avant de migrer les vues |
 | **G3** | Fin de la phase 2 | ADR des addons (P3-01) et création du dépôt `mire-addons` |
 

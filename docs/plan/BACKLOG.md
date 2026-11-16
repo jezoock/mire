@@ -67,7 +67,18 @@ Mettre à jour la ligne de la tâche dans la PR qui la réalise (colonne Statut,
 
 Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et renderer (P1-22 → P1-24).
 
+## Point d'étape G2c — nouvelle architecture
+
+| Élément | Statut | PR |
+| --- | --- | --- |
+| Tri de tous les éléments de Mire (`inventaire-plugins.md`) | fait le 16/11/2026 | [#46](https://github.com/jezoock/mire/pull/46) |
+| Architecture cible (`docs/architecture-cible.md`) et décisions D-14 à D-22 | en revue | [#46](https://github.com/jezoock/mire/pull/46) |
+| Question ouverte Q-01 : thèmes avec leur propre code | à trancher | |
+| Fiches des phases 2 à 6 et nouveau backlog | à faire, après validation | |
+
 ## Phase 2 — Frontend avec dot-stash
+
+> En attente : remplacée après le point G2c (D-22). Ne pas lancer ces tâches.
 
 Approche décidée le 10/11/2026 (D-05, `docs/analyse/D-05-dot-stash.md`) ; fiches dans `phase-2.md`.
 
@@ -118,6 +129,8 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 | DS-08 | Rendre le dépôt public (action de ta part, D-13) : l'archive de la release s'installe par son adresse sans jeton | XS | DS-01 | — | faite (dépôt public, release [v0.2.0](https://github.com/jezoock/dot-stash/releases/tag/v0.2.0) avec `dot-stash-0.2.0.tgz`) | |
 
 ## Phase 3 — Addons
+
+> En attente : remplacée après le point G2c (D-22). Ne pas lancer ces tâches.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
