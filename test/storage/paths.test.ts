@@ -12,6 +12,8 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     root,
     config: at('config.json'),
     usage: at('usage.json'),
+    catalogDir: at('catalog'),
+    catalogSources: at('catalog', 'sources'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

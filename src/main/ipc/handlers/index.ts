@@ -4,6 +4,7 @@ import type { MainContext } from '../context.ts';
 import { registerHandlers, type IpcImplementations, type IpcMainLike } from '../register.ts';
 import { appHandlers } from './app.ts';
 import { bookmarksHandlers } from './bookmarks.ts';
+import { catalogHandlers } from './catalog.ts';
 import { configHandlers } from './config.ts';
 import { downloadsHandlers } from './downloads.ts';
 import { gamesHandlers } from './games.ts';
@@ -20,6 +21,7 @@ import { webHandlers } from './web.ts';
 export const DOMAINS = {
   app: appHandlers,
   bookmarks: bookmarksHandlers,
+  catalog: catalogHandlers,
   config: configHandlers,
   downloads: downloadsHandlers,
   games: gamesHandlers,

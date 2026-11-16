@@ -4,6 +4,7 @@
  * par des accesseurs, pour que les handlers voient toujours la valeur courante. La configuration passe par son
  * service (`ctx.config.get()`, `update`, `replace`).
  */
+import type { Catalog } from '../catalog/index.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -34,6 +35,8 @@ export interface MainContext {
   readonly usage: UsageService;
   /** Langue de l'interface et traduction des textes. */
   readonly i18n: LanguageService;
+  /** Catalogue d'éléments (userData/catalog/). */
+  readonly catalog: Catalog;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;

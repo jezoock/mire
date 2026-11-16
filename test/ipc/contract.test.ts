@@ -136,6 +136,7 @@ const ADDED_METHODS: Record<string, string> = {
   usageAddQuery: 'usage:addQuery',
   usageClearQueries: 'usage:clearQueries',
   i18nGet: 'i18n:get', // P1-28 : langue de l'interface et catalogues
+  catalogElement: 'catalog:element', // P2-01 : élément du catalogue d'après sa clé
 };
 
 // Événements ajoutés après P1-08.

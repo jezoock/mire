@@ -10,6 +10,7 @@
  */
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
+import type { Element } from './element.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -281,6 +282,9 @@ export interface IpcMethods {
   // Langue de l'interface et catalogues de textes
   i18nGet(): LanguageInfo;
 
+  // Catalogue d'éléments (P2-01) : `catalog.element(key)` de l'architecture cible
+  catalogElement(key: string): Element | null;
+
   // Fenêtre et application
   toggleFullscreen(): boolean;
   quit(): boolean;
@@ -400,6 +404,8 @@ export const IPC_METHODS = {
   usageClearQueries: 'usage:clearQueries',
 
   i18nGet: 'i18n:get',
+
+  catalogElement: 'catalog:element',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
