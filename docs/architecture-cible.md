@@ -2,7 +2,7 @@
 
 Statut : proposée au point d'étape **G2c** (16/11/2026), après le tri de tous les éléments de Mire
 (`docs/plan/inventaire-plugins.md`). Ce document remplace l'ADR des addons prévue en P3-01 et les principes du § 9
-de `docs/analyse/ANALYSE.md`. Décisions correspondantes : D-14 à D-22 (`ANALYSE.md` § 10).
+de `docs/analyse/ANALYSE.md`. Décisions correspondantes : D-14 à D-23 (`ANALYSE.md` § 10).
 
 `docs/architecture.md` continue de décrire Mire tel qu'il est aujourd'hui ; il rejoindra ce document au fil des
 tâches.
@@ -21,7 +21,8 @@ tâches.
   - Il fait partie du cœur et ne prend aucun thème, seulement les palettes de couleurs.
   - Il reste toujours accessible : c'est le mode secours.
 - **Les thèmes** sont des façons plus visuelles de parcourir les mêmes pages. Le thème par défaut, « Mire », est
-  construit avec dot-stash : c'est le travail de l'ancienne phase 2.
+  construit avec dot-stash : c'est le travail de l'ancienne phase 2. Un thème peut aussi avoir son propre code : il
+  change alors tout l'agencement et accède à toute la bibliothèque (D-23).
 - **Le Centre** remplace Téléchargements et Boutique : dépôts, plugins, apps et téléchargements au même endroit. Le
   dépôt officiel est signé, et l'utilisateur peut ajouter d'autres dépôts.
 - **Un assistant de premier lancement** installe ce dont l'utilisateur a besoin : Mire reste simple malgré le
@@ -353,8 +354,9 @@ cœur.
 
 ## Thèmes
 
-- **Rôle** : un thème dessine l'accueil, les pages, les regroupements et les cartes d'éléments. Il ne touche ni à la
-  coquille de sécurité, ni aux lecteurs, ni au Centre, ni aux Réglages, ni à l'explorateur.
+- **Rôle** : un thème sans code dessine l'accueil, les pages, les regroupements et les cartes d'éléments ; un thème
+  avec code dessine en plus son menu et tout son agencement. Aucun ne touche aux lecteurs, au Centre, aux Réglages
+  ni à l'explorateur : ces écrans du cœur s'ouvrent par-dessus le thème.
 - **Palettes** : les anciens thèmes (Écran éteint, Plein jour, Minuit, Velours, Contraste élevé) deviennent des
   palettes, c'est-à-dire des jeux de jetons de couleurs (D-05). Écran éteint et Contraste élevé sont au cœur, les
   autres sont des plugins.
@@ -380,7 +382,30 @@ cœur.
   - C'est un thème sans code.
   - Ses composants (`mire-page-view`, `mire-card`, `mire-row`…) sont ceux du cœur.
   - Les concevoir pour lui oblige à les rendre assez souples pour d'autres thèmes.
-- **Thèmes avec leur propre code** : question ouverte Q-01.
+- **Thèmes avec leur propre code** (D-23) : un thème qui n'a rien à voir avec le thème Mire, en visuels comme en
+  agencement.
+  - **Où il tourne** : dans un cadre isolé qui occupe toute la fenêtre, une `iframe` sandboxée (origine opaque)
+    chargée par `mire-theme://<id>/`. La CSP de la fenêtre gagne seulement `frame-src mire-theme:` ;
+    `script-src 'self'` ne change pas.
+  - **Ce qu'il lit** : tout le catalogue (éléments, tags, infos, images, pages, regroupements, listes, recherche,
+    « Reprendre », historique, sites, chaînes, jeux, téléchargements en cours), avec les événements de changement.
+  - **Ce qu'il fait** :
+    - ouvrir, lire ou lancer un élément, piloter la lecture et suivre son état ;
+    - ouvrir une page ou un écran du cœur, chercher ;
+    - modifier tags, infos, listes, favoris et positions de reprise ;
+    - relancer l'analyse des sources.
+  - **Ses entrées et ressources** :
+    - clavier, souris et manette en direct, plus les actions de navigation du cœur ;
+    - ses propres fichiers (images, polices, sons, vidéos, bibliothèques JavaScript), son stockage, ses réglages ;
+    - Internet vers les hôtes qu'il déclare, affichés avant l'installation.
+  - **Ce qui reste refusé** : ce sont les limites des niveaux de sécurité, rien de plus.
+    - Node, et l'accès direct aux fichiers.
+    - Les réglages de Mire et des autres plugins, et les secrets.
+    - Supprimer ou déplacer des fichiers, installer des plugins.
+    - Les sites ouverts dans les vues web.
+    - Bloquer le mode secours.
+  - **Niveau** : code limité, depuis tout dépôt. L'API est versionnée, et son client JavaScript est publié dans
+    `@mire/plugin-sdk`.
 
 ## Jeux et émulateurs
 
@@ -440,6 +465,7 @@ cœur.
 | Données de plugins | Schémas JSON, adresses `https:` seulement, aucun HTML interprété |
 | Gestion des fichiers dans l'explorateur | Dossiers autorisés seulement, contrôle du chemin, confirmation |
 | Thème cassé | Mode secours capté par le processus principal ; un thème sans code ne peut rien exécuter |
+| Thème avec code | Cadre isolé sans Node ni fichiers ; Internet seulement vers les hôtes déclarés, affichés avant l'installation ; aucune action destructrice, ni accès aux réglages, aux secrets ou aux sites ouverts |
 | Clés d'API des plugins | Réglages `secret` chiffrés quand le système le permet, jamais exportés en clair |
 
 ## Reprise des installations existantes
@@ -461,14 +487,14 @@ migration.
 
 ## Conséquences sur le plan
 
-Les phases 2 et 3 actuelles sont remplacées. Les fiches détaillées seront écrites dans la PR suivante, une fois ce
-document validé. Voici le découpage proposé :
+Les phases 2 et 3 d'origine sont remplacées par les phases 2 à 6 ci-dessous. Fiches détaillées :
+`docs/plan/phase-2.md` à `docs/plan/phase-6.md` ; suivi : `docs/plan/BACKLOG.md`.
 
 | Phase | Contenu | Reprend |
 | --- | --- | --- |
 | 2 — Éléments, tags et pages | catalogue d'éléments ; sources → éléments ; moteur de tags et d'infos ; interface `Tagger` et tags automatiques existants ; pages, regroupements et listes (processus principal et IPC) ; recherche ; migration v9 | la logique de `src/renderer/domain/`, `parseVideo`, `guessSystem` |
 | 3 — Socle des plugins | SDK et manifeste ; hôte isolé (prototype, puis réalisation) ; hôte de plugins et permissions ; plugins inclus et dépendances ; dépôt `mire-addons` et sa CI ; client des dépôts ; dépôts tiers | P3-02, P3-03, P3-05, P3-06, P3-08 |
-| 4 — Interface | intégration de dot-stash, palettes, navigation, contrôleurs et traduction, composants, dialogues, coquille ; puis explorateur et mode secours, moteur de thèmes et thème Mire, vue de page générique, accueil, recherche, lecteurs, vue web et télévision, jeux, Centre, réglages (dont tags et pages), éditeurs, assistant du premier lancement, retrait de l'interface historique | P2-01 à P2-07, P2-13, P2-14, P2-19 à P2-23 ; la vue de page générique remplace P2-08 à P2-12 et P2-15 à P2-18 |
+| 4 — Interface | intégration de dot-stash, palettes, navigation, contrôleurs et traduction, composants, dialogues, coquille ; puis explorateur et mode secours, moteur de thèmes et thème Mire, vue de page générique, accueil, recherche, lecteurs, vue web et télévision, jeux, Centre, réglages (dont tags et pages), éditeurs, assistant du premier lancement, retrait de l'interface historique ; thèmes avec leur propre code (cadre et API) | P2-01 à P2-07, P2-13, P2-14, P2-19 à P2-23 ; la vue de page générique remplace P2-08 à P2-12 et P2-15 à P2-18 |
 | 5 — Extraction en plugins | tout ce que l'inventaire classe « inclus » ou « à installer » quitte le cœur, les données d'abord, puis le code ; continuité pour les installations existantes ; pack de langue français | P3-07, P3-10 à P3-29 |
 | 6 — Nouveaux plugins | services de streaming, radios et podcasts, jeux dans le cloud, serveurs multimédias, infos en ligne, émulateurs, thèmes | — |
 
@@ -479,34 +505,14 @@ document validé. Voici le découpage proposé :
   - **G2c** valide ce document ;
   - **G3** clôt la phase 2 ;
   - **G4** clôt la phase 3, prototype de l'hôte isolé compris ;
-  - **G5** suit les premières tâches de la phase 4, comme G2b aujourd'hui.
+  - **G5** suit les premières tâches de la phase 4 (P4-01 à P4-04) ;
+  - **G6** clôt la phase 4, **G7** la phase 5.
 
-## Questions ouvertes
+## Questions tranchées
 
 ### Q-01 — Thèmes avec leur propre code
 
-Un thème sans code ne peut que réarranger les composants de Mire. Un thème avec code dessinerait ses écrans
-lui-même : une interface très différente, des animations, une navigation propre. C'est le seul endroit où du code
-tiers s'afficherait dans la fenêtre de Mire. Proposition, si on l'ouvre :
-
-- **Où il tourne** : dans un cadre isolé posé dans la zone de contenu.
-  - C'est une `iframe` sandboxée (`sandbox="allow-scripts"`, origine opaque), chargée par `mire-theme://<id>/`.
-  - Le cadre a sa propre CSP : scripts du thème seulement, aucune connexion (`connect-src 'none'`), images par un
-    protocole de vignettes.
-  - La CSP de la fenêtre principale ne change pas.
-- **Ce qu'il reçoit** : des données en lecture (pages, regroupements, éléments, adresses de vignettes). La manette et
-  la télécommande lui arrivent traduites en actions (haut, bas, valider, retour) par le cœur.
-- **Ce qu'il peut demander** : seulement ouvrir un élément ou une page, chercher, revenir. Jamais une adresse
-  arbitraire, ni une action sur les fichiers.
-- **Ce qu'il ne peut pas faire** : utiliser Internet, lire des fichiers, changer les réglages, parler aux autres
-  plugins, bloquer le mode secours.
-- **Ce qui reste possible pour un thème malveillant** :
-  - afficher un écran trompeur, par exemple un faux formulaire, mais sans moyen d'envoyer ce qui y serait saisi ;
-  - lire la liste des éléments (titres, images), mais sans moyen de la transmettre.
-- **Coût** :
-  - une API de thème versionnée, à garder stable ;
-  - un cadre et un protocole de plus (environ deux tâches) ;
-  - des thèmes plus lourds à écrire que les thèmes sans code.
-
-Recommandation : garder la porte ouverte dans le format, mais ne construire les thèmes avec code qu'en phase 6,
-une fois le thème Mire et l'API des pages stabilisés.
+Tranchée le 16/11/2026 (D-23). La première proposition (un cadre qui ne pouvait qu'ouvrir un élément ou une page,
+chercher et revenir) était trop restrictive. Un thème avec code doit pouvoir ne ressembler en rien au thème Mire et
+accéder à tout le contenu de la bibliothèque ; les seules limites gardées sont celles des niveaux de sécurité. Voir
+la section « Thèmes ».

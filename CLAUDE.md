@@ -15,7 +15,7 @@ de composants dot-stash (`jezoock/dot-stash`), explorateur et thèmes ; extracti
 - Analyse du code existant : `docs/analyse/ANALYSE.md`
 - Mode d'emploi du plan (phases, points d'étape, lancer une tâche) : `docs/plan/README.md`
 - Tableau de suivi de toutes les tâches : `docs/plan/BACKLOG.md`
-- Fiches des tâches : `docs/plan/phase-0.md` à `docs/plan/phase-3.md`
+- Fiches des tâches : `docs/plan/phase-0.md` à `docs/plan/phase-6.md`
 
 Quand on te demande de « réaliser la tâche Px-yy », lis d'abord `docs/plan/README.md`, puis la fiche de la tâche,
 et reste strictement dans son périmètre. Une tâche dont une dépendance n'est pas « faite » dans `BACKLOG.md`

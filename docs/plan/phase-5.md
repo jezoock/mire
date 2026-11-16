@@ -1,0 +1,127 @@
+# Phase 5 — Extraction en plugins
+
+But : tout ce que `docs/plan/inventaire-plugins.md` classe « Plugin inclus » ou « À installer » quitte le cœur pour
+devenir un plugin publié dans `jezoock/mire-addons`. À la fin, le cœur ne contient plus que les éléments classés
+« Cœur » (D-14).
+
+Prérequis : phase 3 terminée (point **G4**) ; pour chaque tâche, les tâches de la phase 2 ou 4 citées dans
+« Dépend de ».
+
+Règles communes à chaque extraction :
+
+- le code ou les données quittent `src/main/`, `src/renderer/` ou `packages/shared` et deviennent un plugin de
+  `mire-addons` (un dossier, un manifeste, ses tests, ses textes en français et en anglais) ;
+- le niveau du plugin (données seules, code limité, code sensible) est le plus bas possible ; la PR le justifie ;
+- un **plugin inclus** est ajouté à `resources/plugins/` (P3-05) ; un plugin **à installer** est seulement publié ;
+- **continuité** : la tâche ajoute sa règle à P5-01, pour qu'une installation existante active ou installe le
+  plugin et retrouve ses réglages ; aucune fonctionnalité perdue sans le dire à l'utilisateur ;
+- les tests qui couvraient le code déplacé partent avec lui ; le cœur garde des tests avec un plugin factice ;
+- l'inventaire est mis à jour (colonne « Code actuel » : le plugin) ;
+- une PR dans `mire-addons` et une PR dans Mire si le cœur change ; le titre des deux commence par l'identifiant.
+
+À la fin de la phase, point d'étape **G7** : bilan du cœur (P5-21).
+
+---
+
+## P5-01 — Continuité pour les installations existantes
+
+- **Dépend de** : P3-07, P2-11 · **Taille** : M
+- **Objectif** : une installation existante retrouve tout, même quand ses fonctions deviennent des plugins.
+- **À faire** : table de règles « ce que contient la configuration → plugins à activer ou installer, réglages à
+  déplacer sous `plugins.<id>` » (migration de configuration v10) ; plugins inclus activés tout de suite, plugins à
+  installer mis en attente et installés dès que la connexion le permet ; récapitulatif à l'utilisateur (installé,
+  en attente, impossible) ; chaque tâche de la phase ajoute sa règle et son test.
+- **Critères d'acceptation** : tests avec `test/fixtures/config-v*.json` ; installation hors ligne puis en ligne.
+
+---
+
+## P5-05 — Services de streaming
+
+- **Dépend de** : P5-01 · **Taille** : M · 🧑
+- **À faire** : un plugin de données par service (`webApps`) pour les 13 services du catalogue actuel
+  (`src/main/config/catalogs/web.ts`) : adresse, couleur, recherche, alias pour « Où regarder », lecture en fond,
+  catégorie ; JustStream et Voir-Anime sortent du catalogue intégré et ne sont pas publiés (D-21) : un utilisateur
+  qui les avait configurés les garde comme sites ajoutés à la main, avec un message.
+- **Critères d'acceptation** : 🧑 Netflix et Spotify ouverts depuis un plugin installé, lecture protégée comprise.
+
+---
+
+## P5-06 — Télévision
+
+- **Dépend de** : P5-01, P3-05 · **Taille** : M · 🧑
+- **À faire** : deux plugins qui servent de dépendances, « télévision par liste M3U » et « télévision par portail
+  web » (`TvProvider`) ; un pack de données par box (Freebox et Orange avec la liste M3U ; SFR, B.tv et Molotov avec
+  le portail web), chacun avec sa dépendance (D-19) ; retrait de la détection automatique de la box
+  (`src/main/tv/detect.ts`) ; la box d'une installation existante est reprise par P5-01.
+- **Critères d'acceptation** : installer le pack Freebox installe la liste M3U ; 🧑 chaînes d'une box réelle.
+
+---
+
+## P5-08 — Langue française et packs de langue
+
+- **Dépend de** : P5-01, P4-26 · **Taille** : M
+- **Objectif** : l'anglais au cœur, le français et les autres langues en packs (D-20).
+- **À faire**
+  - contribution `languages` : catalogue au format de P1-28 et métadonnées (code BCP 47, nom dans la langue,
+    version de Mire visée, couverture) ; langue de repli : l'anglais ;
+  - le catalogue français reste dans `packages/shared/src/i18n/locales/fr.json` (règle D-11 inchangée) ; la
+    publication de Mire produit le pack et le publie dans le dépôt officiel ;
+  - au premier lancement, installation d'office du pack de la langue du système ; sans connexion, démarrage en
+    anglais puis installation dès que possible ;
+  - outils du SDK : `mire-plugin i18n init <code>` (pack vide tiré du catalogue anglais) et
+    `mire-plugin i18n check` (couverture, variables) ; la CI de `mire-addons` valide chaque pack.
+- **Critères d'acceptation** : un système en français démarre en français après installation du pack ; désinstaller
+  le pack ramène à l'anglais ; un pack incomplet affiche en anglais les textes manquants.
+
+---
+
+## P5-18 — Torrents
+
+- **Dépend de** : P5-01 · **Taille** : L · 🧑
+- **À faire** : le moteur WebTorrent (`Downloader`) devient un plugin de code sensible ; `parse-torrent`, le dossier
+  `vendor/` et la section `overrides` de `package.json` quittent l'application pour le plugin (lire la section
+  correspondante du README avant d'y toucher) ; les liens magnet et les `.torrent` sont proposés au plugin s'il est
+  installé, sinon le Centre propose de l'installer.
+- **Critères d'acceptation** : 🧑 téléchargement réel d'un torrent légal ; l'application se construit sans
+  `vendor/`.
+
+---
+
+## P5-19 — Émulateurs existants
+
+- **Dépend de** : P5-01, P4-17 · **Taille** : L · 🧑
+- **À faire** : un plugin par émulateur du catalogue actuel (`src/main/store/catalog/emulators.ts`) : RetroArch
+  (avec le choix de ses consoles, `emu-consoles-ra`), DuckStation, PCSX2, PPSSPP, Dolphin, melonDS, Azahar, Cemu ;
+  chacun décrit installation, exécutable, arguments par console, consoles gérées et **rappels de BIOS** (D-21 : Mire
+  ne fournit jamais de BIOS, de firmware ni de clés) ; les installateurs génériques restent au cœur ; un émulateur
+  déjà installé est reconnu et son plugin installé par P5-01.
+- **Critères d'acceptation** : 🧑 installation réelle de deux émulateurs depuis le Centre et lancement d'un jeu
+  libre avec chacun.
+
+---
+
+## Les autres extractions
+
+| Tâche | Plugin(s) | Éléments de l'inventaire | Décision | Dépend de | Taille | 🧑 |
+| --- | --- | --- | --- | --- | --- | --- |
+| P5-02 | Palettes Plein jour, Minuit, Velours | `th-jour`, `th-minuit`, `th-velours` | à installer | P5-01, P4-02 | S | |
+| P5-03 | Pages prêtes à l'emploi | `page-films` à `page-jeux` | inclus | P5-01, P2-07 | S | |
+| P5-04 | Profils de manettes Xbox, PlayStation, Nintendo | `pad-xbox`, `pad-ps`, `pad-nintendo` | inclus | P5-01, P4-03 | S | |
+| P5-07 | Sites de jeux légaux, jeux libres | `jeux-sites`, `jeux-libres` | à installer | P5-01 | S | |
+| P5-09 | Tags automatiques : séries, films, musique, consoles, photos, genres et années | `tagauto-*` | inclus | P5-01, P2-05, P2-06 | M | |
+| P5-10 | Thème Mire | `theme-mire` | inclus | P4-11, P4-24 | S | |
+| P5-11 | Dossier local, partage réseau, sous-titres | `src-local`, `src-smb`, `src-subs` | inclus | P5-01, P3-04 | M | |
+| P5-12 | Serveur web, liste M3U | `src-http`, `src-m3u` | à installer | P5-11 | M | |
+| P5-13 | Jeux PC (dossiers et jeux ajoutés à la main) | `jeux-pc`, `jeux-pc-manuel` | inclus | P5-01 | M | 🧑 |
+| P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | `jeux-roms`, `jeux-disque`, `jeux-marque` | inclus | P5-01 | M | |
+| P5-15 | Infos en ligne TMDB et « Où regarder » | `info-tmdb`, `info-ouregarder` | à installer | P5-01, P2-06 | M | |
+| P5-16 | Infos en ligne MusicBrainz, libretro, Steam | `info-mb`, `info-libretro`, `info-steam` | à installer | P5-01, P2-06 | M | |
+| P5-17 | Bloqueur de publicités, connexion Google | `web-adblock` (à installer), `web-google` (inclus) | voir colonne | P5-01 | M | 🧑 |
+| P5-20 | Lecteurs externes mpv et VLC | `lec-externes` | inclus | P5-01 | S | |
+| P5-21 | Bilan du cœur | — | — | P5-02 à P5-20 | S | |
+
+- **P5-15** : la clé TMDB d'une installation existante devient le réglage `secret` du plugin.
+- **P5-17** : les dépendances `@ghostery/*` quittent l'application ; 🧑 YouTube sans publicité.
+- **P5-21** : le cœur ne contient plus que les éléments « Cœur » de l'inventaire (vérification dans la PR) ;
+  `docs/architecture.md` reprend `docs/architecture-cible.md`, qui devient historique ; mesures (démarrage, mémoire)
+  comparées à celles de la fin de la phase 4.

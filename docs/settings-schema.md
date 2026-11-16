@@ -4,9 +4,9 @@ Chaque réglage de Mire est décrit **une seule fois**, dans `@mire/shared/setti
 (`packages/shared/src/settings/`). Ce schéma dit quels réglages existent, où ils sont rangés dans la
 configuration (`config.json`), leur valeur par défaut et le texte affiché. Il servira :
 
-- à construire l'écran des réglages de la phase 2 (P2-19), avec les composants `ds-field`, `ds-select`,
+- à construire l'écran des réglages de la phase 4 (P4-20), avec les composants `ds-field`, `ds-select`,
   `ds-toggle` de dot-stash ;
-- aux addons, qui décriront leurs propres réglages de la même façon (P3-04).
+- aux addons, qui décriront leurs propres réglages de la même façon (P3-04, `settings` du manifeste).
 
 Aujourd'hui, l'écran des réglages (`src/renderer/app.js`) ne s'en sert pas encore : il garde son rendu actuel
 (décision D-05).

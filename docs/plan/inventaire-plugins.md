@@ -13,14 +13,13 @@ Décisions :
 - **Retiré** : n'est plus proposé ;
 - **Hors dépôt officiel** : retiré du dépôt officiel et du catalogue intégré ;
 - **Mis de côté** : idée notée, pas planifiée ;
-- **Question ouverte** : à trancher, voir les questions ouvertes de l'architecture cible.
 
 Colonne « Accès » : ce dont l'élément a besoin. ⚠ marque un accès sensible (réseau local, lancer des programmes,
 vue web, supprimer des fichiers, dessiner l'interface) : un plugin qui le demande vient du dépôt officiel signé, ou
 est installé après l'accord explicite de l'utilisateur. Colonne « Code actuel » : où se trouve l'élément
 aujourd'hui (« à créer » pour un ajout).
 
-Bilan : 67 éléments au cœur, 29 plugins inclus, 114 plugins à installer, 6 décisions particulières.
+Bilan : 68 éléments au cœur, 29 plugins inclus, 114 plugins à installer, 5 décisions particulières.
 
 ## Sources de la bibliothèque
 
@@ -284,7 +283,7 @@ L'explorateur montre tout, en colonnes, sans habillage : il marche toujours. Les
 | `explo-sobre` | Affichage fixe de l'explorateur | Cœur | Socle | Données seules | à créer | on peut ajuster les couleurs uniquement, pas de trucs visuels spéciaux |
 | `theme-moteur` | Moteur de thèmes | Cœur | Socle | Données seules | à créer |  |
 | `theme-donnees` | Thèmes sans code | Cœur | Fonction | Données seules | à créer (format de thème) |  |
-| `theme-code` | Thèmes avec leur propre code | Question ouverte | Fonction | Dessine l'interface ⚠ | à créer (cadre isolé) | tu peux m'expliquer plus en détail — Q-01 de `docs/architecture-cible.md`. |
+| `theme-code` | Thèmes avec leur propre code | Cœur | Fonction | Dessine l'interface ⚠ | à créer (cadre isolé) | tu peux m'expliquer plus en détail — Tranchée : oui, avec une API large (D-23). |
 | `theme-mire` | Thème Mire | Plugin inclus | Thème | Données seules | src/renderer/ (phase 2) |  |
 | `theme-affiches` | Thème Mur d'affiches | À installer | Thème | Données seules | à créer |  |
 | `theme-salon` | Thème Salon | À installer | Thème | Données seules | à créer |  |

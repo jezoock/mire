@@ -72,49 +72,90 @@ Pistes parallèles après P1-01 : processus principal (P1-02 → P1-21) et rende
 | Élément | Statut | PR |
 | --- | --- | --- |
 | Tri de tous les éléments de Mire (`inventaire-plugins.md`) | fait le 16/11/2026 | [#46](https://github.com/jezoock/mire/pull/46) |
-| Architecture cible (`docs/architecture-cible.md`) et décisions D-14 à D-22 | en revue | [#46](https://github.com/jezoock/mire/pull/46) |
-| Question ouverte Q-01 : thèmes avec leur propre code | à trancher | |
-| Fiches des phases 2 à 6 et nouveau backlog | à faire, après validation | |
+| Architecture cible (`docs/architecture-cible.md`) et décisions D-14 à D-22 | faite (validée le 16/11/2026) | [#46](https://github.com/jezoock/mire/pull/46) |
+| Q-01 : thèmes avec leur propre code | tranchée le 16/11/2026 : oui, avec une API large (D-23) | |
+| Fiches des phases 2 à 6 et ce backlog | en revue | |
 
-## Phase 2 — Frontend avec dot-stash
+Les phases 2 et 3 d'origine (« Frontend avec dot-stash », « Addons ») sont remplacées : correspondance dans
+`README.md`.
 
-> En attente : remplacée après le point G2c (D-22). Ne pas lancer ces tâches.
+## Phase 2 — Éléments, tags et pages
 
-Approche décidée le 10/11/2026 (D-05, `docs/analyse/D-05-dot-stash.md`) ; fiches dans `phase-2.md`.
+Fiches dans `phase-2.md`.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P2-01 | Intégration de dot-stash et `@mire/ui` | M | G2, DS-01, DS-02, DS-08 | | à faire | |
-| P2-02 | Habillage Mire et thèmes en jeux de jetons | M | P2-01 | | à faire | |
-| P2-03 | Navigation clavier et manette sur les composants | L | P2-01, P1-24 | 🧑 | à faire | |
-| P2-04 | Contrôleurs et actions (`ds-trigger`) | M | P2-01, P1-22, P1-23 | | à faire | |
-| **G2b** | **Point d'étape : intégration, thèmes, navigation, contrôleurs** | | P2-01…P2-04 | | | |
-| P2-05 | Composants médias | M | P2-02, P2-03, P2-04, DS-04, DS-05 | | à faire | |
-| P2-06 | Boîtes de dialogue et formulaires | M | P2-02, P2-03 | | à faire | |
-| P2-07 | Coquille de l'application | L | P2-05, P2-06 | | à faire | |
-| P2-08 | Section Accueil | S | P2-07 | | à faire | |
-| P2-09 | Section Recherche globale | M | P2-07 | | à faire | |
-| P2-10 | Section Vidéos | M | P2-07, P2-13 | | à faire | |
-| P2-11 | Section Musique + mini-lecteur | M | P2-07 | | à faire | |
-| P2-12 | Section Images + visionneuse | S | P2-07 | | à faire | |
-| P2-13 | Lecteur vidéo | M | P2-07, DS-03 | 🧑 | à faire | |
-| P2-14 | Streaming et vue web | M | P2-07 | 🧑 | à faire | |
-| P2-15 | Section Télévision | S | P2-07 | | à faire | |
-| P2-16 | Section Jeux | L | P2-07 | | à faire | |
-| P2-17 | Boutique | M | P2-07 | | à faire | |
-| P2-18 | Section Téléchargements | S | P2-07 | | à faire | |
-| P2-19 | Réglages | M | P2-07, P1-26, DS-06 | | à faire | |
-| P2-20 | Éditeurs | M | P2-06, P2-10, P2-16 | | à faire | |
-| P2-21 | Retrait de l'interface historique et audits | M | P2-08…P2-20 | 🧑 | à faire | |
-| P2-22 | Guide « Créer un thème » | S | P2-02, P2-21 | | à faire | |
-| P2-23 | Sélecteur de langue et finitions de la localisation | S | P2-19, P2-21, P1-28, P1-29 | | à faire | |
-| **G3** | **Point d'étape : fin de la phase 2, ADR addons, dépôt `mire-addons`** | | P2-01…P2-23 | | | |
+| P2-01 | Modèle d'élément et catalogue | M | G2c |  | à faire | |
+| P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | à faire | |
+| P2-03 | Jeux, télévision et sites → éléments | M | P2-02 |  | à faire | |
+| P2-04 | Moteur de tags et d'infos | L | P2-02 |  | à faire | |
+| P2-05 | Tags automatiques existants | M | P2-04 |  | à faire | |
+| P2-06 | Infos en ligne dans le catalogue | M | P2-04 |  | à faire | |
+| P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | à faire | |
+| P2-08 | Listes | S | P2-07 |  | à faire | |
+| P2-09 | Recherche dans le catalogue | M | P2-07 |  | à faire | |
+| P2-10 | Gestion des fichiers | M | P2-02 |  | à faire | |
+| P2-11 | Migration de la configuration (v9) | M | P2-07, P2-08 |  | à faire | |
+| **G3** | **Point d'étape : fin de la phase 2 (modèle, IPC, mesures)** | | P2-01…P2-11 | | | |
+
+## Phase 3 — Socle des plugins et dépôts
+
+Fiches dans `phase-3.md`.
+
+| ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| P3-01 | `@mire/plugin-sdk` et manifeste | M | G3 |  | à faire | |
+| P3-02 | Prototype de l'hôte isolé | M | P3-01 |  | à faire | |
+| P3-03 | Hôte de plugins | L | P3-02 |  | à faire | |
+| P3-04 | Contexte et permissions des plugins | M | P3-03 |  | à faire | |
+| P3-05 | Plugins inclus et dépendances | M | P3-03 |  | à faire | |
+| P3-06 | Dépôt `mire-addons` : structure et publication | M | P3-01 | 🧑 | à faire | |
+| P3-07 | Client des dépôts | L | P3-05, P3-06 |  | à faire | |
+| P3-08 | Dépôts tiers et confiance | M | P3-07 |  | à faire | |
+| **G4** | **Point d'étape : fin de la phase 3 (hôte isolé, SDK, publication)** | | P3-01…P3-08 | | | |
+
+## Phase 4 — Interface : dot-stash, explorateur et thèmes
+
+Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
+
+| ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | à faire | |
+| P4-02 | Habillage du cœur et palettes | M | P4-01 |  | à faire | |
+| P4-03 | Navigation clavier et manette sur les composants | L | P4-01, P1-24 | 🧑 | à faire | |
+| P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | à faire | |
+| **G5** | **Point d'étape : intégration, palettes, navigation, contrôleurs** | | P4-01…P4-04 | | | |
+| P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | à faire | |
+| P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | à faire | |
+| P4-07 | Coquille de l'application | L | P4-05, P4-06, P2-07 |  | à faire | |
+| P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | à faire | |
+| P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |
+| P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | à faire | |
+| P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | à faire | |
+| P4-12 | Accueil | M | P4-11 |  | à faire | |
+| P4-13 | Recherche | M | P4-11, P2-09 |  | à faire | |
+| P4-14 | Lecteur vidéo | M | P4-07 | 🧑 | à faire | |
+| P4-15 | Lecteurs de musique et d'images | M | P4-14 |  | à faire | |
+| P4-16 | Vue web et télévision | M | P4-11 | 🧑 | à faire | |
+| P4-17 | Jeux : consoles et émulateurs | M | P4-11, P4-06 | 🧑 | à faire | |
+| P4-18 | Centre : téléchargements et apps | M | P4-07, P4-06 |  | à faire | |
+| P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | à faire | |
+| P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | à faire | |
+| P4-21 | Administration des tags, des pages et des listes | M | P4-20, P2-07, P2-08 |  | à faire | |
+| P4-22 | Éditeurs | M | P4-06, P4-11 |  | à faire | |
+| P4-23 | Assistant du premier lancement | M | P4-19, P4-20 | 🧑 | à faire | |
+| P4-24 | Retrait de l'interface historique et audits | M | P4-08…P4-23 | 🧑 | à faire | |
+| P4-25 | Guide « Créer un thème » | S | P4-11, P4-24 |  | à faire | |
+| P4-26 | Sélecteur de langue et finitions de la localisation | S | P4-20, P4-24, P1-28, P1-29 |  | à faire | |
+| P4-27 | Thèmes avec leur propre code : cadre et API | L | P4-11, P4-24, P3-04 | 🧑 | à faire | |
+| P4-28 | Thème d'exemple avec code et guide | M | P4-27, P4-25 |  | à faire | |
+| **G6** | **Point d'étape : fin de la phase 4** | | P4-01…P4-28 | | | |
 
 ### Dans dot-stash (dépôt `jezoock/dot-stash`)
 
 Pull requests sur le dépôt de dot-stash, chacune validée par toi, au contrat de dot-stash (habillage du thème
 `default`, accessibilité, textes traduisibles, tests unitaires et navigateur, readme, CHANGELOG). Elles peuvent
-avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash » donne la tâche du backlog de dot-stash.
+avancer en parallèle des tâches de Mire. La colonne « dot-stash » donne la tâche du backlog de dot-stash.
 
 | ID | Tâche | Taille | Dépend de | dot-stash | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -125,43 +166,75 @@ avancer dès maintenant, en parallèle de la phase 1. La colonne « dot-stash »
 | DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
-| DS-07 | Imports par composant (`dist-custom-elements`), si P2-01 en a besoin | S | — | B-122, B-123 | selon P2-01 | |
+| DS-07 | Imports par composant (`dist-custom-elements`), si P4-01 en a besoin | S | — | B-122, B-123 | selon P4-01 | |
 | DS-08 | Rendre le dépôt public (action de ta part, D-13) : l'archive de la release s'installe par son adresse sans jeton | XS | DS-01 | — | faite (dépôt public, release [v0.2.0](https://github.com/jezoock/dot-stash/releases/tag/v0.2.0) avec `dot-stash-0.2.0.tgz`) | |
 
-## Phase 3 — Addons
+## Phase 5 — Extraction en plugins
 
-> En attente : remplacée après le point G2c (D-22). Ne pas lancer ces tâches.
+Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jezoock/mire-addons`.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P3-01 | ADR : architecture des addons | M | G3 | | à faire | |
-| P3-02 | `@mire/plugin-sdk` | M | P3-01 | | à faire | |
-| P3-03 | Hôte d'addons | L | P3-02 | | à faire | |
-| P3-04 | Contributions d'interface | M | P3-03, P2-21 | | à faire | |
-| P3-05 | Dépôt `mire-addons` | M | P3-02, D-09 | | à faire | |
-| P3-06 | Client de registre et page « Modules » | L | P3-03, P3-04, P3-05 | 🧑 | à faire | |
-| P3-07 | Continuité pour les installations existantes | M | P3-06 | | à faire | |
-| P3-08 | Dépôts tiers | M | P3-06 | 🧑 | à faire | |
-| P3-10 | Addons de thèmes | S | P3-04, P3-06 | | à faire | |
-| P3-11 | Pack « Services de streaming » | S | P3-06 | | à faire | |
-| P3-12 | Pack « Télévision en France » | S | P3-06 | | à faire | |
-| P3-13 | Pack « Sites de jeux légaux » | S | P3-06 | | à faire | |
-| P3-14 | Pack « Jeux libres » | S | P3-06 | | à faire | |
-| P3-15 | Profils de manettes | S | P3-04, P3-06 | | à faire | |
-| P3-16 | Métadonnées TMDB | M | P3-06 | | à faire | |
-| P3-17 | Métadonnées MusicBrainz + Cover Art Archive | M | P3-06 | | à faire | |
-| P3-18 | Métadonnées libretro | M | P3-06 | | à faire | |
-| P3-19 | Métadonnées Steam | S | P3-06 | | à faire | |
-| P3-20 | « Où regarder » (TMDB + JustWatch) | S | P3-16 | | à faire | |
-| P3-21 | Sources « serveur web » et « liste M3U » | M | P3-06 | | à faire | |
-| P3-22 | Télévision par playlist M3U | S | P3-06, P3-12 | | à faire | |
-| P3-23 | Torrents | L | P3-06 | 🧑 | à faire | |
-| P3-24 | Bloqueur de publicités (Ghostery) | M | P3-06 | 🧑 | à faire | |
-| P3-25 | Compatibilité connexion Google | S | P3-06 | 🧑 | à faire | |
-| P3-26 | Catalogue d'émulateurs | L | P3-06 | 🧑 | à faire | |
-| P3-27 | Scanner de jeux PC | M | P3-06 | | à faire | |
-| P3-28 | Lecteurs externes mpv et VLC | S | P3-06 | | à faire | |
-| P3-29 | Packs de langue | M | P1-28, P3-04, P3-06 | | à faire | |
+| P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | à faire | |
+| P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | à faire | |
+| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | à faire | |
+| P5-04 | Profils de manettes | S | P5-01, P4-03 |  | à faire | |
+| P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
+| P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |
+| P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | à faire | |
+| P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |
+| P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | à faire | |
+| P5-10 | Thème Mire | S | P4-11, P4-24 |  | à faire | |
+| P5-11 | Dossier local, partage réseau, sous-titres | M | P5-01, P3-04 |  | à faire | |
+| P5-12 | Serveur web, liste M3U | M | P5-11 |  | à faire | |
+| P5-13 | Jeux PC | M | P5-01 | 🧑 | à faire | |
+| P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | M | P5-01 |  | à faire | |
+| P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | à faire | |
+| P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | à faire | |
+| P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
+| P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
+| P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
+| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | à faire | |
+| P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
+| **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |
+
+## Phase 6 — Nouveaux plugins
+
+Fiches dans `phase-6.md`. Publiés dans `jezoock/mire-addons` ; elles peuvent commencer dès que leurs dépendances
+sont faites.
+
+| ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
+| --- | --- | --- | --- | --- | --- | --- |
+| P6-01 | Infos des fichiers audio | M | P5-09 |  | à faire | |
+| P6-02 | Infos des photos | S | P5-09 |  | à faire | |
+| P6-03 | ARTE, TF1+, M6+, TV5MONDEplus, Auvio, Play RTS, ICI TOU.TV | S | P5-05 | 🧑 | à faire | |
+| P6-04 | ADN, Rakuten TV, MUBI, Pluto TV, Twitch, Dailymotion | S | P5-05 | 🧑 | à faire | |
+| P6-05 | YouTube Music, Apple Music, Tidal, Qobuz, SoundCloud, Radio France | S | P5-05 | 🧑 | à faire | |
+| P6-06 | Xbox Cloud Gaming, GeForce NOW, Boosteroid | M | P5-05 | 🧑 | à faire | |
+| P6-07 | Radios du monde | M | P5-11 |  | à faire | |
+| P6-08 | Podcasts | M | P5-11 |  | à faire | |
+| P6-09 | Serveur Jellyfin ou Emby | M | P5-12 | 🧑 | à faire | |
+| P6-10 | Serveur Plex | M | P5-12 | 🧑 | à faire | |
+| P6-11 | Partages DLNA | M | P5-12 | 🧑 | à faire | |
+| P6-12 | Stockage WebDAV | S | P5-12 |  | à faire | |
+| P6-13 | TVmaze, TheTVDB, AniList | M | P5-15 |  | à faire | |
+| P6-14 | fanart.tv, OMDb, Wikipédia et Wikidata | M | P5-15 |  | à faire | |
+| P6-15 | Trakt | M | P5-15 |  | à faire | |
+| P6-16 | OpenSubtitles | M | P5-11 |  | à faire | |
+| P6-17 | Last.fm, Discogs, pochettes Deezer | M | P5-16 |  | à faire | |
+| P6-18 | Paroles synchronisées | M | P5-16, P4-15 |  | à faire | |
+| P6-19 | ScreenScraper | M | P5-16 |  | à faire | |
+| P6-20 | IGDB, TheGamesDB, SteamGridDB | M | P5-16 |  | à faire | |
+| P6-21 | LaunchBox Games DB | M | P5-16 |  | à faire | |
+| P6-22 | RetroAchievements | M | P5-16 |  | à faire | |
+| P6-23 | Lieux des photos | S | P6-02 |  | à faire | |
+| P6-24 | Programme TV | M | P5-06 |  | à faire | |
+| P6-25 | Mesen, Snes9x, mGBA, Rosalie's Mupen GUI | M | P5-19 | 🧑 | à faire | |
+| P6-26 | ares, BlastEm, Mednafen, Flycast | M | P5-19 | 🧑 | à faire | |
+| P6-27 | MAME, Stella, DOSBox Staging, ScummVM | M | P5-19 | 🧑 | à faire | |
+| P6-28 | RPCS3, shadPS4, Vita3K | M | P5-19 | 🧑 | à faire | |
+| P6-29 | xemu, Xenia, émulateur Switch | M | P5-19 | 🧑 | à faire | |
+| P6-30 | Thèmes Mur d'affiches, Salon, Liste compacte | M | P4-25, P4-28 |  | à faire | |
 
 ## Pistes repérées en cours de route
 

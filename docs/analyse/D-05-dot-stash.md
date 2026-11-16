@@ -45,7 +45,8 @@ Conséquences :
 
 **Thèmes.** Proposition : un seul habillage Mire compilé avec le moteur dot-stash, et les cinq thèmes actuels
 (Écran éteint, Plein jour, Minuit, Velours, Contraste élevé) réduits à des **jeux de jetons** (fichiers de propriétés
-CSS) appliqués à l'exécution. Un thème-addon (P3-10) n'est alors qu'un fichier de jetons : ni Sass, ni code.
+CSS) appliqués à l'exécution. Un thème-addon (P3-10) n'est alors qu'un fichier de jetons : ni Sass, ni code. (Depuis G2c : ces jeux de jetons sont
+des palettes, publiées en plugins par P5-02 ; les thèmes sont décrits par D-17 et D-23.)
 
 **Localisation (D-11).** Les textes des composants sont des attributs (`label`, gabarits avec `{count}`) : Mire leur
 passe ses catalogues français et anglais (P1-28), et la langue (`lang`) pour les pluriels.

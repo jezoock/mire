@@ -1,270 +1,206 @@
-# Phase 2 — Frontend avec dot-stash
+# Phase 2 — Éléments, tags et pages
 
-But : remplacer l'interface rendue en chaînes HTML par les composants de `jezoock/dot-stash` (`ds-*`, light DOM)
-et des composants propres à Mire (`mire-*`), toutes les actions passant par `ds-trigger`, et faire du thème un
-simple jeu de jetons, réutilisable par des thèmes-addons. Décision et justification : D-05
-(`docs/analyse/D-05-dot-stash.md`, décidée le 10/11/2026).
+But : remplacer les sections fixes par le modèle de l'architecture cible (`docs/architecture-cible.md`, D-15).
+Tout ce que Mire peut ouvrir devient un **élément** du catalogue, avec des **tags** et des **infos**. Les **pages**
+et les **listes** décrivent ce qu'on affiche et comment on le regroupe. Tout vit dans le processus principal et
+dans `@mire/shared`, derrière le contrat IPC.
+
+Prérequis : point d'étape **G2c** validé (décisions D-14 à D-22).
 
 Principes :
 
-- **dot-stash** fournit les composants génériques (`ds-trigger`, `ds-modal`, `ds-field`, `ds-select`,
-  `ds-toggle`, `ds-panel-group`, `ds-toaster`, `ds-loader`…) et ceux qui lui sont ajoutés pour Mire (`ds-range`,
-  `ds-thumb`, `ds-scroller`, `ds-sortable`, voir la section « Dans dot-stash » de `BACKLOG.md`). Mire l'installe
-  depuis l'archive attachée à une release, épinglée par version ;
-- **`packages/ui` (`@mire/ui`)** contient l'habillage Mire et les composants `mire-*` propres à Mire, en light
-  DOM, construits avec dot-stash comme toolkit (moteur SCSS, utilitaires `labels` et `focus`, conventions de
-  classes et de modificateurs) ;
-- **actions** : chaque action est une méthode publique d'un contrôleur (`mire-app`, `mire-videos`,
-  `mire-games`…) appelée par un `ds-trigger` (`target`, `action='play:["v:/films/Intouchables.mkv"]'`) ;
-  les arguments désignent les éléments par une clé stable (chemin, identifiant), jamais par leur rang ;
-- **thèmes** : un habillage Mire compilé avec le moteur dot-stash, et les cinq thèmes (Écran éteint, Plein jour,
-  Minuit, Velours, Contraste élevé) en jeux de jetons (propriétés CSS) appliqués à l'exécution ;
-- **textes** : tous par les catalogues de P1-28, en français et en anglais, passés aux composants par leurs
-  attributs (`label`, `labels`, gabarits avec `{count}`) avec la langue (`lang`) pour les pluriels. L'interface
-  traduit avec le service de traduction posé par P2-04 (catalogues reçus du processus principal) ;
-- **TypeScript** : `@mire/ui` hérite de `tsconfig.base.json` et passe par `npm run typecheck` ; la vérification
-  des variables inutilisées et des branches oubliées est faite par le compilateur (D-12), pas par ESLint.
+- **L'interface ne change pas dans cette phase.** L'interface historique continue d'utiliser les méthodes IPC
+  actuelles, qui restent servies jusqu'à son retrait (P4-23). Les nouvelles méthodes (`catalog.*`, `pages.*`,
+  `lists.*`, `files.*`) sont testées sans interface. Exception : P2-04 fait passer les infos modifiées à la main par
+  le nouveau stockage, derrière l'API actuelle.
+- **Sources, tags automatiques et infos en ligne restent du code interne.** Leurs interfaces (`ElementSource`,
+  `Tagger`, `MetadataProvider`) sont posées dans `src/main/catalog/types.ts` ; la phase 3 les publiera dans le SDK,
+  et la phase 5 les déplacera dans des plugins.
+- **Logique déplacée = logique testée** : ce qui quitte `src/renderer/domain/` ou `app.js` (regroupement des
+  séries, des albums, des photos, recherche) garde ses tests et en gagne pour le nouveau comportement.
+- **Performance** : objectif de l'architecture cible, une page calculée en moins de 50 ms pour 20 000 éléments.
+  Un générateur de catalogue factice (`test/fixtures/catalog-factice.ts`) sert à le mesurer, dès P2-04.
+- **Documentation** : chaque tâche met à jour `docs/architecture.md` (modules, flux, contrat IPC) pour ce qu'elle
+  ajoute.
 
-Stratégie : migration **progressive**. Les composants sont des balises standards : la coquille héberge d'abord
-les vues historiques (`mire-legacy-view`), puis chaque tâche remplace une vue. L'application reste utilisable et
-testable après chaque PR. Les captures de P0-09 servent de référence ; l'habillage vise le rendu actuel, et tout
-écart visible est justifié dans la PR et ses captures sont mises à jour.
-
-Prérequis : point d'étape **G2** ; phase 1 terminée (au minimum P1-08, P1-22 à P1-24 et P1-26) ; une release de
-dot-stash avec son archive et son moteur SCSS (DS-01, DS-02), dépôt dot-stash public (DS-08, D-13). Après P2-01
-à P2-04, point d'étape **G2b** avant de migrer les vues.
+À la fin de la phase, point d'étape **G3** : bilan du modèle (types, IPC, mesures) avant de construire les plugins
+et l'interface dessus.
 
 ---
 
-## P2-01 — Intégration de dot-stash et `@mire/ui`
+## P2-01 — Modèle d'élément et catalogue
 
-- **Dépend de** : G2, DS-01, DS-02, DS-08 · **Taille** : M
-- **Objectif** : prouver la chaîne complète dans Electron et trancher les questions techniques avant d'écrire des
-  composants.
+- **Dépend de** : G2c · **Taille** : M
+- **Objectif** : poser le type `Element` et le catalogue qui les garde, avant d'y brancher les sources.
 - **À faire**
-  1. Dépendance `dot-stash` installée depuis l'archive de la release (adresse versionnée, empreinte dans
-     `package-lock.json`, dépôt public : aucun jeton, D-13) ; mise à jour documentée dans le README (changer la
-     version, `npm install`).
-  2. Chargement des composants dans le renderer avec la CSP actuelle (`script-src 'self'`, `file://`) : essayer
-     le chargeur paresseux copié dans `dist/renderer/` ; sinon des imports par composant (`dist-custom-elements`,
-     tâche B-122 de dot-stash) intégrés au bundle esbuild du renderer (P1-22). Mesurer le temps de démarrage.
-  3. Paquet `packages/ui` (`@mire/ui`) : Stencil (version de dot-stash, figée), sortie en light DOM
-     (`shadow: false`), feuille de style compilée avec le moteur SCSS de dot-stash (`sass` en dépendance de
-     développement) ; composant de démonstration `mire-demo` affiché dans une vue existante (cohabitation avec le
-     gabarit HTML historique). Son `tsconfig.json` hérite de `tsconfig.base.json` et `npm run typecheck` le
-     vérifie (D-12).
-  4. Tests de composants : l'outil de dot-stash (Vitest, tests unitaires et navigateur) intégré à `npm test` et à
-     la CI, ou une alternative sans nouvelle dépendance si elle suffit ; justifier le choix (D-03 : dépendances
-     minimales).
-  5. Page de démonstration interne (cachée) montrant les composants `ds-*` utilisés par Mire dans les cinq thèmes.
-  6. `docs/adr/0001-dot-stash.md` : livraison, chargement, `@mire/ui`, conventions (préfixe `mire-`, classes et
-     modificateurs à la manière de dot-stash, événements `mire*`), tests, mode `watch`.
-- **Critères d'acceptation** : `npm start` affiche le composant de démonstration et un `ds-trigger` fonctionnel ;
-  CSP inchangée ; `npm run typecheck` couvre `packages/ui` ; ADR relu au point G2b.
+  - types dans `@mire/shared` : `Element`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, origine
+    d'un tag ou d'une info (`file`, `source`, `tagger`, `metadata`, `user`) ;
+  - règles des **clés stables** pour chaque genre d'élément actuel : fichier local, fichier d'un serveur web, entrée
+    d'une liste M3U, jeu de console, jeu PC, chaîne de télévision, site, marque-page. Une clé ne dépend jamais du
+    rang d'un élément ni d'un nom affiché ;
+  - `src/main/catalog/` : stockage en mémoire, persistance par emplacement de source dans `userData/catalog/`
+    (écriture sûre de `src/main/storage/json-store.ts`), événements « éléments ajoutés, changés, retirés » ;
+  - `catalog.element(key)` dans le contrat IPC.
+- **Critères d'acceptation** : tests des règles de clés (mêmes clés après une nouvelle analyse, après un
+  redémarrage, pour un chemin Windows et un chemin POSIX) ; aller-retour de la persistance ; aucun changement
+  visible.
 
 ---
 
-## P2-02 — Habillage Mire et thèmes en jeux de jetons
+## P2-02 — Sources de la bibliothèque → éléments
 
 - **Dépend de** : P2-01 · **Taille** : M
-- **Objectif** : un système de thèmes indépendant des composants, où un thème n'est qu'un fichier de jetons.
+- **Objectif** : les fichiers trouvés par la bibliothèque deviennent des éléments.
 - **À faire**
-  - thème Mire sur le moteur dot-stash (`packages/ui/src/theme/`) : habillage des contrôles (`.ds-button`,
-    `.ds-link`, `.ds-control` et leurs modificateurs), des composants `ds-*` utilisés et des `mire-*` ; échelles
-    agrandies pour la lecture à distance (« 10-foot UI ») ;
-  - un fichier de jetons par thème (`themes/ecran.css`, `jour.css`, `minuit.css`, `velours.css`,
-    `contraste.css`), valeurs reprises de `styles.css` ; métadonnées (nom, description, couleur de fond de
-    fenêtre, clair ou sombre) dans un `theme.json` à côté ;
-  - chargeur de thème (mode « Automatique » compris), bascule à l'exécution sans rechargement ; le processus
-    principal lit la couleur de fond de fenêtre dans les métadonnées (fin de la copie `THEME_BG`) ;
-  - liste des jetons qu'un thème peut définir, tenue à jour dans `docs/themes.md`.
-- **Critères d'acceptation** : la page de démonstration et l'accueil s'affichent dans les cinq thèmes ; changer de
-  thème reste immédiat ; contrastes du thème « Contraste élevé » vérifiés.
+  - interface `ElementSource` (`src/main/catalog/types.ts`) : identifiant, emplacements gérés, analyse qui produit
+    des éléments, **tags de source** déclarés (par exemple `remote` pour un serveur web) ;
+  - adaptateurs pour les fournisseurs actuels de `src/main/library/providers/` (dossier local et partage réseau,
+    serveur web, liste M3U), sous-titres compris ;
+  - chaque analyse de la bibliothèque alimente aussi le catalogue ; `library.scan` et les méthodes actuelles
+    continuent de renvoyer les `LibraryItem` attendus par l'interface historique.
+- **Critères d'acceptation** : tests avec les dossiers de test existants ; un élément par fichier, avec ses tags de
+  source ; analyses répétées sans doublon.
 
 ---
 
-## P2-03 — Navigation clavier et manette sur les composants
+## P2-03 — Jeux, télévision et sites → éléments
 
-- **Dépend de** : P2-01, P1-24 · **Taille** : L · 🧑
-- **Objectif** : garder la navigation spatiale de Mire (flèches, manette, contextes) sur les composants `ds-*` et
-  `mire-*`.
-- **À faire** : service `focus` qui choisit les candidats avec les aides de dot-stash (`isFocusable`,
-  `checkVisibility` : ni masqués ni inertes) et `pickNeighbor` (P1-24) ; cohabitation avec les composants qui
-  utilisent déjà les flèches (onglets de `ds-panel-group`, `ds-combo`, `ds-select`, `ds-scroller`) ; le bouton A
-  de la manette clique l'élément focalisé (`ds-trigger` gère lui-même Entrée et Espace : pas de double
-  déclenchement) ; B et Retour ; portée limitée à la boîte de dialogue au premier plan (`ds-modal`) ; restauration
-  du focus au retour d'un lecteur ; contextes de la manette (liste, vidéo, images, site, dialogue) ; défilement
-  de la liste au stick droit ; règle des éléments désactivés : aujourd'hui `pickNeighbor` n'écarte que ceux dont
-  la propriété `disabled` est vraie, un composant désactivé par l'attribut `disabled` ou par `aria-disabled`
-  resterait une destination (piste de P1-24) : décider et tester la règle pour les `ds-*` et `mire-*`.
-- **Critères d'acceptation** : tests du service (navigateur) ; 🧑 parcours manette complet sur les vues migrées et
-  historiques (les deux coexistent).
+- **Dépend de** : P2-02 · **Taille** : M
+- **Objectif** : le reste de ce que Mire ouvre devient aussi des éléments.
+- **À faire** : adaptateurs `ElementSource` pour
+  - les jeux de console (`src/main/games/roms/`, jeux sur disque compris) : tag `game`, info `system` ;
+  - les jeux PC (`src/main/games/pc/`) et les jeux ajoutés à la main : tag `game`, info `system` = `pc` ;
+  - les marque-pages de jeux à télécharger (`src/main/games/bookmarks.ts`) ;
+  - les chaînes de télévision (`src/main/tv/`) : tag `tv` ;
+  - les sites et marque-pages de sites (`src/main/web/entries.ts`) : tag `stream`, info `category` (vidéo,
+    musique, jeux…).
+- **Critères d'acceptation** : tests par adaptateur ; le catalogue contient toutes les sortes d'éléments de la
+  configuration de démonstration ; aucun changement visible.
 
 ---
 
-## P2-04 — Contrôleurs et actions
+## P2-04 — Moteur de tags et d'infos
 
-- **Dépend de** : P2-01, P1-22, P1-23 · **Taille** : M
-- **Objectif** : remplacer le `switch` de ~120 actions par des méthodes publiques de contrôleurs, appelées par
-  `ds-trigger`.
+- **Dépend de** : P2-02 · **Taille** : L
+- **Objectif** : calculer les tags et les infos effectifs de chaque élément, et les retrouver vite.
 - **À faire**
-  - `mire-app` (navigation entre sections, recherche, réglages, notifications) et un contrôleur par section
-    (`mire-home`, `mire-search`, `mire-videos`, `mire-music`, `mire-images`, `mire-streaming`, `mire-tv`,
-    `mire-games`, `mire-store`, `mire-downloads`, `mire-settings`), branchés sur l'état et le client API de
-    P1-22 et la logique de P1-23 ;
-  - conventions : noms des méthodes, arguments JSON par clé stable, retour d'erreur (toast), actions
-    asynchrones (état « en cours » du `ds-trigger`) ;
-  - pont temporaire : les `data-action` des vues historiques appellent les mêmes méthodes, pour que les deux
-    interfaces cohabitent ;
-  - les modules `nav/` et `players/` (P1-24) reçoivent aujourd'hui les actions de l'interface (retour, modifier,
-    lecteur externe, vue web…) par des objets de rappels fournis par `app.js` : ces rappels deviennent des appels
-    aux méthodes des contrôleurs ;
-  - service de traduction de l'interface (`src/renderer/i18n/` ou `@mire/ui`) : catalogues demandés au
-    démarrage par `api.i18nGet()`, moteur de `@mire/shared/i18n`, fonction `t()` et langue courante pour les
-    contrôleurs et les composants ; suit `api.onLanguageChange` (événement `i18n:changed`) ; tient à jour
-    l'attribut `lang` du document (aujourd'hui `<html lang="fr">` en dur). Les vues historiques restent en
-    français jusqu'à leur migration ;
-  - script de vérification (`npm run check:actions`, en CI) : chaque `action` d'un `ds-trigger` des gabarits
-    désigne une méthode existante du contrôleur visé.
-- **Critères d'acceptation** : tests des contrôleurs (méthodes appelées avec des clés, erreurs) et du service de
-  traduction (catalogues reçus, changement de langue, `lang` du document) ; le script de vérification passe ;
-  captures identiques.
+  - tags selon le type de fichier, tirés des formats reconnus (`KIND`, `EXT` de `@mire/shared`) : `video`, `audio`,
+    `image` ; règles par extension gardées dans la configuration, modifiables ;
+  - fusion des origines et **priorités** de l'architecture cible (à la main, puis infos en ligne, puis tags
+    automatiques, puis source) ; un **retrait** à la main l'emporte sur l'automatique et survit aux analyses ;
+  - stockage des modifications faites à la main (`userData/catalog/overrides.json`) qui reprend
+    `src/main/meta/user-meta.ts` : l'API actuelle des infos modifiées à la main devient une façade sur ce stockage,
+    pour que l'interface historique continue de fonctionner ;
+  - registre des tags et des infos : identifiants du cœur (anglais, stables), noms affichés par les catalogues de
+    textes (français et anglais), type de valeur d'une info ; tags créés par l'utilisateur ;
+  - index en mémoire (tag → clés ; info → valeurs → clés) mis à jour par les événements du catalogue ;
+  - générateur de catalogue factice pour les mesures ;
+  - IPC : `catalog.setTags`, `catalog.setInfos`, `tags.list`.
+- **Critères d'acceptation** : tests des priorités et des retraits ; migration des infos modifiées à la main sans
+  perte ; requête « tous les éléments qui portent `video` et `series` » en moins de 50 ms sur 20 000 éléments
+  factices (mesure dans la PR).
 
 ---
 
-## P2-05 — Composants médias
+## P2-05 — Tags automatiques existants
 
-- **Dépend de** : P2-02, P2-03, P2-04, DS-04, DS-05 · **Taille** : M
-- **À faire** : `mire-tile` (un `ds-trigger` autour d'un `ds-thumb`, titre, sous-titre, badge, jauge de
-  reprise), `mire-grid` (groupes, « Afficher plus »), rangées défilantes avec `ds-scroller`, `mire-focus-info`
-  (panneau d'infos de l'élément sélectionné), `mire-backdrop` (fondu entre deux images).
-- **Critères d'acceptation** : tests ; une grille de 5 000 éléments reste fluide (mesure dans la PR) ; navigation
-  à la manette dans une grille et une rangée.
-
----
-
-## P2-06 — Boîtes de dialogue et formulaires
-
-- **Dépend de** : P2-02, P2-03 · **Taille** : M
-- **À faire** : équivalent d'`openForm` sur `ds-modal` et `ds-field` / `ds-select` / `ds-toggle` (champs texte,
-  liste, image, zone de texte, actions, résultat par promesse), confirmation, choix de la bonne fiche (image de
-  secours), panneau de réglages de page à onglets (`ds-panel-group`) ; pile des fenêtres ouvertes (la dernière
-  reçoit clavier et manette) ; la vue web native est masquée pendant qu'une fenêtre est ouverte, puis réaffichée ;
-  notifications par `ds-toaster`.
-- **Critères d'acceptation** : tests ; les boîtes historiques peuvent appeler ces composants (cohabitation).
-
----
-
-## P2-07 — Coquille de l'application
-
-- **Dépend de** : P2-05, P2-06 · **Taille** : L
-- **À faire** : `mire-app` complet, `mire-rail` (gauche, droite, haut, bas ; rétractable ; carrousel ; sites
-  ouverts sous Streaming et Jeux ; badge des téléchargements), `mire-header` (titre, outils de section, recherche,
-  rouage, horloge), `mire-padbar` (barre de rappel de la manette), routeur par état (sections, sous-vues : série,
-  saison, console), `mire-legacy-view` qui héberge une vue historique non encore migrée ; `index.html` ne contient
-  plus que `<mire-app>`.
-- **Critères d'acceptation** : captures de toutes les sections (identiques ou écarts justifiés) ; menu dans les
-  quatre positions ; parcours manette du menu.
+- **Dépend de** : P2-04 · **Taille** : M
+- **Objectif** : ce que l'interface devine aujourd'hui d'après les noms et les dossiers devient des tags et des
+  infos, calculés dans le processus principal.
+- **À faire**
+  - interface `Tagger` : reçoit un élément, renvoie des tags et des infos ; rapide, sans réseau ;
+  - cinq tags automatiques internes (ils deviendront les plugins inclus de la phase 5) :
+    - séries : `series`, infos `series`, `season`, `episode` (`parseVideo`) ;
+    - films : `movie`, infos `title`, `year` (`parseVideo`) ;
+    - musique : infos `artist`, `album`, `track` d'après les dossiers (logique de `src/renderer/domain/items.ts`) ;
+    - consoles : info `system` (`guessSystem`) ;
+    - photos : info `folder` (regroupement par dossier de `app.js`) ;
+  - le sixième de l'inventaire (genres et années) vient des infos en ligne : P2-06 ;
+  - la logique reprise de `src/renderer/domain/` passe dans `@mire/shared` ou `src/main/catalog/` ; l'interface
+    historique continue d'utiliser ses fonctions jusqu'à P4-23 (pas de copie : elle importe la version déplacée).
+- **Critères d'acceptation** : tests de chaque tag automatique, en reprenant les cas des tests actuels
+  (`test/renderer/`, `test/shared/`) ; « Friends S01E03.mkv » porte `video`, `series`, `series` = « Friends »,
+  `season` = 1, `episode` = 3.
 
 ---
 
-## P2-08 à P2-18 — Migration des sections (une tâche par section)
+## P2-06 — Infos en ligne dans le catalogue
 
-Chaque tâche remplace une vue historique par ses composants, supprime le code correspondant de `app.js` (gabarits
-et cas du `switch`), garde le comportement et ajoute des tests. Critères communs : capture identique (ou écart
-justifié), parcours clavier et manette, aucune régression du test de fumée, actions par `ds-trigger` uniquement
-(le script de P2-04 passe), **aucun texte écrit en dur : tout passe par les catalogues de P1-28, en français et en
-anglais**.
-
-| Tâche | Section | Contenu | Taille |
-| --- | --- | --- | --- |
-| P2-08 | Accueil | horloge, barres de la mire, « Vos services », « Reprendre », personnalisation | S |
-| P2-09 | Recherche globale | résultats locaux, films et séries (TMDB), sites, télévision, jeux, images, recherches récentes | M |
-| P2-10 | Vidéos | grille, séries → saisons → épisodes, filtres genre/source, tri, source de recherche, panneau d'infos | M |
-| P2-11 | Musique | albums, morceaux, morceau en cours, `mire-mini-player` | M |
-| P2-12 | Images | grille groupée, `mire-image-viewer` (diaporama, préchargement) | S |
-| P2-13 | Lecteur vidéo | `mire-video-player` : OSD (`ds-range` pour la position et le volume), sous-titres, reprise, son absent, lecteur externe | M |
-| P2-14 | Streaming et vue web | services par catégorie, `mire-webbar`, `mire-web-slot` (position de la vue native, `ResizeObserver`) | M |
-| P2-15 | Télévision | chaînes, services, portail web | S |
-| P2-16 | Jeux | liste unifiée, filtres système/genre, console, jeux en ligne, marque-pages « à télécharger », suppression | L |
-| P2-17 | Boutique | cartes d'émulateurs, choix des consoles RetroArch, BIOS, jeux libres, import | M |
-| P2-18 | Téléchargements | liste, mises à jour fines (sans redessin de la page), ajout de lien et de `.torrent` | S |
-
-Dépendances : toutes dépendent de P2-07 ; P2-13 avant P2-10 (le lecteur est ouvert depuis les vidéos) ;
-P2-11 et P2-13 partagent le volume (P1-24). 🧑 pour P2-13 et P2-14 (lecture réelle, Widevine).
-
-Points particuliers (pistes du BACKLOG) :
-
-- **P2-13** : les textes du lecteur et de la manette (affichage sur la vidéo, rappel des boutons, messages),
-  déplacés tels quels dans `players/` et `nav/` par P1-24, passent par les catalogues ;
-- **P2-14** : le nom et la couleur d'une vue `rom:`, `bm:` ou `tv:` viennent de l'état publié par le processus
-  principal (`web-state` : `name`, `color`) ; l'interface ne les reconstitue plus avec ses propres couleurs ;
-- **P2-15** : la variante d'une chaîne (qualité préférée du service, `hd` par défaut) est choisie par le service
-  de télévision du processus principal ; l'interface n'ordonne plus les qualités ;
-- **P2-15, P2-16, P2-17** : les annonces (service de télévision détecté, « jeu ajouté », progression de la
-  boutique) sont rédigées par les catalogues à partir des données du processus principal.
+- **Dépend de** : P2-04 · **Taille** : M
+- **Objectif** : les fiches des fournisseurs d'infos (`src/main/scrape/`) alimentent les infos et les images des
+  éléments.
+- **À faire** : base des fiches indexée par clé d'élément (migration des clés actuelles : chemin, `scrapeKey`,
+  `metaKey`) ; une fiche devient des infos d'origine `metadata` (titre, année, genres, résumé) et des images
+  (affiche, fond, logo) ; ordre de priorité des fournisseurs dans la configuration ; les recherches en cours et
+  l'annulation restent celles du moteur actuel.
+- **Critères d'acceptation** : tests de la migration des clés (aucune fiche perdue) ; une fiche TMDB factice se
+  retrouve dans les infos de l'élément, sous la valeur saisie à la main si elle existe.
 
 ---
 
-## P2-19 — Réglages
+## P2-07 — Pages et regroupements
 
-- **Dépend de** : P2-07, P1-26, DS-06 · **Taille** : M
-- **À faire** : page Réglages et panneaux de page générés depuis le schéma de P1-26 (`ds-field`, `ds-select`,
-  `ds-toggle`, `ds-toggle-group`) ; cartes de thème avec aperçu réel ; listes ordonnables (`ds-sortable`) ;
-  sources ; configuration (import, export).
-  - **Textes du schéma par les catalogues** : les libellés et aides du schéma sont aujourd'hui du français écrit
-    en dur (`SettingsText = string`) ; ils deviennent des clés de catalogue tirées des identifiants
-    (`settingsTextKey`, déjà prévu par P1-26), avec leurs textes en français et en anglais, et le type
-    `SettingsText` devient une clé ; `docs/settings-schema.md` mis à jour.
-  - **Réglages de langue dans le schéma** : `ui.language` (« Automatique », puis les langues disponibles) et
-    `search.language` (langue des fiches : vide = comme l'interface), dont P2-23 a besoin ; le schéma n'a
-    aujourd'hui ni l'un ni l'autre.
-  - Texte d'état du bloqueur désactivé et jamais chargé : « Les listes se téléchargent quand le bloqueur est
-    activé » (aujourd'hui « au premier lancement », inexact depuis P1-13).
-- **Changement visible à valider en revue** : tous les champs s'enregistrent dès qu'ils changent ; seul l'éditeur
-  JSON « Sites, jeux et consoles » garde son bouton « Enregistrer ».
+- **Dépend de** : P2-03, P2-05, P2-06 · **Taille** : L
+- **Objectif** : le moteur qui calcule ce qu'une page affiche.
+- **À faire**
+  - type `PageDefinition` et son schéma JSON dans `@mire/shared` (exemple de l'architecture cible) ;
+  - `userData/catalog/pages.json` ; les sept pages prêtes à l'emploi (Films, Séries, Musique, Images, Streaming,
+    Télévision, Jeux) en données intégrées (elles deviendront un plugin inclus en P5-03) ;
+  - calcul d'une page : `require`, `exclude`, `where` (égal, contient, entre deux valeurs), regroupements sur
+    plusieurs niveaux (`groupBy`), groupe « Autres » pour les éléments sans l'info, tri, résultats par tranches
+    (curseur) ;
+  - IPC : `pages.list`, `pages.get`, `pages.save`, `pages.remove`, `catalog.page(pageId, path, cursor)` ; événement
+    quand le contenu d'une page change.
+- **Critères d'acceptation** : tests de chaque option ; Séries → Friends → Saison 1 → épisodes dans l'ordre ;
+  page Jeux groupée par console ; mesure sur 20 000 éléments factices dans la PR.
 
 ---
 
-## P2-20 — Éditeurs
+## P2-08 — Listes
 
-- **Dépend de** : P2-06, P2-10, P2-16 · **Taille** : M
-- **À faire** : modifier un média, un album, un morceau, un jeu, une console ; recherche en ligne et choix de
-  fiche ; images (choisir, retirer) ; réinitialisation.
-
----
-
-## P2-21 — Retrait de l'interface historique et audits
-
-- **Dépend de** : P2-08 à P2-20 · **Taille** : M · 🧑
-- **À faire** : suppression de `app.js` et de ce qui en reste, de `styles.css` monolithique, de
-  `mire-legacy-view` et du pont `data-action` ; audit accessibilité (lecteur d'écran sur les parcours principaux,
-  contrastes du thème « Contraste élevé ») ; performance (bibliothèque factice de 20 000 éléments : temps
-  d'affichage, mémoire) ; comparaison visuelle automatique des captures (seuil de tolérance) ajoutée au test de
-  bout en bout.
-- **Critères d'acceptation** : plus aucun `innerHTML` construit à partir de données ; mesures dans la PR.
+- **Dépend de** : P2-07 · **Taille** : S
+- **Objectif** : les regroupements faits à la main, ordonnés.
+- **À faire** : `userData/catalog/lists.json` ; créer, renommer, supprimer une liste ; ajouter, retirer, déplacer
+  des éléments ; un élément disparu du catalogue reste dans la liste, marqué indisponible, jusqu'à ce qu'il revienne
+  ou qu'on le retire ; une liste utilisable comme page (`catalog.page` sur une liste) ; IPC `lists.*`.
+- **Critères d'acceptation** : tests (ordre gardé, élément disparu puis revenu).
 
 ---
 
-## P2-22 — Guide « Créer un thème »
+## P2-09 — Recherche dans le catalogue
 
-- **Dépend de** : P2-02, P2-21 · **Taille** : S
-- **À faire** : `docs/themes.md` complet (jetons, métadonnées `theme.json`, exemples), un thème d'exemple (par
-  exemple « Néon ») livré comme futur addon de thème : un fichier de jetons et ses métadonnées, sans Sass ni code ;
-  captures.
+- **Dépend de** : P2-07 · **Taille** : M
+- **Objectif** : chercher dans tous les éléments, leurs infos et leurs tags, côté processus principal.
+- **À faire** : `catalog.search(query, options)` (noms, infos texte, noms des tags ; sans tenir compte des accents
+  ni de la casse, en reprenant `src/renderer/domain/search.ts`) ; résultats groupés par page ; les fournisseurs
+  `SearchProvider` (« Où regarder ») restent interrogés à part, comme aujourd'hui.
+- **Critères d'acceptation** : tests repris de la recherche actuelle ; mesure sur 20 000 éléments factices.
 
 ---
 
-## P2-23 — Sélecteur de langue et finitions de la localisation
+## P2-10 — Gestion des fichiers
 
-- **Dépend de** : P2-19, P2-21, P1-28, P1-29 · **Taille** : S
-- **À faire** : choix de la langue dans Réglages (« Automatique », français, anglais, puis les packs installés en
-  phase 3) avec bascule immédiate, et de la langue des fiches (`search.language` : « Comme l'interface » ou une
-  langue) ; attribut `lang` du document (posé par le service de P2-04) vérifié pour les pluriels des composants
-  dot-stash ; menu de macOS : les libellés des rôles Electron (`appMenu`, `editMenu`, `windowMenu`), fixés en
-  anglais par Electron, pris dans les catalogues ;
-  vérification des mises en page avec les textes anglais (souvent plus courts, parfois plus longs : boutons,
-  en-têtes, menu en carrousel) ; captures de référence en anglais ajoutées au test de bout en bout ;
-  `npm run i18n:check` vert.
-- **Critères d'acceptation** : toute l'application est utilisable en anglais sans redémarrage ; aucun texte
-  français ne reste visible avec l'anglais choisi (parcours de toutes les sections).
+- **Dépend de** : P2-02 · **Taille** : M
+- **Objectif** : le service qui permettra à l'explorateur de renommer, déplacer et supprimer (D-16).
+- **À faire** : `src/main/fs/` ou `src/main/files/` : renommer, déplacer, supprimer un fichier ou un dossier
+  **uniquement dans les dossiers autorisés**, par la politique d'accès (`src/main/security/`) et le contrôle de
+  chemin de la suppression des jeux (`src/main/games/delete.ts`, P0-06) ; refus d'un chemin hors des dossiers, d'un
+  lien symbolique qui en sort, d'un dossier racine ; le catalogue suit (clé mise à jour au renommage, modifications
+  faites à la main conservées) ; IPC `files.rename`, `files.move`, `files.remove`. La confirmation est demandée par
+  l'interface (P4-09).
+- **Critères d'acceptation** : tests de sécurité (chemins hors des dossiers, `..`, liens symboliques, racines) ;
+  tests du suivi par le catalogue.
+
+---
+
+## P2-11 — Migration de la configuration (v9)
+
+- **Dépend de** : P2-07, P2-08 · **Taille** : M
+- **Objectif** : une installation existante retrouve ses sections sous forme de pages.
+- **À faire** : migration v8 → v9 dans `src/main/config/` : chaque section devient la page prête à l'emploi
+  correspondante ; une section masquée devient une page non épinglée ; l'ordre et la position du menu sont gardés ;
+  « Vos services » et les rangées de l'accueil deviennent des réglages de l'accueil ; les positions de reprise et les
+  recherches récentes sont rattachées aux clés d'éléments. Les réglages qui iront aux plugins ne bougent pas ici
+  (P5-01).
+- **Critères d'acceptation** : tests avec `test/fixtures/config-v*.json` et une configuration v8 complète ; aucune
+  donnée perdue ; la configuration migrée se réimporte.
