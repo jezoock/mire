@@ -1,0 +1,13 @@
+{
+  "name": "@mire/ui",
+  "version": "1.0.0",
+  "description": "Composants mire-* de l'interface de Mire, construits avec Stencil et le moteur SCSS de dot-stash",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/components/index.js",
+    "./utils": "./src/utils/index.ts",
+    "./styles": "./src/styles/index.scss"
+  }
+}

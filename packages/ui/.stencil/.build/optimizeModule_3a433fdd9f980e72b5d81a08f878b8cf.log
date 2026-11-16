@@ -1,0 +1,1 @@
+import{transformTag as e}from"@stencil/core/internal/client";export{getAssetPath,render,setAssetPath,setNonce,setPlatformOptions}from"@stencil/core/internal/client";const t=t=>{"undefined"!=typeof customElements&&[].forEach((n=>{customElements.get(e(n.is))||customElements.define(e(n.is),n,t)}))};export{t as defineCustomElements}

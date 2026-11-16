@@ -24,7 +24,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "i18n:check": "node scripts/i18n-check.mjs",
-    "typecheck": "tsc -p tsconfig.json && tsc -p packages/shared/tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p packages/shared/tsconfig.json && tsc -p packages/ui/tsconfig.json",
     "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.ts\"",
     "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/smoke.e2e.js",
     "dist": "node -e \"require('electron')\" && node scripts/build.mjs && npx --yes electron-builder@26.17.0 --publish never"
@@ -36,12 +36,15 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@stencil/core": "4.45.2",
+    "dot-stash": "https://github.com/jezoock/dot-stash/releases/download/v0.2.0/dot-stash-0.2.0.tgz",
     "electron": "https://github.com/castlabs/electron-releases#v44.9.3+wvcus",
     "esbuild": "0.28.2",
     "eslint": "10.13.0",
     "globals": "17.13.0",
     "playwright-core": "1.64.1",
     "prettier": "3.9.10",
+    "sass": "1.107.1",
     "typescript": "6.0.3"
   },
   "overrides": {

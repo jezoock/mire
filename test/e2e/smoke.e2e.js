@@ -191,6 +191,63 @@ describe('Test de fumée de Mire', () => {
     await settle();
   });
 
+  // Composants de l'interface (P4-01) : chargeur de dot-stash sous la CSP, composants mire-* de @mire/ui, ds-trigger.
+  // Tests de composants dans Electron, le moteur de Mire, sans autre outil que Playwright (docs/adr/0001-dot-stash.md).
+  it("la page de démonstration de l'interface affiche les composants ds-* et mire-demo", async () => {
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    page.on('pageerror', onError);
+    page.on('console', onConsole);
+    try {
+      // Textes attendus : ceux des catalogues, dans la langue retenue par Mire.
+      const texts = await page.evaluate(async () => {
+        const info = await window.api.i18nGet();
+        const demo = info.catalogs[info.language].messages.demo;
+        return { lang: info.language, title: demo.title, count: demo.component.count };
+      });
+      const countText = (n) => (new Intl.PluralRules(texts.lang).select(n) === 'one' ? texts.count.one : texts.count.other).replace('{count}', n);
+
+      await page.evaluate(() => (location.hash = 'demo'));
+      await page.waitForFunction(() => document.body.dataset.section === 'demo');
+      assert.equal(await page.locator('#title').textContent(), texts.title);
+      const trigger = page.locator('mire-demo .mire-demo__action');
+      await trigger.and(page.locator('.hydrated')).waitFor();
+      // Chaque composant ds-* de la page a été chargé par le chargeur paresseux (classe hydrated).
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll('#view *')].filter((e) => e.localName.startsWith('ds-')).every((e) => e.classList.contains('hydrated')),
+      );
+      assert.equal(await page.locator('.mire-ui-demo__palette').count(), 5);
+      assert.equal(await page.locator('mire-demo .mire-demo__count').textContent(), countText(0));
+
+      // ds-trigger appelle la méthode publique du composant : au clic, puis à la touche Entrée (une seule fois).
+      await page.evaluate(() => {
+        window.__mireDemo = [];
+        document.querySelector('mire-demo').addEventListener('mireDemoChange', (e) => window.__mireDemo.push(e.detail.count));
+      });
+      await trigger.click();
+      await page.locator('mire-demo .mire-demo__count', { hasText: countText(1) }).waitFor();
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await page.locator('mire-demo .mire-demo__count', { hasText: countText(2) }).waitFor();
+      assert.deepEqual(await page.evaluate(() => window.__mireDemo), [1, 2]);
+
+      // La CSP de la fenêtre principale est inchangée.
+      const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
+      assert.equal(
+        csp,
+        "default-src 'self'; img-src 'self' media: data: blob: https: http:; media-src 'self' media: blob: http: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self' media:",
+      );
+      await settle();
+      await shot('demo-interface');
+      assert.deepEqual(errors, []);
+    } finally {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+    }
+  });
+
   it("l'accueil s'affiche dans chaque thème", async () => {
     for (const theme of THEMES.slice(1)) {
       await goByKeyboard('settings');

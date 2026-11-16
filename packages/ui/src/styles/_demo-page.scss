@@ -1,0 +1,55 @@
+@use 'pkg:dot-stash/scss/themes/default/tokens' as *;
+
+// Page de démonstration interne (cachée) : les composants ds-* dans les cinq thèmes actuels. En attendant les
+// palettes (P4-02), chaque cadre porte un data-theme de styles.css et ce pont temporaire relie quelques jetons de
+// dot-stash aux couleurs du thème. Les jetons qui en dérivent (colorset) sont redéclarés dans le cadre, sans quoi
+// ils garderaient la valeur résolue sur :root.
+.mire-ui-demo {
+  display: grid;
+  gap: ds-spacing(5);
+  padding-bottom: ds-spacing(6);
+
+  &__palettes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &__palette {
+    --ds-color-primary-base: var(--bar-blue);
+    --ds-color-primary-dark: color-mix(in srgb, var(--bar-blue) 80%, #000);
+    --ds-color-primary-darker: color-mix(in srgb, var(--bar-blue) 60%, #000);
+    --ds-color-primary-light: color-mix(in srgb, var(--bar-blue) 25%, var(--surface));
+    --ds-color-gray-white: var(--surface);
+    --ds-color-gray-darkest: var(--text);
+    --ds-color-gray-dark: var(--muted);
+    --ds-color-gray-base: var(--line-strong);
+    --ds-color-gray-light: var(--line);
+
+    @include ds-tokens(colorset);
+
+    display: grid;
+    gap: ds-spacing(3);
+    padding: ds-spacing(4);
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: ds-radius(md);
+  }
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(3);
+    align-items: center;
+  }
+
+  &__name {
+    margin: 0;
+    font-weight: 700;
+  }
+}
+
+.mire-ui-demo__thumb {
+  width: 4rem;
+}

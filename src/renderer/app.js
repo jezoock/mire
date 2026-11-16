@@ -19,6 +19,7 @@ import { setVolume } from './players/volume.ts';
 import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
 import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
+import { DEMO_SECTION, demoTitle, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
@@ -221,6 +222,14 @@ function go(section, { focus = 'keep' } = {}) {
   if (section === 'tv' && !S.channels && !S.tvLoading) loadChannels();
 }
 
+// Page de démonstration de l'interface (P4-01), cachée : ouverte par l'adresse #demo (voir demo/index.ts).
+async function openDemoFromHash() {
+  if (!isDemoHash(location.hash)) return;
+  await loadDemoTexts();
+  go(DEMO_SECTION, { focus: 'content' });
+}
+addEventListener('hashchange', openDemoFromHash);
+
 function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
   if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
@@ -318,13 +327,13 @@ function render({ resetScroll = false } = {}) {
   const selector = hadFocus ? focusSelectorOf(active) : null;
 
   const sec = S.section;
-  titleEl.textContent = sec === 'games' && S.romsOf != null ? (consoleOf(S.romsOf)?.name || 'Jeux') : TITLES[sec];
+  titleEl.textContent = sec === 'games' && S.romsOf != null ? (consoleOf(S.romsOf)?.name || 'Jeux') : sec === DEMO_SECTION ? demoTitle() : TITLES[sec];
   searchEl.hidden = !SEARCHABLE.has(sec);
   searchEl.placeholder = sec === 'tv' ? 'Rechercher une chaîne' : 'Rechercher';
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { home: viewHome, search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings };
+  const views = { home: viewHome, search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings, [DEMO_SECTION]: viewDemo };
   viewEl.innerHTML = views[sec]();
   if (resetScroll) viewEl.scrollTop = 0;
 

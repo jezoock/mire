@@ -10,6 +10,33 @@
       "cancel": "Cancel",
       "close": "Close"
     },
+    "demo": {
+      "title": "Interface demo",
+      "component": {
+        "heading": "Demo component",
+        "action": "Add one",
+        "count": {
+          "one": "{count} click",
+          "other": "{count} clicks"
+        }
+      },
+      "palettes": {
+        "ecran": "Screen off",
+        "jour": "Daylight",
+        "minuit": "Midnight",
+        "velours": "Velvet",
+        "contraste": "High contrast"
+      },
+      "samples": {
+        "button": "Play",
+        "link": "More info",
+        "badge": "New",
+        "toggle": "Subtitles",
+        "range": "Volume",
+        "loader": "Loading",
+        "thumb": "A Trip to the Moon"
+      }
+    },
     "settings": {
       "language": {
         "label": "Language",

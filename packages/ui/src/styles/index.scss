@@ -1,0 +1,36 @@
+// Feuille de style de @mire/ui, compilée par scripts/build.mjs avec le sass de Mire (≥ 1.107) et le moteur SCSS de
+// dot-stash, lu dans l'archive installée (`pkg:dot-stash/scss/…`). Sortie : dist/renderer/ui/mire-ui.css.
+//
+// Le moteur ne se configure qu'au premier chargement : un réglage passe par un module de jetons (`_tokens`, comme
+// celui du thème default), jamais par un `with (…)` après coup, qui provoque une erreur de Sass.
+//
+// Ni les styles de base du thème default (body, titres, liens…), qui changeraient l'interface historique, ni la
+// feuille dot-stash/dist/css/default.css : seulement les jetons et les habillages des composants ds-* utilisés.
+// L'habillage du cœur et les palettes viendront en P4-02.
+
+@use 'pkg:dot-stash/scss/themes/default/tokens' as *;
+
+// Habillage .ds-button et .ds-link de ds-trigger : avant les habillages qui ajoutent des variantes de bouton.
+@use 'pkg:dot-stash/scss/themes/default/components/trigger';
+@use 'pkg:dot-stash/scss/themes/default/components/alert';
+@use 'pkg:dot-stash/scss/themes/default/components/badge';
+@use 'pkg:dot-stash/scss/themes/default/components/field';
+@use 'pkg:dot-stash/scss/themes/default/components/icon';
+@use 'pkg:dot-stash/scss/themes/default/components/loader';
+@use 'pkg:dot-stash/scss/themes/default/components/modal';
+@use 'pkg:dot-stash/scss/themes/default/components/panel';
+@use 'pkg:dot-stash/scss/themes/default/components/range';
+@use 'pkg:dot-stash/scss/themes/default/components/scroller';
+@use 'pkg:dot-stash/scss/themes/default/components/select';
+@use 'pkg:dot-stash/scss/themes/default/components/sortable';
+@use 'pkg:dot-stash/scss/themes/default/components/thumb';
+@use 'pkg:dot-stash/scss/themes/default/components/toaster';
+@use 'pkg:dot-stash/scss/themes/default/components/toggle';
+@use 'pkg:dot-stash/scss/themes/default/components/tooltip';
+
+@use './base';
+@use '../components/mire-demo/mire-demo';
+@use './demo-page';
+
+// Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var().
+@include ds-tokens();
