@@ -3,7 +3,8 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 module.exports = [
-  { ignores: ['dist/', 'release/', 'node_modules/', 'vendor/'] },
+  // Constructions (dist/ de la racine et des paquets), cache de Stencil, dépendances.
+  { ignores: ['**/dist/', '**/.stencil/', 'release/', 'node_modules/', 'vendor/'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],

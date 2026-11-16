@@ -497,12 +497,13 @@ Il faut Node.js 22.18 ou plus récent : les fichiers TypeScript (`.ts`) s’exé
 src/
   main/        processus principal (TypeScript), un dossier par domaine ; index.ts relie les services
   preload/     preload.js (fenêtre principale) et web-preload.js (sites ouverts dans Mire)
-  renderer/    interface : app.js (interface historique), core/, state/, api/, domain/, nav/, players/, ui/
+  renderer/    interface : app.js (interface historique), core/, state/, api/, domain/, nav/, players/, ui/, demo/
 packages/
   shared/      @mire/shared : types, fonctions pures, contrat IPC, schéma des réglages, catalogues de textes
+  ui/          @mire/ui : composants mire-* (Stencil) et feuille de style compilée avec le moteur de dot-stash
 test/          tests unitaires (même découpage que src/), e2e/ (test de fumée), fixtures/
 scripts/       build.mjs (esbuild), i18n-check.mjs, drm.js (signature Widevine)
-docs/          architecture.md, i18n.md, settings-schema.md, analyse/ et plan/ (refonte)
+docs/          architecture.md, i18n.md, settings-schema.md, adr/ (décisions), analyse/ et plan/ (refonte)
 vendor/        dépendances remplacées de WebTorrent (voir plus bas)
 dist/          construction (générée, non versionnée)
 release/       installateurs de npm run dist (générés)
@@ -515,11 +516,11 @@ Le rôle de chaque module, les flux principaux, le contrat IPC et les règles de
 | Commande | Ce qu’elle fait |
 | --- | --- |
 | `npm start` | Construit `dist/` puis lance Mire. |
-| `npm run build` | Construit `dist/` avec esbuild : processus principal et preloads en CommonJS, interface en un seul script. |
-| `npm run dev` | Reconstruit à chaque modification et lance Mire. Après un changement du processus principal, relancez Mire ; après un changement de l’interface, actualisez la fenêtre (<kbd>Ctrl</kbd>+<kbd>R</kbd>). |
+| `npm run build` | Construit `dist/` : composants `mire-*` (Stencil), puis esbuild (processus principal et preloads en CommonJS, interface en un seul script), feuille de style de `@mire/ui` (Sass) et composants de dot-stash. |
+| `npm run dev` | Reconstruit à chaque modification et lance Mire. Après un changement du processus principal, relancez Mire ; après un changement de l’interface (composants et styles de `@mire/ui` compris), actualisez la fenêtre (<kbd>Ctrl</kbd>+<kbd>R</kbd>). |
 | `npm run lint` | ESLint (fichiers `.js` et `.mjs` ; le TypeScript est vérifié par `npm run typecheck`). `npm run lint:fix` corrige ce qui peut l’être. |
 | `npm run format:check` | Vérifie le formatage Prettier. `npm run format` le corrige. |
-| `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/`. Mode strict, et refus des variables et paramètres inutilisés (un paramètre imposé mais inutile commence par `_`), des `case` qui tombent dans le suivant et des fonctions qui ne rendent pas toujours une valeur. |
+| `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/` et `packages/ui/`. Mode strict, et refus des variables et paramètres inutilisés (un paramètre imposé mais inutile commence par `_`), des `case` qui tombent dans le suivant et des fonctions qui ne rendent pas toujours une valeur. |
 | `npm run i18n:check` | Vérifie les catalogues de textes (voir plus bas). |
 | `npm test` | Tests unitaires. |
 | `npm run test:e2e` | Test de fumée dans Electron (voir plus bas). |
@@ -546,7 +547,24 @@ Le contenu de ce dossier est décrit dans [`docs/architecture.md`](docs/architec
 xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e
 ```
 
-**Captures** : le test de fumée enregistre une capture de chaque section, de l’accueil dans chaque thème et du panneau de réglages des Vidéos, dans `test/e2e/__screenshots__/` (versionnées). Il ne les compare pas encore aux précédentes : regardez le changement dans Git après une modification de l’interface. La fenêtre a une taille fixe et l’heure est figée, mais le rendu dépend de l’environnement (système, polices, carte graphique) : les captures varient de quelques pixels d’une exécution à l’autre, et davantage d’une machine à l’autre. Ne versionnez pas des captures qui n’ont changé que pour cette raison.
+**Composants de l’interface** : le test de fumée ouvre aussi la page de démonstration cachée (voir « Composants de l’interface : dot-stash ») et vérifie le chargement des composants `ds-*`, le composant `mire-demo` et son `ds-trigger` (clic et touche Entrée), et la CSP de la fenêtre.
+
+**Captures** : le test de fumée enregistre une capture de chaque section, de l’accueil dans chaque thème, du panneau de réglages des Vidéos et de la page de démonstration, dans `test/e2e/__screenshots__/` (versionnées). Il ne les compare pas encore aux précédentes : regardez le changement dans Git après une modification de l’interface. La fenêtre a une taille fixe et l’heure est figée, mais le rendu dépend de l’environnement (système, polices, carte graphique) : les captures varient de quelques pixels d’une exécution à l’autre, et davantage d’une machine à l’autre. Ne versionnez pas des captures qui n’ont changé que pour cette raison.
+
+### Composants de l’interface : dot-stash
+
+L’interface se reconstruit avec la librairie de composants [dot-stash](https://github.com/jezoock/dot-stash) (composants `ds-*`, moteur SCSS de jetons) et les composants propres à Mire du paquet `@mire/ui` (`packages/ui/`, composants `mire-*`). Livraison, chargement, conventions et tests : [`docs/adr/0001-dot-stash.md`](docs/adr/0001-dot-stash.md).
+
+dot-stash est installé depuis l’archive de sa release GitHub, par une adresse qui contient sa version ; `package-lock.json` garde l’empreinte de l’archive. Pour changer de version, installez l’adresse de la nouvelle release, puis reconstruisez et relancez le test de fumée :
+
+```
+npm install --save-dev --save-exact https://github.com/jezoock/dot-stash/releases/download/v0.2.0/dot-stash-0.2.0.tgz
+npm run build
+```
+
+(en remplaçant `0.2.0`, aux deux endroits de l’adresse, par la nouvelle version). Lisez d’abord son CHANGELOG : un changement des jetons ou des habillages peut demander d’adapter `packages/ui/src/styles/`.
+
+Une page de démonstration interne, cachée, montre les composants : ouvrez les outils de développement (<kbd>F12</kbd>) et tapez `location.hash = 'demo'`.
 
 ### Catalogues de textes : `i18n:check`
 
@@ -574,7 +592,7 @@ WebTorrent tire quelques modules natifs ou fragiles qui n’ont pas leur place d
 | `ip-set` | le code d’origine (licence MIT), sans son script d’installation qui imposait pnpm |
 | `node-domexception` | le `DOMException` intégré à Node |
 
-Résultat : `npm install` n’exécute aucun script d’installation venant de ces dépendances, n’installe aucun paquet obsolète et ne signale aucune faille venant d’elles. Le seul script d’installation est celui d’esbuild (outil de construction) : il vérifie son exécutable, et la construction fonctionne aussi sans lui (`npm install --ignore-scripts`).
+Résultat : `npm install` n’exécute aucun script d’installation venant de ces dépendances, n’installe aucun paquet obsolète et ne signale aucune faille venant d’elles. Les seuls scripts d’installation sont ceux d’outils de construction : celui d’esbuild vérifie son exécutable, et celui de `@parcel/watcher` (dépendance facultative de Sass) ne fait rien, sauf si on lui demande de se compiler (`npm_config_build_from_source`). La construction fonctionne aussi sans eux (`npm install --ignore-scripts`).
 
 **Electron.** Mire utilise la version castLabs `v44.9.3+wvcus` (publiée le 22 octobre 2026), qui corrige la faille d’Electron 44.0 à 44.9.0 (certificats intermédiaires compromis, GHSA-jr5w-w6x2-84p9) : l’audit ne la signale plus. Comme après chaque changement de version d’Electron, relancez `npm install` puis `npm run drm:signer`.
 

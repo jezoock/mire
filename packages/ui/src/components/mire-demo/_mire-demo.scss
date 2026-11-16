@@ -1,0 +1,25 @@
+@use 'pkg:dot-stash/scss/themes/default/tokens' as *;
+
+// Composant de démonstration : bloc, compteur et bouton, avec les accesseurs du moteur (classes et modificateurs à la
+// manière de dot-stash : .mire-demo, .mire-demo__count).
+.mire-demo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: ds-spacing(3);
+  align-items: center;
+  padding: ds-spacing(4);
+  color: ds-color(gray, darkest);
+  background-color: ds-color(gray, white);
+  border-radius: ds-radius(md);
+
+  &__heading {
+    flex-basis: 100%;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  &__count {
+    margin: 0;
+    min-width: 6em;
+  }
+}

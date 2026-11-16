@@ -123,9 +123,11 @@ deux secondes au plus.
 
 ## Interface (renderer)
 
-`src/renderer/index.html` charge un seul script, `dist/renderer/main.js`, construit par esbuild à partir de
-`main.js` (format IIFE, sans script en ligne ni `eval`, à cause de la CSP). `main.js` importe `app.js`, qui importe
-les modules.
+`src/renderer/index.html` charge le script de l'interface, `dist/renderer/main.js`, construit par esbuild à partir
+de `main.js` (format IIFE, sans script en ligne ni `eval`, à cause de la CSP). `main.js` importe `app.js`, qui importe
+les modules, et définit les composants `mire-*` de `@mire/ui`. La page charge aussi, en module, le chargeur des
+composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui` (`ui/mire-ui.css`) : voir
+`docs/adr/0001-dot-stash.md`.
 
 | Dossier ou fichier | Rôle |
 | --- | --- |
@@ -137,6 +139,7 @@ les modules.
 | `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
 | `players/` | Lecteurs intégrés : vidéo (`video.ts`), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
+| `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
 | `styles.css`, `fonts/` | Styles (cinq thèmes, par `data-theme`) et police Archivo. |
 
 Les modules `nav/` et `players/` ne connaissent pas l'interface : `app.js` leur passe ce qu'ils doivent faire
@@ -158,6 +161,13 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 | `@mire/shared/ipc` | Contrat IPC : tables des méthodes et des événements, leurs types, `createApi`. |
 | `@mire/shared/settings/schema` | Schéma des réglages (voir `docs/settings-schema.md`). |
 | `@mire/shared/i18n` | Moteur de traduction, formats, choix de la langue, catalogues intégrés `fr` et `en`, vérification des catalogues (voir `docs/i18n.md`). |
+
+## `@mire/ui`
+
+`packages/ui/` : les composants `mire-*` (Stencil, light DOM), construits dans `packages/ui/dist/components/` puis
+intégrés au script de l'interface, et la feuille de style compilée avec le moteur SCSS de dot-stash
+(`src/styles/index.scss`). Ses fonctions sans DOM (`@mire/ui/utils`) sont testées sous Node. Décisions et
+conventions : `docs/adr/0001-dot-stash.md`.
 
 ## Contrat IPC
 
@@ -326,7 +336,8 @@ Autres points d'extension du même genre, plus internes :
   (`window/main-window.ts`). L'interface n'a pas accès à Node.
 - CSP de `index.html` : `script-src 'self'` (aucun script en ligne, aucun `eval`), `default-src 'self'`. Les images
   et médias peuvent venir de `media:` et du web ; `connect-src` se limite à `'self'` et `media:`. C'est pourquoi
-  l'interface est un seul script construit par esbuild.
+  l'interface est un seul script construit par esbuild, plus le chargeur de dot-stash, chargé comme module depuis les
+  fichiers de la page.
 - Le preload n'expose que les méthodes et abonnements du contrat, et `pathForFile`. Aucun appel générique sur un
   canal choisi par la page (vérifié par `test/ipc/contract.test.ts`).
 - La fenêtre ne navigue jamais (`will-navigate` annulé). Une nouvelle fenêtre est refusée ; une adresse web s'ouvre

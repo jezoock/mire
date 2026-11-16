@@ -17,4 +17,5 @@ dist/
 release/
 vendor/
 package-lock.json
+packages/ui/src/components.d.ts
 eslint-suppressions.json
