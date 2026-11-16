@@ -47,6 +47,8 @@ export interface ScanContext {
   maxItems: number;
   /** Sous-titres des vidéos en ligne. */
   subtitles: RemoteSubtitles;
+  /** Sous-titres .srt / .vtt à côté des vidéos locales (chemins), pour le catalogue d'éléments. */
+  localSubtitles?: Map<string, string[]>;
   platform?: NodeJS.Platform;
 }
 
@@ -63,6 +65,19 @@ export interface SourceStatus {
   ok: boolean;
   error: string | null;
   count: number;
+}
+
+/** Emplacement analysé, avec ce que son fournisseur y a trouvé (pour alimenter le catalogue d'éléments). */
+export interface ScannedLocation {
+  target: SourceTarget;
+  /** Types demandés à cet emplacement. */
+  kinds: ReadonlySet<MediaKind>;
+  /** Éléments de bibliothèque trouvés à cet emplacement. */
+  items: LibraryItem[];
+  /** Sous-titres trouvés à côté d'une vidéo (chemins ou adresses). */
+  subtitles: (videoPath: string) => string[];
+  /** Faux si l'analyse s'est arrêtée avant la fin (emplacement inaccessible, nombre maximal d'éléments atteint). */
+  complete: boolean;
 }
 
 export interface ScanResult {

@@ -144,6 +144,26 @@ describe('catalogue : persistance', () => {
     assert.equal(again.catalog.element('local:/films/Alien.mkv')!.added, 1000);
   });
 
+  it('une analyse qui ne change rien ne réécrit pas le fichier ; un changement le réécrit', async () => {
+    const { catalog, dir, tick } = setup();
+    catalog.setSource(FILMS, [film('/films/Alien.mkv'), film('/films/Brazil.mkv')]);
+    await catalog.flush();
+    const file = path.join(dir, sourceFileName(FILMS));
+    fs.rmSync(file);
+    tick(10);
+    // Même analyse, dans un autre ordre : rien à écrire.
+    catalog.setSource(FILMS, [film('/films/Brazil.mkv'), film('/films/Alien.mkv')]);
+    await catalog.flush();
+    assert.equal(fs.existsSync(file), false);
+    catalog.setSource(FILMS, [film('/films/Brazil.mkv'), film('/films/Alien.mkv', 'Alien, le huitième passager')]);
+    await catalog.flush();
+    assert.equal(readSourceFile(JSON.parse(fs.readFileSync(file, 'utf8')))?.scanned, 1010);
+    // Un emplacement nouveau, même vide, a son fichier.
+    catalog.setSource(SITES, []);
+    await catalog.flush();
+    assert.ok(fs.existsSync(path.join(dir, sourceFileName(SITES))));
+  });
+
   it('le fichier écrit est un fichier d’emplacement valide', async () => {
     const { catalog, dir } = setup();
     catalog.setSource(SITES, [site('netflix')]);
