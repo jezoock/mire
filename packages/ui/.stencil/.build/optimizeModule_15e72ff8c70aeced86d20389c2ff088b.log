@@ -1,1 +1,0 @@
-import{MireDemo as e,t}from"./mire-demo.js";export{g as getAssetPath,r as render,s as setAssetPath,a as setNonce,b as setPlatformOptions}from"./mire-demo.js";const o=s=>{"undefined"!=typeof customElements&&[e].forEach((e=>{customElements.get(t(e.is))||customElements.define(t(e.is),e,s)}))};export{o as defineCustomElements}

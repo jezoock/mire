@@ -1,1 +1,0 @@
-import{transformTag as e}from"@stencil/core/internal/client";export{getAssetPath,render,setAssetPath,setNonce,setPlatformOptions}from"@stencil/core/internal/client";import{MireDemo as t}from"./mire-demo.js";const o=o=>{"undefined"!=typeof customElements&&[t].forEach((t=>{customElements.get(e(t.is))||customElements.define(e(t.is),t,o)}))};export{o as defineCustomElements}
