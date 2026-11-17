@@ -13,10 +13,17 @@ import { addBookmark, removeBookmark } from '../../src/main/ipc/handlers/bookmar
 import type { MainContext } from '../../src/main/ipc/context.ts';
 
 let tmp: string;
+// Écritures différées des services d'usage, attendues avant d'effacer le dossier (sinon le fichier peut être écrit
+// pendant l'effacement : ENOTEMPTY).
+let pending: { flush: () => Promise<void> }[] = [];
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-ipc-'));
 });
-afterEach(() => fs.rmSync(tmp, { recursive: true, force: true }));
+afterEach(async () => {
+  await Promise.all(pending.map((s) => s.flush()));
+  pending = [];
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
 
 const write = (rel: string, text = 'x') => {
   const file = path.join(tmp, rel);
@@ -36,6 +43,7 @@ function makeContext(config: Any = {}, extra: Any = {}) {
   service.onChange(() => log.push(['saveConfig']));
   const usage = createUsageService({ file: path.join(tmp, `usage-${Math.random().toString(36).slice(2)}.json`), debounceMs: 5 });
   usage.load();
+  pending.push(usage);
   const ctx: Any = {
     config: service,
     usage,

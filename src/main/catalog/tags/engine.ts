@@ -28,15 +28,17 @@ export interface TagEngineOptions {
   registry: Registry;
   /** Règles par extension en vigueur (configuration). */
   rules: () => FileTagRules;
+  /** Contributions automatiques dès le départ (tags automatiques internes), sans second calcul. */
+  contributors?: readonly Contributor[];
 }
 
 export type TagEngineListener = (keys: ElementKey[]) => void;
 
-export function createTagEngine({ catalog, overrides, registry, rules }: TagEngineOptions) {
+export function createTagEngine({ catalog, overrides, registry, rules, contributors: initial = [] }: TagEngineOptions) {
   const effective = new Map<ElementKey, Effective>();
   const index = createTagIndex();
   const listeners = new Set<TagEngineListener>();
-  let contributors: readonly Contributor[] = [];
+  let contributors: readonly Contributor[] = [...initial];
   let currentRules = rules();
 
   function compute(e: Readonly<Element>): Effective {
@@ -182,6 +184,12 @@ export function createTagEngine({ catalog, overrides, registry, rules }: TagEngi
       contributors = [...list];
       rebuild();
       emit([...effective.keys()]);
+    },
+
+    /** Éléments dont une contribution a changé (fiche d'infos en ligne enregistrée…) : recalculés. */
+    refresh(keys: readonly ElementKey[]): void {
+      for (const key of keys) update(key);
+      emit([...keys]);
     },
 
     /** Abonnement aux éléments dont les tags ou les infos ont pu changer. */
