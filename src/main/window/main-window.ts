@@ -4,14 +4,31 @@
  * contexte, bac à sable, pas d'accès à Node) ne doivent jamais être affaiblis.
  */
 import type { BrowserWindow as ElectronBrowserWindow } from 'electron';
-import { THEME_BG } from '../config/index.ts';
-import type { Config, Theme } from '@mire/shared';
+import fs from 'node:fs';
+import path from 'node:path';
+import { DEFAULT_PALETTE, parsePaletteMeta, resolvePalette } from '@mire/shared';
+import type { Config, PaletteMeta, Theme } from '@mire/shared';
 import type { WebManager } from '../web/index.ts';
 
-/** Couleur de fond de la fenêtre (avant l'affichage de l'interface) : celle du thème, « auto » suivant le système. */
-export function themeBackground(theme: Theme | string, dark: boolean): string {
-  const t = theme === 'auto' ? (dark ? 'ecran' : 'jour') : theme;
-  return THEME_BG[t as keyof typeof THEME_BG] || THEME_BG.ecran;
+// Fond de repli si aucune palette n'est lisible (installation abîmée) : noir, plutôt que le blanc d'Electron.
+const FALLBACK_BACKGROUND = '#000000';
+
+/** Métadonnées d'une palette (`<dossier des palettes>/<id>/palette.json`), ou `null` si elles sont illisibles. */
+export function readPaletteMeta(dir: string, id: string): PaletteMeta | null {
+  try {
+    return parsePaletteMeta(JSON.parse(fs.readFileSync(path.join(dir, id, 'palette.json'), 'utf8')));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Couleur de fond de la fenêtre (avant l'affichage de l'interface) : celle de la palette du réglage, lue dans ses
+ * métadonnées ; « auto » suit le système ; palette inconnue : celle par défaut.
+ */
+export function themeBackground(dir: string, theme: Theme | string, dark: boolean): string {
+  const meta = readPaletteMeta(dir, resolvePalette(theme, dark)) || readPaletteMeta(dir, DEFAULT_PALETTE);
+  return meta?.background || FALLBACK_BACKGROUND;
 }
 
 export interface MainWindowDeps {
@@ -30,7 +47,9 @@ export interface MainWindowDeps {
 export function createMainWindow(deps: MainWindowDeps) {
   let win: ElectronBrowserWindow | null = null;
   const alive = () => (win && !win.isDestroyed() ? win : null);
-  const background = () => themeBackground(deps.config.get().ui.theme, deps.nativeTheme.shouldUseDarkColors);
+  // Les palettes sont à côté de la page de l'interface (dist/renderer/palettes/).
+  const palettes = path.join(path.dirname(deps.files.html), 'palettes');
+  const background = () => themeBackground(palettes, deps.config.get().ui.theme, deps.nativeTheme.shouldUseDarkColors);
 
   function open() {
     const w = new deps.BrowserWindow({

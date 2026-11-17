@@ -4,5 +4,6 @@ export * from './url.ts';
 export * from './id.ts';
 export * from './media-formats.ts';
 export * from './systems.ts';
+export * from './palette.ts';
 export type * from './config.ts';
 export type * from './element.ts';

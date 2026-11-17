@@ -4,11 +4,13 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, d’adresse et d’identifiant, les formats et les systèmes', () => {
+  it('expose les utilitaires de texte, d’adresse et d’identifiant, les formats, les systèmes et les palettes', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
+      'AUTO_PALETTES',
       'COVER_RE',
+      'DEFAULT_PALETTE',
       'DISC_INDEX_EXT',
       'EXT',
       'FANART_RE',
@@ -18,6 +20,9 @@ describe('@mire/shared', () => {
       'MEDIA_KINDS',
       'MIME',
       'NATIVE',
+      'PALETTE_AUTO',
+      'PALETTE_OPTIONAL_TOKENS',
+      'PALETTE_TOKENS',
       'SYSTEMS',
       'bigramDice',
       'cleanRomName',
@@ -26,10 +31,13 @@ describe('@mire/shared', () => {
       'guessSystem',
       'hostOf',
       'isHttpUrl',
+      'isPaletteId',
       'isUrlTarget',
       'newId',
       'parseEpisode',
+      'parsePaletteMeta',
       'rankByTitle',
+      'resolvePalette',
       'safeDecode',
       'safeFileName',
       'similarity',

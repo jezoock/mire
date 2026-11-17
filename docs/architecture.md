@@ -140,7 +140,8 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `players/` | Lecteurs intégrés : vidéo (`video.ts`), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
-| `styles.css`, `fonts/` | Styles (cinq thèmes, par `data-theme`) et police Archivo. |
+| `styles.css`, `fonts/` | Styles de l'interface historique et police Archivo. |
+| `palettes/` | Palettes du cœur : jetons de couleurs (`<id>/<id>.css`) et métadonnées (`palette.json`), choisies par `data-palette` sur `<html>` (voir `docs/themes.md`). |
 
 Les modules `nav/` et `players/` ne connaissent pas l'interface : `app.js` leur passe ce qu'ils doivent faire
 (retour, modifier, ouvrir le lecteur externe…) par des objets de rappels, lors de leur initialisation (`initKeyboard`,

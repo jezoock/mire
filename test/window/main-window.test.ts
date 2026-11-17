@@ -3,14 +3,37 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { createMainWindow, themeBackground } from '../../src/main/window/main-window.ts';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createMainWindow, readPaletteMeta, themeBackground } from '../../src/main/window/main-window.ts';
+
+// Les palettes du cœur, telles que la construction les copie à côté de la page (dist/renderer/palettes/).
+const RENDERER = path.join(import.meta.dirname, '..', '..', 'src', 'renderer');
+const PALETTES = path.join(RENDERER, 'palettes');
 
 describe('themeBackground', () => {
-  it('couleur du thème ; « auto » suit le système ; thème inconnu : écran', () => {
-    assert.equal(themeBackground('minuit', false), '#0F1524');
-    assert.equal(themeBackground('auto', true), '#1F2321');
-    assert.equal(themeBackground('auto', false), '#F1EFE8');
-    assert.equal(themeBackground('inconnu', false), '#1F2321');
+  it('couleur de la palette, lue dans palette.json ; « auto » suit le système ; palette inconnue : écran', () => {
+    assert.equal(themeBackground(PALETTES, 'minuit', false), '#0F1524');
+    assert.equal(themeBackground(PALETTES, 'auto', true), '#1F2321');
+    assert.equal(themeBackground(PALETTES, 'auto', false), '#F1EFE8');
+    assert.equal(themeBackground(PALETTES, 'inconnu', false), '#1F2321');
+    assert.equal(themeBackground(PALETTES, '../ecran', false), '#1F2321');
+  });
+
+  it('palette illisible : celle par défaut, sinon noir', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-palettes-'));
+    try {
+      fs.mkdirSync(path.join(dir, 'ecran'));
+      fs.writeFileSync(path.join(dir, 'ecran', 'palette.json'), JSON.stringify({ name: 'palettes.ecran', background: '#123456', scheme: 'dark' }));
+      fs.mkdirSync(path.join(dir, 'abimee'));
+      fs.writeFileSync(path.join(dir, 'abimee', 'palette.json'), '{ pas du JSON');
+      assert.equal(readPaletteMeta(dir, 'abimee'), null);
+      assert.equal(themeBackground(dir, 'abimee', true), '#123456');
+      assert.equal(themeBackground(path.join(dir, 'absent'), 'ecran', true), '#000000');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -82,7 +105,7 @@ function setup(ui: Record<string, unknown> = { theme: 'jour', fullscreen: false 
     shell: { openExternal: async (url) => void opened.push(url) },
     nativeTheme: { shouldUseDarkColors: true },
     config: { get: () => ({ ui }) as never },
-    files: { preload: '/dist/preload/preload.js', html: '/dist/renderer/index.html' },
+    files: { preload: '/dist/preload/preload.js', html: path.join(RENDERER, 'index.html') },
     web: () => ({
       onWindowResize: () => void events.push('resize'),
       onAppCommand: (cmd: string) => void events.push(cmd),
@@ -111,7 +134,7 @@ describe('createMainWindow', () => {
       show: false,
       webPreferences: { preload: '/dist/preload/preload.js', contextIsolation: true, sandbox: true, nodeIntegration: false },
     });
-    assert.equal(w.loaded, '/dist/renderer/index.html');
+    assert.equal(w.loaded, path.join(RENDERER, 'index.html'));
     assert.equal(window.get(), w as never);
     assert.equal(w.shown, false);
     w.emit('ready-to-show');

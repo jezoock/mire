@@ -20,13 +20,6 @@
           "other": "{count} clicks"
         }
       },
-      "palettes": {
-        "ecran": "Screen off",
-        "jour": "Daylight",
-        "minuit": "Midnight",
-        "velours": "Velvet",
-        "contraste": "High contrast"
-      },
       "samples": {
         "button": "Play",
         "link": "More info",
@@ -36,6 +29,13 @@
         "loader": "Loading",
         "thumb": "A Trip to the Moon"
       }
+    },
+    "palettes": {
+      "ecran": "Screen off",
+      "jour": "Daylight",
+      "minuit": "Midnight",
+      "velours": "Velvet",
+      "contraste": "High contrast"
     },
     "settings": {
       "language": {

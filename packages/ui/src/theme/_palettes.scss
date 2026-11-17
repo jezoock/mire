@@ -1,0 +1,13 @@
+// Contrat des palettes (docs/themes.md) : valeurs par défaut des jetons facultatifs, sur tout bloc qui porte une
+// palette (data-palette). Cette feuille est chargée avant les fichiers de palettes, qui l'emportent donc à
+// spécificité égale ; un aperçu d'une palette dans une autre ne garde ainsi rien de la palette englobante.
+[data-palette] {
+  // Épaisseur de l'anneau de focus.
+  --ring-w: 3px;
+  // Couleur imposée à l'anneau de focus et aux textes accentués (sinon : l'accent de la section).
+  --ring-from: initial;
+  // Liseré autour de la mire de l'accueil (0px : aucun).
+  --mire-edge: 0px;
+  // Part de la couleur des monogrammes de vignettes, le reste en noir (100 % : la couleur telle quelle).
+  --mono-mix: 100%;
+}

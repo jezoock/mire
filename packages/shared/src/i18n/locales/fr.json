@@ -20,13 +20,6 @@
           "other": "{count} clics"
         }
       },
-      "palettes": {
-        "ecran": "Écran éteint",
-        "jour": "Plein jour",
-        "minuit": "Minuit",
-        "velours": "Velours",
-        "contraste": "Contraste élevé"
-      },
       "samples": {
         "button": "Lire",
         "link": "Plus d’infos",
@@ -36,6 +29,13 @@
         "loader": "Chargement",
         "thumb": "Voyage dans la Lune"
       }
+    },
+    "palettes": {
+      "ecran": "Écran éteint",
+      "jour": "Plein jour",
+      "minuit": "Minuit",
+      "velours": "Velours",
+      "contraste": "Contraste élevé"
     },
     "settings": {
       "language": {

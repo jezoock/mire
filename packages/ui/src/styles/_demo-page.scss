@@ -1,9 +1,7 @@
-@use 'pkg:dot-stash/scss/themes/default/tokens' as *;
+@use '../theme/tokens' as *;
 
-// Page de démonstration interne (cachée) : les composants ds-* dans les cinq thèmes actuels. En attendant les
-// palettes (P4-02), chaque cadre porte un data-theme de styles.css et ce pont temporaire relie quelques jetons de
-// dot-stash aux couleurs du thème. Les jetons qui en dérivent (colorset) sont redéclarés dans le cadre, sans quoi
-// ils garderaient la valeur résolue sur :root.
+// Page de démonstration interne (cachée) : les composants ds-* dans les cinq palettes. Chaque cadre porte le
+// data-palette d'une palette : ses jetons, et ceux du moteur qui en dérivent (theme/_base.scss), s'y appliquent.
 .mire-ui-demo {
   display: grid;
   gap: ds-spacing(5);
@@ -16,24 +14,12 @@
   }
 
   &__palette {
-    --ds-color-primary-base: var(--bar-blue);
-    --ds-color-primary-dark: color-mix(in srgb, var(--bar-blue) 80%, #000);
-    --ds-color-primary-darker: color-mix(in srgb, var(--bar-blue) 60%, #000);
-    --ds-color-primary-light: color-mix(in srgb, var(--bar-blue) 25%, var(--surface));
-    --ds-color-gray-white: var(--surface);
-    --ds-color-gray-darkest: var(--text);
-    --ds-color-gray-dark: var(--muted);
-    --ds-color-gray-base: var(--line-strong);
-    --ds-color-gray-light: var(--line);
-
-    @include ds-tokens(colorset);
-
     display: grid;
     gap: ds-spacing(3);
     padding: ds-spacing(4);
-    color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--line);
+    color: ds-color(gray, darkest);
+    background: ds-color(gray, white);
+    border: 1px solid ds-color(gray, light);
     border-radius: ds-radius(md);
   }
 

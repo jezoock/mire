@@ -73,15 +73,16 @@ traduction de la page de démonstration), et de la feuille de `@mire/ui` (59 Ko,
 - **Styles** : pas de feuille par composant passée par Stencil (`@stencil/sass` aurait ajouté `sass-embedded`). Une
   feuille unique, `packages/ui/src/styles/index.scss`, est compilée par `scripts/build.mjs` avec `sass` et
   l'importeur de paquets Node (`pkg:dot-stash/scss/…`) dans `dist/renderer/ui/mire-ui.css`, chargée par
-  `index.html`. Elle contient les jetons de dot-stash (`--ds-…` sur `:root`), les habillages du thème `default` des
-  composants `ds-*` utilisés, les styles des `mire-*` (un fichier `_<composant>.scss` à côté de chaque composant)
+  `index.html`. Elle contient l'habillage du cœur (`packages/ui/src/theme/`, P4-02, voir `docs/themes.md`) : jetons
+  de dot-stash (`--ds-…`) réglés sur les palettes, habillage des contrôles, habillages du thème `default` pour les
+  autres composants `ds-*` utilisés ; les styles des `mire-*` (un fichier `_<composant>.scss` à côté de chaque composant)
   et ceux de la page de démonstration. Elle ne reprend ni les styles de base du thème `default` (`body`, titres,
   liens…), ni `dot-stash/dist/css/default.css` : ils changeraient l'interface historique. Les icônes dessinées sont
   intégrées à la feuille (33) ; leur licence est copiée à côté (`LICENSE-icons.txt`), comme le demande dot-stash.
 - **Réglages du moteur** : le moteur SCSS ne se configure qu'à son premier chargement. Un réglage passe par un module
   de jetons (`_tokens.scss` qui fait `@forward 'pkg:dot-stash/scss/engine' with (…)`), chargé en premier par toute la
-  feuille ; un `with (…)` sur un moteur déjà chargé provoque une erreur de Sass. P4-02 remplacera les jetons du thème
-  `default` par ceux de l'habillage du cœur (`packages/ui/src/theme/`).
+  feuille ; un `with (…)` sur un moteur déjà chargé provoque une erreur de Sass. Ce module est
+  `packages/ui/src/theme/_tokens.scss` (habillage du cœur, P4-02).
 
 ### 4. Conventions des composants `mire-*`
 
@@ -120,9 +121,8 @@ quand Stencil réécrit `packages/ui/dist/components/`. Comme pour le reste de l
 
 Cachée (aucune entrée du menu), ouverte par l'adresse `#demo` : outils de développement (F12), puis
 `location.hash = 'demo'`. Elle affiche `mire-demo` dans la vue de l'interface historique et les composants `ds-*`
-utilisés par Mire dans les cinq thèmes actuels. En attendant les palettes (P4-02), chaque cadre porte le
-`data-theme` d'un thème de `styles.css`, et un pont temporaire (`_demo-page.scss`) relie quelques jetons de
-dot-stash aux couleurs du thème ; P4-02 le remplacera par les fichiers de palettes. Code : `src/renderer/demo/`.
+utilisés par Mire dans les cinq palettes : chaque cadre porte le `data-palette` d'une palette (P4-02). Code :
+`src/renderer/demo/`.
 
 ## Conséquences
 
@@ -130,7 +130,8 @@ dot-stash aux couleurs du thème ; P4-02 le remplacera par les fichiers de palet
 - Le démarrage coûte environ 15 ms de plus, et l'installateur environ 430 Ko (chargeur et composants de dot-stash,
   feuille de `@mire/ui`, script de l'interface).
 - `npm run build` lance Stencil (environ 1 s de plus).
-- Les composants `ds-*` reçoivent leur habillage du thème `default` jusqu'à P4-02.
+- Les composants `ds-*` reçoivent l'habillage du cœur (P4-02) : contrôles propres à Mire, habillages du thème
+  `default` réglés par les jetons de Mire pour les autres.
 
 ## Points à trancher au point G5
 

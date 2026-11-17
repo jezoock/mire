@@ -19,6 +19,7 @@ import { setVolume } from './players/volume.ts';
 import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
 import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
+import { createPaletteLoader } from '@mire/ui/palettes';
 import { DEMO_SECTION, demoTitle, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
 
 /* ------------------------------------------------------------------ */
@@ -57,12 +58,11 @@ const HOME_BARS = {
   games: { c: 'blue', label: 'Jeux' },
 };
 
-const lightQuery = matchMedia('(prefers-color-scheme: light)');
+// Le réglage « thème » désigne une palette (P4-02) ; le chargeur suit aussi le mode du système (« Automatique »).
+const palette = createPaletteLoader();
 function applyTheme() {
-  const t = S.config?.ui?.theme || 'ecran';
-  document.documentElement.dataset.theme = t === 'auto' ? (lightQuery.matches ? 'jour' : 'ecran') : t;
+  palette.set(S.config?.ui?.theme);
 }
-lightQuery.addEventListener('change', () => applyTheme());
 
 /* ---------- Menu principal : barre latérale (gauche, droite) ou carrousel (haut, bas), rétractable ou non ---------- */
 
@@ -1013,7 +1013,7 @@ async function askSourceAddress(kind) {
 
 function themeCards() {
   const current = S.config.ui.theme || 'ecran';
-  const preview = (id) => `<span class="tc-pane" data-theme="${id}"><span class="tc-rail"></span><span class="tc-body"><span class="tc-clock">20:45</span><span class="tc-bars bars7" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="tc-line"></span></span></span>`;
+  const preview = (id) => `<span class="tc-pane" data-palette="${id}"><span class="tc-rail"></span><span class="tc-body"><span class="tc-clock">20:45</span><span class="tc-bars bars7" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="tc-line"></span></span></span>`;
   return THEMES.map((t) => `<button type="button" class="theme-card focusable" data-action="theme" data-id="${t.id}" aria-pressed="${t.id === current}">
     <span class="tc-preview">${t.id === 'auto' ? preview('ecran') + preview('jour') : preview(t.id)}</span>
     <span class="tc-name">${esc(t.name)}</span><span class="tc-desc">${esc(t.desc)}</span>

@@ -1,0 +1,32 @@
+@use './tokens' as *;
+
+// Styles de base de l'habillage : ce que les composants attendent d'un thème, sans toucher aux éléments de
+// l'interface historique (body, titres, liens… gardent les styles de styles.css).
+
+// Animations du moteur (« spin », celle des indicateurs de chargement). L'interface historique a les siennes, sous
+// d'autres noms.
+@include ds-keyframes();
+
+// Texte réservé aux lecteurs d'écran (repris du thème default). !important : la classe l'emporte sur les règles de
+// l'élément qui la porte.
+.ds-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+// Jetons du moteur qui lisent l'accent de la section (--ring, calculé par styles.css sur body, le mini-lecteur et
+// les lecteurs plein écran) ou une palette : une propriété personnalisée se résout là où elle est déclarée, ceux
+// écrits sur :root ne verraient ni l'un ni l'autre. Ils sont donc redéclarés là où ces valeurs changent.
+body,
+.mini,
+.layer,
+[data-palette] {
+  @include ds-tokens(color, colorset, focus);
+}

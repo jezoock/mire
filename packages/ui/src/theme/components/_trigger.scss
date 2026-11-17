@@ -1,0 +1,144 @@
+@use 'sass:list';
+@use 'sass:map';
+@use '../tokens' as *;
+
+// Contrôles (ds-trigger) : habillage .ds-button (`type="button"`), .ds-link (`type="link"`) et .ds-control
+// (`type="control"`, sans habillage hormis le focus). Les modificateurs et les propriétés personnalisées sont ceux de
+// dot-stash (components/core/trigger/readme.md) ; seules les valeurs sont celles de Mire. Sans modificateur de
+// style, un bouton a l'allure des boutons de l'interface historique (.btn).
+
+$-sizes: (
+  xs: (
+    font-size: ds-token(font-size, 100),
+    padding: ds-spacing(1) ds-spacing(2),
+  ),
+  sm: (
+    font-size: ds-token(font-size, 100),
+    padding: ds-spacing(1) ds-spacing(3),
+  ),
+  md: (
+    font-size: ds-token(font-size, 200),
+    padding: ds-spacing(2) ds-spacing(4),
+  ),
+  lg: (
+    font-size: ds-token(font-size, 300),
+    padding: ds-spacing(3) ds-spacing(5),
+  ),
+  xl: (
+    font-size: ds-token(font-size, 400),
+    padding: ds-spacing(4) ds-spacing(6),
+  ),
+);
+
+// Modificateurs de style : type et variante du jeu de couleurs (survol : `<variante>-hover`).
+$-styles: (
+  stl-1: (
+    solid,
+    primary,
+  ),
+  stl-2: (
+    outlined,
+    secondary,
+  ),
+  stl-3: (
+    solid,
+    gray,
+  ),
+);
+
+@mixin -size($size) {
+  --ds-trigger-font-size: #{map.get($size, font-size)};
+  --ds-trigger-padding: #{map.get($size, padding)};
+}
+
+@mixin -colors($type, $variant) {
+  --ds-trigger-color: #{ds-colorset-text($type, $variant)};
+  --ds-trigger-border-color: #{ds-colorset-border($type, $variant)};
+  --ds-trigger-background: #{ds-colorset-background($type, $variant)};
+}
+
+ds-trigger {
+  @include -size(map.get($-sizes, md));
+  --ds-trigger-color: #{ds-color(gray, darkest)};
+  --ds-trigger-border-color: #{ds-color(gray, base)};
+  --ds-trigger-background: #{ds-color(gray, lighter)};
+  --ds-trigger-radius: #{ds-radius(sm)};
+  --ds-trigger-link-color: #{ds-colorset-text(link, primary)};
+  // Survol : le texte secondaire (le soulignement reste).
+  --ds-trigger-link-hover-color: #{ds-color(gray, dark)};
+}
+
+.ds-button {
+  font-family: ds-font-family(button);
+  font-size: var(--ds-trigger-font-size);
+  font-weight: ds-font-weight(button);
+  text-decoration: ds-font-decoration(button);
+  padding: var(--ds-trigger-padding);
+  color: var(--ds-trigger-color);
+  border: 1px solid var(--ds-trigger-border-color);
+  background-color: var(--ds-trigger-background);
+  border-radius: var(--ds-trigger-radius);
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition-duration: 0.2s;
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-timing-function: ease;
+
+  @each $name, $size in $-sizes {
+    &.--#{$name} {
+      @include -size($size);
+    }
+  }
+
+  @each $name, $style in $-styles {
+    $type: list.nth($style, 1);
+    $variant: list.nth($style, 2);
+
+    &.--#{$name} {
+      @include -colors($type, $variant);
+
+      &:not([disabled]):hover {
+        @include -colors($type, #{$variant}-hover);
+      }
+    }
+  }
+
+  &:not([disabled]):not([class*='--stl-']):hover {
+    --ds-trigger-background: #{ds-color(gray, light)};
+  }
+
+  &.--rounded {
+    --ds-trigger-radius: #{ds-radius(pill)};
+  }
+
+  &.--shadow {
+    box-shadow: 0 2px 6px ds-color(shadow, base);
+  }
+
+  &[disabled] {
+    cursor: default;
+    opacity: 0.35;
+  }
+}
+
+.ds-link {
+  color: var(--ds-trigger-link-color);
+  text-decoration: ds-font-decoration(link);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ds-trigger-link-hover-color);
+  }
+}
+
+.ds-control {
+  cursor: pointer;
+}
+
+// L'anneau de focus de Mire (couleur de l'accent, épaisseur de la palette) au clavier et à la manette, à la place
+// de celui du navigateur.
+:is(.ds-button, .ds-link, .ds-control):focus-visible {
+  @include ds-focus-ring();
+}
