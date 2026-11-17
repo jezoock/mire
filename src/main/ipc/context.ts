@@ -5,6 +5,7 @@
  * service (`ctx.config.get()`, `update`, `replace`).
  */
 import type { Catalog } from '../catalog/index.ts';
+import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -37,6 +38,8 @@ export interface MainContext {
   readonly i18n: LanguageService;
   /** Catalogue d'éléments (userData/catalog/). */
   readonly catalog: Catalog;
+  /** Tags et infos effectifs des éléments, index, modifications à la main. */
+  readonly tags: TagEngine;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;
@@ -62,7 +65,7 @@ export interface MainContext {
   pickFolder: Fn;
   pickFile: Fn;
   metaDir: () => string;
-  saveMeta: Fn;
+  resetMeta: Fn;
   setMeta: Fn;
   pickMetaImage: Fn;
 

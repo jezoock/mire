@@ -212,4 +212,15 @@ export interface Config {
   gameBookmarks: GameBookmark[];
   web: WebSite[];
   emulators: Emulator[];
+  /** Catalogue d'éléments : absent tant que rien n'y a été changé (la version de la configuration ne change pas). */
+  catalog?: CatalogSettings;
+}
+
+/** Réglages du catalogue d'éléments (P2-04). */
+export interface CatalogSettings {
+  /**
+   * Règles par extension modifiées : extension (`.ts`) → tags posés ; une liste vide n'en pose aucun. Les autres
+   * extensions suivent les formats reconnus (`KIND`). Absent : toutes les règles par défaut.
+   */
+  fileTags?: Record<string, string[]>;
 }

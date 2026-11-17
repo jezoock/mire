@@ -328,6 +328,29 @@
         "invalidUrl": "Invalid page address.",
         "noTitle": "Give a title to search for (name of the movie or series)."
       }
+    },
+    "catalog": {
+      "tags": {
+        "video": "Video",
+        "audio": "Music",
+        "image": "Image",
+        "local": "On this computer",
+        "network": "On the network",
+        "remote": "Online"
+      },
+      "infos": {
+        "extension": "Extension",
+        "mediaType": "Media type",
+        "folder": "Folder",
+        "server": "Server",
+        "playlist": "Playlist",
+        "subtitles": "Subtitles",
+        "title": "Title",
+        "year": "Year",
+        "genres": "Genres",
+        "overview": "Summary",
+        "artist": "Artist"
+      }
     }
   }
 }

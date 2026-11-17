@@ -10,12 +10,18 @@ import { MIME, type SystemHint } from '@mire/shared';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
 import { createCatalog } from './catalog/index.ts';
+import { createOverrides } from './catalog/overrides.ts';
+import { createTagEngine } from './catalog/tags/engine.ts';
+import { fileTagRules } from './catalog/tags/file-rules.ts';
+import { createRegistry } from './catalog/tags/registry.ts';
+import { createTargetFinder } from './catalog/targets.ts';
 import { createConfigService } from './config/index.ts';
 import { createDownloads } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { defaultRomSites } from './games/rom-sites.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
+import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
 import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
@@ -61,6 +67,8 @@ function start(pending: PendingFiles): Running {
   const usage = createUsageService({ file: files.usage });
   // Catalogue d'éléments : alimenté par les analyses de la bibliothèque ; l'interface historique ne s'en sert pas.
   const catalog = createCatalog({ dir: files.catalogSources });
+  // Modifications faites à la main (tags, infos, images), qui reprennent l'ancien meta/meta.json.
+  const overrides = createOverrides({ file: files.catalogOverrides, legacyFile: files.meta, find: createTargetFinder(catalog) });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
   // et les fichiers ouverts explicitement (boîte de dialogue, glisser-déposer).
@@ -81,7 +89,8 @@ function start(pending: PendingFiles): Running {
   // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments.
   const library = createLibraryService({ config, access, catalog });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
-  const meta = createUserMeta({ file: files.meta, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
+  // Façade de l'interface historique sur les modifications faites à la main.
+  const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
   const tv = createTv({ config, http, toUi });
 
   // Lancement de programmes (jeux, émulateurs, lecteur externe) ; « réduire pendant le jeu ».
@@ -128,8 +137,18 @@ function start(pending: PendingFiles): Running {
   // Lecture des données, puis services qui en dépendent.
   config.load();
   usage.load();
-  meta.load();
   catalog.load();
+  // Après le catalogue : les fiches de l'ancien meta.json se rangent sous la clé de leur élément.
+  const migrated = overrides.load();
+  if (migrated)
+    console.log(
+      `Catalogue : infos modifiées à la main reprises (${migrated.matched} rattachées à un élément, ${migrated.unmatched.length} gardées sous leur ancienne clé).`,
+    );
+  // Tags et infos effectifs, index ; les règles par extension suivent la configuration.
+  const tags = createTagEngine({ catalog, overrides, registry: createRegistry(t), rules: () => fileTagRules(config.get().catalog) });
+  config.onChange((next, prev) => {
+    if (JSON.stringify(next.catalog?.fileTags) !== JSON.stringify(prev.catalog?.fileTags)) tags.refreshRules();
+  });
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
   const scraper = createScraper({ dataDir: userData, getConfig: config.get, listRoms: games.listRoms, onProgress: (p) => toUi('scrape-progress', p) });
@@ -164,7 +183,7 @@ function start(pending: PendingFiles): Running {
   const adblock = webLayer.start();
 
   // Les handlers IPC (src/main/ipc/handlers/) reçoivent les services par leur contexte.
-  const services = { config, usage, i18n, catalog, access, window, pending, meta, files, library, dialogs, web, scraper, store, downloads, adblock };
+  const services = { config, usage, i18n, catalog, tags, access, window, pending, meta, files, library, dialogs, web, scraper, store, downloads, adblock };
   const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
   window.open();
@@ -180,7 +199,7 @@ function start(pending: PendingFiles): Running {
     },
     beforeQuit() {
       downloads.stop().catch(() => {});
-      const flushes = [scraper, downloads, usage, catalog].map((m) => () => m.flush());
+      const flushes = [scraper, downloads, usage, catalog, overrides].map((m) => () => m.flush());
       return flushWithin(flushes, 2000);
     },
   };

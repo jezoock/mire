@@ -8,9 +8,10 @@
  * emplacement seul, comme le fera l'hôte des plugins.
  *
  * Seuls les tags et les infos que la source connaît sont posés ici (tags de source, dossier, serveur, sous-titres,
- * images trouvées à côté du fichier) ; le type de fichier et les épisodes viendront du moteur de tags (P2-04, P2-05).
+ * images trouvées à côté du fichier, type de média d'une entrée M3U sans extension) ; le type de fichier est posé
+ * par le moteur de tags (P2-04), les épisodes viendront des tags automatiques (P2-05).
  */
-import type { MediaKind } from '@mire/shared';
+import { KIND, type MediaKind } from '@mire/shared';
 import type { ElementImages, InfoValue } from '@mire/shared';
 import { localFileKey, m3uEntryKey, normalizePath, normalizeUrl, remoteFileKey } from '../catalog/keys.ts';
 import type { ElementInput, ElementSource } from '../catalog/types.ts';
@@ -103,7 +104,9 @@ export function librarySources(platform: NodeJS.Platform = process.platform): Li
         key: m3uEntryKey(item.dir, item.path, platform),
         name: item.name,
         open: { kind: 'stream', url: item.path },
-        infos: compact({ playlist: item.folder }),
+        // Sans extension reconnue, le type de média vient de celui de la source configurée : le moteur de tags
+        // en tire `video`, `audio` ou `image` (P2-04).
+        infos: compact({ playlist: item.folder, mediaType: KIND[item.ext] ? undefined : item.kind }),
         images: compact({ logo: item.cover }),
       }),
       platform,

@@ -4,6 +4,7 @@
  */
 import type { PendingFiles } from '../app/lifecycle.ts';
 import type { Catalog } from '../catalog/index.ts';
+import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -26,6 +27,7 @@ export interface MainServices {
   usage: UsageService;
   i18n: LanguageService;
   catalog: Catalog;
+  tags: TagEngine;
   access: AccessPolicy;
   window: Pick<MainWindow, 'get' | 'themeBackground'>;
   pending: PendingFiles;
@@ -52,6 +54,7 @@ export function mainContext(s: MainServices): MainContext {
     usage: s.usage,
     i18n: s.i18n,
     catalog: s.catalog,
+    tags: s.tags,
     access: s.access,
     get mainWindow() {
       return s.window.get();
@@ -80,7 +83,7 @@ export function mainContext(s: MainServices): MainContext {
     pickFolder: s.dialogs.pickFolder,
     pickFile: s.dialogs.pickFile,
     metaDir: () => s.files.metaDir,
-    saveMeta: s.meta.save,
+    resetMeta: s.meta.reset,
     setMeta: s.meta.set,
     pickMetaImage: s.meta.pickImage,
     playExternal: s.players.playExternal,

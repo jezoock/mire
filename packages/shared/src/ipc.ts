@@ -10,7 +10,7 @@
  */
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
-import type { Element } from './element.ts';
+import type { Element, InfoChanges, TagChanges, TagSummary } from './element.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -284,6 +284,11 @@ export interface IpcMethods {
 
   // Catalogue d'éléments (P2-01) : `catalog.element(key)` de l'architecture cible
   catalogElement(key: string): Element | null;
+  // Moteur de tags et d'infos (P2-04) : `catalog.setTags`, `catalog.setInfos`, `tags.list`. Rendent l'élément
+  // modifié (ou `null` s'il n'est pas dans le catalogue : la modification est gardée).
+  catalogSetTags(key: string, changes: TagChanges): Element | null;
+  catalogSetInfos(key: string, changes: InfoChanges): Element | null;
+  tagsList(): TagSummary[];
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -406,6 +411,9 @@ export const IPC_METHODS = {
   i18nGet: 'i18n:get',
 
   catalogElement: 'catalog:element',
+  catalogSetTags: 'catalog:setTags',
+  catalogSetInfos: 'catalog:setInfos',
+  tagsList: 'tags:list',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

@@ -328,6 +328,29 @@
         "invalidUrl": "Adresse de page invalide.",
         "noTitle": "Donnez un titre à chercher (nom du film ou de la série)."
       }
+    },
+    "catalog": {
+      "tags": {
+        "video": "Vidéo",
+        "audio": "Musique",
+        "image": "Image",
+        "local": "Sur cet ordinateur",
+        "network": "Sur le réseau",
+        "remote": "En ligne"
+      },
+      "infos": {
+        "extension": "Extension",
+        "mediaType": "Type de média",
+        "folder": "Dossier",
+        "server": "Serveur",
+        "playlist": "Liste de lecture",
+        "subtitles": "Sous-titres",
+        "title": "Titre",
+        "year": "Année",
+        "genres": "Genres",
+        "overview": "Résumé",
+        "artist": "Artiste"
+      }
     }
   }
 }

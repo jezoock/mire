@@ -137,6 +137,10 @@ const ADDED_METHODS: Record<string, string> = {
   usageClearQueries: 'usage:clearQueries',
   i18nGet: 'i18n:get', // P1-28 : langue de l'interface et catalogues
   catalogElement: 'catalog:element', // P2-01 : élément du catalogue d'après sa clé
+  // P2-04 : tags et infos modifiés à la main, tags connus
+  catalogSetTags: 'catalog:setTags',
+  catalogSetInfos: 'catalog:setInfos',
+  tagsList: 'tags:list',
 };
 
 // Événements ajoutés après P1-08.

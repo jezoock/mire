@@ -7,7 +7,11 @@ import path from 'node:path';
 import type { ElementSourceRef } from '@mire/shared';
 import { createCatalog, type CatalogChange, type ElementInput } from '../../src/main/catalog/index.ts';
 import { localFileKey, siteKey } from '../../src/main/catalog/keys.ts';
+import { createOverrides } from '../../src/main/catalog/overrides.ts';
 import { readSourceFile, sourceFileName } from '../../src/main/catalog/persistence.ts';
+import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
+import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
+import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
 import type { MainContext } from '../../src/main/ipc/context.ts';
 
@@ -71,6 +75,24 @@ describe('catalogue : en mémoire', () => {
     tick();
     assert.deepEqual(catalog.setSource(FILMS, [film('/films/Alien.mkv')]), { added: [], changed: [], removed: [] });
     assert.equal(changes.length, 1);
+  });
+
+  it('empreintes (P2-04) : un seul élément changé parmi d’autres est le seul annoncé ; les autres gardent leur objet', () => {
+    const { catalog } = setup();
+    const many = Array.from({ length: 50 }, (_, i) => film(`/films/${i}.mkv`));
+    catalog.setSource(FILMS, many);
+    const before = catalog.get('local:/films/1.mkv');
+    const next = many.map((e) => structuredClone(e));
+    next[7].infos = { extension: '.avi' };
+    assert.deepEqual(catalog.setSource(FILMS, next), { added: [], changed: ['local:/films/7.mkv'], removed: [] });
+    assert.equal(catalog.get('local:/films/1.mkv'), before);
+    assert.deepEqual(catalog.element('local:/films/7.mkv')!.infos, { extension: '.avi' });
+    // La source garde la main sur ce qu'elle a donné.
+    next[7].infos.extension = '.mov';
+    assert.deepEqual(catalog.element('local:/films/7.mkv')!.infos, { extension: '.avi' });
+    // Retour à l'identique, puis une même clé fournie par un second emplacement : rien n'est annoncé.
+    assert.deepEqual(catalog.setSource(FILMS, many).changed, ['local:/films/7.mkv']);
+    assert.deepEqual(catalog.setSource(SITES, [film('/films/1.mkv')]), { added: [], changed: [], removed: [] });
   });
 
   it('les sources sont indépendantes ; une clé fournie par deux emplacements reste tant que l’un la fournit', () => {
@@ -234,7 +256,10 @@ describe('catalogue : IPC', () => {
   it('catalogElement rend l’élément d’après sa clé, ou null', () => {
     const { catalog } = setup();
     catalog.setSource(SITES, [site('netflix')]);
-    const handlers = catalogHandlers({ catalog } as unknown as MainContext);
+    const overrides = createOverrides({ file: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-catalog-')), 'overrides.json') });
+    overrides.load();
+    const tags = createTagEngine({ catalog, overrides, registry: createRegistry((k) => k), rules: () => fileTagRules(undefined) });
+    const handlers = catalogHandlers({ catalog, tags } as unknown as MainContext);
     assert.equal(handlers.catalogElement('web:netflix')!.name, 'netflix');
     assert.equal(handlers.catalogElement('web:inconnu'), null);
   });
