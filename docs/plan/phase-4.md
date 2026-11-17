@@ -105,6 +105,24 @@ d'étape **G6**.
 
 ---
 
+## P4-03b — Navigation : attente du rendu des composants
+
+- **Dépend de** : P4-03 · **Taille** : S · correctif décidé au point d'étape G3 (17/11/2026)
+- **Problème** : le test de fumée échouait de temps en temps (« attend le rendu des composants, puis les flèches les
+  parcourent… ») : après une flèche pressée avant le rendu des `ds-*`, le focus n'arrivait jamais sur le bon
+  composant.
+- **Cause** : ouvrir une vue appelle `focusFirst`, qui attend le rendu de ses composants avant de focaliser le premier
+  élément. Si d'autres composants arrivent pendant cette attente et qu'une flèche est pressée, les deux attentes se
+  terminent ensemble : le premier élément reprend le focus, puis la flèche part de lui au lieu de l'élément où était
+  le focus. Reproduit en rejouant le test en boucle (ouverture de la page de démonstration puis flèche) : 10 échecs
+  sur 40.
+- **Correction** : un focus automatique différé (`focusFirst`, `restoreFocus`) est abandonné si une demande plus
+  récente est venue pendant l'attente (une flèche) ou si le focus a été placé ailleurs (règle `deferredFocusStands`
+  de `nav/targets.ts`, testée). Les flèches ne sont jamais abandonnées.
+- **Critère d'acceptation** : le test passe en boucle (100 passages sans échec) ; test de fumée complet vert.
+
+---
+
 ## P4-04 — Contrôleurs, actions et traduction
 
 - **Dépend de** : P4-01, P1-22, P1-23 · **Taille** : M
