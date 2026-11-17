@@ -1,5 +1,5 @@
 /**
- * Recherche dans le catalogue (P2-09, `catalog.search`) : noms des éléments, infos texte et noms des tags, sans tenir
+ * Recherche dans le catalogue (P2-09, `catalog.search`) : noms des éléments, infos texte cherchables et noms des tags, sans tenir
  * compte des accents ni de la casse, comme la recherche de l'interface historique (`src/renderer/domain/search.ts`) :
  * un élément est trouvé s'il contient tous les mots, dans n'importe quel ordre.
  *
@@ -26,7 +26,7 @@ export interface SearchServiceOptions {
   engine: Pick<TagEngine, 'peek' | 'keys' | 'element' | 'onChange'>;
   catalog: Pick<Catalog, 'get'>;
   pages: Pick<Pages, 'list'>;
-  registry: Pick<Registry, 'tagName' | 'infoType'>;
+  registry: Pick<Registry, 'tagName' | 'infoSearch'>;
   /** Texte des catalogues (noms des pages, groupe des éléments hors pages). */
   translate: (key: string) => string;
 }
@@ -47,15 +47,18 @@ export const quickFold = (s: string): string => (ASCII.test(s) ? s.toLowerCase()
 /** Mots de la recherche, simplifiés (comme `matcher` de l'interface historique). */
 export const searchWords = (query: unknown): string[] => fold(query).split(/\s+/).filter(Boolean);
 
-/** Valeurs texte des infos : infos de type texte, éléments texte des listes ; une info non déclarée si c'est un texte. */
-export function infoTexts(infos: Readonly<Effective['infos']>, infoType: Registry['infoType']): string[] {
+/**
+ * Valeurs texte des infos que la recherche lit (`searchedAs` du registre) : infos de type texte, éléments texte des
+ * listes ; une info non déclarée si c'est un texte ; jamais une info déclarée non cherchable.
+ */
+export function infoTexts(infos: Readonly<Effective['infos']>, infoSearch: Registry['infoSearch']): string[] {
   const out: string[] = [];
   for (const id in infos) {
     const value = infos[id];
-    const type = infoType(id);
-    if (type === 'text' || type === undefined) {
+    const how = infoSearch(id);
+    if (how === 'text') {
       if (typeof value === 'string') out.push(value);
-    } else if (type === 'list' && Array.isArray(value)) {
+    } else if (how === 'list' && Array.isArray(value)) {
       for (const v of value) if (typeof v === 'string') out.push(v);
     }
   }
@@ -64,11 +67,11 @@ export function infoTexts(infos: Readonly<Effective['infos']>, infoType: Registr
 
 export function createSearch({ engine, catalog, pages, registry, translate }: SearchServiceOptions) {
   let entries: Map<ElementKey, Entry> | null = null;
-  // Type de chaque info, lu une fois dans le registre (les infos du cœur ne changent pas de type).
-  const types = new Map<string, ReturnType<Registry['infoType']>>();
-  const infoType = (id: string) => {
-    if (!types.has(id)) types.set(id, registry.infoType(id));
-    return types.get(id);
+  // Ce que la recherche lit de chaque info, demandé une fois au registre (les infos du cœur ne changent pas).
+  const how = new Map<string, ReturnType<Registry['infoSearch']>>();
+  const infoSearch = (id: string) => {
+    if (!how.has(id)) how.set(id, registry.infoSearch(id));
+    return how.get(id) ?? null;
   };
 
   /** `memo` : valeurs déjà simplifiées pendant la préparation (dossiers, séries, albums se répètent). */
@@ -84,7 +87,7 @@ export function createSearch({ engine, catalog, pages, registry, translate }: Se
       }
       return f;
     };
-    return { name, texts: infoTexts(eff.infos, infoType).map(simple), eff };
+    return { name, texts: infoTexts(eff.infos, infoSearch).map(simple), eff };
   }
 
   function all(): Map<ElementKey, Entry> {

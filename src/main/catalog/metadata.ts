@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import type { CatalogSettings, Element, ElementKey, OpenKind } from '@mire/shared';
 import type { ScrapeDb, ScrapeRecord, ScrapeStore } from '../scrape/types.ts';
-import { createJsonStore, readJsonFile } from '../storage/json-store.ts';
+import { corruptReason, createJsonStore, readJsonFile } from '../storage/json-store.ts';
 import { movedKey } from './keys.ts';
 import { legacyTarget, metaToOverride, movedLegacyKey } from './legacy-meta.ts';
 import type { MigrationReport } from './overrides.ts';
@@ -78,7 +78,12 @@ function readFile(raw: MetadataFile): MetadataFile {
 
 export function createMetadataStore({ file, legacyFile, platform = process.platform, find, onIgnored }: MetadataStoreOptions) {
   const ignored = onIgnored ?? ((f: string, reason: string) => console.error(`Catalogue : ${f} écarté (${reason}).`));
-  const store = createJsonStore<MetadataFile>(file, { defaults: empty, debounceMs: 400, onCorrupt: (err, f) => ignored(f, err.message) });
+  const store = createJsonStore<MetadataFile>(file, {
+    defaults: empty,
+    debounceMs: 400,
+    setAside: true,
+    onCorrupt: (err, f, kept) => ignored(f, corruptReason(err, kept)),
+  });
   let data = empty();
   // Clé du fournisseur → clé de l'élément qui porte sa fiche.
   const legacyIndex = new Map<string, ElementKey>();
@@ -184,6 +189,9 @@ export function createMetadataStore({ file, legacyFile, platform = process.platf
     load(): MigrationReport | null {
       const exists = fs.existsSync(file);
       data = readFile(store.load());
+      // Fichier illisible mis de côté : un fichier vide le remplace tout de suite, pour que l'ancien fichier de
+      // l'interface historique ne soit pas repris une seconde fois au démarrage suivant.
+      if (exists && !fs.existsSync(file)) store.set(data);
       let report: MigrationReport | null = null;
       if (!exists && legacyFile && fs.existsSync(legacyFile)) {
         try {

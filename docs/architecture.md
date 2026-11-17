@@ -168,6 +168,7 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 | --- | --- |
 | `@mire/shared` | Fonctions pures et référentiels : texte (`fold`, noms de fichiers, épisodes), adresses (`hostOf`, `isHttpUrl`), identifiants (`newId`), formats de fichiers (`KIND`, `NATIVE`, `MIME`, `EXT`), systèmes de jeu (`guessSystem`, alias, noms) ; types de la configuration (`Config`, `WebSite`, `TvService`, `Emulator`…). |
 | `@mire/shared` (`element.ts`) | Types du catalogue d'éléments : `Element`, `ElementKey`, `ElementSourceRef`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, `ValueOrigin` (origine d'un tag ou d'une info : `file`, `source`, `tagger`, `metadata`, `user`). |
+| `@mire/shared` (`targets.ts`) | Cibles (P2-12) : ce qu'une rangée de l'accueil, puis un plugin ou un thème, peut ouvrir, écrit en un texte : une page par son identifiant (`movies` ; un identifiant de page n'a jamais de `:`, `PAGE_ID_RE`), une liste par `list:<id>` (`LIST_PAGE_PREFIX`, comme `catalogPage`), un écran du cœur par `screen:<nom>` (`CORE_SCREENS`, liste fermée : `home`, `search`, `center`, `settings`, `explorer` ; ni la coquille ni les lecteurs). `parseTarget` lit (`null` si invalide), `isTarget` reconnaît, `formatTarget` écrit (lève `RangeError` pour une cible invalide). La normalisation de la configuration retire des rangées de l'accueil une cible invalide. |
 | `@mire/shared/ipc` | Contrat IPC : tables des méthodes et des événements, leurs types, `createApi`. |
 | `@mire/shared/settings/schema` | Schéma des réglages (voir `docs/settings-schema.md`). |
 | `@mire/shared/i18n` | Moteur de traduction, formats, choix de la langue, catalogues intégrés `fr` et `en`, vérification des catalogues (voir `docs/i18n.md`). |
@@ -387,7 +388,14 @@ relatif, avec `..` ou hors de ces dossiers ; un lien symbolique (le fichier ou u
 (une racine de disque configurée est ignorée) ; une destination hors des dossiers, absente ou qui n'est pas un
 dossier ; un nom déjà pris (rien n'est écrasé) ; un nouveau nom vide, `.`, `..` ou avec un séparateur. La
 suppression passe par la corbeille du système (`shell.trashItem`). La confirmation est demandée par l'interface
-(P4-09). Le catalogue suit : voir « Listes » et « Tags et infos » (`movePath`).
+(P4-09). Le catalogue suit (`files/follow.ts`, `catalogFollow`, clés recalculées par `movedKey`) :
+
+| Après… | Suit le nouveau chemin | Ne bouge pas |
+| --- | --- | --- |
+| un renommage ou un déplacement (fichier, ou tout ce que contient un dossier) | modifications faites à la main (`overrides.json`), infos en ligne (`metadata.json`), listes (`lists.json`), positions de reprise et entrées de « Reprendre » (`usage.json` : chemin et clé ; nom et images gardés) ; l'élément revient sous sa nouvelle clé à l'analyse suivante | recherches récentes (des textes), adresses web et entrées M3U |
+| une mise à la corbeille | l'élément quitte le catalogue | tout le reste : modifications, infos en ligne, positions de reprise et « Reprendre » sont gardés (un fichier remis de la corbeille retrouve tout) ; une liste garde l'élément, indisponible |
+
+Détail : voir « Listes » et « Tags et infos » (`movePath`).
 
 Piste connue : un lien symbolique placé dans un dossier autorisé est servi par `media://` (voir les pistes de
 `docs/plan/BACKLOG.md`).
@@ -405,6 +413,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | --- | --- | --- |
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
+| `catalog/overrides.json.illisible-<date>`, de même `metadata.json`, `pages.json`, `lists.json` | Fichier du catalogue illisible mis de côté à la lecture, signalé dans le journal (P2-12) : il n'est jamais écrasé ; un `overrides.json` ou `metadata.json` vide le remplace aussitôt, pour que l'ancien `meta.json` ou `db.json` ne soit pas repris | stockage JSON (`setAside`) |
 | `usage.json` | « Reprendre », positions de reprise des vidéos (par clé d'élément depuis P2-11), volume, recherches récentes | service des données d'usage, stockage JSON |
 | `catalog/sources/<plugin>--<emplacement>-<empreinte>.json` | Catalogue d'éléments : résultat de la dernière analyse de chaque emplacement de source (`{ version, source, scanned, elements }`) | catalogue (`src/main/catalog/`), stockage JSON (écriture différée) |
 | `catalog/overrides.json` | Modifications faites à la main : tags ajoutés ou retirés, infos et images, par clé d'élément ; tags créés par l'utilisateur ; fiches de l'ancien `meta.json` sans élément (`{ version, tags, elements, unmatched }`) | `src/main/catalog/overrides.ts`, stockage JSON |
@@ -569,7 +578,9 @@ les règles par extension de la configuration.
   été changé : la version de la configuration ne change pas.
 - **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, `series`,
   `movie` des tags automatiques, `game`, `tv`, `stream` des sources de P2-03) et infos
-  du cœur avec leur type (`text`, `number`, `boolean`, `list`) ; noms affichés dans les catalogues de textes
+  du cœur (`InfoDeclaration` : leur type `text`, `number`, `boolean`, `list`, et `searchable`, vrai par défaut pour
+  un texte ou une liste ; faux pour `extension`, `mediaType`, `server` et `subtitles`, qui n'ont pas de sens dans une
+  recherche ; un plugin le déclarera pour ses infos, P3-01) ; noms affichés dans les catalogues de textes
   (`catalog.tags.<id>`, `catalog.infos.<id>`). Un tag inconnu ajouté à la main devient un tag de l'utilisateur, dont
   l'identifiant est le nom simplifié (« Vus en 2024 » → `vus-en-2024`).
 - **Index** (`tags/tag-index.ts`) : tag → clés, info → valeur → clés (un élément de liste est indexé seul).
@@ -695,8 +706,9 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
 - **Comparaison** : celle de l'interface historique (`matcher`) : un élément est trouvé s'il contient tous les mots de
   la recherche, dans n'importe quel ordre, sans tenir compte des accents ni de la casse (`fold`). Une recherche vide
   ou faite d'espaces ne trouve rien.
-- **Ce qui est cherché** : le nom de l'élément, ses infos texte (type `text` du registre, éléments texte des infos de
-  liste comme `genres`, et une info non déclarée si sa valeur est un texte ; pas les nombres) et le nom affiché de
+- **Ce qui est cherché** : le nom de l'élément, ses infos texte cherchables (type `text` du registre, éléments texte
+  des infos de liste comme `genres`, et une info non déclarée si sa valeur est un texte ; pas les nombres, ni une info
+  déclarée `searchable: false` comme l'extension ou les sous-titres, `searchedAs`) et le nom affiché de
   ses tags, dans la langue de l'interface (« films » trouve les films en français, « movies » en anglais).
 - **Calcul à la demande** : rien n'est calculé au démarrage. À la première recherche, le nom et les infos texte de
   chaque élément sont simplifiés et gardés (une valeur qui se répète, comme un dossier, n'est simplifiée qu'une
@@ -727,7 +739,7 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
   épinglées, dans l'ordre du menu de la v8, qui n'était ni modifiable ni masquable) : rien n'est écrit dans
   `catalog/pages.json` ni dans `catalog/lists.json` (la v8 n'a pas de favoris). La position et le repli du menu
   (`ui.menu`) ne bougent pas. Les barres de la mire, « Vos services » et « Reprendre » deviennent les rangées de
-  l'accueil (`ui.home.rows`, `HomeRow` : `bars` vers des pages, `list:<id>` ou `screen:search` ; `sites` par clé
+  l'accueil (`ui.home.rows`, `HomeRow` : `bars` vers des cibles, voir `targets.ts` dans « `@mire/shared` » ; `sites` par clé
   `web:<id>` ; `recent` ; `page` ; `list`). `ui.home.clock`, `recent`, `bars`, `services` et `ui.start` restent en
   place pour l'interface historique ; une configuration sans rangées (installation neuve) reçoit celles qu'on tire de
   ces réglages. Les réglages qui iront aux plugins ne bougent pas (P5-01) ;
@@ -753,6 +765,9 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
   service en tire la clé. Un `usage.json` d'avant (positions par chemin) est rattaché au chargement et réécrit une
   fois ; un import ou le `localStorage` d'une version précédente aussi. Les recherches récentes sont des textes : elles
   ne désignent aucun élément et restent telles quelles.
+- **Fichier renommé ou déplacé par Mire** (P2-12, `rules.movePath`, appelé par `catalogFollow`) : les positions de
+  reprise et les entrées de « Reprendre » passent sous le nouveau chemin et la nouvelle clé ; la position du fichier
+  déplacé remplace une ancienne restée sous le nouveau chemin. Après une mise à la corbeille, rien ne change.
 - L'interface lit `usageGet()` au démarrage et garde une copie de « Reprendre », du volume et des recherches pour
   l'affichage ; chaque modification part au processus principal. La position de reprise se demande vidéo par vidéo.
 - Au premier lancement après la mise à jour, l'interface envoie ce que gardait son `localStorage` (`recent`,
@@ -767,8 +782,10 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
 `src/main/storage/json-store.ts` est la seule façon de lire et d'écrire un fichier de données JSON :
 
 - **lecture tolérante** (`load()`) : fichier absent → valeurs par défaut ; fichier illisible (JSON invalide, ou
-  contenu qui n'est pas un objet) → `onCorrupt(erreur, fichier)` puis valeurs par défaut. Les clés lues complètent
-  les valeurs par défaut ;
+  contenu qui n'est pas un objet) → `onCorrupt(erreur, fichier, misDeCôté)` puis valeurs par défaut. Avec `setAside`
+  (fichiers du catalogue), le fichier illisible est d'abord renommé en `<fichier>.illisible-<date>` (`setAsideFile`),
+  comme `config.json`, pour qu'une écriture ne l'écrase pas en silence. Les clés lues complètent les valeurs par
+  défaut ;
 - **écriture atomique** : le JSON est écrit dans `<fichier>.<pid>.tmp`, mis sur le disque (`fsync`), puis renommé
   par-dessus l'ancien. Une coupure pendant l'écriture laisse l'ancien fichier intact. Sous Windows, un renommage
   refusé un instant (antivirus, indexation) est réessayé ;

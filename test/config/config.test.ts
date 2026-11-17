@@ -262,7 +262,7 @@ test.describe('migration v9 (P2-11)', () => {
     assert.deepEqual(gone.ui.home.rows, [{ kind: 'sites', keys: ['web:a'] }, { kind: 'recent' }]);
   });
 
-  test('rangées : normalisées sans doublon, les autres réglages de l’accueil n’y touchent pas', () => {
+  test('rangées : normalisées sans doublon ni cible invalide, les autres réglages de l’accueil n’y touchent pas', () => {
     const rows = [
       { kind: 'recent' },
       { kind: 'recent' },
@@ -270,7 +270,9 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'list', id: 'favorites' },
       { kind: 'page', id: 'movies' },
       { kind: 'sites', keys: ['web:x', 'x', 'web:x'] },
-      { kind: 'bars', targets: ['tv', '', 3] },
+      { kind: 'bars', targets: ['tv', '', 3, 'list:a', 'screen:search', 'screen:inconnu', 'Films', 'web:x', 'tv'] },
+      { kind: 'page', id: 'list:a' },
+      { kind: 'list', id: 'Mauvais' },
       { kind: 'inconnue' },
       null,
     ];
@@ -279,7 +281,7 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'page', id: 'movies' },
       { kind: 'list', id: 'favorites' },
       { kind: 'sites', keys: ['web:x'] },
-      { kind: 'bars', targets: ['tv'] },
+      { kind: 'bars', targets: ['tv', 'list:a', 'screen:search'] },
     ]);
   });
 

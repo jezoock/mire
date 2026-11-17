@@ -11,34 +11,63 @@ import { slug, type InfoType, type InfoValue } from '@mire/shared';
  */
 export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote', 'series', 'movie', 'game', 'tv', 'stream'] as const;
 
-/** Infos du cœur et leur type de valeur. */
-export const CORE_INFOS: Readonly<Record<string, InfoType>> = {
+/**
+ * Déclaration d'une info : son type de valeur et, pour un texte ou une liste, si la recherche la lit (vrai par
+ * défaut). C'est ce qu'un plugin déclarera pour ses propres infos (P3-01).
+ */
+export interface InfoDeclaration {
+  type: InfoType;
+  /** Faux pour une info technique qui n'a pas de sens dans une recherche (extension, sous-titres…). */
+  searchable?: boolean;
+}
+
+const text = (searchable = true): InfoDeclaration => (searchable ? { type: 'text' } : { type: 'text', searchable });
+const list = (searchable = true): InfoDeclaration => (searchable ? { type: 'list' } : { type: 'list', searchable });
+const NUMBER: InfoDeclaration = { type: 'number' };
+
+/**
+ * Infos du cœur. Ne sont pas cherchées : l'extension (`mkv` trouverait tous les fichiers de ce format), le genre de
+ * média d'une entrée M3U (`video`, `audio` : déjà le nom des tags), le serveur (nom d'hôte d'une adresse) et les
+ * fichiers de sous-titres. Le dossier, la liste M3U et la catégorie d'un site le sont : ce sont des noms donnés par
+ * l'utilisateur, et l'interface historique cherche déjà dans le dossier.
+ */
+export const CORE_INFOS: Readonly<Record<string, InfoDeclaration>> = {
   // Type de fichier.
-  extension: 'text',
+  extension: text(false),
   // Posées par les sources.
-  mediaType: 'text',
-  folder: 'text',
-  server: 'text',
-  playlist: 'text',
-  subtitles: 'list',
+  mediaType: text(false),
+  folder: text(),
+  server: text(false),
+  playlist: text(),
+  subtitles: list(false),
   // Saisies à la main (et, plus tard, infos en ligne).
-  title: 'text',
-  year: 'number',
-  genres: 'list',
-  overview: 'text',
-  artist: 'text',
+  title: text(),
+  year: NUMBER,
+  genres: list(),
+  overview: text(),
+  artist: text(),
   // Tags automatiques (P2-05).
-  series: 'text',
-  season: 'number',
-  episode: 'number',
-  album: 'text',
-  track: 'number',
-  system: 'text',
+  series: text(),
+  season: NUMBER,
+  episode: NUMBER,
+  album: text(),
+  track: NUMBER,
+  system: text(),
   // Sources des sites (P2-03) : rangement du site dans Streaming (`video`, `music`…).
-  category: 'text',
+  category: text(),
   // Source des chaînes (P2-07) : numéro de la chaîne, pour le tri de la page Télévision.
-  channel: 'number',
+  channel: NUMBER,
 };
+
+/**
+ * Ce que la recherche lit d'une info : sa valeur texte, les textes de sa liste, ou rien (nombre, oui/non, info
+ * déclarée non cherchable). Une info non déclarée est lue si c'est un texte.
+ */
+export function searchedAs(decl: InfoDeclaration | undefined): 'text' | 'list' | null {
+  if (!decl) return 'text';
+  if (decl.searchable === false) return null;
+  return decl.type === 'text' || decl.type === 'list' ? decl.type : null;
+}
 
 /** Identifiant d'une info : lettres et chiffres, en commençant par une minuscule (`season`, `releaseDate`). */
 export const INFO_ID_RE = /^[a-z][a-zA-Z0-9]{0,63}$/;
@@ -73,6 +102,8 @@ export function coerceInfo(type: InfoType | undefined, v: unknown): InfoValue | 
   return isInfoValue(v) ? v : undefined;
 }
 
+const infoDeclaration = (id: string): InfoDeclaration | undefined => (Object.hasOwn(CORE_INFOS, id) ? CORE_INFOS[id] : undefined);
+
 export interface UserTag {
   name: string;
 }
@@ -99,7 +130,9 @@ export function createRegistry(translate: (key: string) => string) {
     },
     /** Nom affiché d'une info. */
     infoName: (id: string): string => (Object.hasOwn(CORE_INFOS, id) ? translate(`catalog.infos.${id}`) : id),
-    infoType: (id: string): InfoType | undefined => (Object.hasOwn(CORE_INFOS, id) ? CORE_INFOS[id] : undefined),
+    infoType: (id: string): InfoType | undefined => infoDeclaration(id)?.type,
+    /** Ce que la recherche lit de l'info (`searchedAs`). */
+    infoSearch: (id: string): ReturnType<typeof searchedAs> => searchedAs(infoDeclaration(id)),
   };
 }
 

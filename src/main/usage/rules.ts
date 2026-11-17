@@ -6,7 +6,7 @@
 import path from 'node:path';
 import { fold, isHttpUrl } from '@mire/shared';
 import type { LegacyUsage, RecentEntry, UsageData } from '@mire/shared/ipc';
-import { keyGenre, localFileKey, remoteFileKey } from '../catalog/keys.ts';
+import { isSameOrUnder, keyGenre, localFileKey, movedKey, remoteFileKey } from '../catalog/keys.ts';
 
 export const RECENT_MAX = 18;
 export const QUERIES_MAX = 10;
@@ -137,4 +137,38 @@ export function mergeUsage(base: UsageData, extra: UsageData): UsageData {
 export function mergeLegacy(base: UsageData, legacy: LegacyUsage, platform: NodeJS.Platform = process.platform): UsageData {
   const extra = normalizeUsage(legacy, platform);
   return { ...mergeUsage(base, extra), volume: normalizeVolume(legacy?.volume, base.volume) };
+}
+
+/** Chemin `p` une fois `from` renommé ou déplacé en `to` (fichier ou dossier) ; `null` s'il n'est pas dessous. */
+function movedFilePath(p: string, from: string, to: string, platform: NodeJS.Platform): string | null {
+  if (!isSameOrUnder(p, from, platform)) return null;
+  const paths = platform === 'win32' ? path.win32 : path.posix;
+  const rest = paths.relative(from, p);
+  return rest ? paths.join(to, rest) : to;
+}
+
+/**
+ * Données d'usage après le renommage ou le déplacement de `from` vers `to` par Mire (P2-10, comme `movedKey`) : les
+ * positions de reprise rangées sous la clé d'un fichier concerné et les entrées de « Reprendre » (chemin et clé)
+ * passent sous le nouveau chemin. Le reste de l'entrée (nom, image…) est gardé tel quel. Rend `data` s'il n'y a rien
+ * à changer.
+ */
+export function movePath(data: UsageData, from: string, to: string, platform: NodeJS.Platform = process.platform): UsageData {
+  let changed = false;
+  const resume: Record<string, number> = {};
+  for (const [id, t] of Object.entries(data.resume)) {
+    const next = movedKey(id, from, to, platform);
+    if (next) changed = true;
+    // La position du fichier déplacé l'emporte sur une ancienne restée sous la nouvelle clé.
+    if (next || !Object.hasOwn(resume, id)) resume[next ?? id] = t;
+  }
+  const recent = data.recent.map((entry) => {
+    const next = entry.key && movedKey(entry.key, from, to, platform) ? movedFilePath(entry.path, from, to, platform) : null;
+    if (!next) return entry;
+    changed = true;
+    return { ...entry, path: next, key: usageKey(next, platform) };
+  });
+  if (!changed) return data;
+  // Une entrée déjà là sous le nouveau chemin : la plus récente (la première) reste.
+  return { ...data, resume, recent: recent.filter((x, i) => recent.findIndex((y) => y.path === x.path) === i) };
 }

@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import type { Element, ElementKey, InfoValue, OpenKind } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
-import { createJsonStore, readJsonFile } from '../storage/json-store.ts';
+import { corruptReason, createJsonStore, readJsonFile } from '../storage/json-store.ts';
 import { movedKey } from './keys.ts';
 import { FACADE_IMAGES, FACADE_INFOS, legacyTarget, metaToOverride, movedLegacyKey, overrideToMeta } from './legacy-meta.ts';
 import type { Override } from './tags/merge.ts';
@@ -97,7 +97,12 @@ function readFile(raw: OverridesFile): OverridesFile {
 
 export function createOverrides({ file, legacyFile, platform = process.platform, find, onIgnored }: OverridesOptions) {
   const ignored = onIgnored ?? ((f: string, reason: string) => console.error(`Catalogue : ${f} écarté (${reason}).`));
-  const store = createJsonStore<OverridesFile>(file, { defaults: empty, space: 2, onCorrupt: (err, f) => ignored(f, err.message) });
+  const store = createJsonStore<OverridesFile>(file, {
+    defaults: empty,
+    space: 2,
+    setAside: true,
+    onCorrupt: (err, f, kept) => ignored(f, corruptReason(err, kept)),
+  });
   let data = empty();
   // Ancienne clé → clé de l'élément qui porte sa fiche.
   const legacyIndex = new Map<string, ElementKey>();
@@ -159,6 +164,9 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
     load(): MigrationReport | null {
       const exists = fs.existsSync(file);
       data = readFile(store.load());
+      // Fichier illisible mis de côté : un fichier vide le remplace tout de suite, pour que l'ancien fichier de
+      // l'interface historique ne soit pas repris une seconde fois au démarrage suivant.
+      if (exists && !fs.existsSync(file)) store.set(data);
       let report: MigrationReport | null = null;
       if (!exists && legacyFile && fs.existsSync(legacyFile)) {
         try {

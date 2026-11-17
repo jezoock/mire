@@ -39,6 +39,8 @@ export interface UsageService {
   merge(data: unknown): UsageData;
   /** Reprend les valeurs du `localStorage` d'une version précédente. */
   migrate(legacy: unknown): UsageData;
+  /** Fichier ou dossier renommé ou déplacé par Mire : positions et « Reprendre » le suivent (`rules.movePath`). */
+  movePath(from: string, to: string): void;
   /** Écrit tout de suite ce qui attend (fermeture de l'application). */
   flush(): Promise<void>;
 }
@@ -97,6 +99,10 @@ export function createUsageService({ file, debounceMs = 1000, log = (m) => conso
     replace: (data) => commit(rules.normalizeUsage(data, platform)),
     merge: (data) => commit(rules.mergeUsage(current, rules.normalizeUsage(data, platform))),
     migrate: (legacy) => commit(rules.mergeLegacy(current, rules.isObject(legacy) ? legacy : {}, platform)),
+    movePath(from, to) {
+      const next = rules.movePath(current, from, to, platform);
+      if (next !== current) commit(next);
+    },
     flush: () => store.flush(),
   };
 }

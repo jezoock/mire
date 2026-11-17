@@ -1,6 +1,8 @@
 /**
  * Stockage d'un fichier de données JSON du processus principal.
  * - Lecture tolérante : fichier absent → valeurs par défaut ; fichier illisible → `onCorrupt`, puis valeurs par défaut.
+ *   Avec `setAside`, le fichier illisible est d'abord mis de côté (`<fichier>.illisible-<date>`) : une écriture
+ *   suivante ne l'écrase pas.
  * - Écriture atomique : le JSON est écrit dans un fichier temporaire, mis sur le disque, puis renommé
  *   par-dessus l'ancien. Une coupure en pleine écriture laisse l'ancien fichier intact (anomalie A5).
  * - Écriture immédiate (par défaut) : synchrone, une erreur remonte à l'appelant.
@@ -18,8 +20,13 @@ export interface JsonStoreOptions<T> {
   defaults: T | (() => T);
   /** Délai de regroupement des écritures en millisecondes ; 0 (par défaut) : écriture immédiate. */
   debounceMs?: number;
-  /** Fichier présent mais illisible (JSON invalide ou qui n'est pas un objet). */
-  onCorrupt?: (err: Error, file: string) => void;
+  /**
+   * Fichier présent mais illisible (JSON invalide ou qui n'est pas un objet). `kept` : où il a été mis de côté
+   * (`setAside`), `null` sinon.
+   */
+  onCorrupt?: (err: Error, file: string, kept: string | null) => void;
+  /** Met de côté un fichier illisible avant de repartir des valeurs par défaut (`setAsideFile`). */
+  setAside?: boolean;
   /** Échec d'une écriture différée (une écriture immédiate lève l'erreur à l'appelant). */
   onError?: (err: Error, file: string) => void;
   /** Indentation du JSON, comme le troisième argument de `JSON.stringify` (aucune par défaut). */
@@ -108,6 +115,24 @@ export async function writeFileAtomicAsync(file: string, text: string): Promise<
 }
 
 /**
+ * Met un fichier de côté sous `<fichier>.illisible-<date>` (comme `config.json`), pour qu'il ne soit jamais écrasé en
+ * silence ; rend son nouveau chemin, ou `null` si c'est impossible (il reste alors en place).
+ */
+export function setAsideFile(file: string, now: () => number = Date.now): string | null {
+  const kept = `${file}.illisible-${now()}`;
+  try {
+    fs.renameSync(file, kept);
+    return kept;
+  } catch {
+    return null;
+  }
+}
+
+/** Message du journal pour un fichier illisible : la raison, et où il a été mis de côté. */
+export const corruptReason = (err: Error, kept: string | null): string =>
+  kept ? `${err.message} ; mis de côté dans ${path.basename(kept)}` : `${err.message} ; impossible de le mettre de côté`;
+
+/**
  * Lit un fichier JSON. Absent → `null`. Illisible → l'erreur est levée.
  * Un objet JSON est attendu (tous les fichiers de données de Mire en sont).
  */
@@ -127,7 +152,7 @@ export function readJsonFile(file: string): Record<string, unknown> | null {
 }
 
 export function createJsonStore<T extends object>(file: string, options: JsonStoreOptions<T>): JsonStore<T> {
-  const { debounceMs = 0, onCorrupt, space } = options;
+  const { debounceMs = 0, onCorrupt, setAside = false, space } = options;
   const onError = options.onError ?? ((err: Error, f: string) => console.error(`Écriture de ${f} impossible :`, err.message));
   const defaults = (): T => (typeof options.defaults === 'function' ? (options.defaults as () => T)() : structuredClone(options.defaults));
 
@@ -146,7 +171,7 @@ export function createJsonStore<T extends object>(file: string, options: JsonSto
       value = read ? ({ ...defaults(), ...read } as T) : defaults();
     } catch (err) {
       value = defaults();
-      onCorrupt?.(err as Error, file);
+      onCorrupt?.(err as Error, file, setAside ? setAsideFile(file) : null);
     }
     return value;
   }

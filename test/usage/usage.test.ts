@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createUsageService, mergeLegacy, mergeUsage, normalizeUsage, resumeAfter } from '../../src/main/usage/index.ts';
-import { addQuery, addRecent, emptyUsage, usageKey } from '../../src/main/usage/rules.ts';
+import { addQuery, addRecent, emptyUsage, movePath, usageKey } from '../../src/main/usage/rules.ts';
 
 let tmp: string;
 beforeEach(() => {
@@ -275,5 +275,45 @@ describe('usage : rattachement aux clés d’éléments (P2-11)', () => {
     usage.clearResume('/v/b.mkv');
     assert.deepEqual(usage.get().resume, { 'local:/v/a.mkv': 400 });
     return usage.flush();
+  });
+});
+
+describe('usage : fichier renommé ou déplacé (P2-12)', () => {
+  it('Windows : chemins comparés sans casse, clés et chemins suivis', () => {
+    const data = normalizeUsage(
+      {
+        recent: [
+          { path: 'D:\\Films\\Saga\\c.mkv', name: 'c' },
+          { path: 'magnet:?xt=1', name: 'm' },
+        ],
+        resume: { 'D:\\Films\\Saga\\c.mkv': 600, 'magnet:?xt=1': 50 },
+      },
+      'win32',
+    );
+    const out = movePath(data, 'd:\\films', 'D:\\Cinema', 'win32');
+    assert.deepEqual(out.resume, { 'local:d:/cinema/saga/c.mkv': 600, 'magnet:?xt=1': 50 });
+    assert.deepEqual(
+      out.recent.map((r) => [r.path, r.key]),
+      [
+        ['D:\\Cinema\\Saga\\c.mkv', 'local:d:/cinema/saga/c.mkv'],
+        ['magnet:?xt=1', null],
+      ],
+    );
+  });
+
+  it('rien à suivre : les données sont rendues telles quelles', () => {
+    const data = normalizeUsage({ recent: [{ path: '/v/a.mkv' }, { path: 'https://nas/v/a.mkv' }], resume: { '/v/a.mkv': 600 } }, 'linux');
+    assert.equal(movePath(data, '/w', '/x', 'linux'), data);
+    assert.equal(movePath(data, '/v/a', '/v/b', 'linux'), data, 'un nom qui commence pareil ne compte pas');
+  });
+
+  it('le service écrit usage.json après un renommage', async () => {
+    const file = path.join(tmp, 'usage.json');
+    const usage = createUsageService({ file, debounceMs: 0, platform: 'linux' });
+    usage.load();
+    usage.saveResume('/v/a.mkv', 600, 3000);
+    usage.movePath('/v', '/w');
+    await usage.flush();
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).resume, { 'local:/w/a.mkv': 600 });
   });
 });

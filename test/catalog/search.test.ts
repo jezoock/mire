@@ -14,7 +14,7 @@ import { createPages } from '../../src/main/catalog/pages/index.ts';
 import { createSearch, infoTexts, quickFold, searchWords, SEARCH_LIMIT } from '../../src/main/catalog/search/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
-import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
+import { CORE_INFOS, createRegistry, searchedAs } from '../../src/main/catalog/tags/registry.ts';
 import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
@@ -86,9 +86,39 @@ describe('catalog/search : infos texte et noms des tags', () => {
     assert.deepEqual(found(search.search('2024')), [], 'année : un nombre, pas un texte');
   });
 
-  it('infoTexts suit le type du registre ; une info non déclarée compte si c’est un texte', () => {
-    const { infoType } = createRegistry((k) => k);
-    assert.deepEqual(infoTexts({ title: 'T', year: 1999, genres: ['G', 3 as unknown as string], plugin: 'P', other: 5 }, infoType), ['T', 'G', 'P']);
+  it('infoTexts suit le registre ; une info non déclarée compte si c’est un texte, une info non cherchable jamais', () => {
+    const { infoSearch } = createRegistry((k) => k);
+    const infos = {
+      title: 'T',
+      year: 1999,
+      genres: ['G', 3 as unknown as string],
+      plugin: 'P',
+      other: 5,
+      extension: 'mkv',
+      subtitles: ['a.srt'],
+      server: 'nas',
+      mediaType: 'video',
+    };
+    assert.deepEqual(infoTexts(infos, infoSearch), ['T', 'G', 'P']);
+  });
+
+  it('les infos non cherchables (extension, sous-titres, serveur, genre de média) ne trouvent rien', () => {
+    const { search } = setup([file('/bib/Vacances.mkv', { subtitles: ['/bib/Vacances.fr.srt'], server: 'nas.local' }), file('/bib/Mkv expliqué.txt')]);
+    assert.deepEqual(found(search.search('mkv')), ['Mkv expliqué'], 'le nom reste cherché, pas l’extension');
+    assert.deepEqual(found(search.search('srt')), []);
+    assert.deepEqual(found(search.search('nas')), []);
+  });
+
+  it('searchedAs : vrai par défaut pour les textes et les listes, jamais pour les nombres', () => {
+    assert.equal(searchedAs({ type: 'text' }), 'text');
+    assert.equal(searchedAs({ type: 'list' }), 'list');
+    assert.equal(searchedAs({ type: 'text', searchable: false }), null);
+    assert.equal(searchedAs({ type: 'number', searchable: true }), null);
+    assert.equal(searchedAs({ type: 'boolean' }), null);
+    assert.equal(searchedAs(undefined), 'text');
+    for (const id of ['extension', 'subtitles', 'server', 'mediaType']) assert.equal(CORE_INFOS[id].searchable, false, id);
+    for (const id of ['title', 'folder', 'playlist', 'genres', 'series', 'album', 'artist', 'overview', 'system', 'category'])
+      assert.equal(searchedAs(CORE_INFOS[id]), CORE_INFOS[id].type, id);
   });
 
   it('les noms des tags, dans la langue de l’interface ; les tags de l’utilisateur aussi', () => {

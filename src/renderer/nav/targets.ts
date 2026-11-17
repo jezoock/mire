@@ -92,3 +92,20 @@ export function pickInColumn<T extends Navigable & ElementLike>(from: Rect, targ
   }
   return best;
 }
+
+/** Une demande de focus automatique différée (premier élément, retour d'un lecteur) en attente du rendu. */
+export interface DeferredFocus<T> {
+  /** Numéro de la demande ; chaque demande de focus (flèche comprise) en prend un nouveau. */
+  ticket: number;
+  /** L'élément focalisé au moment de la demande. */
+  from: T | null;
+}
+
+/**
+ * Une demande différée s'applique encore si aucune demande n'est venue après elle (une flèche pressée pendant
+ * l'attente part de l'élément focalisé, elle ne doit pas être écrasée ensuite) et si personne n'a placé le focus
+ * entre-temps (le focus est resté où il était, ou s'est perdu sur `body` quand la vue a été réaffichée).
+ */
+export function deferredFocusStands<T>(req: DeferredFocus<T>, latest: number, now: T | null, body: T | null): boolean {
+  return req.ticket === latest && (now === req.from || now === body || now === null);
+}
