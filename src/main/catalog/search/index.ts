@@ -3,8 +3,8 @@
  * compte des accents ni de la casse, comme la recherche de l'interface historique (`src/renderer/domain/search.ts`) :
  * un élément est trouvé s'il contient tous les mots, dans n'importe quel ordre.
  *
- * Rien n'est calculé au démarrage : le texte de recherche de chaque élément (nom et infos texte, simplifiés) est
- * préparé à la première recherche, puis tenu à jour par les changements du moteur de tags. Les noms des tags ne sont
+ * Rien n'est calculé au démarrage : les textes de recherche de chaque élément (nom et infos texte, simplifiés) sont
+ * préparés à la première recherche, puis tenus à jour par les changements du moteur de tags. Les noms des tags ne sont
  * pas dans ce texte : ils dépendent de la langue et sont comparés à chaque recherche (il y en a peu).
  */
 import type { Element, ElementKey, PageDefinition, SearchGroup, SearchOptions, SearchResult } from '@mire/shared';
@@ -34,9 +34,15 @@ export interface SearchServiceOptions {
 /** Texte de recherche d'un élément, simplifié (`fold`). */
 interface Entry {
   name: string;
-  /** Nom et infos texte, séparés par des retours à la ligne (un mot ne peut pas en chevaucher deux). */
-  text: string;
+  /** Infos texte, simplifiées ; les valeurs qui se répètent (dossier, série, album) partagent la même chaîne. */
+  texts: string[];
+  /** Tags, infos et images effectifs : le moteur remplace l'objet à chaque calcul et l'annonce (`onChange`). */
+  eff: Readonly<Effective>;
 }
+
+/** `fold` sans décomposition pour un texte sans accent (le cas courant) : même résultat, bien plus rapide. */
+const ASCII = /^[\x00-\x7f]*$/;
+export const quickFold = (s: string): string => (ASCII.test(s) ? s.toLowerCase() : fold(s));
 
 /** Mots de la recherche, simplifiés (comme `matcher` de l'interface historique). */
 export const searchWords = (query: unknown): string[] => fold(query).split(/\s+/).filter(Boolean);
@@ -44,7 +50,8 @@ export const searchWords = (query: unknown): string[] => fold(query).split(/\s+/
 /** Valeurs texte des infos : infos de type texte, éléments texte des listes ; une info non déclarée si c'est un texte. */
 export function infoTexts(infos: Readonly<Effective['infos']>, infoType: Registry['infoType']): string[] {
   const out: string[] = [];
-  for (const [id, value] of Object.entries(infos)) {
+  for (const id in infos) {
+    const value = infos[id];
     const type = infoType(id);
     if (type === 'text' || type === undefined) {
       if (typeof value === 'string') out.push(value);
@@ -57,20 +64,36 @@ export function infoTexts(infos: Readonly<Effective['infos']>, infoType: Registr
 
 export function createSearch({ engine, catalog, pages, registry, translate }: SearchServiceOptions) {
   let entries: Map<ElementKey, Entry> | null = null;
+  // Type de chaque info, lu une fois dans le registre (les infos du cœur ne changent pas de type).
+  const types = new Map<string, ReturnType<Registry['infoType']>>();
+  const infoType = (id: string) => {
+    if (!types.has(id)) types.set(id, registry.infoType(id));
+    return types.get(id);
+  };
 
-  function entryOf(key: ElementKey, eff: Readonly<Effective>): Entry | undefined {
+  /** `memo` : valeurs déjà simplifiées pendant la préparation (dossiers, séries, albums se répètent). */
+  function entryOf(key: ElementKey, eff: Readonly<Effective>, memo?: Map<string, string>): Entry | undefined {
     const e = catalog.get(key);
     if (!e) return undefined;
-    const name = fold(e.name);
-    return { name, text: [name, ...infoTexts(eff.infos, registry.infoType).map(fold)].join('\n') };
+    const name = quickFold(e.name);
+    const simple = (v: string) => {
+      let f = memo?.get(v);
+      if (f === undefined) {
+        f = quickFold(v);
+        memo?.set(v, f);
+      }
+      return f;
+    };
+    return { name, texts: infoTexts(eff.infos, infoType).map(simple), eff };
   }
 
   function all(): Map<ElementKey, Entry> {
     if (entries) return entries;
     entries = new Map();
+    const memo = new Map<string, string>();
     for (const key of engine.keys()) {
       const eff = engine.peek(key);
-      const entry = eff && entryOf(key, eff);
+      const entry = eff && entryOf(key, eff, memo);
       if (entry) entries.set(key, entry);
     }
     return entries;
@@ -114,11 +137,11 @@ export function createSearch({ engine, catalog, pages, registry, translate }: Se
 
       const hits: { key: ElementKey; eff: Readonly<Effective>; name: string; byName: boolean }[] = [];
       for (const [key, entry] of all()) {
-        const eff = engine.peek(key);
-        if (!eff) continue;
+        const { eff } = entry;
         let ok = true;
         for (let i = 0; i < words.length && ok; i++) {
-          if (entry.text.includes(words[i])) continue;
+          const w = words[i];
+          if (entry.name.includes(w) || entry.texts.some((x) => x.includes(w))) continue;
           ok = eff.tags.some((t) => tagWords(t)[i]);
         }
         if (ok) hits.push({ key, eff, name: entry.name, byName: words.every((w) => entry.name.includes(w)) });
