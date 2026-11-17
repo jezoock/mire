@@ -24,6 +24,7 @@ import {
   readRecord,
   shownCount,
   visibleRange,
+  withFocus,
   type CardElement,
 } from '@mire/ui/utils';
 
@@ -157,6 +158,16 @@ describe('grille', () => {
     assert.deepEqual(visibleRange(5000, 8, 300, -2000, -1100), { start: 0, end: 8 }, 'grille sous la fenêtre : la première ligne');
     assert.deepEqual(visibleRange(10, 8, 300, 0, 900), { start: 0, end: 10 });
     assert.deepEqual(visibleRange(0, 8, 300, 0, 900), { start: 0, end: 0 });
+  });
+
+  it('withFocus : la ligne de la carte qui a le focus et deux lignes de marge restent rendues', () => {
+    const visible = { start: 0, end: 48 }; // lignes 0 à 5, 8 colonnes
+    assert.deepEqual(withFocus(visible, 50, 8, 5000), { start: 0, end: 72 }, 'focus en ligne 6 : lignes 7 et 8 en plus');
+    assert.deepEqual(withFocus(visible, 20, 8, 5000), visible, 'focus déjà dans la part rendue');
+    assert.deepEqual(withFocus({ start: 800, end: 848 }, 790, 8, 5000), { start: 768, end: 848 }, 'focus au-dessus');
+    assert.deepEqual(withFocus(visible, 4999, 8, 5000), visible, 'focus trop loin : la page a défilé au stick');
+    assert.deepEqual(withFocus({ start: 4960, end: 5000 }, 4999, 8, 5000), { start: 4960, end: 5000 }, 'pas au-delà de la fin');
+    assert.deepEqual(withFocus(visible, -1, 8, 5000), visible, 'aucun focus');
   });
 
   it('visibleRange : sans mesure, une première tranche en lignes entières', () => {

@@ -193,6 +193,24 @@ export function visibleRange(count: number, columns: number, rowHeight: number, 
   return { start: first * cols, end: Math.min(count, last * cols) };
 }
 
+/**
+ * Étend la part rendue à la carte `focus` (son rang dans la grille) et à `overscan` lignes de chaque côté : au clavier
+ * et à la manette, le focus devance le défilement en douceur (de plusieurs lignes quand la touche reste enfoncée), et
+ * la ligne suivante doit déjà exister. Une carte à plus de `reach` lignes de la part visible (la page a défilé au
+ * stick) n'est pas gardée : la grille ne rend pas tout ce qui les sépare.
+ */
+export function withFocus(range: ItemRange, focus: number, columns: number, count: number, overscan = 2, reach = 50): ItemRange {
+  const cols = Math.max(1, Math.floor(columns) || 1);
+  if (focus < 0 || focus >= count || range.end <= range.start) return range;
+  const row = Math.floor(focus / cols);
+  const first = Math.floor(range.start / cols);
+  const last = Math.ceil(range.end / cols);
+  if (row < first - reach || row >= last + reach) return range;
+  const start = Math.min(first, Math.max(0, row - overscan)) * cols;
+  const end = Math.min(count, Math.max(last, row + overscan + 1) * cols);
+  return { start, end };
+}
+
 /** Deux parts identiques : la grille ne se rend pas de nouveau. */
 export const sameRange = (a: ItemRange, b: ItemRange): boolean => a.start === b.start && a.end === b.end;
 

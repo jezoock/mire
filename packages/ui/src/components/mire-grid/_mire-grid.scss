@@ -34,5 +34,9 @@
     gap: ds-spacing(4);
     box-sizing: border-box;
     width: 100%;
+    // Virtualisation : les marges changent quand des lignes entrent ou sortent. L'ancrage du défilement du navigateur
+    // compenserait chaque changement en faisant défiler la page, qui changerait de nouveau les lignes rendues, jusqu'à
+    // la fin de la grille.
+    overflow-anchor: none;
   }
 }

@@ -1,7 +1,10 @@
 import { Component, Element, Host, Method, Prop, State, h } from '@stencil/core';
-import { gridGroups, gridView, readList, readRecord, sameRange, visibleRange } from '../../utils/elements.ts';
+import { gridGroups, gridView, readList, readRecord, sameRange, visibleRange, withFocus } from '../../utils/elements.ts';
 import type { CardElement, GridGroup, ItemRange } from '../../utils/elements.ts';
 import { parsePluralLabels, pluralLabel } from '../../utils/plural.ts';
+
+/** Carte rendue : elle, son `ds-trigger` et son `ds-thumb` ont la classe `hydrated`. */
+const isRendered = (card: Element): boolean => !!card.querySelector(':scope > ds-trigger.hydrated > ds-thumb.hydrated');
 
 /** Ce que la grille mesure de ses cartes : colonnes, et hauteur d'une ligne avec l'espace qui la suit. */
 interface Metrics {
@@ -64,6 +67,8 @@ export class MireGrid {
   private readonly onScroll = () => this.schedule();
   private readonly onFocusIn = (e: FocusEvent) => {
     this.lastFocused = (e.target as HTMLElement).closest('[data-key]')?.getAttribute('data-key') ?? null;
+    // La part rendue suit la carte qui a le focus (lignes suivantes prêtes avant que la page ait défilé).
+    this.schedule();
   };
 
   /** Montre une page de plus du groupe `key` ; méthode publique, appelée aussi par le bouton « Afficher plus ». */
@@ -124,30 +129,45 @@ export class MireGrid {
   /** Mesure les cartes et la zone visible, puis la part de chaque groupe à rendre (nouveau rendu si elle change). */
   private measure() {
     const items = [...this.host.querySelectorAll<HTMLElement>('.mire-grid__items')];
-    const card = items.map((el) => el.querySelector('mire-card')).find(Boolean);
     let metrics = this.metrics;
-    if (card && items[0]) {
-      const style = getComputedStyle(card.parentElement as HTMLElement);
+    // Une carte qui vient d'être créée n'a pas encore sa taille (ds-trigger et ds-thumb se rendent plus tard) : seules
+    // les cartes entièrement rendues servent à mesurer, sinon une ligne trop basse ferait sauter la grille à sa fin.
+    const ready = items.flatMap((el) => [...el.querySelectorAll<HTMLElement>(':scope > mire-card.hydrated')]).filter(isRendered);
+    if (ready[0]) {
+      const style = getComputedStyle(ready[0].parentElement as HTMLElement);
       const columns = style.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
-      const rowHeight = card.getBoundingClientRect().height + (parseFloat(style.rowGap) || 0);
-      if (rowHeight > 0 && (columns !== metrics.columns || Math.abs(rowHeight - metrics.rowHeight) > 0.5)) metrics = { columns, rowHeight };
+      const height = Math.max(...ready.slice(0, columns).map((card) => card.getBoundingClientRect().height));
+      const rowHeight = height + (parseFloat(style.rowGap) || 0);
+      if (height > 0 && (columns !== metrics.columns || Math.abs(rowHeight - metrics.rowHeight) > 0.5)) metrics = { columns, rowHeight };
     }
     const vp = this.viewport();
     const view = this.view();
     const ranges: Record<string, ItemRange> = {};
+    const focused = this.focusedCard(view);
     let changed = metrics !== this.metrics;
     for (const el of items) {
       const key = el.dataset.group ?? '';
       const group = view.find((g) => g.key === key);
       if (!group) continue;
       const top = el.getBoundingClientRect().top;
-      ranges[key] = visibleRange(group.shown, metrics.columns, metrics.rowHeight, vp.top - top, vp.bottom - top);
+      const visible = visibleRange(group.shown, metrics.columns, metrics.rowHeight, vp.top - top, vp.bottom - top);
+      ranges[key] = withFocus(visible, focused?.group === key ? focused.index : -1, metrics.columns, group.shown);
       const old = this.ranges[key];
       if (!old || !sameRange(old, ranges[key])) changed = true;
     }
     if (!changed) return;
     this.metrics = metrics;
     this.ranges = ranges;
+  }
+
+  /** Carte de la grille qui a le focus : son groupe et son rang, ou `null`. */
+  private focusedCard(view: GridGroup[]): { group: string; index: number } | null {
+    const active = document.activeElement;
+    if (!this.lastFocused || !active || !this.host.contains(active)) return null;
+    const section = active.closest('.mire-grid__items') as HTMLElement | null;
+    const group = view.find((g) => g.key === (section?.dataset.group ?? ''));
+    const index = group ? group.elements.findIndex((el) => el.key === this.lastFocused) : -1;
+    return group && index >= 0 ? { group: group.key, index } : null;
   }
 
   /** Focus demandé par « Afficher plus », ou focus perdu parce que sa carte n'est plus rendue. */

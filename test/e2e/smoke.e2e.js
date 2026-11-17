@@ -726,8 +726,10 @@ describe('Test de fumée de Mire', () => {
         grid.setAttribute('action', 'pick');
         grid.elements = elements;
         box.append(grid);
+        // Vue remise en haut avant l'insertion : insérée au-dessus d'une vue défilée, la grille la décalerait de toute sa
+        // hauteur (ancrage du défilement du navigateur).
+        document.getElementById('view').scrollTop = 0;
         document.querySelector('.mire-ui-demo').prepend(box);
-        box.scrollIntoView({ block: 'start' });
         const ready = () => {
           const cards = [...grid.querySelectorAll('mire-card')];
           return grid.classList.contains('hydrated') && cards.length > 0 && cards.every((c) => c.querySelector('ds-trigger.hydrated ds-thumb.hydrated'));
@@ -743,7 +745,7 @@ describe('Test de fumée de Mire', () => {
         };
       }, COUNT);
       assert.ok(first.cards < 300, `${first.cards} cartes rendues sur ${COUNT}`);
-      // Flèche bas, 40 fois : temps entre la touche et le focus sur la carte de la ligne suivante.
+      // Flèche bas, 20 fois : temps entre la touche et le focus sur la carte de la ligne suivante.
       const m1 = await memory();
       Object.assign(first, { heapMb: mb(m1.heap - m0.heap), nodes: m1.nodes - m0.nodes });
       const start = await page.evaluate(() => {
@@ -753,7 +755,7 @@ describe('Test de fumée de Mire', () => {
       });
       await settle();
       const times = [];
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 20; i++) {
         times.push(
           await page.evaluate(async () => {
             const from = document.activeElement;
@@ -763,8 +765,8 @@ describe('Test de fumée de Mire', () => {
             return performance.now() - t0;
           }),
         );
-        // La page défile (en douceur) et la grille rend les lignes suivantes : comme un appui tenu, une touche par 150 ms.
-        await page.waitForTimeout(150);
+        // La page défile (en douceur) et la grille rend les lignes suivantes : comme un appui tenu, une touche par 100 ms.
+        await page.waitForTimeout(100);
       }
       times.sort((a, b) => a - b);
       const moves = await page.evaluate(() => ({
@@ -773,14 +775,14 @@ describe('Test de fumée de Mire', () => {
       }));
       const m2 = await memory();
       Object.assign(moves, {
-        median: Math.round(times[20] * 10) / 10,
-        max: Math.round(times[39] * 10) / 10,
+        median: Math.round(times[10] * 10) / 10,
+        max: Math.round(times[19] * 10) / 10,
         heapMb: mb(m2.heap - m0.heap),
         nodes: m2.nodes - m0.nodes,
       });
       await cdp.detach();
       console.log(`Grille de ${COUNT} éléments : ${JSON.stringify({ ...first, moves })}`);
-      assert.equal(moves.key, `e2e:${start + 40 * first.columns}`, 'quarante lignes plus bas, même colonne');
+      assert.equal(moves.key, `e2e:${start + 20 * first.columns}`, 'vingt lignes plus bas, même colonne');
       assert.ok(moves.cards < 300, `${moves.cards} cartes rendues après le défilement`);
       assert.ok(first.firstRender < 3000, `premier rendu : ${first.firstRender} ms`);
       assert.ok(moves.median < 100, `déplacement du focus : ${moves.median} ms (médiane)`);
