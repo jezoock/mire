@@ -142,7 +142,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `state/` | État partagé par toutes les vues : `S` (section, données reçues, caches, choix en cours), `Q` (file de musique), `V` (lecteur vidéo), `I` (visionneuse d'images), et `PAGE` (nombre d'éléments affichés d'abord, puis à chaque « Afficher plus »). |
 | `api/` | Seul accès à `window.api` (`api`), typé par le contrat IPC. |
 | `domain/` | Logique sans DOM ni état : éléments, vidéos et séries, jeux, recherche, sites, téléchargements. Les fonctions reçoivent leurs données en paramètre ; elles sont testées sous Node. |
-| `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
+| `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), service de focus sur les vues historiques et les composants `ds-*` / `mire-*` (`focus.ts`, règles sans DOM dans `targets.ts`, P4-03 ; voir l'ADR 0001, § 10), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
 | `players/` | Lecteurs intégrés : vidéo (`video.ts`), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
