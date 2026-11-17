@@ -1,0 +1,128 @@
+@use '../../theme/tokens' as *;
+
+// Carte d'un élément (et d'un regroupement, qui en reprend la forme) : image, textes, badge et jauge de reprise.
+// Largeur donnée par le conteneur (grille, rangée) ; --mire-card-width sert aux rangées.
+.mire-card,
+.mire-group-card {
+  display: block;
+  min-width: 0;
+}
+
+.mire-card__trigger,
+.mire-group-card__trigger {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: ds-spacing(2);
+  width: 100%;
+  padding: ds-spacing(1);
+  color: ds-color(gray, darkest);
+  border-radius: ds-radius(md);
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+
+  &:focus-visible,
+  &:hover {
+    transform: scale(1.04);
+  }
+
+  @include ds-reduced-motion() {
+    transition: none;
+
+    &:focus-visible,
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+.mire-card__thumb,
+.mire-group-card__thumb {
+  width: 100%;
+  border-radius: ds-radius(md);
+  background: ds-color(gray, lighter);
+}
+
+.mire-card__texts,
+.mire-group-card__texts {
+  display: grid;
+  min-width: 0;
+}
+
+.mire-card__title,
+.mire-group-card__title {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mire-card__subtitle,
+.mire-group-card__count {
+  overflow: hidden;
+  font-size: ds-token(font-size, 100);
+  color: ds-color(gray, dark);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mire-card__badge {
+  position: absolute;
+  top: ds-spacing(2);
+  inset-inline-end: ds-spacing(2);
+  padding: 0 ds-spacing(2);
+  font-size: ds-token(font-size, 100);
+  font-weight: 700;
+  color: ds-color(gray, white);
+  background: ds-color(primary, base);
+  border-radius: ds-radius(sm);
+}
+
+// Jauge de reprise, posée sur le bas de l'image.
+.mire-card__progress {
+  position: absolute;
+  inset-inline: ds-spacing(2);
+  height: ds-spacing(1);
+  overflow: hidden;
+  background: ds-color(gray, light);
+  border-radius: ds-radius(sm);
+}
+
+.mire-card__progress-bar {
+  display: block;
+  height: 100%;
+  background: ds-color(primary, base);
+}
+
+.mire-card.--poster .mire-card__progress,
+.mire-card.--thumbnail .mire-card__progress {
+  // Sous l'image : la hauteur des textes la sépare du bas de la carte.
+  bottom: calc(#{ds-spacing(1)} + 2lh + #{ds-spacing(3)});
+}
+
+// Ligne : petite image carrée et textes à côté.
+.mire-card.--line .mire-card__trigger,
+.mire-group-card.--line .mire-group-card__trigger {
+  flex-direction: row;
+  align-items: center;
+
+  &:focus-visible,
+  &:hover {
+    transform: none;
+  }
+}
+
+.mire-card.--line .mire-card__thumb,
+.mire-group-card.--line .mire-group-card__thumb {
+  flex: 0 0 auto;
+  width: ds-spacing(7);
+}
+
+.mire-card.--line .mire-card__progress {
+  bottom: ds-spacing(1);
+  inset-inline-start: calc(#{ds-spacing(7)} + #{ds-spacing(3)});
+}
+
+.mire-card.--unavailable .mire-card__thumb {
+  opacity: 0.5;
+}

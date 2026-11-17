@@ -1,0 +1,48 @@
+@use '../../theme/tokens' as *;
+
+// Infos de l'élément sélectionné : logo ou titre, ligne d'infos séparées par un point, résumé sur quelques lignes.
+.mire-focus-info {
+  display: grid;
+  gap: ds-spacing(2);
+  max-width: 48rem;
+  color: ds-color(gray, darkest);
+
+  &.--empty {
+    display: none;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: ds-token(font-size, 600);
+    font-weight: 700;
+  }
+
+  &__logo {
+    max-width: 24rem;
+    max-height: 8rem;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+    margin: 0;
+    color: ds-color(gray, dark);
+  }
+
+  &__info + &__info::before {
+    content: '·';
+    margin-inline-end: ds-spacing(2);
+  }
+
+  &__summary {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+  }
+}

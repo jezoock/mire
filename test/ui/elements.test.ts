@@ -21,6 +21,7 @@ import {
   progressPercent,
   readJson,
   readList,
+  readRecord,
   shownCount,
   visibleRange,
   type CardElement,
@@ -39,6 +40,9 @@ describe('carte', () => {
     assert.deepEqual(readList('[1,2]'), [1, 2]);
     assert.deepEqual(readList('{"a":1}'), []);
     assert.deepEqual(readList(null), []);
+    assert.deepEqual(readRecord('{"k":0.5}'), { k: 0.5 });
+    assert.deepEqual(readRecord('[1]'), {});
+    assert.deepEqual(readRecord(''), {});
   });
 
   it('cardVariant : variante reconnue, sinon l’affiche', () => {

@@ -46,6 +46,12 @@ export const readList = <T>(value: T[] | string | null | undefined): T[] => {
   return Array.isArray(list) ? list : [];
 };
 
+/** Objet (avancements par clé…) passé en propriété ou en JSON ; `{}` si ce n'est pas un objet. */
+export function readRecord<T>(value: Record<string, T> | string | null | undefined): Record<string, T> {
+  const rec = readJson<Record<string, T>>(value);
+  return rec && typeof rec === 'object' && !Array.isArray(rec) ? rec : {};
+}
+
 /** Variante reconnue, sinon l'affiche. */
 export const cardVariant = (value: string | null | undefined): CardVariant => (CARD_VARIANTS as readonly string[]).includes(value ?? '') ? (value as CardVariant) : 'poster';
 

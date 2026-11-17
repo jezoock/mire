@@ -1,0 +1,35 @@
+@use '../../theme/tokens' as *;
+
+// Rangée défilante : titre, puis les cartes dans un ds-scroller horizontal. La marge de défilement laisse voir la
+// carte qui grandit au focus.
+.mire-row {
+  --mire-row-card: 11rem;
+
+  display: grid;
+  gap: ds-spacing(2);
+  min-width: 0;
+
+  &__heading {
+    margin: 0;
+    font-size: ds-token(font-size, 300);
+    font-weight: 700;
+  }
+
+  &__scroller {
+    --ds-scroller-gap: #{ds-spacing(4)};
+    --ds-scroller-padding: #{ds-spacing(2)};
+    --ds-scroller-focus-margin: #{ds-spacing(5)};
+  }
+
+  &__card {
+    width: var(--mire-row-card);
+  }
+
+  &[variant='thumbnail'] {
+    --mire-row-card: 18rem;
+  }
+
+  &[variant='line'] {
+    --mire-row-card: 22rem;
+  }
+}
