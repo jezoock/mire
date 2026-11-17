@@ -185,7 +185,8 @@ function start(pending: PendingFiles): Running {
     if (added.length) metadata.adopt(added.map((k) => catalog.get(k)).filter((e) => !!e));
   });
   // Jeux ajoutés à la main, marque-pages, sites, portail de télévision : leurs éléments suivent la configuration ;
-  // les consoles, dossiers de jeux et services qui n'y sont plus quittent le catalogue (P2-03).
+  // les consoles, dossiers de jeux et services qui n'y sont plus quittent le catalogue (P2-03). Après le moteur et
+  // l'abonnement ci-dessus : un élément qui arrive retrouve aussitôt les fiches gardées sous son ancienne clé.
   const syncConfig = (cfg: Config) => {
     try {
       syncFeeds(catalog, [gameConfigFeed(cfg), tvConfigFeed(cfg), siteConfigFeed(cfg)]);
@@ -194,13 +195,6 @@ function start(pending: PendingFiles): Running {
     }
   };
   syncConfig(config.get());
-  // Fiches gardées sous une ancienne clé dont l'élément était déjà là (jeux d'une version précédente) : rattachées.
-  const known = catalog
-    .keys()
-    .map((k) => catalog.get(k))
-    .filter((e) => !!e);
-  overrides.adopt(known);
-  metadata.adopt(known);
   config.onChange((next) => syncConfig(next));
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
