@@ -13,6 +13,7 @@ import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
 import type { Element, InfoChanges, TagChanges, TagSummary } from './element.ts';
 import type { PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
+import type { SearchOptions, SearchResult } from './search.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -309,6 +310,8 @@ export interface IpcMethods {
   listsAdd(id: string, keys: string[], at?: number): number | null;
   listsRemoveItems(id: string, keys: string[]): number | null;
   listsMove(id: string, key: string, to: number): boolean;
+  // Recherche dans le catalogue (P2-09) : noms, infos texte et noms des tags, résultats groupés par page.
+  catalogSearch(query: string, options?: SearchOptions): SearchResult;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -447,6 +450,7 @@ export const IPC_METHODS = {
   listsAdd: 'lists:add',
   listsRemoveItems: 'lists:removeItems',
   listsMove: 'lists:move',
+  catalogSearch: 'catalog:search',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

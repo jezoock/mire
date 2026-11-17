@@ -1,5 +1,5 @@
 /**
- * Catalogue d'éléments (P2-01), moteur de tags et d'infos (P2-04), pages (P2-07) et listes (P2-08) : nouvelles méthodes, sans usage dans
+ * Catalogue d'éléments (P2-01), moteur de tags et d'infos (P2-04), pages (P2-07), listes (P2-08) et recherche (P2-09) : nouvelles méthodes, sans usage dans
  * l'interface historique.
  */
 import { listIdOfPage } from '@mire/shared';
@@ -28,5 +28,7 @@ export function catalogHandlers(ctx: MainContext) {
     listsAdd: (id, keys, at?: number) => ctx.lists.add(id, keys, at),
     listsRemoveItems: (id, keys) => ctx.lists.removeItems(id, keys),
     listsMove: (id, key, to) => ctx.lists.move(id, key, to),
+    // Recherche dans le catalogue (P2-09).
+    catalogSearch: (query, options?) => ctx.search.search(query, options),
   } satisfies Partial<IpcImplementations>;
 }

@@ -15,6 +15,7 @@ import { createMetadataStore, metadataContributors, metadataOrder } from './cata
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
 import { createPages } from './catalog/pages/index.ts';
+import { createSearch } from './catalog/search/index.ts';
 import { createLists } from './catalog/lists/index.ts';
 import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
@@ -169,10 +170,11 @@ function start(pending: PendingFiles): Running {
     ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
     ...metadataContributors(metadata, metadataOrder(config.get().catalog)),
   ];
+  const registry = createRegistry(t);
   const tags = createTagEngine({
     catalog,
     overrides,
-    registry: createRegistry(t),
+    registry,
     rules: () => fileTagRules(config.get().catalog),
     contributors: contributors(),
   });
@@ -189,6 +191,8 @@ function start(pending: PendingFiles): Running {
   const lists = createLists({ file: files.catalogLists, engine: tags });
   lists.load();
   lists.onChange((ids) => toUi('lists:changed', { lists: ids }));
+  // Recherche : textes préparés à la première recherche, puis suivis par le moteur de tags.
+  const search = createSearch({ engine: tags, catalog, pages: catalogPages, registry, translate: t });
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
   catalog.onChange(({ added }) => {
@@ -254,6 +258,7 @@ function start(pending: PendingFiles): Running {
     tags,
     pages: catalogPages,
     lists,
+    search,
     access,
     window,
     pending,
