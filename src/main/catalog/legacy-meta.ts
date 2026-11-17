@@ -5,9 +5,10 @@
  * - ses champs (`title`, `year`, `genre`, `overview`, `artist`, `image`, `backdrop`) deviennent des infos et des
  *   images (`metaToOverride`), et inversement pour la façade (`overrideToMeta`).
  */
+import path from 'node:path';
 import type { ElementImages, ElementKey, InfoValue, OpenKind } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
-import { gameBookmarkKey, localFileKey } from './keys.ts';
+import { gameBookmarkKey, isSameOrUnder, localFileKey } from './keys.ts';
 import { pcNameTarget } from './targets.ts';
 import { INFO_ID_RE, isInfoValue } from './tags/registry.ts';
 
@@ -88,4 +89,17 @@ export function overrideToMeta(o: { infos?: Record<string, InfoValue>; images?: 
   }
   for (const [field, id] of Object.entries(IMAGE_OF)) if (o.images?.[id]) meta[field] = o.images[id];
   return Object.keys(meta).length ? meta : null;
+}
+
+/**
+ * Ancienne clé d'un fichier local (`v:`, `t:`, `i:`, `r:`) ou d'un dossier d'album (`a:`) après le renommage ou le
+ * déplacement de `from` vers `to` ; `null` si elle ne désigne ni `from` ni ce qu'il contient. Le chemin garde
+ * l'écriture du système (séparateurs, casse de `to`).
+ */
+export function movedLegacyKey(legacyKey: string, from: string, to: string, platform: NodeJS.Platform = process.platform): string | null {
+  const m = /^([vtira]):(.+)$/s.exec(legacyKey);
+  if (!m || isUrl(m[2]) || !isSameOrUnder(m[2], from, platform)) return null;
+  const p = platform === 'win32' ? path.win32 : path.posix;
+  const rel = p.relative(from, m[2]);
+  return `${m[1]}:${rel ? p.join(to, rel) : to}`;
 }

@@ -15,7 +15,8 @@ import fs from 'node:fs';
 import type { CatalogSettings, Element, ElementKey, OpenKind } from '@mire/shared';
 import type { ScrapeDb, ScrapeRecord, ScrapeStore } from '../scrape/types.ts';
 import { createJsonStore, readJsonFile } from '../storage/json-store.ts';
-import { legacyTarget, metaToOverride } from './legacy-meta.ts';
+import { movedKey } from './keys.ts';
+import { legacyTarget, metaToOverride, movedLegacyKey } from './legacy-meta.ts';
 import type { MigrationReport } from './overrides.ts';
 import type { Contributor } from './tags/engine.ts';
 import type { Layer } from './tags/merge.ts';
@@ -243,6 +244,34 @@ export function createMetadataStore({ file, legacyFile, platform = process.platf
       }
       if (moved.size) save([...moved]);
       return [...moved];
+    },
+
+    /**
+     * Fichier ou dossier renommé ou déplacé de `from` vers `to` (P2-10) : ses fiches, et celles de tout ce qu'il
+     * contient, passent sous les nouvelles clés d'éléments et de fournisseurs (une fiche restée à l'arrivée, d'un
+     * ancien fichier, est remplacée). Rend les clés d'éléments touchées (anciennes et nouvelles).
+     */
+    movePath(from: string, to: string): ElementKey[] {
+      const touched: ElementKey[] = [];
+      const moved: [ElementKey, Record<string, ScrapeRecord>][] = [];
+      const rename = <T>(rec: Record<string, T>): Record<string, T> => {
+        const out: Record<string, T> = {};
+        for (const [legacyKey, v] of Object.entries(rec)) out[movedLegacyKey(legacyKey, from, to, platform) ?? legacyKey] = v;
+        return out;
+      };
+      for (const [key, recs] of Object.entries(data.elements)) {
+        const next = movedKey(key, from, to, platform);
+        if (!next) continue;
+        delete data.elements[key];
+        moved.push([next, rename(recs)]);
+        touched.push(key, next);
+      }
+      for (const [key, recs] of moved) data.elements[key] = recs;
+      data.unmatched = rename(data.unmatched);
+      data.misses = rename(data.misses);
+      reindex();
+      save(touched);
+      return touched;
     },
 
     /** Abonnement aux fiches modifiées (clés des éléments concernés). */
