@@ -66,7 +66,7 @@ export const listPageId = (id: string): string => `${LIST_PAGE_PREFIX}${id}`;
 export const listIdOfPage = (pageId: unknown): string | null =>
   typeof pageId === 'string' && pageId.startsWith(LIST_PAGE_PREFIX) ? pageId.slice(LIST_PAGE_PREFIX.length) : null;
 
-export const LIST_ID_RE = PAGE_ID_RE;
+const LIST_ID_RE = PAGE_ID_RE;
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isText = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -94,7 +94,7 @@ function isOpenSpec(v: unknown): v is OpenSpec {
 }
 
 /** Vérifie un élément gardé par une liste ; `null` s'il est mal formé. */
-export function validateListItem(v: unknown): ListItem | null {
+function validateListItem(v: unknown): ListItem | null {
   if (!isObject(v) || !isText(v.key) || typeof v.name !== 'string' || !isOpenSpec(v.open)) return null;
   const s = v.source;
   if (!isObject(s) || typeof s.plugin !== 'string' || typeof s.instance !== 'string') return null;

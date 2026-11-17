@@ -17,6 +17,7 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     catalogOverrides: at('catalog', 'overrides.json'),
     catalogMetadata: at('catalog', 'metadata.json'),
     catalogPages: at('catalog', 'pages.json'),
+    catalogLists: at('catalog', 'lists.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

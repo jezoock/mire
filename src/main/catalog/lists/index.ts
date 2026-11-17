@@ -70,10 +70,10 @@ export function createLists({ file, engine, onIgnored = logIgnored, newId: makeI
     for (const [i, def] of (Array.isArray(raw.lists) ? raw.lists : []).entries()) {
       const r = validateList(def);
       if (!r.ok || ids.has(r.list.id)) {
-        onIgnored(file, `liste ${i}`);
+        onIgnored(file, `list ${i}`);
         continue;
       }
-      if (r.dropped) onIgnored(file, `liste ${r.list.id} : ${r.dropped} élément(s)`);
+      if (r.dropped) onIgnored(file, `list ${r.list.id}: ${r.dropped} item(s)`);
       ids.add(r.list.id);
       data.lists.push(r.list);
       for (const item of r.list.items) index(r.list, item.key, true);

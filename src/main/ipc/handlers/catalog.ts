@@ -25,7 +25,7 @@ export function catalogHandlers(ctx: MainContext) {
     listsCreate: (name) => ctx.lists.create(name),
     listsRename: (id, name) => ctx.lists.rename(id, name),
     listsRemove: (id) => ctx.lists.remove(id),
-    listsAdd: (id, keys, at) => ctx.lists.add(id, keys, at),
+    listsAdd: (id, keys, at?: number) => ctx.lists.add(id, keys, at),
     listsRemoveItems: (id, keys) => ctx.lists.removeItems(id, keys),
     listsMove: (id, key, to) => ctx.lists.move(id, key, to),
   } satisfies Partial<IpcImplementations>;
