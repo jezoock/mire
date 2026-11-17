@@ -204,3 +204,22 @@ et l'interface dessus.
   (P5-01).
 - **Critères d'acceptation** : tests avec `test/fixtures/config-v*.json` et une configuration v8 complète ; aucune
   donnée perdue ; la configuration migrée se réimporte.
+
+## P2-12 — Finitions du modèle
+
+- **Dépend de** : G3 · **Taille** : S
+- **Objectif** : régler, avant que P3-01 publie le modèle et le contrat IPC, les quelques points relevés au G3.
+- **À faire** : figer la notation des cibles de l'accueil dans `@mire/shared` ; permettre de déclarer une info non
+  cherchable ; faire suivre un renommage aux positions de reprise et à « Reprendre » ; ne jamais écraser en silence
+  un fichier du catalogue illisible. Aucun changement visible dans l'interface historique.
+- **Critères d'acceptation** :
+  1. une cible s'écrit `<page>`, `list:<id>` ou `screen:<nom>` (écrans du cœur en liste fermée, dont `search`) ; des
+     fonctions pures la reconnaissent, la lisent et l'écrivent ; une cible invalide est retirée des rangées de
+     l'accueil ; un identifiant de page n'a toujours pas de `:` ;
+  2. le registre des infos porte `searchable` (vrai par défaut pour les textes) ; la recherche ignore les infos du
+     cœur qui n'ont pas de sens dans une recherche (au moins les sous-titres et l'extension) ; la mesure sur 20 000
+     éléments tient toujours ;
+  3. au renommage ou au déplacement d'un fichier ou d'un dossier, la position de reprise et l'entrée de « Reprendre »
+     (chemin et clé) passent sous le nouveau chemin ; après une suppression, rien ne change ;
+  4. un `overrides.json` illisible est mis de côté (`.illisible-<date>`) et signalé dans le journal ; de même pour
+     `pages.json`, `lists.json` et `metadata.json`.

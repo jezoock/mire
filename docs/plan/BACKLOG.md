@@ -97,6 +97,7 @@ Fiches dans `phase-2.md`.
 | P2-10 | Gestion des fichiers | M | P2-02 |  | faite | |
 | P2-11 | Migration de la configuration (v9) | M | P2-07, P2-08 |  | faite | |
 | **G3** | **Point d'étape : fin de la phase 2 (modèle, IPC, mesures)** | | P2-01…P2-11 | | | |
+| P2-12 | Finitions du modèle | S | G3 |  | faite | |
 
 ## Phase 3 — Socle des plugins et dépôts
 

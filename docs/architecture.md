@@ -168,6 +168,7 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 | --- | --- |
 | `@mire/shared` | Fonctions pures et référentiels : texte (`fold`, noms de fichiers, épisodes), adresses (`hostOf`, `isHttpUrl`), identifiants (`newId`), formats de fichiers (`KIND`, `NATIVE`, `MIME`, `EXT`), systèmes de jeu (`guessSystem`, alias, noms) ; types de la configuration (`Config`, `WebSite`, `TvService`, `Emulator`…). |
 | `@mire/shared` (`element.ts`) | Types du catalogue d'éléments : `Element`, `ElementKey`, `ElementSourceRef`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, `ValueOrigin` (origine d'un tag ou d'une info : `file`, `source`, `tagger`, `metadata`, `user`). |
+| `@mire/shared` (`targets.ts`) | Cibles (P2-12) : ce qu'une rangée de l'accueil, puis un plugin ou un thème, peut ouvrir, écrit en un texte : une page par son identifiant (`movies` ; un identifiant de page n'a jamais de `:`, `PAGE_ID_RE`), une liste par `list:<id>` (`LIST_PAGE_PREFIX`, comme `catalogPage`), un écran du cœur par `screen:<nom>` (`CORE_SCREENS`, liste fermée : `home`, `search`, `center`, `settings`, `explorer` ; ni la coquille ni les lecteurs). `parseTarget` lit (`null` si invalide), `isTarget` reconnaît, `formatTarget` écrit (lève `RangeError` pour une cible invalide). La normalisation de la configuration retire des rangées de l'accueil une cible invalide. |
 | `@mire/shared/ipc` | Contrat IPC : tables des méthodes et des événements, leurs types, `createApi`. |
 | `@mire/shared/settings/schema` | Schéma des réglages (voir `docs/settings-schema.md`). |
 | `@mire/shared/i18n` | Moteur de traduction, formats, choix de la langue, catalogues intégrés `fr` et `en`, vérification des catalogues (voir `docs/i18n.md`). |
@@ -738,7 +739,7 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
   épinglées, dans l'ordre du menu de la v8, qui n'était ni modifiable ni masquable) : rien n'est écrit dans
   `catalog/pages.json` ni dans `catalog/lists.json` (la v8 n'a pas de favoris). La position et le repli du menu
   (`ui.menu`) ne bougent pas. Les barres de la mire, « Vos services » et « Reprendre » deviennent les rangées de
-  l'accueil (`ui.home.rows`, `HomeRow` : `bars` vers des pages, `list:<id>` ou `screen:search` ; `sites` par clé
+  l'accueil (`ui.home.rows`, `HomeRow` : `bars` vers des cibles, voir `targets.ts` dans « `@mire/shared` » ; `sites` par clé
   `web:<id>` ; `recent` ; `page` ; `list`). `ui.home.clock`, `recent`, `bars`, `services` et `ui.start` restent en
   place pour l'interface historique ; une configuration sans rangées (installation neuve) reçoit celles qu'on tire de
   ces réglages. Les réglages qui iront aux plugins ne bougent pas (P5-01) ;
