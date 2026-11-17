@@ -250,7 +250,7 @@ describe('index', () => {
   it('tags.list : tags du cœur avec leur nom, puis de l’utilisateur, puis ceux posés sans être déclarés', () => {
     const { catalog, engine } = setup({ language: 'en' });
     catalog.setSource(FILMS, [file('/films/Amélie.mkv')]);
-    engine.setContributors([{ id: 't', origin: 'tagger', compute: () => ({ tags: ['series'] }) }]);
+    engine.setContributors([{ id: 't', origin: 'tagger', compute: () => ({ tags: ['anime'] }) }]);
     engine.setTags(amelie, { 'Mes favoris': true });
     const list = engine.tagsList();
     assert.deepEqual(list.slice(0, 3), [
@@ -260,8 +260,13 @@ describe('index', () => {
     ]);
     assert.deepEqual(list.slice(-2), [
       { id: 'mes-favoris', name: 'Mes favoris', origin: 'user', count: 1 },
-      { id: 'series', name: 'series', origin: 'other', count: 1 },
+      { id: 'anime', name: 'anime', origin: 'other', count: 1 },
     ]);
+    // Tags automatiques internes (P2-05) : déclarés, avec leur nom.
+    assert.deepEqual(
+      list.find((t) => t.id === 'series'),
+      { id: 'series', name: 'TV shows', origin: 'core', count: 0 },
+    );
     assert.equal(setup().engine.tagsList()[0].name, 'Vidéo');
   });
 
