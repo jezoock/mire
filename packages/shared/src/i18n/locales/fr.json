@@ -343,7 +343,10 @@
         "network": "Sur le réseau",
         "remote": "En ligne",
         "series": "Séries",
-        "movie": "Films"
+        "movie": "Films",
+        "game": "Jeux",
+        "tv": "Télévision",
+        "stream": "Streaming"
       },
       "infos": {
         "extension": "Extension",
@@ -362,7 +365,8 @@
         "episode": "Épisode",
         "album": "Album",
         "track": "Piste",
-        "system": "Console"
+        "system": "Console",
+        "category": "Catégorie"
       }
     }
   }

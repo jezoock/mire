@@ -19,7 +19,7 @@ import { legacyTarget, metaToOverride } from './legacy-meta.ts';
 import type { MigrationReport } from './overrides.ts';
 import type { Contributor } from './tags/engine.ts';
 import type { Layer } from './tags/merge.ts';
-import { openTarget } from './targets.ts';
+import { targetsOf } from './targets.ts';
 
 export const METADATA_VERSION = 1;
 
@@ -235,7 +235,7 @@ export function createMetadataStore({ file, legacyFile, platform = process.platf
       if (!pending.size) return [];
       const moved = new Set<ElementKey>();
       for (const e of elements) {
-        for (const hit of pending.get(openTarget(e)) ?? []) {
+        for (const hit of targetsOf(e).flatMap((target) => pending.get(target) ?? [])) {
           if (!hit.kinds.includes(e.open.kind) || !data.unmatched[hit.legacyKey]) continue;
           place(hit.legacyKey, data.unmatched[hit.legacyKey]);
           moved.add(e.key);

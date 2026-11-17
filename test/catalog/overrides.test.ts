@@ -13,7 +13,7 @@ import { createOverrides } from '../../src/main/catalog/overrides.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { createTargetFinder } from '../../src/main/catalog/targets.ts';
+import { createTargetFinder, pcNameTarget } from '../../src/main/catalog/targets.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { createUserMeta } from '../../src/main/meta/user-meta.ts';
 
@@ -155,13 +155,15 @@ describe('reprise de meta.json', () => {
 });
 
 describe('correspondance des anciennes clés', () => {
-  it('clé déduite pour un chemin local et un marque-page de jeu ; à retrouver pour une adresse ou une ROM', () => {
+  it('clé déduite pour un chemin local et un marque-page de jeu ; à retrouver pour une adresse, une ROM ou un jeu PC', () => {
     assert.deepEqual(legacyTarget('v:C:\\Films\\A.mkv', 'win32'), { key: 'local:c:/films/a.mkv' });
     assert.deepEqual(legacyTarget('t:/m/a.mp3', 'linux'), { key: 'local:/m/a.mp3' });
-    assert.deepEqual(legacyTarget('i:https://nas/a.jpg', 'linux'), { find: { target: 'https://nas/a.jpg', kinds: ['file', 'stream'] } });
+    assert.deepEqual(legacyTarget('i:https://nas/a.jpg', 'linux'), { find: { target: 'https://nas/a.jpg', kinds: ['file', 'stream', 'site'] } });
     assert.deepEqual(legacyTarget('r:/roms/a.sfc', 'linux'), { find: { target: '/roms/a.sfc', kinds: ['game'] } });
     assert.deepEqual(legacyTarget('b:x1', 'linux'), { key: 'gamebm:x1' });
-    for (const k of ['a:/m', 'g:celeste', 'c:snes', 'b: ', 'sans-prefixe', '']) assert.deepEqual(legacyTarget(k, 'linux'), {}, k);
+    // Jeu PC : par son nom simplifié, parmi les programmes (P2-03).
+    assert.deepEqual(legacyTarget('g:celeste', 'linux'), { find: { target: pcNameTarget('celeste'), kinds: ['program'] } });
+    for (const k of ['a:/m', 'g:', 'c:snes', 'b: ', 'sans-prefixe', '']) assert.deepEqual(legacyTarget(k, 'linux'), {}, k);
   });
 
   it('champs ↔ infos et images, aller-retour', () => {

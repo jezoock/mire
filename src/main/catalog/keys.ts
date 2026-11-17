@@ -11,7 +11,7 @@
  * que soit le système qui exécute les tests. Sous Windows, le chemin est sans casse et ses séparateurs deviennent `/`.
  */
 import path from 'node:path';
-import { isHttpUrl } from '@mire/shared';
+import { isHttpUrl, isUrlTarget } from '@mire/shared';
 import type { ElementKey } from '@mire/shared';
 
 /** Préfixe de chaque genre d'élément. */
@@ -113,10 +113,14 @@ export const romKey = (consoleId: string, file: string, platform: NodeJS.Platfor
   joinKey('rom', required(consoleId, 'console'), normalizeLocation(file, platform));
 
 /**
- * Jeu PC : chemin du programme ou du raccourci. Un jeu ajouté à la main et le même jeu trouvé dans un dossier ont la
- * même clé (la position dans `config.games` n'y entre pas).
+ * Jeu PC : chemin du programme ou du raccourci, ou adresse d'un lanceur (`steam://rungameid/…`, gardée telle quelle).
+ * Un jeu ajouté à la main et le même jeu trouvé dans un dossier ont la même clé (la position dans `config.games` n'y
+ * entre pas).
  */
-export const pcGameKey = (file: string, platform: NodeJS.Platform = process.platform): ElementKey => joinKey('pc', normalizePath(file, platform));
+export function pcGameKey(file: string, platform: NodeJS.Platform = process.platform): ElementKey {
+  const target = required(file, 'programme');
+  return joinKey('pc', isUrlTarget(target) ? target : normalizePath(target, platform));
+}
 
 /** Ce qui identifie une chaîne de télévision : son numéro, sinon les adresses de ses flux. */
 export interface ChannelIdentity {

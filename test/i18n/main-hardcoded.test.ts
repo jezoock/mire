@@ -30,6 +30,11 @@ const ALLOWED = new Set([
   'Clé d’élément :  …  manquant.',
   'adresse de la chaîne',
   'Catalogue : élément sans clé.',
+  // Identifiants des sources de jeux : ceux des plugins de l'inventaire (P2-03), jamais affichés.
+  'jeux-roms',
+  'jeux-pc',
+  'jeux-pc-manuel',
+  'jeux-marque',
   // Fichier de données illisible : passé au journal (`onCorrupt`).
   'le contenu n’est pas un objet JSON',
   // Corps des réponses du protocole media:// : lus par le lecteur, jamais affichés.

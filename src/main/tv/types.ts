@@ -1,5 +1,6 @@
 /** Types de la télévision : entrées M3U, chaînes, fournisseurs (playlist, portail web) et dépendances du service. */
 import type { TvService } from '@mire/shared';
+import type { ElementInput } from '../catalog/types.ts';
 import type { ConfigService } from '../config/service.ts';
 
 /** Ligne d'une liste M3U : titre et attributs de `#EXTINF`, puis l'adresse du flux. */
@@ -64,4 +65,6 @@ export interface TvDeps {
   /** Message à l'interface (`tv-detected`). */
   toUi: (channel: string, payload: unknown) => void;
   providers?: readonly TvProvider[];
+  /** Catalogue d'éléments que les chaînes lues alimentent (`element-sources.ts`). */
+  catalog?: { setSource(source: { plugin: string; instance: string }, elements: ElementInput[]): unknown };
 }
