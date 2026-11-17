@@ -53,7 +53,8 @@ export function readRecord<T>(value: Record<string, T> | string | null | undefin
 }
 
 /** Variante reconnue, sinon l'affiche. */
-export const cardVariant = (value: string | null | undefined): CardVariant => (CARD_VARIANTS as readonly string[]).includes(value ?? '') ? (value as CardVariant) : 'poster';
+export const cardVariant = (value: string | null | undefined): CardVariant =>
+  (CARD_VARIANTS as readonly string[]).includes(value ?? '') ? (value as CardVariant) : 'poster';
 
 /** Remplace les `{nom}` d'un gabarit ; `''` sans gabarit. */
 export function fillLabel(template: string | undefined, values: Record<string, string | number>): string {
@@ -112,7 +113,11 @@ export interface CardTexts {
   label: string;
 }
 
-export function cardTexts(el: CardElement, labels: CardLabels, opts: { badge?: string; progress?: number | string | null; subtitleInfo?: string } = {}): CardTexts {
+export function cardTexts(
+  el: CardElement,
+  labels: CardLabels,
+  opts: { badge?: string; progress?: number | string | null; subtitleInfo?: string } = {},
+): CardTexts {
   const title = el.name ?? '';
   const subtitle = cardSubtitle(el, labels, opts.subtitleInfo);
   const badge = cardBadge(el, labels, opts.badge);

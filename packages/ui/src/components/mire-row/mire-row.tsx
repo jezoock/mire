@@ -45,7 +45,13 @@ export class MireRow {
         )}
         {/* Le ds-scroller déplace ses enfants dans sa zone de défilement (autre moteur Stencil) : une autre liste
             d'éléments le recrée plutôt que de modifier des enfants qu'il a déplacés. */}
-        <ds-scroller key={elements.map((el) => el.key).join('\n')} class="mire-row__scroller" label={this.heading} controls={this.controls} labels={this.scrollerLabels || undefined}>
+        <ds-scroller
+          key={elements.map((el) => el.key).join('\n')}
+          class="mire-row__scroller"
+          label={this.heading}
+          controls={this.controls}
+          labels={this.scrollerLabels || undefined}
+        >
           {elements.map((el, i) => (
             <mire-card
               key={el.key}
@@ -65,4 +71,3 @@ export class MireRow {
     );
   }
 }
-

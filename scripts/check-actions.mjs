@@ -68,7 +68,8 @@ function attribute(tag, name) {
 export const ACTION_FORWARDERS = ['mire-card', 'mire-grid', 'mire-row', 'mire-group-card'];
 
 /** Fichier d'un composant qui transmet l'action reçue : ses `target={…}` et `action={…}` ne sont pas écrits là. */
-const isForwarderSource = (root, file) => ACTION_FORWARDERS.some((tag) => file.startsWith(path.join(root, 'packages', 'ui', 'src', 'components', tag) + path.sep));
+const isForwarderSource = (root, file) =>
+  ACTION_FORWARDERS.some((tag) => file.startsWith(path.join(root, 'packages', 'ui', 'src', 'components', tag) + path.sep));
 
 /** Les `ds-trigger` à action des gabarits, et les composants qui en transmettent une : fichier, ligne, cible et action. */
 export function findTriggers(root = ROOT) {

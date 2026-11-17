@@ -43,7 +43,16 @@ export class MireBackdrop {
     return (
       <Host class={{ 'mire-backdrop': true, '--empty': front === -1 }} aria-hidden="true">
         {([0, 1] as const).map((i) =>
-          layers[i] ? <img key={i} class={{ 'mire-backdrop__layer': true, '--front': front === i }} src={layers[i]} alt="" decoding="async" onLoad={(e) => this.loaded(i, e)} /> : null,
+          layers[i] ? (
+            <img
+              key={i}
+              class={{ 'mire-backdrop__layer': true, '--front': front === i }}
+              src={layers[i]}
+              alt=""
+              decoding="async"
+              onLoad={(e) => this.loaded(i, e)}
+            />
+          ) : null,
         )}
       </Host>
     );

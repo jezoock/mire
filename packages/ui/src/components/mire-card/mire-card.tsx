@@ -45,7 +45,14 @@ export class MireCard {
     return (
       <Host class={{ 'mire-card': true, [`--${variant}`]: true, '--unavailable': !!el.unavailable }}>
         <ds-trigger class="mire-card__trigger" label={t.label} data-key={el.key} {...act}>
-          <ds-thumb class="mire-card__thumb" src={cardImage(el, variant)} ratio={CARD_RATIOS[variant]} label={t.title} loading={this.eager ? 'eager' : 'lazy'} decorative />
+          <ds-thumb
+            class="mire-card__thumb"
+            src={cardImage(el, variant)}
+            ratio={CARD_RATIOS[variant]}
+            label={t.title}
+            loading={this.eager ? 'eager' : 'lazy'}
+            decorative
+          />
           <span class="mire-card__texts" aria-hidden="true">
             <span class="mire-card__title">{t.title}</span>
             {t.subtitle && <span class="mire-card__subtitle">{t.subtitle}</span>}

@@ -101,10 +101,19 @@ function watchFocus(): void {
 
 function elementsDemo(): string {
   const row = keep(sampleElements(12, 'rangee'));
-  const groups: GridGroup[] = [1, 2, 3].map((n) => ({ key: `groupe-${n}`, name: t('demo.elements.group', { n }), elements: keep(sampleElements(30, `groupe-${n}`)) }));
+  const groups: GridGroup[] = [1, 2, 3].map((n) => ({
+    key: `groupe-${n}`,
+    name: t('demo.elements.group', { n }),
+    elements: keep(sampleElements(30, `groupe-${n}`)),
+  }));
   const lines = keep(sampleElements(4, 'ligne'));
   const progress = Object.fromEntries(row.slice(0, 3).map((el, i) => [el.key, 0.25 * (i + 1)]));
-  const groupCards = [1, 2, 3, 4].map((n) => ({ value: n === 4 ? null : t('demo.elements.group', { n }), name: t('demo.elements.group', { n }), count: n * 7, poster: row[n]?.images.poster }));
+  const groupCards = [1, 2, 3, 4].map((n) => ({
+    value: n === 4 ? null : t('demo.elements.group', { n }),
+    name: t('demo.elements.group', { n }),
+    count: n * 7,
+    poster: row[n]?.images.poster,
+  }));
   const labels = esc(forms.card);
   return `<section class="mire-ui-demo__elements" aria-label="${esc(t('demo.elements.heading'))}">
     <p class="mire-ui-demo__name">${esc(t('demo.elements.heading'))}</p>
