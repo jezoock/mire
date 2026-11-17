@@ -7,74 +7,16 @@
  * par événement et y appelle les extensions dans l'ordre de la liste. Pour une même requête, la première
  * annulation (ou redirection) l'emporte ; les en-têtes modifiés par une extension sont transmis à la suivante.
  */
+import type { ExtensionSession, RequestDetails, RequestResponse, WebExtension, WebRequestEvent, WebRequestHandler } from '@mire/plugin-sdk';
 
-type Headers = Record<string, string>;
-type ResponseHeaders = Record<string, string[]>;
+// Interfaces publiées dans le SDK des plugins (contribution `webExtensions`).
+export type { ExtensionSession, RequestDetails, RequestResponse, WebExtension, WebRequestEvent, WebRequestHandlers } from '@mire/plugin-sdk';
 
-/** Détails d'une requête, tels que les donne Electron (sous-ensemble utilisé). */
-export interface RequestDetails {
-  id?: number;
-  url: string;
-  method?: string;
-  resourceType?: string;
-  referrer?: string;
-  webContentsId?: number;
-  requestHeaders?: Headers;
-  responseHeaders?: ResponseHeaders;
-  statusLine?: string;
-  [key: string]: unknown;
-}
+type Handler = WebRequestHandler;
 
-/** Réponse d'une extension pour une requête (la même forme que les réponses de `webRequest`). */
-export interface RequestResponse {
-  cancel?: boolean;
-  redirectURL?: string;
-  requestHeaders?: Headers;
-  responseHeaders?: ResponseHeaders;
-  statusLine?: string;
-}
-
-type Handler = (details: RequestDetails) => RequestResponse | void | Promise<RequestResponse | void>;
-
-export interface WebRequestHandlers {
-  onBeforeRequest?: Handler;
-  onBeforeSendHeaders?: Handler;
-  onHeadersReceived?: Handler;
-}
-
-export type WebRequestEvent = keyof WebRequestHandlers;
 export const WEB_REQUEST_EVENTS: readonly WebRequestEvent[] = ['onBeforeRequest', 'onBeforeSendHeaders', 'onHeadersReceived'];
 
 type Listener = (details: any, callback: (response: RequestResponse) => void) => void;
-
-/** Session Electron (sous-ensemble utilisé par l'hôte). */
-export interface ExtensionSession {
-  webRequest: Record<WebRequestEvent, (listener: Listener | null) => void>;
-  [key: string]: any;
-}
-
-export interface WebExtension {
-  id: string;
-  /** Branchement sur la session des vues web (scripts de page propres, canaux…). */
-  attach(session: ExtensionSession): void;
-  detach(): void;
-  webRequest?: WebRequestHandlers;
-  /**
-   * Script à exécuter dans la page avant son propre code ('' : rien). `url` : adresse du cadre ; `topUrl` : celle de
-   * la page qui le contient (la même pour le cadre principal).
-   */
-  beforePageScript?(url: string, topUrl: string): string;
-  /** Navigation de `from` vers `url` à annuler (true) : redirection publicitaire, par exemple. */
-  guardNavigation?(url: string, from: string): boolean;
-  /** État de l'extension (réglages). */
-  status?(): unknown;
-  /** Nombre d'éléments bloqués dans une page (identifiant de webContents). */
-  blockedCount?(webContentsId: number): number;
-  /** Nouvelle page dans la vue : le compteur repart de zéro. */
-  resetPage?(webContentsId: number): void;
-  /** L'extension agit-elle sur cette page (bouclier de la barre du site) ? */
-  activeOn?(url: string): boolean;
-}
 
 // Appelle les extensions une à une ; une extension en erreur est ignorée (la requête ne doit jamais rester bloquée).
 async function run(handlers: Handler[], event: WebRequestEvent, details: RequestDetails): Promise<RequestResponse> {

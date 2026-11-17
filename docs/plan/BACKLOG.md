@@ -105,7 +105,7 @@ Fiches dans `phase-3.md`.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P3-01 | `@mire/plugin-sdk` et manifeste | M | G3 |  | à faire | |
+| P3-01 | `@mire/plugin-sdk` et manifeste | M | G3 |  | faite | [#65](https://github.com/jezoock/mire/pull/65) |
 | P3-02 | Prototype de l'hôte isolé | M | P3-01 |  | à faire | |
 | P3-03 | Hôte de plugins | L | P3-02 |  | à faire | |
 | P3-04 | Contexte et permissions des plugins | M | P3-03 |  | à faire | |

@@ -5,6 +5,8 @@
  * la fois, par tranches (`catalog.page`).
  */
 import type { Element } from './element.ts';
+// Règle des identifiants de page : celle des cibles, publiée dans le SDK des plugins.
+import { PAGE_ID_RE } from '../../plugin-sdk/src/targets.ts';
 
 /** Valeur simple d'une info, telle qu'elle sert à regrouper et à comparer (un élément d'une liste est pris seul). */
 export type InfoScalar = string | number | boolean;
@@ -88,7 +90,7 @@ export interface PagesChange {
   pages: string[];
 }
 
-export const PAGE_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+export { PAGE_ID_RE };
 const INFO_RE = /^[a-z][a-zA-Z0-9]{0,63}$/;
 const TAG_RE = /^[^\s].{0,63}$/;
 export const PAGE_DISPLAYS: readonly PageDisplay[] = ['posters', 'thumbnails', 'list', 'rows'];

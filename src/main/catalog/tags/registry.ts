@@ -4,6 +4,7 @@
  * (identifiant : nom simplifié). Les plugins y déclareront les leurs (phase 3).
  */
 import { slug, type InfoType, type InfoValue } from '@mire/shared';
+import type { InfoDeclaration } from '@mire/plugin-sdk';
 
 /**
  * Tags posés par le cœur : type de fichier, tags des sources de la bibliothèque (P2-02), tags automatiques internes
@@ -11,15 +12,8 @@ import { slug, type InfoType, type InfoValue } from '@mire/shared';
  */
 export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote', 'series', 'movie', 'game', 'tv', 'stream'] as const;
 
-/**
- * Déclaration d'une info : son type de valeur et, pour un texte ou une liste, si la recherche la lit (vrai par
- * défaut). C'est ce qu'un plugin déclarera pour ses propres infos (P3-01).
- */
-export interface InfoDeclaration {
-  type: InfoType;
-  /** Faux pour une info technique qui n'a pas de sens dans une recherche (extension, sous-titres…). */
-  searchable?: boolean;
-}
+// Déclaration d'une info (type de valeur, recherche) : publiée dans le SDK, un plugin la reprend dans son manifeste.
+export type { InfoDeclaration };
 
 const text = (searchable = true): InfoDeclaration => (searchable ? { type: 'text' } : { type: 'text', searchable });
 const list = (searchable = true): InfoDeclaration => (searchable ? { type: 'list' } : { type: 'list', searchable });

@@ -51,6 +51,8 @@ const common = {
   sourcemap: 'linked',
   logLevel: 'info',
   plugins: [externalPackages],
+  // @mire/plugin-sdk : ses sources plutôt que son dist/ (construit seulement pour son archive).
+  conditions: ['mire-source'],
 };
 
 // Interface : script classique pour la page (pas de module ES ; esbuild le place en mode strict). Les paquets de

@@ -167,8 +167,8 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 | Point d'entrée | Contenu |
 | --- | --- |
 | `@mire/shared` | Fonctions pures et référentiels : texte (`fold`, noms de fichiers, épisodes), adresses (`hostOf`, `isHttpUrl`), identifiants (`newId`), formats de fichiers (`KIND`, `NATIVE`, `MIME`, `EXT`), systèmes de jeu (`guessSystem`, alias, noms) ; types de la configuration (`Config`, `WebSite`, `TvService`, `Emulator`…). |
-| `@mire/shared` (`element.ts`) | Types du catalogue d'éléments : `Element`, `ElementKey`, `ElementSourceRef`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, `ValueOrigin` (origine d'un tag ou d'une info : `file`, `source`, `tagger`, `metadata`, `user`). |
-| `@mire/shared` (`targets.ts`) | Cibles (P2-12) : ce qu'une rangée de l'accueil, puis un plugin ou un thème, peut ouvrir, écrit en un texte : une page par son identifiant (`movies` ; un identifiant de page n'a jamais de `:`, `PAGE_ID_RE`), une liste par `list:<id>` (`LIST_PAGE_PREFIX`, comme `catalogPage`), un écran du cœur par `screen:<nom>` (`CORE_SCREENS`, liste fermée : `home`, `search`, `center`, `settings`, `explorer` ; ni la coquille ni les lecteurs). `parseTarget` lit (`null` si invalide), `isTarget` reconnaît, `formatTarget` écrit (lève `RangeError` pour une cible invalide). La normalisation de la configuration retire des rangées de l'accueil une cible invalide. |
+| `@mire/shared` (`element.ts`) | Types du catalogue d'éléments, réexportés de `@mire/plugin-sdk` (P3-01) : `Element`, `ElementKey`, `ElementSourceRef`, `OpenSpec` (fichier, site, jeu, programme, flux), `InfoValue`, `ValueOrigin` (origine d'un tag ou d'une info : `file`, `source`, `tagger`, `metadata`, `user`). |
+| `@mire/shared` (`targets.ts`) | Cibles (P2-12), réexportées de `@mire/plugin-sdk` (P3-01) : ce qu'une rangée de l'accueil, puis un plugin ou un thème, peut ouvrir, écrit en un texte : une page par son identifiant (`movies` ; un identifiant de page n'a jamais de `:`, `PAGE_ID_RE`), une liste par `list:<id>` (`LIST_PAGE_PREFIX`, comme `catalogPage`), un écran du cœur par `screen:<nom>` (`CORE_SCREENS`, liste fermée : `home`, `search`, `center`, `settings`, `explorer` ; ni la coquille ni les lecteurs). `parseTarget` lit (`null` si invalide), `isTarget` reconnaît, `formatTarget` écrit (lève `RangeError` pour une cible invalide). La normalisation de la configuration retire des rangées de l'accueil une cible invalide. |
 | `@mire/shared/ipc` | Contrat IPC : tables des méthodes et des événements, leurs types, `createApi`. |
 | `@mire/shared/settings/schema` | Schéma des réglages (voir `docs/settings-schema.md`). |
 | `@mire/shared/i18n` | Moteur de traduction, formats, choix de la langue, catalogues intégrés `fr` et `en`, vérification des catalogues (voir `docs/i18n.md`). |
@@ -179,6 +179,30 @@ principal, aux preloads, à l'interface et aux scripts. esbuild l'intègre aux b
 intégrés au script de l'interface, et la feuille de style compilée avec le moteur SCSS de dot-stash
 (`src/styles/index.scss`). Ses fonctions sans DOM (`@mire/ui/utils`) sont testées sous Node. Décisions et
 conventions : `docs/adr/0001-dot-stash.md`.
+
+## `@mire/plugin-sdk`
+
+`packages/plugin-sdk/` (P3-01) : le contrat public des plugins, sans aucune dépendance. Mode d'emploi pour les auteurs
+de plugins : `packages/plugin-sdk/README.md`.
+
+- **Types** (`src/`) : éléments (`element.ts`) et cibles (`targets.ts`), que `@mire/shared` réexporte sans les
+  recopier (un test le garde, `test/plugin-sdk/shared.test.ts`) ; interfaces des contributions de code
+  (`contributions.ts` : `ElementSource`, `Tagger`, `InfoDeclaration`, `MetadataProvider`, `SearchProvider`,
+  `WebExtension`, `Downloader`), que les interfaces internes de `src/main/` reprennent, génériques quand le cœur
+  leur prête un contexte plus riche ; contexte d'un plugin de code (`context.ts` : `http`, `files`, `storage`,
+  `settings`, `log`, `events`, types seulement) ; manifeste (`manifest.ts` : champs, niveaux, contributions et
+  permissions, listes fermées).
+- **Manifeste** : `schema/mire-plugin.schema.json` (schéma JSON) et `validate.ts` (validateur écrit à la main,
+  `validateManifest`), gardés d'accord par `test/plugin-sdk/schema.test.ts`. `validate-dir.ts` vérifie un dossier
+  (fichiers déclarés, textes anglais, et français avec `official`).
+- **Valider un plugin** : `node packages/plugin-sdk/src/cli.ts validate <dossier> [--official]` dans Mire,
+  `npx mire-plugin validate <dossier>` une fois l'archive installée. `--official` : validation pour le dépôt
+  officiel (préfixe `mire.` permis, textes français obligatoires).
+- **Sources et archive** : dans Mire, `@mire/plugin-sdk` désigne ses sources par la condition d'export `mire-source`
+  (`customConditions` de `tsconfig.base.json`, `conditions` d'esbuild) ; `@mire/shared` l'importe par chemin relatif
+  (aucune condition à prévoir pour Stencil). `npm pack -w @mire/plugin-sdk` construit `dist/` (`tsconfig.build.json` :
+  JavaScript et déclarations) et produit l'archive ; `test/plugin-sdk/pack.test.ts` l'installe dans un dossier vide,
+  en compile les types et lance l'outil.
 
 ## Contrat IPC
 
@@ -318,8 +342,9 @@ fixé (`i18n/metadata.ts`).
 
 ## Interfaces d'extension
 
-Ces interfaces existent déjà dans le code. Elles préparent les addons de la phase 3, mais aujourd'hui seuls les
-fournisseurs intégrés à Mire les implémentent.
+Ces interfaces existent déjà dans le code. Depuis P3-01, leurs types publics sont dans `@mire/plugin-sdk` (contributions
+des plugins) et les fichiers ci-dessous les reprennent ; aujourd'hui seuls les fournisseurs intégrés à Mire les
+implémentent.
 
 | Interface | Fichier | Ce qu'elle décrit | Implémentations |
 | --- | --- | --- | --- |

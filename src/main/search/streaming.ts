@@ -3,6 +3,7 @@
  * la région choisie (données JustWatch, servies par TMDB), rapprochés des sites de streaming configurés.
  */
 import { fold, type Config, type WebSite } from '@mire/shared';
+import type { SearchProvider as SdkSearchProvider } from '@mire/plugin-sdk';
 import { HttpError } from '../net/http.ts';
 import { tmdbImageUrl, type TmdbClient, type TmdbParams } from '../net/tmdb.ts';
 import { providerMatches } from '../lib/text.ts';
@@ -14,11 +15,8 @@ export interface SearchContext {
   getConfig(): Pick<Config, 'search' | 'web'>;
 }
 
-/** Fournisseur de recherche : interroge un catalogue et rend ses résultats. */
-export interface SearchProvider<R> {
-  id: string;
-  search(query: string, ctx: SearchContext): Promise<R>;
-}
+/** Fournisseur de recherche : l'interface du SDK (contribution `search`), avec le contexte de la recherche. */
+export type SearchProvider<R> = SdkSearchProvider<R, SearchContext>;
 
 /** Service qui propose un titre ; `webId` : site configuré correspondant, s'il y en a un. */
 export interface StreamingOffer {
