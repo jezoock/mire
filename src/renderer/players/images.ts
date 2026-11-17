@@ -6,7 +6,7 @@ import { toast } from '../ui/toast.ts';
 import { I, S } from '../state/index.ts';
 import { api } from '../api/index.ts';
 import { IMAGE_KEYS, keyAction } from '../nav/keyboard.ts';
-import { focusFirst, focusSelectorOf } from '../nav/spatial.ts';
+import { rememberFocus, restoreFocus } from '../nav/focus.ts';
 import type { Playable } from './types.ts';
 import type { Controllers } from '../controllers/index.ts';
 
@@ -17,7 +17,6 @@ import type { Controllers } from '../controllers/index.ts';
 export type ImagesControllers = Pick<Controllers, 'player' | 'home' | 'web'>;
 
 let ctrl: ImagesControllers;
-const viewEl = $('#view') as HTMLElement;
 const imageLayer = $('#image-layer') as HTMLElement;
 const ivImg = $('#iv-img') as HTMLImageElement;
 
@@ -46,7 +45,7 @@ export function openImages(list: Playable[], i: number): void {
     ctrl.player.openExternal({ path: it.path, name: it.name });
     return;
   }
-  I.returnSel = focusSelectorOf(document.activeElement);
+  I.returnFocus = rememberFocus();
   I.list = list.filter((x) => x.native);
   I.i = Math.max(0, I.list.indexOf(it));
   imageLayer.hidden = false;
@@ -79,9 +78,7 @@ export function closeImages(): void {
   ivImg.removeAttribute('src');
   ctrl.web.sync();
   if (S.section === 'home') ctrl.player.refreshView();
-  const back = I.returnSel && viewEl.querySelector<HTMLElement>(I.returnSel);
-  if (back) back.focus();
-  else focusFirst();
+  restoreFocus(I.returnFocus);
 }
 
 /** Touche dans la visionneuse (du clavier, ou traduite depuis la manette) ; `true` si elle a été utilisée. */

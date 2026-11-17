@@ -8,7 +8,7 @@ import { S, V } from '../state/index.ts';
 import { api } from '../api/index.ts';
 import { folderText } from '../domain/index.ts';
 import { VIDEO_KEYS, keyAction } from '../nav/keyboard.ts';
-import { focusFirst, focusSelectorOf } from '../nav/spatial.ts';
+import { rememberFocus, restoreFocus } from '../nav/focus.ts';
 import { audio, getVolume, setRangeFill, setVolume, video } from './volume.ts';
 import type { Playable } from './types.ts';
 import type { Controllers } from '../controllers/index.ts';
@@ -22,7 +22,6 @@ export { video };
 export type VideoControllers = Pick<Controllers, 'player' | 'home' | 'web'>;
 
 let ctrl: VideoControllers;
-const viewEl = $('#view') as HTMLElement;
 const videoLayer = $('#video-layer') as HTMLElement;
 const vpPlay = $('#vp-play') as HTMLButtonElement;
 const vpSeek = $('#vp-seek') as HTMLInputElement;
@@ -156,7 +155,7 @@ export function openVideo(list: Playable[], i: number): void {
     ctrl.player.openExternal({ path: it.path, name: it.name });
     return;
   }
-  if (videoLayer.hidden) V.returnSel = focusSelectorOf(document.activeElement);
+  if (videoLayer.hidden) V.returnFocus = rememberFocus();
   else saveResume(current());
 
   V.list = list;
@@ -215,9 +214,7 @@ export function closeVideo(): void {
   V.i = -1;
   ctrl.web.sync();
   if (S.section === 'home') ctrl.player.refreshView();
-  const back = V.returnSel && viewEl.querySelector<HTMLElement>(V.returnSel);
-  if (back) back.focus();
-  else focusFirst();
+  restoreFocus(V.returnFocus);
 }
 
 /** Vidéo suivante (1) ou précédente (-1) de la liste, s'il y en a une. */

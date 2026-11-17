@@ -8,7 +8,8 @@ import { S } from '../state/index.ts';
 import { toast } from '../ui/toast.ts';
 import type { Controllers } from '../controllers/index.ts';
 import { handleKey } from './keyboard.ts';
-import { moveFocus, type Direction } from './spatial.ts';
+import { activeDialog, closeDialog, inColumns, moveFocus, relayPadKey, stickScroll } from './focus.ts';
+import type { Direction } from './spatial.ts';
 import {
   IMAGE_PAD,
   LIST_PAD,
@@ -41,8 +42,16 @@ let ctrl: GamepadControllers;
 const mem: PadMemory = { prev: {}, repeatAt: {} };
 const DIRS: Readonly<Record<string, Direction>> = { up: 'up', down: 'down', left: 'left', right: 'right' };
 
-function padPress(k: string): void {
+/** Contexte de la manette : celui de l'interface, sauf un `ds-modal` au premier plan (dialogue) ou des colonnes. */
+function context(): PadContext {
   const ctx = hooks.context();
+  if (ctx !== 'dialog' && activeDialog(null)) return 'dialog';
+  if (ctx === 'list' && inColumns(document.activeElement)) return 'columns';
+  return ctx;
+}
+
+function padPress(k: string): void {
+  const ctx = context();
   if (ctx === 'web') {
     if (k === 'select' || k === 'home') {
       ctrl.web.toggleFocus({ toSite: !S.webFocused });
@@ -58,11 +67,14 @@ function padPress(k: string): void {
     return;
   }
   if (ctx === 'dialog') {
-    const box = hooks.dialog() as HTMLElement;
+    const box = activeDialog(hooks.dialog()) as HTMLElement;
+    const key = padKey(LIST_PAD, k);
+    // Un composant qui a le focus traite d'abord la touche (liste ouverte, onglets, Entrée d'un ds-trigger).
+    if (key && relayPadKey(key)) return;
     const dir = Object.hasOwn(DIRS, k) ? DIRS[k] : undefined;
     if (dir) moveFocus(dir, box);
     else if (k === 'a') (document.activeElement as HTMLElement | null)?.click?.();
-    else if (k === 'b') box.dispatchEvent(new Event('cancel', { cancelable: true }));
+    else if (k === 'b') closeDialog(box);
     return;
   }
   if (ctx === 'video' || ctx === 'image') {
@@ -83,6 +95,7 @@ function padPress(k: string): void {
     return;
   }
   const key = padKey(LIST_PAD, k);
+  if (key && relayPadKey(key)) return;
   if (key) handleKey(key, true);
 }
 
@@ -91,7 +104,7 @@ let padCtxShown = '';
 /** Barre de rappel des boutons : mise à jour quand le contexte ou la manette change (ou si `force`). */
 export function updatePadbar(force = false): void {
   const padbar = $('#padbar') as HTMLElement;
-  const ctx = S.pad ? hooks.context() : '';
+  const ctx = S.pad ? context() : '';
   const key = `${ctx}|${S.pad?.family || ''}`;
   if (!force && key === padCtxShown) return;
   padCtxShown = key;
@@ -128,9 +141,12 @@ function pollPads(now: number): void {
       }
       padPress(button);
     }
-    // Stick droit : défilement de la liste.
+    // Stick droit : défilement de la liste, de la colonne ou de la rangée qui a le focus.
+    const rx = gp.axes[2] || 0;
     const ry = gp.axes[3] || 0;
-    if (Math.abs(ry) > 0.3 && hooks.context() === 'list') ($('#view') as HTMLElement).scrollBy(0, ry * 22);
+    const dx = Math.abs(rx) > 0.3 ? rx * 22 : 0;
+    const dy = Math.abs(ry) > 0.3 ? ry * 22 : 0;
+    if (dx || dy) stickScroll(dx, dy, context());
   }
   updatePadbar();
   requestAnimationFrame(pollPads);

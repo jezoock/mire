@@ -2,8 +2,9 @@
  * Navigation spatiale : flèches du clavier, croix et stick de la manette.
  * Le choix du voisin (`pickNeighbor`) ne dépend que des rectangles : il sert à tout élément focalisable,
  * qu'il porte la classe `.focusable` (interface actuelle) ou soit un composant dot-stash (`ds-trigger`…).
+ * Le service qui déplace le focus dans le document est `focus.ts` (P4-03).
  */
-import { $, $$ } from '../core/dom.ts';
+import { $ } from '../core/dom.ts';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -74,42 +75,21 @@ export function pickNeighbor<T extends Navigable>(from: Rect, candidates: Iterab
 
 const viewEl = () => $('#view') as HTMLElement;
 
-/** Sélecteur qui retrouve l'élément du contenu après un nouvel affichage (par ses `data-*` ou son id), ou `null`. */
+/**
+ * Sélecteur qui retrouve l'élément du contenu après un nouvel affichage (par ses `data-*` ou son id), ou `null`.
+ * Dans un composant : par la clé stable (`data-key`) ou par l'action du `ds-trigger` qui le contient.
+ */
 export function focusSelectorOf(target: Element | null): string | null {
   if (!target || !viewEl().contains(target)) return null;
   const el = target as HTMLElement;
-  const parts = ['action', 'index', 'console', 'go', 'id']
+  const parts = ['action', 'index', 'console', 'go', 'id', 'key']
     .filter((k) => el.dataset[k] != null)
     .map((k) => `[data-${k}="${CSS.escape(el.dataset[k] as string)}"]`);
   if (parts.length) return parts.join('');
-  return el.id ? `#${CSS.escape(el.id)}` : null;
-}
-
-// Premier élément du contenu ; le panneau d'infos et les onglets ne passent qu'en dernier recours.
-export function focusFirst(): void {
-  const all = $$(NAV_SELECTOR, viewEl()).filter(isShown);
-  const el = all.find((x) => !x.closest('.focus-info, .tabs')) || all[0] || $('.rail-item[aria-current]');
-  el?.focus();
-}
-
-/**
- * Déplace le focus vers le voisin dans la direction donnée, parmi les éléments `selector` de `scope`.
- * Si le focus n'est sur aucun d'eux, il va au premier élément du contenu (ou de `scope`).
- */
-export function moveFocus(dir: Direction, scope: ParentNode = document, selector: string = NAV_SELECTOR): void {
-  const els = $$(selector, scope).filter(isShown);
-  const cur = document.activeElement as HTMLElement | null;
-  if (!cur || !els.includes(cur)) {
-    ($$(selector, viewEl()).find(isShown) || els[0])?.focus();
-    return;
-  }
-  const best = pickNeighbor(
-    cur.getBoundingClientRect(),
-    els.filter((el) => el !== cur),
-    dir,
-  );
-  if (best) {
-    best.focus({ preventScroll: true });
-    best.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  }
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  const trigger = el.closest('ds-trigger[action]');
+  if (!trigger || !viewEl().contains(trigger)) return null;
+  const attr = (name: string) => (trigger.hasAttribute(name) ? `[${name}="${CSS.escape(trigger.getAttribute(name) as string)}"]` : '');
+  const own = `ds-trigger${attr('target')}${attr('action')}`;
+  return trigger === el ? own : `${own} ${el.localName}`;
 }
