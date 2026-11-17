@@ -30,6 +30,7 @@ export function normalizeExtension(ext: unknown): string | null {
 export function normalizeCatalogSettings(raw: unknown): CatalogSettings {
   const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const out: CatalogSettings = { ...src };
+  if (src.metadataProviders !== undefined) out.metadataProviders = providerIds(src.metadataProviders);
   const fileTags = src.fileTags;
   if (fileTags === undefined) return out;
   const rules: Record<string, string[]> = {};
@@ -42,6 +43,12 @@ export function normalizeCatalogSettings(raw: unknown): CatalogSettings {
   }
   out.fileTags = rules;
   return out;
+}
+
+/** Identifiants de fournisseurs écrits à la main, simplifiés et sans doublons. */
+function providerIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.filter((id): id is string => typeof id === 'string').map((id) => id.trim().toLowerCase()))].filter(Boolean);
 }
 
 /** Règles effectives : celles par défaut, remplacées extension par extension par celles de la configuration. */

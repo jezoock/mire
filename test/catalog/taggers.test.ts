@@ -13,6 +13,7 @@ import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
 import { builtinTaggers, movieTagger, musicTagger, photoTagger, seriesTagger, systemTagger, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { metadataContributors } from '../../src/main/catalog/metadata.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 
@@ -193,5 +194,42 @@ describe('tags automatiques branchés sur le moteur', () => {
       list.some((t) => t.origin === 'other'),
       false,
     );
+  });
+});
+
+describe('tags automatiques et infos en ligne (P2-06)', () => {
+  it('les infos en ligne passent avant celles des tags automatiques, quel que soit l’ordre ; la main avant tout', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-taggers-'));
+    const catalog = createCatalog({ dir: path.join(dir, 'sources'), debounceMs: 0, onIgnored: () => {} });
+    catalog.load();
+    const overrides = createOverrides({ file: path.join(dir, 'overrides.json') });
+    overrides.load();
+    const p = '/films/Amelie (2001).mkv';
+    const key = localFileKey(p, 'linux');
+    // Fiche TMDB factice : titre en ligne, sans année.
+    const store = { forElement: (k: string) => (k === key ? new Map([['tmdb', { infos: { title: 'Le Fabuleux Destin d’Amélie Poulain' } }]]) : undefined) };
+    const online = metadataContributors(store, ['tmdb']);
+    const automatic = builtinTaggers(() => []).map(taggerContributor);
+    const engine = createTagEngine({
+      catalog,
+      overrides,
+      registry: createRegistry(builtinTranslator('fr').t),
+      rules: () => fileTagRules(undefined),
+      contributors: [...online, ...automatic],
+    });
+    catalog.setSource({ plugin: 'src-local', instance: '/films' }, [
+      { key, name: 'Amelie (2001)', open: { kind: 'file', path: p }, tags: ['local'], infos: { folder: 'films' }, images: {} },
+    ]);
+    let e = engine.element(key)!;
+    assert.equal(e.infos.title, 'Le Fabuleux Destin d’Amélie Poulain');
+    // Ce que la fiche ne donne pas vient des tags automatiques.
+    assert.equal(e.infos.year, 2001);
+    assert.ok(e.tags.includes('movie'));
+    engine.setContributors([...automatic, ...online]);
+    assert.equal(engine.element(key)!.infos.title, 'Le Fabuleux Destin d’Amélie Poulain');
+    engine.setInfos(key, { title: 'Amélie' });
+    e = engine.element(key)!;
+    assert.equal(e.infos.title, 'Amélie');
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

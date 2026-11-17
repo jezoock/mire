@@ -223,4 +223,9 @@ export interface CatalogSettings {
    * extensions suivent les formats reconnus (`KIND`). Absent : toutes les règles par défaut.
    */
   fileTags?: Record<string, string[]>;
+  /**
+   * Ordre de priorité des fournisseurs d'infos en ligne (`tmdb`, `musicbrainz`, `libretro`, `steam`) : pour une même
+   * info, le premier l'emporte. Ceux qui manquent suivent, dans l'ordre par défaut. Absent : l'ordre par défaut.
+   */
+  metadataProviders?: string[];
 }

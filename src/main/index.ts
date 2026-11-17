@@ -10,6 +10,7 @@ import { MIME, type SystemHint } from '@mire/shared';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
 import { createCatalog } from './catalog/index.ts';
+import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
 import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
@@ -69,7 +70,10 @@ function start(pending: PendingFiles): Running {
   // Catalogue d'éléments : alimenté par les analyses de la bibliothèque ; l'interface historique ne s'en sert pas.
   const catalog = createCatalog({ dir: files.catalogSources });
   // Modifications faites à la main (tags, infos, images), qui reprennent l'ancien meta/meta.json.
-  const overrides = createOverrides({ file: files.catalogOverrides, legacyFile: files.meta, find: createTargetFinder(catalog) });
+  const find = createTargetFinder(catalog);
+  const overrides = createOverrides({ file: files.catalogOverrides, legacyFile: files.meta, find });
+  // Infos en ligne (fiches des fournisseurs), qui reprennent l'ancien scrape/db.json.
+  const metadata = createMetadataStore({ file: files.catalogMetadata, legacyFile: files.scrapeDb, find });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
   // et les fichiers ouverts explicitement (boîte de dialogue, glisser-déposer).
@@ -145,17 +149,44 @@ function start(pending: PendingFiles): Running {
     console.log(
       `Catalogue : infos modifiées à la main reprises (${migrated.matched} rattachées à un élément, ${migrated.unmatched.length} gardées sous leur ancienne clé).`,
     );
-  // Tags et infos effectifs, index ; les règles par extension suivent la configuration.
-  // Tags automatiques internes (séries, films, musique, consoles, photos) : ils suivent les consoles configurées.
-  const taggers = () => builtinTaggers(() => config.get().emulators).map(taggerContributor);
-  const tags = createTagEngine({ catalog, overrides, registry: createRegistry(t), rules: () => fileTagRules(config.get().catalog), contributors: taggers() });
+  const scraped = metadata.load();
+  if (scraped)
+    console.log(
+      `Catalogue : infos en ligne reprises (${scraped.matched} rattachées à un élément, ${scraped.unmatched.length} gardées sous leur ancienne clé).`,
+    );
+  // Tags et infos effectifs, index ; les règles par extension, les consoles et l'ordre des fournisseurs suivent la
+  // configuration. Tags automatiques internes (séries, films, musique, consoles, photos), puis infos en ligne : le
+  // moteur fait passer les infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
+  const contributors = () => [
+    ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
+    ...metadataContributors(metadata, metadataOrder(config.get().catalog)),
+  ];
+  const tags = createTagEngine({
+    catalog,
+    overrides,
+    registry: createRegistry(t),
+    rules: () => fileTagRules(config.get().catalog),
+    contributors: contributors(),
+  });
   config.onChange((next, prev) => {
     if (JSON.stringify(next.catalog?.fileTags) !== JSON.stringify(prev.catalog?.fileTags)) tags.refreshRules();
-    if (JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(taggers());
+    const providers = JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders);
+    if (providers || JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(contributors());
+  });
+  // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
+  metadata.onChange((keys) => tags.refresh(keys));
+  catalog.onChange(({ added }) => {
+    if (added.length) metadata.adopt(added.map((k) => catalog.get(k)).filter((e) => !!e));
   });
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
-  const scraper = createScraper({ dataDir: userData, getConfig: config.get, listRoms: games.listRoms, onProgress: (p) => toUi('scrape-progress', p) });
+  const scraper = createScraper({
+    dataDir: userData,
+    getConfig: config.get,
+    listRoms: games.listRoms,
+    onProgress: (p) => toUi('scrape-progress', p),
+    store: metadata.scrapeStore,
+  });
   // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
   access.invalidate();
   const store = createStore({
@@ -203,7 +234,7 @@ function start(pending: PendingFiles): Running {
     },
     beforeQuit() {
       downloads.stop().catch(() => {});
-      const flushes = [scraper, downloads, usage, catalog, overrides].map((m) => () => m.flush());
+      const flushes = [scraper, downloads, usage, catalog, overrides, metadata].map((m) => () => m.flush());
       return flushWithin(flushes, 2000);
     },
   };

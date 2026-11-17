@@ -1,8 +1,8 @@
 /**
  * Moteur de récupération d'infos de base et d'une image pour les listes de Mire. Les sources sont des
- * fournisseurs (`MetadataProvider`) : le moteur tient la base `db.json`, décide de ce qui doit être récupéré
- * (révision, nouvel essai après 14 jours), fait tourner les récupérations avec la concurrence de chaque
- * fournisseur, annonce la progression et gère l'annulation.
+ * fournisseurs (`MetadataProvider`) : le moteur tient la base des fiches (`ScrapeStore` : celle du catalogue, ou
+ * `db.json`), décide de ce qui doit être récupéré (révision, nouvel essai après 14 jours), fait tourner les
+ * récupérations avec la concurrence de chaque fournisseur, annonce la progression et gère l'annulation.
  *
  * Les images sont copiées dans <données de Mire>/scrape/img ; rien n'est écrit dans vos dossiers.
  */
@@ -30,6 +30,7 @@ import type {
   ScrapeOverride,
   ScrapeProgress,
   ScrapeRecord,
+  ScrapeStore,
 } from './types.ts';
 import { t } from '../i18n/current.ts';
 
@@ -49,6 +50,8 @@ export interface ScrapeEngineDeps {
   fetch?: FetchLike;
   /** Horloge (tests). */
   now?: () => number;
+  /** Base des fiches ; par défaut `<données>/scrape/db.json`. */
+  store?: ScrapeStore;
 }
 
 export interface OneJob {
@@ -69,6 +72,37 @@ interface Task {
   provider: MetadataProvider;
   item: ScrapeItem;
   key: string;
+}
+
+/** Base des fiches dans `db.json` (fichier illisible : on repart de zéro, les infos seront récupérées de nouveau). */
+export function createDbFileStore(file: string): ScrapeStore {
+  const dbStore = createJsonStore<ScrapeDb>(file, { defaults: { items: {}, misses: {} }, debounceMs: 400 });
+  let db = dbStore.load();
+  const save = () => dbStore.set(db);
+  return {
+    get: (key) => db.items[key],
+    set(key, record) {
+      db.items[key] = record;
+      delete db.misses[key];
+      save();
+    },
+    remove(key) {
+      delete db.items[key];
+      delete db.misses[key];
+      save();
+    },
+    missedAt: (key) => db.misses[key],
+    miss(key, at) {
+      db.misses[key] = at;
+      save();
+    },
+    all: () => db.items,
+    clear() {
+      db = { items: {}, misses: {} };
+      save();
+    },
+    flush: () => dbStore.flush(),
+  };
 }
 
 /** Fait tourner `fn` sur `items`, `limit` à la fois, tant que `go()` est vrai. */
@@ -94,10 +128,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
   fs.mkdirSync(imgDir, { recursive: true });
   fs.mkdirSync(cacheDir, { recursive: true });
 
-  // Fichier illisible : on repart de zéro, comme avant (les infos seront récupérées de nouveau).
-  const dbStore = createJsonStore<ScrapeDb>(dbFile, { defaults: { items: {}, misses: {} }, debounceMs: 400 });
-  let db = dbStore.load();
-  const save = () => dbStore.set(db);
+  const db = deps.store ?? createDbFileStore(dbFile);
 
   const state = { running: false, cancel: false };
   const ctx: ProviderContext = {
@@ -109,18 +140,16 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
   };
 
   function record(key: string, data: ScrapeFacts): void {
-    db.items[key] = { ...data, rev: REV, at: now() } as ScrapeRecord;
-    delete db.misses[key];
-    save();
+    db.set(key, { ...data, rev: REV, at: now() } as ScrapeRecord);
   }
   function miss(key: string): void {
-    db.misses[key] = now();
-    save();
+    db.miss(key, now());
   }
   function wanted(key: string, force?: boolean): boolean {
     if (force) return true;
-    if (db.items[key]) return db.items[key].rev !== REV;
-    const m = db.misses[key];
+    const found = db.get(key);
+    if (found) return found.rev !== REV;
+    const m = db.missedAt(key);
     return !m || now() - m > MISS_RETRY_MS;
   }
 
@@ -218,7 +247,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
 
   return {
     imgDir,
-    data: () => db.items,
+    data: () => db.all(),
     run,
     one,
     candidates,
@@ -228,26 +257,22 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     },
     running: () => state.running,
     forget(key: string) {
-      delete db.items[key];
-      delete db.misses[key];
-      save();
+      db.remove(key);
       return true;
     },
     /** Reporte une fiche sur une autre clé (marque-page de jeu → jeu téléchargé), sans écraser une fiche existante. */
     copy(from: string, to: string) {
-      if (!db.items[from] || db.items[to]) return false;
-      db.items[to] = { ...db.items[from] };
-      delete db.misses[to];
-      save();
+      const found = db.get(from);
+      if (!found || db.get(to)) return false;
+      db.set(to, { ...found });
       return true;
     },
     async clear() {
-      db = { items: {}, misses: {} };
-      save();
+      db.clear();
       for (const f of await fsp.readdir(imgDir).catch(() => [] as string[])) await fsp.unlink(path.join(imgDir, f)).catch(() => {});
       return true;
     },
-    flush: () => dbStore.flush(),
+    flush: () => db.flush(),
   };
 }
 

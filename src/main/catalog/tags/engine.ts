@@ -190,6 +190,12 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
       emit([...effective.keys()]);
     },
 
+    /** Éléments dont une contribution a changé (fiche d'infos en ligne enregistrée…) : recalculés. */
+    refresh(keys: readonly ElementKey[]): void {
+      for (const key of keys) update(key);
+      emit([...keys]);
+    },
+
     /** Abonnement aux éléments dont les tags ou les infos ont pu changer. */
     onChange(listener: TagEngineListener): () => void {
       listeners.add(listener);

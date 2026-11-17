@@ -121,7 +121,7 @@ sont alors passés par un accesseur (`downloads: () => downloads`), lu au moment
 
 `start` rend trois points d'entrée au cycle de vie : deuxième lancement (les fichiers sont ouverts dans la fenêtre
 existante), clic sur l'icône du Dock (macOS), et `beforeQuit`. Avant de quitter, les téléchargements s'arrêtent et
-les écritures différées de `scrape/db.json`, `telechargements.json`, `usage.json`, du catalogue et de
+les écritures différées de `catalog/metadata.json`, `telechargements.json`, `usage.json`, du catalogue et de
 `catalog/overrides.json` sont attendues
 deux secondes au plus.
 
@@ -258,7 +258,8 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
 2. vérifie ce qui manque (`requires` : par exemple la clé TMDB) ;
 3. pour `run`, rassemble les éléments de chaque fournisseur (`collect`), saute ceux qui sont déjà décrits ou en échec
    depuis moins de 14 jours, et lance les récupérations avec la concurrence du fournisseur ;
-4. enregistre chaque fiche dans `scrape/db.json` sous la clé de l'élément ; les images sont copiées dans
+4. enregistre chaque fiche sous la clé du fournisseur (`v:<chemin>`, `a:<dossier>`…) dans la base des infos en ligne
+   du catalogue (`catalog/metadata.json`, voir « Tags et infos » ; `ScrapeStore`) ; les images sont copiées dans
    `scrape/img/`. L'interface les affiche par `media://` ;
 5. annonce la progression (événement `scrape-progress`) ; « Arrêter » appelle `scrapeCancel`.
 
@@ -395,7 +396,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `catalog/overrides.json` | Modifications faites à la main : tags ajoutés ou retirés, infos et images, par clé d'élément ; tags créés par l'utilisateur ; fiches de l'ancien `meta.json` sans élément (`{ version, tags, elements, unmatched }`) | `src/main/catalog/overrides.ts`, stockage JSON |
 | `meta/meta.json` | Ancien fichier des infos modifiées à la main : repris dans `catalog/overrides.json` au premier démarrage, puis laissé en place sans être écrit | `src/main/meta/user-meta.ts` jusqu'à P2-04 |
 | `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
-| `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | moteur de récupération (`scrape/`), stockage JSON |
+| `catalog/metadata.json` | Infos récupérées en ligne (films, séries, albums, jeux), par clé d'élément puis clé du fournisseur ; fiches sans élément ; titres introuvables (`{ version, elements, unmatched, misses }`) | `src/main/catalog/metadata.ts`, stockage JSON |
+| `scrape/db.json` | Ancien fichier des infos récupérées en ligne : repris dans `catalog/metadata.json` au premier démarrage, puis laissé en place sans être écrit | moteur de récupération (`scrape/`) jusqu'à P2-06 |
 | `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
 | `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | moteur de récupération (`scrape/`) |
 | `telechargements.json` | Liste des téléchargements (en cours, terminés, en attente) | téléchargements (`src/main/downloads/`), stockage JSON |
@@ -495,7 +497,7 @@ les règles par extension de la configuration.
   | Type de fichier (`tags/file-rules.ts`) | `video`, `audio`, `image` d'après l'extension du fichier ou de l'adresse (formats de `EXT`) ; sans extension reconnue, l'info `mediaType` posée par la source (entrée M3U) | `extension` (`mkv`) |
   | Source | tags de la source (`local`, `network`, `remote`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, images trouvées à côté |
   | Tags automatiques (`tags/taggers.ts`) | `series`, `movie` | `series`, `season`, `episode`, `title`, `year`, `artist`, `album`, `track`, `system`, `folder` (détail ci-dessous) |
-  | Infos en ligne | `Contributor` (`setContributors`), en attendant P2-06 | |
+  | Infos en ligne (`catalog/metadata.ts`) | | `title`, `year`, `genres`, `overview`, `artist` ; images `poster`, `background` (un `Contributor` d'origine `metadata` par fournisseur) |
   | À la main (`overrides.json`) | ajout (`true`) ou **retrait** (`false`) | toute info, images |
 
   Tags : réunion des origines automatiques, puis les ajouts et les retraits faits à la main, qui l'emportent même
@@ -543,6 +545,19 @@ les règles par extension de la configuration.
   Une fiche gardée sous une adresse rejoint son élément quand une analyse l'apporte. Champs : `title`, `overview`,
   `artist` → infos du même nom ; `year` → `year` (nombre) ; `genre` → `genres` (liste) ; `image`, `backdrop` →
   images `poster`, `background`. `meta.json` est laissé en place et n'est plus écrit.
+- **Infos en ligne** (`metadata.ts`) : `userData/catalog/metadata.json` range les fiches des fournisseurs
+  (`src/main/scrape/`) par clé d'élément, puis par clé du fournisseur (un élément peut en avoir plusieurs). Il reprend
+  `scrape/db.json` au premier démarrage, avec la même correspondance des clés que `meta.json` (`r:`, `b:`, `v:` ; `a:`
+  et `g:` gardées dans `unmatched`), et les échecs (`misses`, sous les clés des fournisseurs). Une fiche gardée sous
+  une adresse rejoint son élément quand une analyse l'apporte ; `db.json` est laissé en place et n'est plus écrit.
+  - Le moteur de récupération lit et écrit toujours sous les clés des fournisseurs (`scrapeStore`) : recherches,
+    annulation, « Tout effacer » et l'interface historique (`scrapeData`) ne changent pas. Chaque fiche enregistrée
+    ou oubliée recalcule son élément (`engine.refresh`).
+  - Une fiche devient des infos et des images avec les mêmes conversions que les infos modifiées à la main
+    (`genre` → `genres`, `year` → nombre, `image` → `poster`, `backdrop` → `background`).
+  - **Ordre des fournisseurs** : une contribution par fournisseur, dans l'ordre de `catalog.metadataProviders`
+    (`["steam", "tmdb"]`), puis les autres dans l'ordre par défaut (`tmdb`, `musicbrainz`, `libretro`, `steam`). La
+    section est facultative : la version de la configuration ne change pas. Un changement recalcule tout.
 - **Façade** : `src/main/meta/user-meta.ts` garde l'API de l'interface historique (`metaAll`, `metaSet`,
   `metaPickImage`, `metaReset`), sous les anciennes clés et avec les anciens champs. « Réinitialiser » efface les
   infos et images de la fiche, pas les tags modifiés à la main.
