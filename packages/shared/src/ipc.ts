@@ -12,6 +12,7 @@
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
 import type { Element, InfoChanges, TagChanges, TagSummary } from './element.ts';
 import type { PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
+import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -296,7 +297,18 @@ export interface IpcMethods {
   pagesSave(page: PageDefinition): PageSaveResult;
   pagesRemove(id: string): boolean;
   // Un niveau d'une page (regroupements ou éléments), par tranches ; `null` : page inconnue ou chemin invalide.
+  // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08).
   catalogPage(pageId: string, path?: PagePath, cursor?: string | null): PageLevel | null;
+  // Listes (P2-08) : `lists.*` de l'architecture cible. `null` / `false` : liste inconnue ou valeur invalide.
+  listsList(): ListSummary[];
+  listsGet(id: string): ListView | null;
+  listsCreate(name: string | { key: string }): ListSummary | null;
+  listsRename(id: string, name: string | { key: string }): boolean;
+  listsRemove(id: string): boolean;
+  // Rendent le nombre d'éléments ajoutés ou retirés.
+  listsAdd(id: string, keys: string[], at?: number): number | null;
+  listsRemoveItems(id: string, keys: string[]): number | null;
+  listsMove(id: string, key: string, to: number): boolean;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -427,6 +439,14 @@ export const IPC_METHODS = {
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
   catalogPage: 'catalog:page',
+  listsList: 'lists:list',
+  listsGet: 'lists:get',
+  listsCreate: 'lists:create',
+  listsRename: 'lists:rename',
+  listsRemove: 'lists:remove',
+  listsAdd: 'lists:add',
+  listsRemoveItems: 'lists:removeItems',
+  listsMove: 'lists:move',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
@@ -458,6 +478,8 @@ export interface IpcEvents {
   onLanguageChange: LanguageInfo;
   /** Le contenu de ces pages a pu changer (analyse, infos, modification à la main, définition) : à redemander. */
   onPagesChange: PagesChange;
+  /** Ces listes ont changé (définition, éléments, élément disparu, revenu ou changé) : à redemander. */
+  onListsChange: ListsChange;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -483,6 +505,7 @@ export const IPC_EVENTS = {
   onMireFocus: 'web-mire-focus',
   onLanguageChange: 'i18n:changed',
   onPagesChange: 'pages:changed',
+  onListsChange: 'lists:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

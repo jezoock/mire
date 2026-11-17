@@ -56,7 +56,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
 | `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
-| `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`) ; pages et regroupements (`pages/`, P2-07). Voir « Catalogue d'éléments ». |
+| `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`) ; pages et regroupements (`pages/`, P2-07) ; listes (`lists/`, P2-08). Voir « Catalogue d'éléments ». |
 | `meta/` | Façade de l'interface historique sur les infos modifiées à la main (rangées dans `catalog/overrides.json` depuis P2-04) ; images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
 | `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
@@ -398,6 +398,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
 | `catalog/metadata.json` | Infos récupérées en ligne (films, séries, albums, jeux), par clé d'élément puis clé du fournisseur ; fiches sans élément ; titres introuvables (`{ version, elements, unmatched, misses }`) | `src/main/catalog/metadata.ts`, stockage JSON |
 | `catalog/pages.json` | Pages créées ou modifiées par l'utilisateur, par identifiant, et pages prêtes à l'emploi supprimées (`{ version, pages, removed }`) ; absent tant que rien n'a changé | `src/main/catalog/pages/`, stockage JSON (écriture immédiate) |
+| `catalog/lists.json` | Listes faites à la main, dans l'ordre de création ; pour chaque élément, sa clé et de quoi l'afficher s'il disparaît (`{ version, lists: [{ id, name, items: [{ key, name, source, open, added, poster? }] }] }`) ; absent tant qu'aucune liste n'a été créée | `src/main/catalog/lists/`, stockage JSON (écriture immédiate) |
 | `scrape/db.json` | Ancien fichier des infos récupérées en ligne : repris dans `catalog/metadata.json` au premier démarrage, puis laissé en place sans être écrit | moteur de récupération (`scrape/`) jusqu'à P2-06 |
 | `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
 | `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | moteur de récupération (`scrape/`) |
@@ -641,6 +642,30 @@ sur plusieurs niveaux (`groupBy`, une info par niveau). Le service (`catalog/pag
 - Coût sur 20 000 éléments factices (`test/catalog/pages-bench.test.ts`) : 2 à 4 ms pour un niveau jamais calculé
   (première page des Séries, épisodes d'une saison, 4 000 films triés), moins de 0,5 ms en cache ; ~1 ms pour un
   élément changé avec les sept pages en cache.
+
+### Listes
+
+Une liste (`ListDefinition`, `@mire/shared` : types, `validateList`) est un regroupement fait à la main : des clés
+d'éléments dans l'ordre choisi, sans doublon. Le service (`catalog/lists/`, `createLists`) lit `lists.json` au
+démarrage et ne calcule rien d'autre.
+
+- **Élément disparu** : pour chaque élément, la liste garde ce qu'il faut pour l'afficher (nom, source, ouverture,
+  date d'ajout, affiche), mis à jour à chaque changement du moteur de tags. Un élément qui quitte le catalogue reste à
+  sa place, indisponible (`available: false`), jusqu'à ce qu'il revienne ou qu'on le retire. Le moteur suit les
+  événements du catalogue : un élément disparu ou revenu (ou changé) fait annoncer les listes qui le contiennent
+  (index clé → listes, construit à la lecture du fichier).
+- **Liste vue comme une page** : `catalogPage('list:<id>', [], cursor)` rend `{ kind: 'elements', elements }` dans
+  l'ordre de la liste, sans regroupement ni tri, par tranches de 100. Le préfixe `list:` ne peut pas désigner une page
+  (un identifiant de page n'a pas de `:`). Un élément indisponible y est reconstitué d'après ce que la liste garde,
+  sans tags ni infos, avec `unavailable: true` (`PageElement`) : il ne s'ouvre pas.
+- **Ajout** : seuls les éléments présents dans le catalogue s'ajoutent (à une position, à la fin par défaut) ; un
+  élément déjà dans la liste n'y est pas mis deux fois. Une position trop grande met l'élément à la fin.
+- **`lists.json`** : une liste mal formée (identifiant, nom, doublon d'identifiant) est écartée à la lecture, un
+  élément mal formé ou en double aussi, sans perdre le reste (journal).
+- **IPC** : `listsList()` (`{ id, name, count }`), `listsGet(id)` (éléments avec `available`), `listsCreate(name)`,
+  `listsRename(id, name)`, `listsRemove(id)`, `listsAdd(id, keys, at?)`, `listsRemoveItems(id, keys)`,
+  `listsMove(id, key, to)` ; `name` : un texte ou une clé des catalogues (`{ key }`). Événement `onListsChange`
+  (`lists:changed`, `{ lists: [...] }`) : ces listes, et leur page `list:<id>`, sont à redemander.
 
 ## Configuration
 

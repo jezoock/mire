@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes et les pages', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les pages et les listes', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
@@ -17,6 +17,7 @@ describe('@mire/shared', () => {
       'GAME_FILE_RE',
       'GENERIC_DIR',
       'KIND',
+      'LIST_PAGE_PREFIX',
       'MEDIA_KINDS',
       'MIME',
       'NATIVE',
@@ -37,8 +38,11 @@ describe('@mire/shared', () => {
       'guessSystem',
       'hostOf',
       'isHttpUrl',
+      'isListName',
       'isPaletteId',
       'isUrlTarget',
+      'listIdOfPage',
+      'listPageId',
       'newId',
       'parseEpisode',
       'parsePaletteMeta',
@@ -54,6 +58,7 @@ describe('@mire/shared', () => {
       'systemById',
       'titleKey',
       'trackNumber',
+      'validateList',
       'validatePage',
     ]);
   });

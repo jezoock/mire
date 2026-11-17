@@ -20,6 +20,8 @@ export interface DataPaths {
   catalogMetadata: string;
   /** Pages créées, modifiées ou supprimées par l'utilisateur (P2-07). */
   catalogPages: string;
+  /** Listes faites à la main, ordonnées (P2-08). */
+  catalogLists: string;
   /** Ancien fichier des infos modifiées à la main (repris par `catalogOverrides`), et leurs images. */
   metaDir: string;
   meta: string;
@@ -57,6 +59,7 @@ export function dataPaths(root: string): DataPaths {
     catalogOverrides: at('catalog', 'overrides.json'),
     catalogMetadata: at('catalog', 'metadata.json'),
     catalogPages: at('catalog', 'pages.json'),
+    catalogLists: at('catalog', 'lists.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

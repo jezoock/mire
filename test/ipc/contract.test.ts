@@ -147,12 +147,22 @@ const ADDED_METHODS: Record<string, string> = {
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
   catalogPage: 'catalog:page',
+  // P2-08 : listes
+  listsList: 'lists:list',
+  listsGet: 'lists:get',
+  listsCreate: 'lists:create',
+  listsRename: 'lists:rename',
+  listsRemove: 'lists:remove',
+  listsAdd: 'lists:add',
+  listsRemoveItems: 'lists:removeItems',
+  listsMove: 'lists:move',
 };
 
 // Événements ajoutés après P1-08.
 const ADDED_EVENTS: Record<string, string> = {
   onLanguageChange: 'i18n:changed', // P1-28 : changement de langue à chaud
   onPagesChange: 'pages:changed', // P2-07 : contenu d'une page changé
+  onListsChange: 'lists:changed', // P2-08 : liste changée
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

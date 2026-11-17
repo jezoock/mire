@@ -64,6 +64,12 @@ export interface PageGroup {
   poster?: string;
 }
 
+/**
+ * Élément rendu par `catalog.page` : un élément du catalogue, ou, dans une liste, un élément disparu reconstitué
+ * d'après ce que la liste en garde (`unavailable: true`, sans tags ni infos ; il ne s'ouvre pas).
+ */
+export type PageElement = Element & { unavailable?: true };
+
 /** Réponse de `catalog.page` : les regroupements du niveau demandé, ou ses éléments, par tranches. */
 export type PageLevel = {
   page: string;
@@ -72,7 +78,7 @@ export type PageLevel = {
   total: number;
   /** Curseur de la tranche suivante, ou `null` si c'est la dernière. */
   next: string | null;
-} & ({ kind: 'groups'; info: string; groups: PageGroup[] } | { kind: 'elements'; elements: Element[] });
+} & ({ kind: 'groups'; info: string; groups: PageGroup[] } | { kind: 'elements'; elements: PageElement[] });
 
 /** Réponse de `pages.save` : la page enregistrée, ou les endroits de la définition qui ne conviennent pas. */
 export type PageSaveResult = { ok: true; page: PageDefinition } | { ok: false; errors: string[] };
