@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les pages et les listes', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les pages, les listes et les cibles', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
       'AUTO_PALETTES',
+      'CORE_SCREENS',
       'COVER_RE',
       'DEFAULT_PALETTE',
       'DISC_INDEX_EXT',
@@ -27,6 +28,7 @@ describe('@mire/shared', () => {
       'PALETTE_AUTO',
       'PALETTE_OPTIONAL_TOKENS',
       'PALETTE_TOKENS',
+      'SCREEN_PREFIX',
       'SYSTEMS',
       'bigramDice',
       'cleanRomName',
@@ -35,17 +37,20 @@ describe('@mire/shared', () => {
       'fold',
       'folderLabel',
       'folderText',
+      'formatTarget',
       'guessSystem',
       'hostOf',
       'isHttpUrl',
       'isListName',
       'isPaletteId',
+      'isTarget',
       'isUrlTarget',
       'listIdOfPage',
       'listPageId',
       'newId',
       'parseEpisode',
       'parsePaletteMeta',
+      'parseTarget',
       'rankByTitle',
       'resolvePalette',
       'safeDecode',

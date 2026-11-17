@@ -18,6 +18,7 @@ import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { catalogFollow } from '../../src/main/files/follow.ts';
+import { createUsageService } from '../../src/main/usage/index.ts';
 import type { ScrapeRecord } from '../../src/main/scrape/types.ts';
 
 const LIB: ElementSourceRef = { plugin: 'src-local', instance: '/bib' };
@@ -47,9 +48,11 @@ function setup() {
   });
   const lists = createLists({ file: path.join(dir, 'lists.json'), engine, newId: () => 'l1', platform: 'linux' });
   lists.load();
+  const usage = createUsageService({ file: path.join(dir, 'usage.json'), debounceMs: 0, platform: 'linux' });
+  usage.load();
   let rescans = 0;
-  const follow = catalogFollow({ catalog, overrides, metadata, lists, rescan: () => rescans++, platform: 'linux' });
-  return { catalog, overrides, metadata, engine, lists, follow, rescans: () => rescans };
+  const follow = catalogFollow({ catalog, overrides, metadata, lists, usage, rescan: () => rescans++, platform: 'linux' });
+  return { catalog, overrides, metadata, engine, lists, usage, follow, rescans: () => rescans };
 }
 
 describe('gestion des fichiers : le catalogue suit', () => {
@@ -121,6 +124,54 @@ describe('gestion des fichiers : le catalogue suit', () => {
       s.lists.get('l1')!.items.map((i) => i.key),
       [key(OTHER)],
     );
+  });
+
+  it('dossier renommé : positions de reprise et « Reprendre » passent sous le nouveau chemin', () => {
+    const s = setup();
+    s.usage.saveResume(A, 600, 3000);
+    s.usage.saveResume(OTHER, 700, 3000);
+    s.usage.addRecent({ path: OTHER, name: 'd.mkv', kind: 'video' });
+    s.usage.addRecent({ path: C, name: 'c.mkv', kind: 'video' });
+
+    s.follow.moved('/bib/Films', '/bib/Cinema');
+
+    const A2 = '/bib/Cinema/a.mkv';
+    const C2 = '/bib/Cinema/Saga/c.mkv';
+    assert.equal(s.usage.resume(A2), 600);
+    assert.equal(s.usage.resume(A), 0);
+    assert.equal(s.usage.resume(OTHER), 700, 'un dossier au nom proche ne bouge pas');
+    assert.deepEqual(
+      s.usage.get().recent.map((r) => [r.path, r.key, r.name]),
+      [
+        [C2, key(C2), 'c.mkv'],
+        [OTHER, key(OTHER), 'd.mkv'],
+      ],
+    );
+  });
+
+  it('fichier renommé : sa position le suit et remplace celle restée à l’arrivée ; « Reprendre » sans doublon', () => {
+    const s = setup();
+    const B = '/bib/Films/b.mkv';
+    s.usage.saveResume(A, 600, 3000);
+    s.usage.saveResume(B, 100, 3000);
+    s.usage.addRecent({ path: B, name: 'b.mkv', kind: 'video' });
+    s.usage.addRecent({ path: A, name: 'a.mkv', kind: 'video' });
+    s.follow.moved(A, B);
+    assert.deepEqual(s.usage.get().resume, { [key(B)]: 600 });
+    assert.deepEqual(
+      s.usage.get().recent.map((r) => [r.path, r.name]),
+      [[B, 'a.mkv']],
+    );
+  });
+
+  it('suppression : position de reprise et « Reprendre » restent (une vidéo remise de la corbeille retrouve sa position)', () => {
+    const s = setup();
+    s.usage.saveResume(C, 600, 3000);
+    s.usage.addRecent({ path: C, name: 'c.mkv', kind: 'video' });
+    const before = s.usage.get();
+    s.follow.removed('/bib/Films/Saga');
+    assert.equal(s.usage.get(), before);
+    assert.equal(s.usage.resume(C), 600);
   });
 
   it('suppression : l’élément quitte le catalogue, la liste le garde indisponible, les modifications restent', () => {

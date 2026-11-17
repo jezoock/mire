@@ -37,6 +37,9 @@ const ALLOWED = new Set([
   'jeux-marque',
   // Fichier de données illisible : passé au journal (`onCorrupt`).
   'le contenu n’est pas un objet JSON',
+  // … et où il a été mis de côté (P2-12).
+  ' …  ; mis de côté dans  … ',
+  ' …  ; impossible de le mettre de côté',
   // Corps des réponses du protocole media:// : lus par le lecteur, jamais affichés.
   'Requête invalide',
   'Accès refusé',

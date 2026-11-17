@@ -205,7 +205,7 @@ function start(pending: PendingFiles): Running {
   const fileManager = createFilesService({
     roots: () => managedRoots(config.get()),
     ops: { trash: (p) => shell.trashItem(p) },
-    follow: catalogFollow({ catalog, overrides, metadata, lists, rescan }),
+    follow: catalogFollow({ catalog, overrides, metadata, lists, usage, rescan }),
   });
   // Recherche : textes préparés à la première recherche, puis suivis par le moteur de tags.
   const search = createSearch({ engine: tags, catalog, pages: catalogPages, registry, translate: t });

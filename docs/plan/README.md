@@ -32,7 +32,7 @@ On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est
 | **G1** | ✅ Fin de la phase 0 | CI verte, tests de caractérisation et captures de référence en place, correctifs livrés → feu vert phase 1 |
 | **G2** | ✅ 12/11/2026 | Bilan de la refacto (arborescence, contrats), décisions D-12 et D-13 |
 | **G2c** | ✅ 16/11/2026 | Nouvelle architecture (`docs/architecture-cible.md`, décisions D-14 à D-23) et nouveau plan |
-| **G3** | Fin de la phase 2 | Modèle d'éléments, tags et pages : types, contrat IPC, mesures sur 20 000 éléments |
+| **G3** | ✅ 17/11/2026 | Modèle d'éléments, tags et pages, contrat IPC et mesures sur 20 000 éléments validés tels quels ; finitions confiées à P2-12 (modèle) et P4-03b (renderer et test de fumée) |
 | **G4** | Fin de la phase 3 | Prototype de l'hôte isolé (mesures, choix), SDK, chaîne de publication de `mire-addons` |
 | **G5** | Après P4-01 à P4-04 | Intégration de dot-stash (ADR), palettes, navigation et contrôleurs, avant de construire les écrans |
 | **G6** | Fin de la phase 4 | Interface complète, interface historique retirée, thèmes avec code |

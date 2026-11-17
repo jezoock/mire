@@ -10,7 +10,7 @@ import type { ElementKey, PageDefinition, PageGroup, PageLevel, PagePath, PageSa
 import { validatePage } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { TagEngine } from '../tags/engine.ts';
-import { createJsonStore } from '../../storage/json-store.ts';
+import { corruptReason, createJsonStore } from '../../storage/json-store.ts';
 import { BUILTIN_PAGES } from './builtin.ts';
 import { followPath, groupBy, matchesPage, matchesWhere, sortKeys, type RawGroup } from './compute.ts';
 
@@ -52,7 +52,12 @@ const empty = (): PagesFile => ({ version: PAGES_VERSION, pages: {}, removed: []
 const isScalarOrNull = (v: unknown) => v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v));
 
 export function createPages({ file, engine, catalog, translate, builtin = BUILTIN_PAGES, onIgnored = logIgnored }: PagesOptions) {
-  const store = createJsonStore<PagesFile>(file, { defaults: empty, space: 2, onCorrupt: (err, f) => onIgnored(f, err.message) });
+  const store = createJsonStore<PagesFile>(file, {
+    defaults: empty,
+    space: 2,
+    setAside: true,
+    onCorrupt: (err, f, kept) => onIgnored(f, corruptReason(err, kept)),
+  });
   const builtinById = new Map(builtin.map((p) => [p.id, p]));
   let data = empty();
   const caches = new Map<string, PageCache>();

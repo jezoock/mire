@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createJsonStore, writeFileAtomic, readJsonFile, flushWithin } from '../../src/main/storage/json-store.ts';
+import { corruptReason, createJsonStore, writeFileAtomic, readJsonFile, flushWithin, setAsideFile } from '../../src/main/storage/json-store.ts';
 
 let root = '';
 let n = 0;
@@ -49,6 +49,44 @@ describe('lecture tolérante', () => {
     assert.equal(where, file);
     // Le fichier abîmé n'est pas touché par la lecture.
     assert.equal(fs.readFileSync(file, 'utf8'), '{"items": {"a": 1');
+  });
+
+  it('setAside : le fichier corrompu est mis de côté (`.illisible-<date>`) avant onCorrupt, puis une écriture ne le touche pas', () => {
+    const file = fresh();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, '{"items": {"a": 1');
+    const onCorrupt = mock.fn();
+    const store = createJsonStore(file, { defaults: { items: {} }, onCorrupt, setAside: true });
+    assert.deepEqual(store.load(), { items: {} });
+    const [, where, kept] = onCorrupt.mock.calls[0].arguments;
+    assert.equal(where, file);
+    assert.match(path.basename(kept), /^donnees\.json\.illisible-\d+$/);
+    assert.equal(fs.readFileSync(kept, 'utf8'), '{"items": {"a": 1');
+    assert.equal(fs.existsSync(file), false);
+    store.set({ items: { b: 2 } });
+    assert.equal(fs.readFileSync(kept, 'utf8'), '{"items": {"a": 1');
+    // Fichier absent : rien à mettre de côté.
+    const absent = fresh();
+    const quiet = mock.fn();
+    createJsonStore(absent, { defaults: {}, onCorrupt: quiet, setAside: true }).load();
+    assert.equal(quiet.mock.callCount(), 0);
+  });
+
+  it('setAsideFile et corruptReason', () => {
+    const file = fresh();
+    assert.equal(
+      setAsideFile(file, () => 5),
+      null,
+      'impossible : le fichier n’existe pas',
+    );
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, 'x');
+    assert.equal(
+      setAsideFile(file, () => 5),
+      `${file}.illisible-5`,
+    );
+    assert.equal(corruptReason(new Error('JSON invalide'), `${file}.illisible-5`), 'JSON invalide ; mis de côté dans donnees.json.illisible-5');
+    assert.equal(corruptReason(new Error('JSON invalide'), null), 'JSON invalide ; impossible de le mettre de côté');
   });
 
   it('contenu qui n’est pas un objet (tableau, nombre) : traité comme corrompu', () => {

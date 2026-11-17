@@ -11,6 +11,7 @@
  * Les réglages qui iront aux plugins ne bougent pas ici (P5-01). Les données d'usage (`usage.json`) sont rattachées
  * aux clés d'éléments par leur service (`src/main/usage/rules.ts`), hors de la configuration.
  */
+import { formatTarget } from '@mire/shared';
 import type { HomeRow } from '@mire/shared';
 import { HOME_BARS } from '../defaults.ts';
 import { isObjectLike, type Loose } from '../normalize/common.ts';
@@ -18,7 +19,7 @@ import type { Migration } from './types.ts';
 
 /** Barre de la mire de la v8 → ce qu'elle ouvre en v9 : les Vidéos montraient les films et les séries. */
 export const BAR_TARGETS: Readonly<Record<string, readonly string[]>> = {
-  search: ['screen:search'],
+  search: [formatTarget({ kind: 'screen', screen: 'search' })],
   videos: ['movies', 'series'],
   music: ['music'],
   images: ['images'],

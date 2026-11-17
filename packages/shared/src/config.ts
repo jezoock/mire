@@ -93,8 +93,8 @@ export interface HomeSettings {
 
 /**
  * Rangée de l'accueil (v9) :
- * - `bars` : barres de la mire ; chacune désigne une page (son identifiant), une liste (`list:<id>`) ou un écran
- *   du cœur (`screen:search`) ;
+ * - `bars` : barres de la mire ; chacune est une cible (`targets.ts`) : une page (son identifiant), une liste
+ *   (`list:<id>`) ou un écran du cœur (`screen:<nom>`, `CORE_SCREENS`) ;
  * - `sites` : sites épinglés (anciennement « Vos services »), par clé d'élément (`web:<id>`) ;
  * - `recent` : « Reprendre » ;
  * - `page`, `list` : les premiers éléments d'une page ou d'une liste.
