@@ -111,6 +111,15 @@ export namespace Components {
           * Ajoute `step` au compteur ; méthode publique, appelée par `ds-trigger` (`action='increment:[1]'`).
          */
         "increment": (step?: number) => Promise<number>;
+        /**
+          * Action des cartes de la démonstration (P4-05) : `pick:[{"key":"…"}]` pour un élément, `pick:[{"value":…}]` pour un regroupement. Montre ce qui a été reçu, pour vérifier à la main qu'une carte désigne l'élément par sa clé.
+         */
+        "pick": (arg?: { key?: string; value?: unknown; }) => Promise<void>;
+        /**
+          * Texte de la dernière action reçue d'une carte (`{key}` : sa clé, ou la valeur d'un regroupement).
+          * @default ''
+         */
+        "pickedLabel": string;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -327,6 +336,7 @@ declare global {
     };
     interface HTMLMireDemoElementEventMap {
         "mireDemoChange": { count: number };
+        "mireDemoPick": { key?: string; value?: unknown };
     }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -506,6 +516,15 @@ declare namespace LocalJSX {
           * Émis à chaque changement du compteur, avec sa nouvelle valeur.
          */
         "onMireDemoChange"?: (event: MireDemoCustomEvent<{ count: number }>) => void;
+        /**
+          * Émis quand une carte de la démonstration appelle `pick`, avec ce qui la désigne (clé ou valeur).
+         */
+        "onMireDemoPick"?: (event: MireDemoCustomEvent<{ key?: string; value?: unknown }>) => void;
+        /**
+          * Texte de la dernière action reçue d'une carte (`{key}` : sa clé, ou la valeur d'un regroupement).
+          * @default ''
+         */
+        "pickedLabel"?: string;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -697,6 +716,7 @@ declare namespace LocalJSX {
         "heading": string;
         "actionLabel": string;
         "countLabels": string;
+        "pickedLabel": string;
     }
     interface MireFocusInfoAttributes {
         "element": CardElement | string | null;

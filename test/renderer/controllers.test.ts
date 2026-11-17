@@ -8,7 +8,7 @@ import { LEGACY_ACTIONS } from '../../src/renderer/controllers/bridge.ts';
 import { actionNames, callAction, controller, invokeAction, setActionErrorHandler } from '../../src/renderer/controllers/registry.ts';
 import type { ControllerContext, Data, LegacyUi } from '../../src/renderer/controllers/types.ts';
 import { PAGE, S } from '../../src/renderer/state/index.ts';
-import { checkActions, checkBridge, checkTriggers, targetMethods } from '../../scripts/check-actions.mjs';
+import { checkActions, checkBridge, checkTriggers, findTriggers, targetMethods } from '../../scripts/check-actions.mjs';
 
 type Call = [string, ...unknown[]];
 
@@ -173,6 +173,14 @@ describe('pont des data-action historiques', () => {
     assert.deepEqual(errors, []);
     assert.ok(legacy >= 100, `${legacy} actions`);
     assert.ok(triggers >= 1);
+  });
+
+  it('vérifie aussi la cible et l’action passées aux composants d’éléments, pas celles qu’ils transmettent (P4-05)', () => {
+    const triggers = findTriggers();
+    const demo = triggers.filter((tr: { file: string }) => tr.file === 'src/renderer/demo/index.ts');
+    assert.ok(demo.length >= 4, `${demo.length} composants d'éléments dans la démonstration`);
+    assert.ok(demo.every((tr: { target: unknown; action: unknown }) => tr.target === 'mire-demo' && tr.action === 'pick'));
+    assert.ok(!triggers.some((tr: { file: string }) => /packages\/ui\/src\/components\/mire-(card|grid|row|group-card)\//.test(tr.file)));
   });
 
   it('signale une action inconnue, une cible qui n’est pas un mire-*, un data-action sans entrée', () => {

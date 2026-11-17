@@ -3,6 +3,9 @@
  * - chaque `ds-trigger` des gabarits (src/renderer, packages/ui/src) qui a une `action` vise un composant `mire-*` par
  *   sa balise (`target="mire-app"`), et son action est une méthode de ce composant : méthode `@Method()` du composant
  *   Stencil, ou action du contrôleur de la balise (src/renderer/controllers/) ;
+ * - les composants d'éléments (`mire-card`, `mire-grid`, `mire-row`, `mire-group-card`, P4-05) passent à leur
+ *   `ds-trigger` la cible et la méthode qu'ils reçoivent (l'argument, la clé de l'élément, est ajouté par le
+ *   composant) : leurs attributs `target` et `action` sont vérifiés de la même façon là où ils sont écrits ;
  * - chaque `data-action` des vues historiques a une entrée dans le pont (controllers/bridge.ts), et chaque entrée du
  *   pont désigne une méthode existante d'un contrôleur.
  * Usage : node scripts/check-actions.mjs — sort en erreur après avoir listé tous les problèmes.
@@ -61,7 +64,13 @@ function attribute(tag, name) {
   return m[1] ?? m[2] ?? m[3] ?? m[4] ?? m[5];
 }
 
-/** Les `ds-trigger` à action des gabarits : fichier, ligne, cible et action. */
+/** Composants qui transmettent `target` et `action` aux `ds-trigger` de leurs cartes (P4-05). */
+export const ACTION_FORWARDERS = ['mire-card', 'mire-grid', 'mire-row', 'mire-group-card'];
+
+/** Fichier d'un composant qui transmet l'action reçue : ses `target={…}` et `action={…}` ne sont pas écrits là. */
+const isForwarderSource = (root, file) => ACTION_FORWARDERS.some((tag) => file.startsWith(path.join(root, 'packages', 'ui', 'src', 'components', tag) + path.sep));
+
+/** Les `ds-trigger` à action des gabarits, et les composants qui en transmettent une : fichier, ligne, cible et action. */
 export function findTriggers(root = ROOT) {
   const files = [
     ...filesOf(path.join(root, 'src', 'renderer'), ['.js', '.ts', '.html']),
@@ -70,10 +79,13 @@ export function findTriggers(root = ROOT) {
   const triggers = [];
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');
-    for (const m of text.matchAll(/<ds-trigger\b((?:[^>"'{]|"[^"]*"|'[^']*'|\{[^}]*\})*)>/g)) {
+    const tags = ['ds-trigger', ...ACTION_FORWARDERS].join('|');
+    for (const m of text.matchAll(new RegExp(`<(?:${tags})\\b((?:[^>"'{]|"[^"]*"|'[^']*'|\\{[^}]*\\})*)>`, 'g'))) {
       const action = attribute(m[1], 'action');
       if (action === null) continue;
-      triggers.push({ file: rel(file), line: lineOf(text, m.index), target: attribute(m[1], 'target'), action });
+      const target = attribute(m[1], 'target');
+      if (target === undefined && action === undefined && isForwarderSource(root, file)) continue;
+      triggers.push({ file: rel(file), line: lineOf(text, m.index), target, action });
     }
   }
   return triggers;

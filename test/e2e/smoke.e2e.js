@@ -536,6 +536,207 @@ describe('Test de fumée de Mire', () => {
     });
   });
 
+  describe("composants d'éléments (P4-05)", () => {
+    const PAD = { a: 0, b: 1, up: 12, down: 13, left: 14, right: 15 };
+    const activeKey = () => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') ?? null);
+    // Manette simulée (API Gamepad), comme pour la navigation sur les composants (P4-03).
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    // Cartes rendues : chaque mire-card et ses ds-* ont la classe hydrated (rendu asynchrone des deux moteurs).
+    const cardsReady = (selector) =>
+      page.waitForFunction((sel) => {
+        const cards = [...document.querySelectorAll(`${sel} mire-card, ${sel} mire-group-card`)];
+        return cards.length > 0 && cards.every((c) => c.classList.contains('hydrated') && [...c.querySelectorAll('ds-trigger, ds-thumb')].every((d) => d.classList.contains('hydrated')));
+      }, selector);
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+      await page.evaluate(() => (location.hash = 'demo'));
+      await page.waitForFunction(() => document.body.dataset.section === 'demo');
+      await cardsReady('#view .mire-ui-demo__elements');
+    });
+
+    after(async () => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => {
+        document.getElementById('e2e-grid')?.remove();
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+        location.hash = '';
+      });
+    });
+
+    it('rendu : cartes, regroupements, « Afficher plus », infos et fond ; les actions désignent les éléments par leur clé', async () => {
+      const shown = await page.evaluate(() => {
+        const row = document.querySelector('.mire-ui-demo mire-row');
+        const cards = [...row.querySelectorAll('mire-card ds-trigger')];
+        const group = document.querySelector('.mire-ui-demo mire-group-card ds-trigger');
+        return {
+          row: cards.length,
+          inScroller: !!row.querySelector('ds-scroller mire-card'),
+          action: cards[0].getAttribute('action'),
+          label: cards[0].getAttribute('label'),
+          gauges: row.querySelectorAll('.mire-card__progress').length,
+          group: group.getAttribute('action'),
+          badge: document.querySelector('.mire-ui-demo mire-card[class*="--unavailable"] .mire-card__badge')?.textContent ?? null,
+          grid: document.querySelectorAll('.mire-ui-demo mire-grid:not([variant="line"]) mire-card').length,
+        };
+      });
+      const texts = await page.evaluate(async () => {
+        const info = await window.api.i18nGet();
+        const m = info.catalogs[info.language].messages;
+        return { unavailable: m.elements.card.unavailable, progress: m.elements.card.progress };
+      });
+      assert.equal(shown.row, 12);
+      assert.ok(shown.inScroller, 'les cartes de la rangée sont dans le ds-scroller');
+      assert.equal(shown.action, 'pick:[{"key":"demo:rangee/1"}]');
+      assert.match(shown.label, new RegExp(texts.progress.replace('{percent}', '25').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.equal(shown.gauges, 3);
+      assert.match(shown.group, /^pick:\[\{"value":/);
+      assert.equal(shown.badge, texts.unavailable);
+      assert.equal(shown.grid, 36, 'trois groupes de 12 cartes avant « Afficher plus »');
+
+      // Un clic sur une carte appelle l'action avec la clé de l'élément.
+      const picked = page.evaluate(() => new Promise((resolve) => document.addEventListener('mireDemoPick', (e) => resolve(e.detail), { once: true })));
+      await page.locator('.mire-ui-demo mire-row mire-card ds-trigger').nth(2).click();
+      assert.deepEqual(await picked, { key: 'demo:rangee/3' });
+
+      // « Afficher plus » : 12 cartes de plus dans le premier groupe, le focus va à la première nouvelle carte.
+      await page.locator('.mire-ui-demo mire-grid:not([variant="line"]) .mire-grid__more').first().click();
+      await page.waitForFunction(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') === 'demo:groupe-1/13');
+      assert.equal(await page.locator('.mire-ui-demo .mire-grid__group').first().locator('mire-card').count(), 24);
+
+      // Panneau d'infos et fond suivent la carte qui a le focus ; le fond passe d'une image à l'autre en fondu.
+      await page.locator('.mire-ui-demo mire-row mire-card ds-trigger').first().focus();
+      await page.waitForFunction(() => document.querySelector('.mire-ui-demo mire-focus-info .mire-focus-info__title')?.textContent === document.querySelector('.mire-ui-demo mire-row mire-card .mire-card__title').textContent);
+      const pictures = path.join(tmp, 'fixtures', 'bibliotheque', 'Images', 'Vacances');
+      for (const name of ['Montagne.png', 'Plage.png']) {
+        await page.evaluate((src) => (document.querySelector('.mire-ui-demo mire-backdrop').src = src), path.join(pictures, name));
+        await page.waitForFunction((n) => decodeURIComponent(document.querySelector('.mire-ui-demo mire-backdrop img.--front')?.getAttribute('src') ?? '').endsWith(n), name);
+      }
+      assert.equal(await page.locator('.mire-ui-demo mire-backdrop img').count(), 2, 'deux calques, l’ancien derrière le nouveau');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt une rangée et une grille, A ouvre la carte par sa clé', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+        document.querySelector('.mire-ui-demo mire-row mire-card ds-trigger').focus();
+      });
+      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
+      // Rangée : droite et gauche de carte en carte.
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:rangee/2');
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:rangee/3');
+      await padPress('left');
+      assert.equal(await activeKey(), 'demo:rangee/2');
+
+      // Grille : droite passe à la carte suivante, bas à celle de la ligne suivante, même colonne.
+      const columns = await page.evaluate(() => {
+        const first = document.querySelector('.mire-ui-demo .mire-grid__group mire-card ds-trigger');
+        first.scrollIntoView({ block: 'center' });
+        first.focus();
+        return getComputedStyle(first.closest('.mire-grid__items')).gridTemplateColumns.split(' ').length;
+      });
+      await settle();
+      assert.ok(columns >= 2, `${columns} colonnes`);
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:groupe-1/2');
+      await padPress('down');
+      assert.equal(await activeKey(), `demo:groupe-1/${2 + columns}`);
+      const picked = page.evaluate(() => new Promise((resolve) => document.addEventListener('mireDemoPick', (e) => resolve(e.detail), { once: true })));
+      await padPress('a');
+      assert.deepEqual(await picked, { key: `demo:groupe-1/${2 + columns}` });
+      assert.deepEqual(errors, []);
+    });
+
+    it('une grille de 5 000 éléments reste fluide (virtualisée)', async () => {
+      const COUNT = 5000;
+      const first = await page.evaluate(async (count) => {
+        const elements = Array.from({ length: count }, (_, i) => ({ key: `e2e:${i}`, name: `Élément ${i + 1}`, images: {}, infos: { year: 1990 + (i % 30) }, tags: [] }));
+        const heap = () => performance.memory?.usedJSHeapSize ?? 0;
+        const heapBefore = heap();
+        const nodesBefore = document.getElementsByTagName('*').length;
+        const t0 = performance.now();
+        const box = document.createElement('div');
+        box.id = 'e2e-grid';
+        const grid = document.createElement('mire-grid');
+        grid.setAttribute('target', 'mire-demo');
+        grid.setAttribute('action', 'pick');
+        grid.elements = elements;
+        box.append(grid);
+        document.querySelector('.mire-ui-demo').prepend(box);
+        box.scrollIntoView({ block: 'start' });
+        const ready = () => {
+          const cards = [...grid.querySelectorAll('mire-card')];
+          return grid.classList.contains('hydrated') && cards.length > 0 && cards.every((c) => c.querySelector('ds-trigger.hydrated ds-thumb.hydrated'));
+        };
+        while (!ready()) await new Promise((r) => requestAnimationFrame(r));
+        // Une image de plus : la mise en page des cartes est faite et affichée.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        return {
+          firstRender: Math.round(performance.now() - t0),
+          cards: grid.querySelectorAll('mire-card').length,
+          nodes: document.getElementsByTagName('*').length - nodesBefore,
+          heapMb: Math.round(((heap() - heapBefore) / 1048576) * 10) / 10,
+          height: Math.round(grid.getBoundingClientRect().height),
+          columns: getComputedStyle(grid.querySelector('.mire-grid__items')).gridTemplateColumns.split(' ').length,
+        };
+      }, COUNT);
+      assert.ok(first.cards < 300, `${first.cards} cartes rendues sur ${COUNT}`);
+      // Flèche bas, 40 fois : temps entre la touche et le focus sur la carte de la ligne suivante.
+      const moves = await page.evaluate(async () => {
+        document.querySelector('#e2e-grid mire-card ds-trigger').focus();
+        const times = [];
+        for (let i = 0; i < 40; i++) {
+          const from = document.activeElement;
+          const t0 = performance.now();
+          from.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+          while (document.activeElement === from) await new Promise((r) => requestAnimationFrame(r));
+          times.push(performance.now() - t0);
+          // La page défile (en douceur) et la grille rend les lignes suivantes : comme un appui tenu, une touche par 120 ms.
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        times.sort((a, b) => a - b);
+        return {
+          median: Math.round(times[20] * 10) / 10,
+          max: Math.round(times[39] * 10) / 10,
+          key: document.activeElement.closest('[data-key]')?.getAttribute('data-key'),
+          cards: document.querySelectorAll('#e2e-grid mire-card').length,
+        };
+      });
+      console.log(`Grille de ${COUNT} éléments : ${JSON.stringify({ ...first, moves })}`);
+      assert.equal(moves.key, `e2e:${40 * first.columns}`, 'quarante lignes plus bas, même colonne');
+      assert.ok(moves.cards < 300, `${moves.cards} cartes rendues après le défilement`);
+      assert.ok(first.firstRender < 3000, `premier rendu : ${first.firstRender} ms`);
+      assert.ok(moves.median < 100, `déplacement du focus : ${moves.median} ms (médiane)`);
+      assert.deepEqual(errors, []);
+    });
+  });
+
   it('aucune requête réseau sortante, hors Widevine', () => {
     const log = fs
       .readFileSync(path.join(tmp, 'reseau.log'), 'utf8')

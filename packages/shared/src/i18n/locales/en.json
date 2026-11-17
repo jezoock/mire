@@ -33,6 +33,42 @@
         "range": "Volume",
         "loader": "Loading",
         "thumb": "A Trip to the Moon"
+      },
+      "elements": {
+        "heading": "Item components",
+        "picked": "Last action: {key}",
+        "row": "Row",
+        "groups": "Groups",
+        "grid": "Grid in groups",
+        "lines": "Lines",
+        "sample": "Item {n}",
+        "group": "Group {n}",
+        "genre": "Comedy",
+        "summary": "A summary a few lines long, shown by the info panel of the selected item.",
+        "badge": "New"
+      }
+    },
+    "elements": {
+      "card": {
+        "episode": "S{season} · E{episode}",
+        "progress": "{percent}% watched",
+        "unavailable": "Unavailable"
+      },
+      "group": {
+        "count": {
+          "one": "{count} item",
+          "other": "{count} items"
+        }
+      },
+      "grid": {
+        "more": {
+          "one": "Show more ({count} left)",
+          "other": "Show more ({count} left)"
+        }
+      },
+      "row": {
+        "previous": "Previous",
+        "next": "Next"
       }
     },
     "palettes": {
