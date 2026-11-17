@@ -16,6 +16,8 @@ export interface DataPaths {
   catalogSources: string;
   /** Modifications faites à la main : tags, infos, images (P2-04 ; reprend `meta`). */
   catalogOverrides: string;
+  /** Infos en ligne rangées par clé d'élément (P2-06 ; reprend `scrapeDb`). */
+  catalogMetadata: string;
   /** Ancien fichier des infos modifiées à la main (repris par `catalogOverrides`), et leurs images. */
   metaDir: string;
   meta: string;
@@ -51,6 +53,7 @@ export function dataPaths(root: string): DataPaths {
     catalogDir: at('catalog'),
     catalogSources: at('catalog', 'sources'),
     catalogOverrides: at('catalog', 'overrides.json'),
+    catalogMetadata: at('catalog', 'metadata.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

@@ -36,6 +36,25 @@ export interface ScrapeDb {
   misses: Record<string, number>;
 }
 
+/**
+ * Base des fiches vue par le moteur, sous les clés des fournisseurs (`v:<chemin>`, `a:<dossier>`…) : `db.json`
+ * (`createDbFileStore`), ou la base du catalogue rangée par clé d'élément (`catalog/metadata.ts`).
+ */
+export interface ScrapeStore {
+  get(key: string): ScrapeRecord | undefined;
+  /** Enregistre une fiche ; l'échec noté pour cette clé est oublié. */
+  set(key: string, record: ScrapeRecord): void;
+  /** Oublie la fiche et l'échec d'une clé. */
+  remove(key: string): void;
+  /** Date du dernier échec, s'il y en a un. */
+  missedAt(key: string): number | undefined;
+  miss(key: string, at: number): void;
+  /** Toutes les fiches, sous leurs clés (ce que l'interface historique lit). */
+  all(): Record<string, ScrapeRecord>;
+  clear(): void;
+  flush(): Promise<void>;
+}
+
 /** Fiche choisie par l'utilisateur (un des candidats). */
 export interface ScrapePick {
   id: string;
