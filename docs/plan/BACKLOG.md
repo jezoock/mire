@@ -89,7 +89,7 @@ Fiches dans `phase-2.md`.
 | P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | faite | [#50](https://github.com/jezoock/mire/pull/50) |
 | P2-03 | Jeux, télévision et sites → éléments | M | P2-02 |  | à faire | |
 | P2-04 | Moteur de tags et d'infos | L | P2-02 |  | faite | [#52](https://github.com/jezoock/mire/pull/52) |
-| P2-05 | Tags automatiques existants | M | P2-04 |  | faite | |
+| P2-05 | Tags automatiques existants | M | P2-04 |  | faite | [#54](https://github.com/jezoock/mire/pull/54) |
 | P2-06 | Infos en ligne dans le catalogue | M | P2-04 |  | à faire | |
 | P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | à faire | |
 | P2-08 | Listes | S | P2-07 |  | à faire | |
