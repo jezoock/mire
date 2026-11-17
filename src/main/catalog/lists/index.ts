@@ -10,7 +10,7 @@
 import type { Element, ElementKey, ListDefinition, ListItem, ListSummary, ListView, PageElement, PageLevel } from '@mire/shared';
 import { isListName, listIdOfPage, listPageId, newId, validateList } from '@mire/shared';
 import type { TagEngine } from '../tags/engine.ts';
-import { createJsonStore } from '../../storage/json-store.ts';
+import { corruptReason, createJsonStore } from '../../storage/json-store.ts';
 import { PAGE_SIZE } from '../pages/index.ts';
 import { movedKey } from '../keys.ts';
 
@@ -44,7 +44,12 @@ function snapshot(e: Element): ListItem {
 const sameItem = (a: ListItem, b: ListItem) => JSON.stringify(a) === JSON.stringify(b);
 
 export function createLists({ file, engine, onIgnored = logIgnored, newId: makeId = newId, platform = process.platform }: ListsOptions) {
-  const store = createJsonStore<ListsFile>(file, { defaults: empty, space: 2, onCorrupt: (err, f) => onIgnored(f, err.message) });
+  const store = createJsonStore<ListsFile>(file, {
+    defaults: empty,
+    space: 2,
+    setAside: true,
+    onCorrupt: (err, f, kept) => onIgnored(f, corruptReason(err, kept)),
+  });
   let data = empty();
   /** Clé d'élément → listes qui le contiennent (pour suivre les changements du moteur). */
   const byKey = new Map<ElementKey, Set<string>>();

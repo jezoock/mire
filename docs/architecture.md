@@ -412,6 +412,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | --- | --- | --- |
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
+| `catalog/overrides.json.illisible-<date>`, de même `metadata.json`, `pages.json`, `lists.json` | Fichier du catalogue illisible mis de côté à la lecture, signalé dans le journal (P2-12) : il n'est jamais écrasé ; un `overrides.json` ou `metadata.json` vide le remplace aussitôt, pour que l'ancien `meta.json` ou `db.json` ne soit pas repris | stockage JSON (`setAside`) |
 | `usage.json` | « Reprendre », positions de reprise des vidéos (par clé d'élément depuis P2-11), volume, recherches récentes | service des données d'usage, stockage JSON |
 | `catalog/sources/<plugin>--<emplacement>-<empreinte>.json` | Catalogue d'éléments : résultat de la dernière analyse de chaque emplacement de source (`{ version, source, scanned, elements }`) | catalogue (`src/main/catalog/`), stockage JSON (écriture différée) |
 | `catalog/overrides.json` | Modifications faites à la main : tags ajoutés ou retirés, infos et images, par clé d'élément ; tags créés par l'utilisateur ; fiches de l'ancien `meta.json` sans élément (`{ version, tags, elements, unmatched }`) | `src/main/catalog/overrides.ts`, stockage JSON |
@@ -780,8 +781,10 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
 `src/main/storage/json-store.ts` est la seule façon de lire et d'écrire un fichier de données JSON :
 
 - **lecture tolérante** (`load()`) : fichier absent → valeurs par défaut ; fichier illisible (JSON invalide, ou
-  contenu qui n'est pas un objet) → `onCorrupt(erreur, fichier)` puis valeurs par défaut. Les clés lues complètent
-  les valeurs par défaut ;
+  contenu qui n'est pas un objet) → `onCorrupt(erreur, fichier, misDeCôté)` puis valeurs par défaut. Avec `setAside`
+  (fichiers du catalogue), le fichier illisible est d'abord renommé en `<fichier>.illisible-<date>` (`setAsideFile`),
+  comme `config.json`, pour qu'une écriture ne l'écrase pas en silence. Les clés lues complètent les valeurs par
+  défaut ;
 - **écriture atomique** : le JSON est écrit dans `<fichier>.<pid>.tmp`, mis sur le disque (`fsync`), puis renommé
   par-dessus l'ancien. Une coupure pendant l'écriture laisse l'ancien fichier intact. Sous Windows, un renommage
   refusé un instant (antivirus, indexation) est réessayé ;
