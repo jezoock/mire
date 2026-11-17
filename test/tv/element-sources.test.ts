@@ -33,7 +33,7 @@ describe('chaînes d’une liste → éléments (`tv-m3u`)', () => {
     assert.ok(r.ok && 'channels' in r);
     assert.equal(catalog.keys().length, r.channels.length);
     const fr2 = catalog.element(tvChannelKey('freebox', { number: 2, urls: [] }))!;
-    assert.deepEqual([fr2.source, fr2.name, fr2.tags, fr2.infos], [{ plugin: 'tv-m3u', instance: 'freebox' }, 'France 2', ['tv'], {}]);
+    assert.deepEqual([fr2.source, fr2.name, fr2.tags, fr2.infos], [{ plugin: 'tv-m3u', instance: 'freebox' }, 'France 2', ['tv'], { channel: 2 }]);
     assert.equal(fr2.open.kind, 'stream');
     // Flux principal : la qualité choisie pour le service (`sd`) ; toutes les variantes suivent.
     assert.ok(fr2.open.kind === 'stream' && /flavour=sd/.test(fr2.open.url));

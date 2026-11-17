@@ -29,7 +29,8 @@ export function channelElement(svc: TvService, ch: Channel): ElementInput {
     name: ch.name,
     open: { kind: 'stream', url: main.url, variants: ch.variants.map(({ label, url }) => ({ label, url })) },
     tags: [...TV_SOURCE_TAGS['tv-m3u']],
-    infos: {},
+    // Numéro de la chaîne : tri de la page Télévision (P2-07).
+    infos: ch.number === null ? {} : { channel: ch.number },
     images: compact({ logo: ch.logo }),
   };
 }

@@ -56,7 +56,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
 | `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
-| `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`). Voir « Catalogue d'éléments ». |
+| `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`) ; pages et regroupements (`pages/`, P2-07). Voir « Catalogue d'éléments ». |
 | `meta/` | Façade de l'interface historique sur les infos modifiées à la main (rangées dans `catalog/overrides.json` depuis P2-04) ; images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
 | `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
@@ -397,6 +397,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `meta/meta.json` | Ancien fichier des infos modifiées à la main : repris dans `catalog/overrides.json` au premier démarrage, puis laissé en place sans être écrit | `src/main/meta/user-meta.ts` jusqu'à P2-04 |
 | `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
 | `catalog/metadata.json` | Infos récupérées en ligne (films, séries, albums, jeux), par clé d'élément puis clé du fournisseur ; fiches sans élément ; titres introuvables (`{ version, elements, unmatched, misses }`) | `src/main/catalog/metadata.ts`, stockage JSON |
+| `catalog/pages.json` | Pages créées ou modifiées par l'utilisateur, par identifiant, et pages prêtes à l'emploi supprimées (`{ version, pages, removed }`) ; absent tant que rien n'a changé | `src/main/catalog/pages/`, stockage JSON (écriture immédiate) |
 | `scrape/db.json` | Ancien fichier des infos récupérées en ligne : repris dans `catalog/metadata.json` au premier démarrage, puis laissé en place sans être écrit | moteur de récupération (`scrape/`) jusqu'à P2-06 |
 | `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
 | `scrape/cache/` | Index des jaquettes et listes de jeux par console, gardés quelques jours (cache) | moteur de récupération (`scrape/`) |
@@ -496,7 +497,7 @@ déduisent de la configuration :
 | `jeux-pc` | dossier de jeux | `game` | `pc:<programme>`, `program`, `system` = `pc` | chaque `scanGameSources` |
 | `jeux-pc-manuel` | `config` | `game` | `pc:<programme ou adresse>`, `program` (arguments), `system` = `pc`, image | configuration (`games`) |
 | `jeux-marque` | `config` | `game` | `gamebm:<id>`, ouvert comme son lien (`site`), `system` du marque-page ou de sa console | configuration (`gameBookmarks` en attente) |
-| `tv-m3u` | service | `tv` | `tv:<service>\|<numéro>`, `stream` (qualité du service, variantes), logo | chaque `tvChannels` du service choisi |
+| `tv-m3u` | service | `tv` | `tv:<service>\|<numéro>`, `stream` (qualité du service, variantes), info `channel` (numéro, P2-07), logo | chaque `tvChannels` du service choisi |
 | `tv-web` | service | `tv` | portail du service, `site` | configuration (service choisi, s'il est web) |
 | `svc-<id>` / `web-perso` | `config` | `stream` | `web:<id>`, `site`, info `category` (`video`, `music`…) | configuration (`web`) : site du catalogue intégré / ajouté |
 | `web-bm` | `config` | `stream` | `bm:<id>`, `site` (site au même domaine), `category`, `season`, `episode` | configuration (`bookmarks`) |
@@ -594,6 +595,52 @@ les règles par extension de la configuration.
 - **Façade** : `src/main/meta/user-meta.ts` garde l'API de l'interface historique (`metaAll`, `metaSet`,
   `metaPickImage`, `metaReset`), sous les anciennes clés et avec les anciens champs. « Réinitialiser » efface les
   infos et images de la fiche, pas les tags modifiés à la main.
+
+### Pages et regroupements
+
+Une page (`PageDefinition`, `@mire/shared` : type, schéma JSON `PAGE_DEFINITION_SCHEMA` et `validatePage`) garde les
+éléments qui portent tous les tags de `require` et aucun de `exclude`, sous les conditions de `where`, puis les range
+sur plusieurs niveaux (`groupBy`, une info par niveau). Le service (`catalog/pages/`, `createPages`) calcule un niveau
+à la fois.
+
+- **Conditions** (`where`) : `{ info, equals }` (valeur égale ; texte sans tenir compte de la casse ni des accents),
+  `{ info, contains }` (contient un texte, sans tenir compte de la casse), `{ info, between: [min, max] }` (bornes
+  comprises, deux nombres ou deux textes). Pour une info de liste (`genres`), l'un de ses éléments suffit.
+- **Regroupements** : un niveau rend les valeurs de son info, avec le nombre d'éléments et l'affiche du premier qui en
+  a une. Les nombres sont rangés entre eux, les textes dans l'ordre alphabétique (« 2 » avant « 10 »). Un élément
+  sans l'info va dans « Autres » (`value: null`, nom tiré des catalogues `pages.others`), toujours en dernier. Un
+  élément dont l'info est une liste est rangé dans chacun de ses groupes.
+- **Tri** (`sort`) : une info, ou `name` et `added`, croissant ou décroissant ; un élément sans la valeur va après
+  les autres ; on finit toujours par le nom.
+- **Tranches** : 100 regroupements ou éléments par réponse ; `next` est le curseur de la suivante (`null` à la fin).
+- **Pages prêtes à l'emploi** (`pages/builtin.ts`, plugin inclus en P5-03) :
+
+  | Page | `require` | `groupBy` | `sort` |
+  | --- | --- | --- | --- |
+  | `movies` (Films) | `video`, `movie` | `genres` | `title`, `year` |
+  | `series` (Séries) | `video`, `series` | `series`, `season` | `episode` |
+  | `music` (Musique) | `audio` | `artist`, `album` | `track` |
+  | `images` (Images) | `image` | `folder` | nom |
+  | `streaming` (Streaming) | `stream` | `category` | nom |
+  | `tv` (Télévision) | `tv` | — | `channel` (numéro de la chaîne, posé par `tv-m3u`) |
+  | `games` (Jeux) | `game` | `system` | nom |
+
+- **`pages.json`** : une page enregistrée remplace la page prête à l'emploi du même identifiant (et la rétablit si
+  elle avait été supprimée) ; une page prête à l'emploi supprimée est notée dans `removed`. Une page mal formée est
+  écartée à la lecture (journal).
+- **Calcul à la demande** : rien n'est calculé au démarrage. À la première demande, les éléments de la page viennent
+  de l'index du moteur de tags (`query(require, exclude)`), puis des conditions ; ils restent en cache avec les
+  niveaux déjà demandés. À chaque changement du moteur (`engine.onChange`), les éléments changés sont réévalués pour
+  chaque page : une page touchée met ses éléments à jour, oublie ses niveaux et est annoncée. Au-delà de 500 éléments
+  changés d'un coup, toutes les pages sont oubliées et annoncées.
+- **IPC** : `pagesList()`, `pagesGet(id)`, `pagesSave(page)` (rend `{ ok: true, page }` ou `{ ok: false, errors }`,
+  les champs qui ne conviennent pas), `pagesRemove(id)`, `catalogPage(pageId, path, cursor)` (`path` : la valeur
+  choisie à chaque niveau, `null` pour « Autres » ; rend `{ kind: 'groups', info, groups }` ou
+  `{ kind: 'elements', elements }`, avec `total` et `next`, ou `null`). Événement `onPagesChange` (`pages:changed`,
+  `{ pages: [...] }`) : le contenu de ces pages est à redemander.
+- Coût sur 20 000 éléments factices (`test/catalog/pages-bench.test.ts`) : 2 à 4 ms pour un niveau jamais calculé
+  (première page des Séries, épisodes d'une saison, 4 000 films triés), moins de 0,5 ms en cache ; ~1 ms pour un
+  élément changé avec les sept pages en cache.
 
 ## Configuration
 

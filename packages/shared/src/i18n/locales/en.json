@@ -366,8 +366,19 @@
         "album": "Album",
         "track": "Track",
         "system": "Console",
-        "category": "Category"
+        "category": "Category",
+        "channel": "Channel"
       }
+    },
+    "pages": {
+      "movies": "Movies",
+      "series": "TV shows",
+      "music": "Music",
+      "images": "Pictures",
+      "streaming": "Streaming",
+      "tv": "TV",
+      "games": "Games",
+      "others": "Others"
     }
   }
 }

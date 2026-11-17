@@ -11,6 +11,7 @@
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
 import type { Element, InfoChanges, TagChanges, TagSummary } from './element.ts';
+import type { PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -289,6 +290,13 @@ export interface IpcMethods {
   catalogSetTags(key: string, changes: TagChanges): Element | null;
   catalogSetInfos(key: string, changes: InfoChanges): Element | null;
   tagsList(): TagSummary[];
+  // Pages et regroupements (P2-07) : `pages.*` et `catalog.page(pageId, path, cursor)` de l'architecture cible.
+  pagesList(): PageDefinition[];
+  pagesGet(id: string): PageDefinition | null;
+  pagesSave(page: PageDefinition): PageSaveResult;
+  pagesRemove(id: string): boolean;
+  // Un niveau d'une page (regroupements ou éléments), par tranches ; `null` : page inconnue ou chemin invalide.
+  catalogPage(pageId: string, path?: PagePath, cursor?: string | null): PageLevel | null;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -414,6 +422,11 @@ export const IPC_METHODS = {
   catalogSetTags: 'catalog:setTags',
   catalogSetInfos: 'catalog:setInfos',
   tagsList: 'tags:list',
+  pagesList: 'pages:list',
+  pagesGet: 'pages:get',
+  pagesSave: 'pages:save',
+  pagesRemove: 'pages:remove',
+  catalogPage: 'catalog:page',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
@@ -443,6 +456,8 @@ export interface IpcEvents {
   onMireFocus: undefined;
   /** La langue de l'interface a changé (réglage ou langue du système) : à appliquer à chaud. */
   onLanguageChange: LanguageInfo;
+  /** Le contenu de ces pages a pu changer (analyse, infos, modification à la main, définition) : à redemander. */
+  onPagesChange: PagesChange;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -467,6 +482,7 @@ export const IPC_EVENTS = {
   onWebFocus: 'web-focus',
   onMireFocus: 'web-mire-focus',
   onLanguageChange: 'i18n:changed',
+  onPagesChange: 'pages:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

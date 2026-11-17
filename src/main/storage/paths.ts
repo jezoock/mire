@@ -18,6 +18,8 @@ export interface DataPaths {
   catalogOverrides: string;
   /** Infos en ligne rangées par clé d'élément (P2-06 ; reprend `scrapeDb`). */
   catalogMetadata: string;
+  /** Pages créées, modifiées ou supprimées par l'utilisateur (P2-07). */
+  catalogPages: string;
   /** Ancien fichier des infos modifiées à la main (repris par `catalogOverrides`), et leurs images. */
   metaDir: string;
   meta: string;
@@ -54,6 +56,7 @@ export function dataPaths(root: string): DataPaths {
     catalogSources: at('catalog', 'sources'),
     catalogOverrides: at('catalog', 'overrides.json'),
     catalogMetadata: at('catalog', 'metadata.json'),
+    catalogPages: at('catalog', 'pages.json'),
     metaDir: at('meta'),
     meta: at('meta', 'meta.json'),
     metaImg: at('meta', 'img'),

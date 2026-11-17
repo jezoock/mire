@@ -122,6 +122,10 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
     /** Clés des éléments qui portent tous les tags de `require` et aucun de `exclude`. */
     query: (require: readonly string[], exclude: readonly string[] = []): ElementKey[] => index.withTags(require, exclude),
     withInfo: index.withInfo,
+    /** Tags, infos et images effectifs d'un élément, sans copie (lecture seule, pour le calcul des pages). */
+    peek: (key: ElementKey): Readonly<Effective> | undefined => effective.get(key),
+    /** Clés de tous les éléments calculés. */
+    keys: (): IterableIterator<ElementKey> => effective.keys(),
     infoValues: index.infoValues,
 
     /**
