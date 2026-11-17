@@ -8,6 +8,7 @@ import type { Catalog } from '../catalog/index.ts';
 import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { Pages } from '../catalog/pages/index.ts';
 import type { Lists } from '../catalog/lists/index.ts';
+import type { Search } from '../catalog/search/index.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -46,6 +47,8 @@ export interface MainContext {
   readonly pages: Pages;
   /** Listes faites à la main (lists.json). */
   readonly lists: Lists;
+  /** Recherche dans le catalogue (textes préparés à la première recherche). */
+  readonly search: Search;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;

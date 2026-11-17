@@ -378,7 +378,8 @@
       "streaming": "Streaming",
       "tv": "Télévision",
       "games": "Jeux",
-      "others": "Autres"
+      "others": "Autres",
+      "outside": "Autres éléments"
     }
   }
 }

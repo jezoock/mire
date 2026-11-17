@@ -156,6 +156,7 @@ const ADDED_METHODS: Record<string, string> = {
   listsAdd: 'lists:add',
   listsRemoveItems: 'lists:removeItems',
   listsMove: 'lists:move',
+  catalogSearch: 'catalog:search',
 };
 
 // Événements ajoutés après P1-08.
