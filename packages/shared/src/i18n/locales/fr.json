@@ -33,6 +33,42 @@
         "range": "Volume",
         "loader": "Chargement",
         "thumb": "Voyage dans la Lune"
+      },
+      "elements": {
+        "heading": "Composants d’éléments",
+        "picked": "Dernière action : {key}",
+        "row": "Rangée",
+        "groups": "Regroupements",
+        "grid": "Grille en groupes",
+        "lines": "Lignes",
+        "sample": "Élément {n}",
+        "group": "Groupe {n}",
+        "genre": "Comédie",
+        "summary": "Un résumé de quelques lignes, affiché par le panneau d’infos de l’élément sélectionné.",
+        "badge": "Nouveau"
+      }
+    },
+    "elements": {
+      "card": {
+        "episode": "S{season} · É{episode}",
+        "progress": "Vu à {percent} %",
+        "unavailable": "Indisponible"
+      },
+      "group": {
+        "count": {
+          "one": "{count} élément",
+          "other": "{count} éléments"
+        }
+      },
+      "grid": {
+        "more": {
+          "one": "Afficher plus ({count} restant)",
+          "other": "Afficher plus ({count} restants)"
+        }
+      },
+      "row": {
+        "previous": "Précédents",
+        "next": "Suivants"
       }
     },
     "palettes": {

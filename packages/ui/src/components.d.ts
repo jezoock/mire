@@ -5,6 +5,10 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { CardElement, CardLabels, GridGroup } from "./utils/elements";
+import { PageGroup } from "@mire/shared";
+export { CardElement, CardLabels, GridGroup } from "./utils/elements";
+export { PageGroup } from "@mire/shared";
 export namespace Components {
     /**
      * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
@@ -12,6 +16,75 @@ export namespace Components {
      * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
      */
     interface MireApp {
+    }
+    /**
+     * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
+     * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est
+     * lu par les lecteurs d'écran.
+     */
+    interface MireBackdrop {
+        /**
+          * Élément du catalogue : son fond, sinon son affiche.
+          * @default null
+         */
+        "element": CardElement | string | null;
+        /**
+          * Image (chemin local ou adresse) ; prioritaire sur `element`.
+          * @default ''
+         */
+        "src": string;
+    }
+    /**
+     * Carte d'un élément du catalogue (P4-05) : un `ds-trigger` autour d'un `ds-thumb`, avec titre, sous-titre, badge et
+     * jauge de reprise. Variantes : affiche, vignette, ligne. L'action désigne l'élément par sa clé
+     * (`target="mire-page" action="open"` donne `open:[{"key":"…"}]`). Ses textes viennent de l'élément et des attributs.
+     */
+    interface MireCard {
+        /**
+          * Méthode du contrôleur appelée avec la clé de l'élément (`open` → `open:[{"key":"…"}]`).
+          * @default ''
+         */
+        "action": string;
+        /**
+          * Badge donné par la page (« Nouveau », « 4K ») ; sans lui, « Indisponible » pour un élément disparu.
+          * @default ''
+         */
+        "badge": string;
+        /**
+          * Image chargée tout de suite (cartes du haut de la page) plutôt qu'à l'approche de l'écran.
+          * @default false
+         */
+        "eager": boolean;
+        /**
+          * Élément du catalogue (`key`, `name`, `images`, `infos`, `tags`), en propriété ou en JSON.
+          * @default null
+         */
+        "element": CardElement | string | null;
+        /**
+          * Textes tirés des catalogues (JSON) : `episode`, `progress`, `unavailable` (voir `CardLabels`).
+          * @default ''
+         */
+        "labels": CardLabels | string;
+        /**
+          * Avancement de la reprise, entre 0 et 1 (la jauge ne s'affiche qu'entre les deux).
+          * @default null
+         */
+        "progress": number | string | null;
+        /**
+          * Info affichée en sous-titre (`year`, `genres`…) ; sans elle : épisode, année ou artiste.
+          * @default ''
+         */
+        "subtitleInfo": string;
+        /**
+          * Contrôleur visé par l'action (balise d'un `mire-*`).
+          * @default ''
+         */
+        "target": string;
+        /**
+          * `poster` (affiche, par défaut), `thumbnail` (vignette 16/9) ou `line` (ligne).
+          * @default 'poster'
+         */
+        "variant": string;
     }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -38,6 +111,189 @@ export namespace Components {
           * Ajoute `step` au compteur ; méthode publique, appelée par `ds-trigger` (`action='increment:[1]'`).
          */
         "increment": (step?: number) => Promise<number>;
+        /**
+          * Action des cartes de la démonstration (P4-05) : `pick:[{"key":"…"}]` pour un élément, `pick:[{"value":…}]` pour un regroupement. Montre ce qui a été reçu, pour vérifier à la main qu'une carte désigne l'élément par sa clé.
+         */
+        "pick": (arg?: { key?: string; value?: unknown; }) => Promise<void>;
+        /**
+          * Texte de la dernière action reçue d'une carte (`{key}` : sa clé, ou la valeur d'un regroupement).
+          * @default ''
+         */
+        "pickedLabel": string;
+    }
+    /**
+     * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
+     * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
+     * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
+     */
+    interface MireFocusInfo {
+        /**
+          * Élément du catalogue, en propriété ou en JSON.
+          * @default null
+         */
+        "element": CardElement | string | null;
+        /**
+          * Infos de la ligne, dans l'ordre, séparées par des virgules (`year,genres,duration`).
+          * @default 'year,genres'
+         */
+        "infos": string;
+        /**
+          * Textes des cartes (JSON, voir `mire-card`) : l'épisode d'une série s'affiche en tête de la ligne d'infos.
+          * @default ''
+         */
+        "labels": CardLabels | string;
+        /**
+          * Info qui donne le résumé.
+          * @default 'summary'
+         */
+        "summaryInfo": string;
+    }
+    /**
+     * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
+     * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
+     * la place des autres, si bien que la page défile comme si toutes étaient là. Les flèches et la manette passent de
+     * carte en carte par le service de navigation (la ligne suivante est toujours rendue). Cartes et actions comme
+     * `mire-card` (clé de l'élément).
+     */
+    interface MireGrid {
+        /**
+          * @default ''
+         */
+        "action": string;
+        /**
+          * Éléments d'une grille sans groupes, en propriété ou en JSON.
+          * @default []
+         */
+        "elements": CardElement[] | string;
+        /**
+          * Groupes (`key`, `name`, `elements`), en propriété ou en JSON ; prioritaires sur `elements`.
+          * @default []
+         */
+        "groups": GridGroup[] | string;
+        /**
+          * @default ''
+         */
+        "labels": string;
+        /**
+          * Éléments montrés par groupe avant « Afficher plus », et à chaque appui (0 : tous).
+          * @default 0
+         */
+        "limit": number;
+        /**
+          * Formes du bouton « Afficher plus » (JSON, `{count}` : éléments restants).
+          * @default ''
+         */
+        "moreLabels": string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON : `{"local:/a.mkv": 0.4}`).
+          * @default ''
+         */
+        "progress": Record<string, number> | string;
+        /**
+          * Montre une page de plus du groupe `key` ; méthode publique, appelée aussi par le bouton « Afficher plus ».
+         */
+        "showMore": (arg?: { key?: string; }) => Promise<void>;
+        /**
+          * Info en sous-titre des cartes ; textes des cartes (JSON, voir `mire-card`).
+          * @default ''
+         */
+        "subtitleInfo": string;
+        /**
+          * Contrôleur visé et méthode appelée avec la clé de l'élément (voir `mire-card`).
+          * @default ''
+         */
+        "target": string;
+        /**
+          * Variante des cartes : `poster` (par défaut), `thumbnail` ou `line`.
+          * @default 'poster'
+         */
+        "variant": string;
+    }
+    /**
+     * Carte d'un regroupement d'une page (P4-05) : une série (Friends), une saison, une console. Elle montre le nom, le
+     * nombre d'éléments et l'affiche du regroupement ; l'action le désigne par sa valeur dans le niveau
+     * (`openGroup:[{"value":"Friends"}]`, `null` pour « Autres »), jamais par son rang.
+     */
+    interface MireGroupCard {
+        /**
+          * Méthode du contrôleur appelée avec la valeur du regroupement.
+          * @default ''
+         */
+        "action": string;
+        /**
+          * Formes du nombre d'éléments (JSON : `{"one": "{count} élément", "other": "{count} éléments"}`).
+          * @default ''
+         */
+        "countLabels": string;
+        /**
+          * Regroupement (`value`, `name`, `count`, `poster`) tel que le renvoie `catalog.page`, en propriété ou en JSON.
+          * @default null
+         */
+        "group": PageGroup | string | null;
+        /**
+          * Contrôleur visé par l'action (balise d'un `mire-*`).
+          * @default ''
+         */
+        "target": string;
+        /**
+          * `poster` (par défaut), `thumbnail` ou `line`, comme `mire-card`.
+          * @default 'poster'
+         */
+        "variant": string;
+    }
+    /**
+     * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
+     * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
+     * focus. Cartes et actions comme `mire-card` (clé de l'élément).
+     */
+    interface MireRow {
+        /**
+          * @default ''
+         */
+        "action": string;
+        /**
+          * Boutons « précédent » et « suivant » du `ds-scroller`, et leurs noms (JSON : `previous`, `next`).
+          * @default false
+         */
+        "controls": boolean;
+        /**
+          * Éléments du catalogue, en propriété ou en JSON.
+          * @default []
+         */
+        "elements": CardElement[] | string;
+        /**
+          * Titre de la rangée (et nom de la région pour les lecteurs d'écran).
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "labels": string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON : `{"local:/a.mkv": 0.4}`).
+          * @default ''
+         */
+        "progress": Record<string, number> | string;
+        /**
+          * @default ''
+         */
+        "scrollerLabels": string;
+        /**
+          * Info en sous-titre des cartes ; textes des cartes (JSON, voir `mire-card`).
+          * @default ''
+         */
+        "subtitleInfo": string;
+        /**
+          * Contrôleur visé et méthode appelée avec la clé de l'élément (voir `mire-card`).
+          * @default ''
+         */
+        "target": string;
+        /**
+          * Variante des cartes : `poster` (par défaut), `thumbnail` ou `line`.
+          * @default 'poster'
+         */
+        "variant": string;
     }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
@@ -56,8 +312,31 @@ declare global {
         prototype: HTMLMireAppElement;
         new (): HTMLMireAppElement;
     };
+    /**
+     * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
+     * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est
+     * lu par les lecteurs d'écran.
+     */
+    interface HTMLMireBackdropElement extends Components.MireBackdrop, HTMLStencilElement {
+    }
+    var HTMLMireBackdropElement: {
+        prototype: HTMLMireBackdropElement;
+        new (): HTMLMireBackdropElement;
+    };
+    /**
+     * Carte d'un élément du catalogue (P4-05) : un `ds-trigger` autour d'un `ds-thumb`, avec titre, sous-titre, badge et
+     * jauge de reprise. Variantes : affiche, vignette, ligne. L'action désigne l'élément par sa clé
+     * (`target="mire-page" action="open"` donne `open:[{"key":"…"}]`). Ses textes viennent de l'élément et des attributs.
+     */
+    interface HTMLMireCardElement extends Components.MireCard, HTMLStencilElement {
+    }
+    var HTMLMireCardElement: {
+        prototype: HTMLMireCardElement;
+        new (): HTMLMireCardElement;
+    };
     interface HTMLMireDemoElementEventMap {
         "mireDemoChange": { count: number };
+        "mireDemoPick": { key?: string; value?: unknown };
     }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -78,9 +357,61 @@ declare global {
         prototype: HTMLMireDemoElement;
         new (): HTMLMireDemoElement;
     };
+    /**
+     * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
+     * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
+     * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
+     */
+    interface HTMLMireFocusInfoElement extends Components.MireFocusInfo, HTMLStencilElement {
+    }
+    var HTMLMireFocusInfoElement: {
+        prototype: HTMLMireFocusInfoElement;
+        new (): HTMLMireFocusInfoElement;
+    };
+    /**
+     * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
+     * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
+     * la place des autres, si bien que la page défile comme si toutes étaient là. Les flèches et la manette passent de
+     * carte en carte par le service de navigation (la ligne suivante est toujours rendue). Cartes et actions comme
+     * `mire-card` (clé de l'élément).
+     */
+    interface HTMLMireGridElement extends Components.MireGrid, HTMLStencilElement {
+    }
+    var HTMLMireGridElement: {
+        prototype: HTMLMireGridElement;
+        new (): HTMLMireGridElement;
+    };
+    /**
+     * Carte d'un regroupement d'une page (P4-05) : une série (Friends), une saison, une console. Elle montre le nom, le
+     * nombre d'éléments et l'affiche du regroupement ; l'action le désigne par sa valeur dans le niveau
+     * (`openGroup:[{"value":"Friends"}]`, `null` pour « Autres »), jamais par son rang.
+     */
+    interface HTMLMireGroupCardElement extends Components.MireGroupCard, HTMLStencilElement {
+    }
+    var HTMLMireGroupCardElement: {
+        prototype: HTMLMireGroupCardElement;
+        new (): HTMLMireGroupCardElement;
+    };
+    /**
+     * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
+     * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
+     * focus. Cartes et actions comme `mire-card` (clé de l'élément).
+     */
+    interface HTMLMireRowElement extends Components.MireRow, HTMLStencilElement {
+    }
+    var HTMLMireRowElement: {
+        prototype: HTMLMireRowElement;
+        new (): HTMLMireRowElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
+        "mire-backdrop": HTMLMireBackdropElement;
+        "mire-card": HTMLMireCardElement;
         "mire-demo": HTMLMireDemoElement;
+        "mire-focus-info": HTMLMireFocusInfoElement;
+        "mire-grid": HTMLMireGridElement;
+        "mire-group-card": HTMLMireGroupCardElement;
+        "mire-row": HTMLMireRowElement;
     }
 }
 declare namespace LocalJSX {
@@ -90,6 +421,75 @@ declare namespace LocalJSX {
      * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
      */
     interface MireApp {
+    }
+    /**
+     * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
+     * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est
+     * lu par les lecteurs d'écran.
+     */
+    interface MireBackdrop {
+        /**
+          * Élément du catalogue : son fond, sinon son affiche.
+          * @default null
+         */
+        "element"?: CardElement | string | null;
+        /**
+          * Image (chemin local ou adresse) ; prioritaire sur `element`.
+          * @default ''
+         */
+        "src"?: string;
+    }
+    /**
+     * Carte d'un élément du catalogue (P4-05) : un `ds-trigger` autour d'un `ds-thumb`, avec titre, sous-titre, badge et
+     * jauge de reprise. Variantes : affiche, vignette, ligne. L'action désigne l'élément par sa clé
+     * (`target="mire-page" action="open"` donne `open:[{"key":"…"}]`). Ses textes viennent de l'élément et des attributs.
+     */
+    interface MireCard {
+        /**
+          * Méthode du contrôleur appelée avec la clé de l'élément (`open` → `open:[{"key":"…"}]`).
+          * @default ''
+         */
+        "action"?: string;
+        /**
+          * Badge donné par la page (« Nouveau », « 4K ») ; sans lui, « Indisponible » pour un élément disparu.
+          * @default ''
+         */
+        "badge"?: string;
+        /**
+          * Image chargée tout de suite (cartes du haut de la page) plutôt qu'à l'approche de l'écran.
+          * @default false
+         */
+        "eager"?: boolean;
+        /**
+          * Élément du catalogue (`key`, `name`, `images`, `infos`, `tags`), en propriété ou en JSON.
+          * @default null
+         */
+        "element"?: CardElement | string | null;
+        /**
+          * Textes tirés des catalogues (JSON) : `episode`, `progress`, `unavailable` (voir `CardLabels`).
+          * @default ''
+         */
+        "labels"?: CardLabels | string;
+        /**
+          * Avancement de la reprise, entre 0 et 1 (la jauge ne s'affiche qu'entre les deux).
+          * @default null
+         */
+        "progress"?: number | string | null;
+        /**
+          * Info affichée en sous-titre (`year`, `genres`…) ; sans elle : épisode, année ou artiste.
+          * @default ''
+         */
+        "subtitleInfo"?: string;
+        /**
+          * Contrôleur visé par l'action (balise d'un `mire-*`).
+          * @default ''
+         */
+        "target"?: string;
+        /**
+          * `poster` (affiche, par défaut), `thumbnail` (vignette 16/9) ou `line` (ligne).
+          * @default 'poster'
+         */
+        "variant"?: string;
     }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -116,17 +516,255 @@ declare namespace LocalJSX {
           * Émis à chaque changement du compteur, avec sa nouvelle valeur.
          */
         "onMireDemoChange"?: (event: MireDemoCustomEvent<{ count: number }>) => void;
+        /**
+          * Émis quand une carte de la démonstration appelle `pick`, avec ce qui la désigne (clé ou valeur).
+         */
+        "onMireDemoPick"?: (event: MireDemoCustomEvent<{ key?: string; value?: unknown }>) => void;
+        /**
+          * Texte de la dernière action reçue d'une carte (`{key}` : sa clé, ou la valeur d'un regroupement).
+          * @default ''
+         */
+        "pickedLabel"?: string;
+    }
+    /**
+     * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
+     * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
+     * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
+     */
+    interface MireFocusInfo {
+        /**
+          * Élément du catalogue, en propriété ou en JSON.
+          * @default null
+         */
+        "element"?: CardElement | string | null;
+        /**
+          * Infos de la ligne, dans l'ordre, séparées par des virgules (`year,genres,duration`).
+          * @default 'year,genres'
+         */
+        "infos"?: string;
+        /**
+          * Textes des cartes (JSON, voir `mire-card`) : l'épisode d'une série s'affiche en tête de la ligne d'infos.
+          * @default ''
+         */
+        "labels"?: CardLabels | string;
+        /**
+          * Info qui donne le résumé.
+          * @default 'summary'
+         */
+        "summaryInfo"?: string;
+    }
+    /**
+     * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
+     * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
+     * la place des autres, si bien que la page défile comme si toutes étaient là. Les flèches et la manette passent de
+     * carte en carte par le service de navigation (la ligne suivante est toujours rendue). Cartes et actions comme
+     * `mire-card` (clé de l'élément).
+     */
+    interface MireGrid {
+        /**
+          * @default ''
+         */
+        "action"?: string;
+        /**
+          * Éléments d'une grille sans groupes, en propriété ou en JSON.
+          * @default []
+         */
+        "elements"?: CardElement[] | string;
+        /**
+          * Groupes (`key`, `name`, `elements`), en propriété ou en JSON ; prioritaires sur `elements`.
+          * @default []
+         */
+        "groups"?: GridGroup[] | string;
+        /**
+          * @default ''
+         */
+        "labels"?: string;
+        /**
+          * Éléments montrés par groupe avant « Afficher plus », et à chaque appui (0 : tous).
+          * @default 0
+         */
+        "limit"?: number;
+        /**
+          * Formes du bouton « Afficher plus » (JSON, `{count}` : éléments restants).
+          * @default ''
+         */
+        "moreLabels"?: string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON : `{"local:/a.mkv": 0.4}`).
+          * @default ''
+         */
+        "progress"?: Record<string, number> | string;
+        /**
+          * Info en sous-titre des cartes ; textes des cartes (JSON, voir `mire-card`).
+          * @default ''
+         */
+        "subtitleInfo"?: string;
+        /**
+          * Contrôleur visé et méthode appelée avec la clé de l'élément (voir `mire-card`).
+          * @default ''
+         */
+        "target"?: string;
+        /**
+          * Variante des cartes : `poster` (par défaut), `thumbnail` ou `line`.
+          * @default 'poster'
+         */
+        "variant"?: string;
+    }
+    /**
+     * Carte d'un regroupement d'une page (P4-05) : une série (Friends), une saison, une console. Elle montre le nom, le
+     * nombre d'éléments et l'affiche du regroupement ; l'action le désigne par sa valeur dans le niveau
+     * (`openGroup:[{"value":"Friends"}]`, `null` pour « Autres »), jamais par son rang.
+     */
+    interface MireGroupCard {
+        /**
+          * Méthode du contrôleur appelée avec la valeur du regroupement.
+          * @default ''
+         */
+        "action"?: string;
+        /**
+          * Formes du nombre d'éléments (JSON : `{"one": "{count} élément", "other": "{count} éléments"}`).
+          * @default ''
+         */
+        "countLabels"?: string;
+        /**
+          * Regroupement (`value`, `name`, `count`, `poster`) tel que le renvoie `catalog.page`, en propriété ou en JSON.
+          * @default null
+         */
+        "group"?: PageGroup | string | null;
+        /**
+          * Contrôleur visé par l'action (balise d'un `mire-*`).
+          * @default ''
+         */
+        "target"?: string;
+        /**
+          * `poster` (par défaut), `thumbnail` ou `line`, comme `mire-card`.
+          * @default 'poster'
+         */
+        "variant"?: string;
+    }
+    /**
+     * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
+     * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
+     * focus. Cartes et actions comme `mire-card` (clé de l'élément).
+     */
+    interface MireRow {
+        /**
+          * @default ''
+         */
+        "action"?: string;
+        /**
+          * Boutons « précédent » et « suivant » du `ds-scroller`, et leurs noms (JSON : `previous`, `next`).
+          * @default false
+         */
+        "controls"?: boolean;
+        /**
+          * Éléments du catalogue, en propriété ou en JSON.
+          * @default []
+         */
+        "elements"?: CardElement[] | string;
+        /**
+          * Titre de la rangée (et nom de la région pour les lecteurs d'écran).
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "labels"?: string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON : `{"local:/a.mkv": 0.4}`).
+          * @default ''
+         */
+        "progress"?: Record<string, number> | string;
+        /**
+          * @default ''
+         */
+        "scrollerLabels"?: string;
+        /**
+          * Info en sous-titre des cartes ; textes des cartes (JSON, voir `mire-card`).
+          * @default ''
+         */
+        "subtitleInfo"?: string;
+        /**
+          * Contrôleur visé et méthode appelée avec la clé de l'élément (voir `mire-card`).
+          * @default ''
+         */
+        "target"?: string;
+        /**
+          * Variante des cartes : `poster` (par défaut), `thumbnail` ou `line`.
+          * @default 'poster'
+         */
+        "variant"?: string;
     }
 
+    interface MireBackdropAttributes {
+        "src": string;
+        "element": CardElement | string | null;
+    }
+    interface MireCardAttributes {
+        "element": CardElement | string | null;
+        "variant": string;
+        "target": string;
+        "action": string;
+        "badge": string;
+        "progress": string;
+        "subtitleInfo": string;
+        "labels": CardLabels | string;
+        "eager": boolean;
+    }
     interface MireDemoAttributes {
         "heading": string;
         "actionLabel": string;
         "countLabels": string;
+        "pickedLabel": string;
+    }
+    interface MireFocusInfoAttributes {
+        "element": CardElement | string | null;
+        "infos": string;
+        "summaryInfo": string;
+        "labels": CardLabels | string;
+    }
+    interface MireGridAttributes {
+        "elements": CardElement[] | string;
+        "groups": GridGroup[] | string;
+        "variant": string;
+        "target": string;
+        "action": string;
+        "limit": number;
+        "moreLabels": string;
+        "progress": Record<string, number> | string;
+        "subtitleInfo": string;
+        "labels": string;
+    }
+    interface MireGroupCardAttributes {
+        "group": PageGroup | string | null;
+        "variant": string;
+        "target": string;
+        "action": string;
+        "countLabels": string;
+    }
+    interface MireRowAttributes {
+        "heading": string;
+        "elements": CardElement[] | string;
+        "variant": string;
+        "target": string;
+        "action": string;
+        "progress": Record<string, number> | string;
+        "subtitleInfo": string;
+        "labels": string;
+        "controls": boolean;
+        "scrollerLabels": string;
     }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
+        "mire-backdrop": Omit<MireBackdrop, keyof MireBackdropAttributes> & { [K in keyof MireBackdrop & keyof MireBackdropAttributes]?: MireBackdrop[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `attr:${K}`]?: MireBackdropAttributes[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `prop:${K}`]?: MireBackdrop[K] };
+        "mire-card": Omit<MireCard, keyof MireCardAttributes> & { [K in keyof MireCard & keyof MireCardAttributes]?: MireCard[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `attr:${K}`]?: MireCardAttributes[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `prop:${K}`]?: MireCard[K] };
         "mire-demo": Omit<MireDemo, keyof MireDemoAttributes> & { [K in keyof MireDemo & keyof MireDemoAttributes]?: MireDemo[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `attr:${K}`]?: MireDemoAttributes[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `prop:${K}`]?: MireDemo[K] };
+        "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
+        "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
+        "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
+        "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -140,11 +778,49 @@ declare module "@stencil/core" {
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
             /**
+             * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
+             * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est
+             * lu par les lecteurs d'écran.
+             */
+            "mire-backdrop": LocalJSX.IntrinsicElements["mire-backdrop"] & JSXBase.HTMLAttributes<HTMLMireBackdropElement>;
+            /**
+             * Carte d'un élément du catalogue (P4-05) : un `ds-trigger` autour d'un `ds-thumb`, avec titre, sous-titre, badge et
+             * jauge de reprise. Variantes : affiche, vignette, ligne. L'action désigne l'élément par sa clé
+             * (`target="mire-page" action="open"` donne `open:[{"key":"…"}]`). Ses textes viennent de l'élément et des attributs.
+             */
+            "mire-card": LocalJSX.IntrinsicElements["mire-card"] & JSXBase.HTMLAttributes<HTMLMireCardElement>;
+            /**
              * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
              * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
              * attributs, fournis par la page à partir des catalogues.
              */
             "mire-demo": LocalJSX.IntrinsicElements["mire-demo"] & JSXBase.HTMLAttributes<HTMLMireDemoElement>;
+            /**
+             * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
+             * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
+             * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
+             */
+            "mire-focus-info": LocalJSX.IntrinsicElements["mire-focus-info"] & JSXBase.HTMLAttributes<HTMLMireFocusInfoElement>;
+            /**
+             * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
+             * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
+             * la place des autres, si bien que la page défile comme si toutes étaient là. Les flèches et la manette passent de
+             * carte en carte par le service de navigation (la ligne suivante est toujours rendue). Cartes et actions comme
+             * `mire-card` (clé de l'élément).
+             */
+            "mire-grid": LocalJSX.IntrinsicElements["mire-grid"] & JSXBase.HTMLAttributes<HTMLMireGridElement>;
+            /**
+             * Carte d'un regroupement d'une page (P4-05) : une série (Friends), une saison, une console. Elle montre le nom, le
+             * nombre d'éléments et l'affiche du regroupement ; l'action le désigne par sa valeur dans le niveau
+             * (`openGroup:[{"value":"Friends"}]`, `null` pour « Autres »), jamais par son rang.
+             */
+            "mire-group-card": LocalJSX.IntrinsicElements["mire-group-card"] & JSXBase.HTMLAttributes<HTMLMireGroupCardElement>;
+            /**
+             * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
+             * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
+             * focus. Cartes et actions comme `mire-card` (clé de l'élément).
+             */
+            "mire-row": LocalJSX.IntrinsicElements["mire-row"] & JSXBase.HTMLAttributes<HTMLMireRowElement>;
         }
     }
 }

@@ -12,6 +12,12 @@
 @use '../theme';
 
 @use '../components/mire-demo/mire-demo';
+@use '../components/mire-card/mire-card';
+@use '../components/mire-group-card/mire-group-card';
+@use '../components/mire-grid/mire-grid';
+@use '../components/mire-row/mire-row';
+@use '../components/mire-focus-info/mire-focus-info';
+@use '../components/mire-backdrop/mire-backdrop';
 @use './demo-page';
 
 // Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var(), et les icônes qu'ils

@@ -1,0 +1,26 @@
+@use '../../theme/tokens' as *;
+
+// Carte d'un regroupement : la forme de mire-card (_mire-card.scss), avec une pile derrière l'affiche.
+// Une pile, deux bords décalés derrière l'affiche.
+.mire-group-card__stack {
+  position: relative;
+  display: block;
+  width: 100%;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: ds-color(gray, light);
+    border-radius: ds-radius(md);
+    transform: translate(#{ds-spacing(1)}, calc(-1 * #{ds-spacing(1)}));
+  }
+
+  .mire-group-card__thumb {
+    position: relative;
+  }
+}
+
+.mire-group-card.--line .mire-group-card__stack {
+  width: ds-spacing(7);
+}

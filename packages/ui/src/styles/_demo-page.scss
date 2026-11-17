@@ -4,6 +4,8 @@
 // data-palette d'une palette : ses jetons, et ceux du moteur qui en dérivent (theme/_base.scss), s'y appliquent.
 .mire-ui-demo {
   display: grid;
+  // Une seule colonne, jamais plus large que la vue : les rangées défilent dans leur ds-scroller, pas la page.
+  grid-template-columns: minmax(0, 1fr);
   gap: ds-spacing(5);
   padding-bottom: ds-spacing(6);
 
@@ -38,4 +40,33 @@
 
 .mire-ui-demo__thumb {
   width: 4rem;
+}
+
+// Composants d'éléments (P4-05) : fond et infos de l'élément sélectionné, rangée, regroupements, grilles.
+.mire-ui-demo__elements {
+  display: grid;
+  gap: ds-spacing(4);
+  min-width: 0;
+}
+
+.mire-ui-demo__stage {
+  position: relative;
+  min-height: 14rem;
+  overflow: hidden;
+  border-radius: ds-radius(md);
+}
+
+.mire-ui-demo__backdrop {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+}
+
+.mire-ui-demo__info {
+  position: relative;
+  padding: ds-spacing(4);
+}
+
+.mire-ui-demo__group {
+  width: 11rem;
 }

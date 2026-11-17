@@ -20,7 +20,12 @@ export class MireDemo {
   /** Formes du compteur (JSON : `{"one": "{count} clic", "other": "{count} clics"}`). */
   @Prop() countLabels = '';
 
+  /** Texte de la dernière action reçue d'une carte (`{key}` : sa clé, ou la valeur d'un regroupement). */
+  @Prop() pickedLabel = '';
+
   @State() count = 0;
+
+  @State() picked = '';
 
   /** Émis à chaque changement du compteur, avec sa nouvelle valeur. */
   @Event({ eventName: 'mireDemoChange' }) changed!: EventEmitter<{ count: number }>;
@@ -31,6 +36,19 @@ export class MireDemo {
     this.count += step;
     this.changed.emit({ count: this.count });
     return this.count;
+  }
+
+  /** Émis quand une carte de la démonstration appelle `pick`, avec ce qui la désigne (clé ou valeur). */
+  @Event({ eventName: 'mireDemoPick' }) pickEvent!: EventEmitter<{ key?: string; value?: unknown }>;
+
+  /**
+   * Action des cartes de la démonstration (P4-05) : `pick:[{"key":"…"}]` pour un élément, `pick:[{"value":…}]` pour
+   * un regroupement. Montre ce qui a été reçu, pour vérifier à la main qu'une carte désigne l'élément par sa clé.
+   */
+  @Method()
+  async pick(arg: { key?: string; value?: unknown } = {}): Promise<void> {
+    this.picked = arg.key ?? JSON.stringify(arg.value ?? null);
+    this.pickEvent.emit(arg);
   }
 
   private countText(): string {
@@ -49,6 +67,11 @@ export class MireDemo {
         <ds-trigger class="mire-demo__action" type="button" mods="stl-1" target="mire-demo" action="increment:[1]">
           {this.actionLabel}
         </ds-trigger>
+        {this.picked && this.pickedLabel && (
+          <p class="mire-demo__picked" role="status">
+            {this.pickedLabel.replaceAll('{key}', this.picked)}
+          </p>
+        )}
       </Host>
     );
   }

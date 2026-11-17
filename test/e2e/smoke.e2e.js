@@ -536,6 +536,260 @@ describe('Test de fumée de Mire', () => {
     });
   });
 
+  describe("composants d'éléments (P4-05)", () => {
+    const PAD = { a: 0, b: 1, up: 12, down: 13, left: 14, right: 15 };
+    const activeKey = () => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') ?? null);
+    // Manette simulée (API Gamepad), comme pour la navigation sur les composants (P4-03).
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    // Cartes rendues : chaque mire-card et ses ds-* ont la classe hydrated (rendu asynchrone des deux moteurs).
+    const cardsReady = (selector) =>
+      page.waitForFunction((sel) => {
+        const cards = [...document.querySelectorAll(`${sel} mire-card, ${sel} mire-group-card`)];
+        return (
+          cards.length > 0 &&
+          cards.every((c) => c.classList.contains('hydrated') && [...c.querySelectorAll('ds-trigger, ds-thumb')].every((d) => d.classList.contains('hydrated')))
+        );
+      }, selector);
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+      await page.evaluate(() => (location.hash = 'demo'));
+      await page.waitForFunction(() => document.body.dataset.section === 'demo');
+      await cardsReady('#view .mire-ui-demo__elements');
+    });
+
+    after(async () => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => {
+        document.getElementById('e2e-grid')?.remove();
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+        location.hash = '';
+      });
+    });
+
+    it('rendu : cartes, regroupements, « Afficher plus », infos et fond ; les actions désignent les éléments par leur clé', async () => {
+      const shown = await page.evaluate(() => {
+        const row = document.querySelector('.mire-ui-demo mire-row');
+        const cards = [...row.querySelectorAll('mire-card ds-trigger')];
+        const group = document.querySelector('.mire-ui-demo mire-group-card ds-trigger');
+        return {
+          row: cards.length,
+          inScroller: !!row.querySelector('ds-scroller mire-card'),
+          // Posés par le JSX de Stencil en propriétés du ds-trigger (pas en attributs).
+          action: cards[0].action,
+          label: cards[0].label,
+          gauges: row.querySelectorAll('.mire-card__progress').length,
+          group: group.action,
+          badge: document.querySelector('.mire-ui-demo mire-card[class*="--unavailable"] .mire-card__badge')?.textContent ?? null,
+          // Grille virtualisée : seules les cartes proches de l'écran sont rendues ; chaque groupe en annonce 12.
+          sizes: [...document.querySelectorAll('.mire-ui-demo mire-grid:not([variant="line"]) .mire-grid__group')].map((g) =>
+            g.querySelector('mire-card')?.getAttribute('aria-setsize'),
+          ),
+          more: [...document.querySelectorAll('.mire-ui-demo mire-grid:not([variant="line"]) .mire-grid__more')].map((b) => b.textContent.trim()),
+        };
+      });
+      const texts = await page.evaluate(async () => {
+        const info = await window.api.i18nGet();
+        const m = info.catalogs[info.language].messages;
+        const rules = new Intl.PluralRules(info.language);
+        return {
+          unavailable: m.elements.card.unavailable,
+          progress: m.elements.card.progress,
+          more: m.elements.grid.more[rules.select(18)] ?? m.elements.grid.more.other,
+        };
+      });
+      assert.equal(shown.row, 12);
+      assert.ok(shown.inScroller, 'les cartes de la rangée sont dans le ds-scroller');
+      assert.equal(shown.action, 'pick:[{"key":"demo:rangee/1"}]');
+      assert.match(shown.label, new RegExp(texts.progress.replace('{percent}', '25').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      assert.equal(shown.gauges, 3);
+      assert.match(shown.group, /^pick:\[\{"value":/);
+      assert.equal(shown.badge, texts.unavailable);
+      assert.deepEqual(shown.sizes, ['12', '12', '12'], 'trois groupes de 12 cartes avant « Afficher plus »');
+      assert.deepEqual(shown.more, Array(3).fill(texts.more.replace('{count}', '18')));
+
+      // Un clic sur une carte appelle l'action avec la clé de l'élément.
+      const picked = page.evaluate(() => new Promise((resolve) => document.addEventListener('mireDemoPick', (e) => resolve(e.detail), { once: true })));
+      await page.locator('.mire-ui-demo mire-row mire-card ds-trigger').nth(2).click();
+      assert.deepEqual(await picked, { key: 'demo:rangee/3' });
+
+      // « Afficher plus » : 12 cartes de plus dans le premier groupe, le focus va à la première nouvelle carte.
+      await page.locator('.mire-ui-demo mire-grid:not([variant="line"]) .mire-grid__more').first().click();
+      await page.waitForFunction(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') === 'demo:groupe-1/13');
+      assert.equal(
+        await page.locator('.mire-ui-demo mire-grid:not([variant="line"]) .mire-grid__group').first().locator('mire-card').first().getAttribute('aria-setsize'),
+        '24',
+      );
+
+      // Panneau d'infos et fond suivent la carte qui a le focus ; le fond passe d'une image à l'autre en fondu.
+      await page.locator('.mire-ui-demo mire-row mire-card ds-trigger').first().focus();
+      await page.waitForFunction(
+        () =>
+          document.querySelector('.mire-ui-demo mire-focus-info .mire-focus-info__title')?.textContent ===
+          document.querySelector('.mire-ui-demo mire-row mire-card .mire-card__title').textContent,
+      );
+      const pictures = path.join(tmp, 'fixtures', 'bibliotheque', 'Images', 'Vacances');
+      for (const name of ['Montagne.png', 'Plage.png']) {
+        await page.evaluate((src) => (document.querySelector('.mire-ui-demo mire-backdrop').src = src), path.join(pictures, name));
+        await page.waitForFunction(
+          (n) => decodeURIComponent(document.querySelector('.mire-ui-demo mire-backdrop img.--front')?.getAttribute('src') ?? '').endsWith(n),
+          name,
+        );
+      }
+      assert.equal(await page.locator('.mire-ui-demo mire-backdrop img').count(), 2, 'deux calques, l’ancien derrière le nouveau');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt une rangée et une grille, A ouvre la carte par sa clé', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+        document.querySelector('.mire-ui-demo mire-row mire-card ds-trigger').focus();
+      });
+      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
+      // Rangée : droite et gauche de carte en carte.
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:rangee/2');
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:rangee/3');
+      await padPress('left');
+      assert.equal(await activeKey(), 'demo:rangee/2');
+
+      // Grille : droite passe à la carte suivante, bas à celle de la ligne suivante, même colonne.
+      const columns = await page.evaluate(() => {
+        const first = document.querySelector('.mire-ui-demo mire-grid:not([variant="line"]) mire-card ds-trigger');
+        first.scrollIntoView({ block: 'center' });
+        first.focus();
+        return getComputedStyle(first.closest('.mire-grid__items')).gridTemplateColumns.split(' ').length;
+      });
+      await settle();
+      assert.ok(columns >= 2, `${columns} colonnes`);
+      await padPress('right');
+      assert.equal(await activeKey(), 'demo:groupe-1/2');
+      await padPress('down');
+      assert.equal(await activeKey(), `demo:groupe-1/${2 + columns}`);
+      const picked = page.evaluate(() => new Promise((resolve) => document.addEventListener('mireDemoPick', (e) => resolve(e.detail), { once: true })));
+      await padPress('a');
+      assert.deepEqual(await picked, { key: `demo:groupe-1/${2 + columns}` });
+      assert.deepEqual(errors, []);
+    });
+
+    it('une grille de 5 000 éléments reste fluide (virtualisée)', async () => {
+      const COUNT = 5000;
+      // Mémoire du renderer après un ramasse-miettes, par le protocole de Chromium (performance.memory est arrondie).
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Performance.enable');
+      const memory = async () => {
+        await cdp.send('HeapProfiler.collectGarbage');
+        const { metrics } = await cdp.send('Performance.getMetrics');
+        const get = (name) => metrics.find((m) => m.name === name)?.value ?? 0;
+        return { heap: get('JSHeapUsedSize'), nodes: get('Nodes') };
+      };
+      const mb = (bytes) => Math.round((bytes / 1048576) * 10) / 10;
+      const m0 = await memory();
+      const first = await page.evaluate(async (count) => {
+        const elements = Array.from({ length: count }, (_, i) => ({
+          key: `e2e:${i}`,
+          name: `Élément ${i + 1}`,
+          images: {},
+          infos: { year: 1990 + (i % 30) },
+          tags: [],
+        }));
+        const t0 = performance.now();
+        const box = document.createElement('div');
+        box.id = 'e2e-grid';
+        const grid = document.createElement('mire-grid');
+        grid.setAttribute('target', 'mire-demo');
+        grid.setAttribute('action', 'pick');
+        grid.elements = elements;
+        box.append(grid);
+        // Vue remise en haut avant l'insertion : insérée au-dessus d'une vue défilée, la grille la décalerait de toute sa
+        // hauteur (ancrage du défilement du navigateur).
+        document.getElementById('view').scrollTop = 0;
+        document.querySelector('.mire-ui-demo').prepend(box);
+        const ready = () => {
+          const cards = [...grid.querySelectorAll('mire-card')];
+          return grid.classList.contains('hydrated') && cards.length > 0 && cards.every((c) => c.querySelector('ds-trigger.hydrated ds-thumb.hydrated'));
+        };
+        while (!ready() && performance.now() - t0 < 15000) await new Promise((r) => requestAnimationFrame(r));
+        // Une image de plus : la mise en page des cartes est faite et affichée.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        return {
+          firstRender: Math.round(performance.now() - t0),
+          cards: grid.querySelectorAll('mire-card').length,
+          height: Math.round(grid.getBoundingClientRect().height),
+          columns: getComputedStyle(grid.querySelector('.mire-grid__items')).gridTemplateColumns.split(' ').length,
+        };
+      }, COUNT);
+      assert.ok(first.cards < 300, `${first.cards} cartes rendues sur ${COUNT}`);
+      // Flèche bas, 20 fois : temps entre la touche et le focus sur la carte de la ligne suivante.
+      const m1 = await memory();
+      Object.assign(first, { heapMb: mb(m1.heap - m0.heap), nodes: m1.nodes - m0.nodes });
+      const start = await page.evaluate(() => {
+        const el = document.querySelector('#e2e-grid mire-card ds-trigger');
+        el.focus();
+        return Number(el.dataset.key.split(':')[1]);
+      });
+      await settle();
+      const times = [];
+      for (let i = 0; i < 20; i++) {
+        times.push(
+          await page.evaluate(async () => {
+            const from = document.activeElement;
+            const t0 = performance.now();
+            from.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+            while (document.activeElement === from && performance.now() - t0 < 3000) await new Promise((r) => requestAnimationFrame(r));
+            return performance.now() - t0;
+          }),
+        );
+        // La page défile (en douceur) et la grille rend les lignes suivantes : comme un appui tenu, une touche par 100 ms.
+        await page.waitForTimeout(100);
+      }
+      times.sort((a, b) => a - b);
+      const moves = await page.evaluate(() => ({
+        key: document.activeElement.closest('[data-key]')?.getAttribute('data-key'),
+        cards: document.querySelectorAll('#e2e-grid mire-card').length,
+      }));
+      const m2 = await memory();
+      Object.assign(moves, {
+        median: Math.round(times[10] * 10) / 10,
+        max: Math.round(times[19] * 10) / 10,
+        heapMb: mb(m2.heap - m0.heap),
+        nodes: m2.nodes - m0.nodes,
+      });
+      await cdp.detach();
+      console.log(`Grille de ${COUNT} éléments : ${JSON.stringify({ ...first, moves })}`);
+      assert.equal(moves.key, `e2e:${start + 20 * first.columns}`, 'vingt lignes plus bas, même colonne');
+      assert.ok(moves.cards < 300, `${moves.cards} cartes rendues après le défilement`);
+      assert.ok(first.firstRender < 3000, `premier rendu : ${first.firstRender} ms`);
+      assert.ok(moves.median < 100, `déplacement du focus : ${moves.median} ms (médiane)`);
+      assert.deepEqual(errors, []);
+    });
+  });
+
   it('aucune requête réseau sortante, hors Widevine', () => {
     const log = fs
       .readFileSync(path.join(tmp, 'reseau.log'), 'utf8')

@@ -1,0 +1,42 @@
+@use '../../theme/tokens' as *;
+
+// Grille d'éléments : groupes (titre, cartes, « Afficher plus »). Les colonnes suivent la largeur disponible ; la
+// grille lit leur nombre (grid-template-columns calculé) pour sa virtualisation.
+.mire-grid {
+  --mire-grid-card: 11rem;
+
+  display: grid;
+  gap: ds-spacing(5);
+
+  &.--thumbnail {
+    --mire-grid-card: 18rem;
+  }
+
+  &.--line {
+    --mire-grid-card: 22rem;
+  }
+
+  &__group {
+    display: grid;
+    gap: ds-spacing(3);
+    justify-items: start;
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: ds-token(font-size, 300);
+    font-weight: 700;
+  }
+
+  &__items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--mire-grid-card), 1fr));
+    gap: ds-spacing(4);
+    box-sizing: border-box;
+    width: 100%;
+    // Virtualisation : les marges changent quand des lignes entrent ou sortent. L'ancrage du défilement du navigateur
+    // compenserait chaque changement en faisant défiler la page, qui changerait de nouveau les lignes rendues, jusqu'à
+    // la fin de la grille.
+    overflow-anchor: none;
+  }
+}

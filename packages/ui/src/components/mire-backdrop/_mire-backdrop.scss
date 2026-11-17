@@ -1,0 +1,27 @@
+@use '../../theme/tokens' as *;
+
+// Fond en fondu : deux calques superposés ; celui de devant est opaque. Le conteneur lui donne sa taille.
+.mire-backdrop {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background: ds-color(gray, white);
+
+  &__layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+
+    &.--front {
+      opacity: 1;
+    }
+
+    @include ds-reduced-motion() {
+      transition: none;
+    }
+  }
+}

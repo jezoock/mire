@@ -22,4 +22,9 @@
     margin: 0;
     min-width: 6em;
   }
+
+  &__picked {
+    flex-basis: 100%;
+    margin: 0;
+  }
 }
