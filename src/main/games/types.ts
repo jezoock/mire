@@ -1,5 +1,6 @@
 /** Types du domaine des jeux : jeux PC trouvés dans les dossiers, jeux de console (ROMs) et dépendances du service. */
 import type { Config, GameSource } from '@mire/shared';
+import type { ElementInput } from '../catalog/types.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { CacheResult, DownloadContext } from '../downloads/types.ts';
 import type { ResolvedLocation } from '../library/location.ts';
@@ -81,6 +82,10 @@ export interface GamesDeps {
   /** Fournisseurs de jeux PC ; par défaut, le dossier local. */
   providers?: GameSourceProvider[];
   platform?: NodeJS.Platform;
+  /** Catalogue d'éléments que chaque liste de jeux alimente (`element-sources.ts`). */
+  catalog?: { setSource(source: { plugin: string; instance: string }, elements: ElementInput[]): unknown };
+  /** Le catalogue n'a pas pu être alimenté (journal par défaut) ; la liste répond quand même. */
+  onCatalogError?: (err: Error) => void;
 }
 
 export type { Config };

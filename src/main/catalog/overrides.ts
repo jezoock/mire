@@ -15,7 +15,7 @@ import { createJsonStore, readJsonFile } from '../storage/json-store.ts';
 import { FACADE_IMAGES, FACADE_INFOS, legacyTarget, metaToOverride, overrideToMeta } from './legacy-meta.ts';
 import type { Override } from './tags/merge.ts';
 import { isInfoValue, type UserTag } from './tags/registry.ts';
-import { openTarget } from './targets.ts';
+import { targetsOf } from './targets.ts';
 
 export const OVERRIDES_VERSION = 1;
 
@@ -270,15 +270,16 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
       if (!pending.size) return [];
       const moved: ElementKey[] = [];
       for (const e of elements) {
-        const target = openTarget(e);
-        const hit = pending.get(target);
-        if (!hit || !hit.kinds.includes(e.open.kind) || data.elements[e.key]?.legacy) continue;
-        const o = data.unmatched[hit.legacyKey];
-        delete data.unmatched[hit.legacyKey];
-        data.elements[e.key] = writeFacade({ ...data.elements[e.key], legacy: hit.legacyKey }, o);
-        legacyIndex.set(hit.legacyKey, e.key);
-        pending.delete(target);
-        moved.push(e.key);
+        for (const target of targetsOf(e)) {
+          const hit = pending.get(target);
+          if (!hit || !hit.kinds.includes(e.open.kind) || data.elements[e.key]?.legacy) continue;
+          const o = data.unmatched[hit.legacyKey];
+          delete data.unmatched[hit.legacyKey];
+          data.elements[e.key] = writeFacade({ ...data.elements[e.key], legacy: hit.legacyKey }, o);
+          legacyIndex.set(hit.legacyKey, e.key);
+          pending.delete(target);
+          moved.push(e.key);
+        }
       }
       if (moved.length) save(moved);
       return moved;

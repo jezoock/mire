@@ -9,6 +9,7 @@ import { path7za } from '7zip-bin';
 import { MIME, type SystemHint } from '@mire/shared';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
+import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import { createOverrides } from './catalog/overrides.ts';
@@ -17,10 +18,12 @@ import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
 import { createTargetFinder } from './catalog/targets.ts';
+import { syncFeeds } from './catalog/sync.ts';
 import { createConfigService } from './config/index.ts';
 import { createDownloads } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
+import { gameConfigFeed } from './games/element-sources.ts';
 import { defaultRomSites } from './games/rom-sites.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { t } from './i18n/current.ts';
@@ -40,6 +43,8 @@ import { flushWithin } from './storage/json-store.ts';
 import { dataPaths } from './storage/paths.ts';
 import { createStore } from './store/index.ts';
 import { createTv } from './tv/index.ts';
+import { tvConfigFeed } from './tv/element-sources.ts';
+import { siteConfigFeed } from './web/element-sources.ts';
 import { createUsageService } from './usage/index.ts';
 import { chromeLikeUserAgent, createWebLayer, nativeUserAgent, WEB_PARTITION, type ViewLike, type WebManagerDeps } from './web/index.ts';
 import { createDialogs } from './window/dialogs.ts';
@@ -96,7 +101,7 @@ function start(pending: PendingFiles): Running {
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
   const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
-  const tv = createTv({ config, http, toUi });
+  const tv = createTv({ config, http, toUi, catalog });
 
   // Lancement de programmes (jeux, émulateurs, lecteur externe) ; « réduire pendant le jeu ».
   const launcher = createLauncher({ shell, minimizeWhileRunning: window.minimizeWhileRunning });
@@ -137,6 +142,7 @@ function start(pending: PendingFiles): Running {
     romCacheDir: () => files.romCache,
     pickFile: dialogs.pickFile,
     toUi,
+    catalog,
   });
 
   // Lecture des données, puis services qui en dépendent.
@@ -178,6 +184,21 @@ function start(pending: PendingFiles): Running {
   catalog.onChange(({ added }) => {
     if (added.length) metadata.adopt(added.map((k) => catalog.get(k)).filter((e) => !!e));
   });
+  // Jeux ajoutés à la main, marque-pages, sites, portail de télévision : leurs éléments suivent la configuration ;
+  // les consoles, dossiers de jeux et services qui n'y sont plus quittent le catalogue (P2-03).
+  const syncConfig = (cfg: Config) => {
+    try {
+      syncFeeds(catalog, [gameConfigFeed(cfg), tvConfigFeed(cfg), siteConfigFeed(cfg)]);
+    } catch (err) {
+      console.error('Catalogue (configuration) :', (err as Error).message);
+    }
+  };
+  syncConfig(config.get());
+  // Fiches gardées sous une ancienne clé dont l'élément était déjà là (jeux d'une version précédente) : rattachées.
+  const known = catalog.keys().map((k) => catalog.get(k)).filter((e) => !!e);
+  overrides.adopt(known);
+  metadata.adopt(known);
+  config.onChange((next) => syncConfig(next));
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
   const scraper = createScraper({

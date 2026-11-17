@@ -7,7 +7,8 @@ import { isHttpUrl, type TvService } from '@mire/shared';
 import * as netHttp from '../net/http.ts';
 import { groupChannels, parseM3U } from './channels.ts';
 import { detectTvService } from './detect.ts';
-import type { ChannelsResult, TvDeps, TvProvider, TvProviderContext } from './types.ts';
+import { channelElements } from './element-sources.ts';
+import type { Channel, ChannelsResult, TvDeps, TvProvider, TvProviderContext } from './types.ts';
 import { t } from '../i18n/current.ts';
 
 /** Playlist M3U lue dans Mire : adresse sur le réseau de la box, ou fichier local. */
@@ -77,7 +78,18 @@ export function createTv(deps: TvDeps) {
     if (!svc) return { ok: false, error: t('tv.errors.noService') };
     // Un service d'un autre genre que « web » est lu comme une playlist, comme avant l'introduction des fournisseurs.
     const provider = providers.find((p) => p.kind === svc.kind) || playlistProvider;
-    return provider.channels(svc, ctx);
+    const r = await provider.channels(svc, ctx);
+    if (deps.catalog && r.ok && 'channels' in r) feed(deps.catalog, svc, r.channels);
+    return r;
+  }
+
+  /** Chaînes lues → catalogue d'éléments (`element-sources.ts`) ; une erreur du catalogue ne gêne jamais la réponse. */
+  function feed(catalog: NonNullable<TvDeps['catalog']>, svc: TvService, list: Channel[]): void {
+    try {
+      catalog.setSource({ plugin: 'tv-m3u', instance: svc.id }, channelElements(svc, list));
+    } catch (err) {
+      console.error('Catalogue (télévision) :', (err as Error).message);
+    }
   }
 
   return { detect, detectOnce, active, channels };

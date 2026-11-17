@@ -8,6 +8,7 @@
 import type { ElementImages, ElementKey, InfoValue, OpenKind } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
 import { gameBookmarkKey, localFileKey } from './keys.ts';
+import { pcNameTarget } from './targets.ts';
 import { INFO_ID_RE, isInfoValue } from './tags/registry.ts';
 
 /** Champ de l'ancien format → info. */
@@ -29,19 +30,22 @@ export interface LegacyTarget {
 
 const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
 
-/** Élément visé par une ancienne clé ; `{}` pour un dossier, un jeu PC (nom), une console : aucun élément. */
+/** Élément visé par une ancienne clé ; `{}` pour un dossier (album) ou une console : aucun élément. */
 export function legacyTarget(legacyKey: string, platform: NodeJS.Platform = process.platform): LegacyTarget {
   const m = /^([a-z]):(.+)$/s.exec(legacyKey);
   if (!m) return {};
   const [, prefix, rest] = m;
-  // Vidéo, morceau, image : fichier local (clé déduite), fichier d'un serveur web ou entrée M3U (à retrouver).
+  // Vidéo, morceau, image : fichier local (clé déduite), fichier d'un serveur web, entrée M3U ou marque-page d'une
+  // page de streaming (présenté par l'interface historique comme une vidéo à l'adresse de la page), à retrouver.
   if (prefix === 'v' || prefix === 't' || prefix === 'i') {
-    if (isUrl(rest)) return { find: { target: rest, kinds: ['file', 'stream'] } };
+    if (isUrl(rest)) return { find: { target: rest, kinds: ['file', 'stream', 'site'] } };
     return { key: localFileKey(rest, platform) };
   }
   // ROM : la console n'est pas dans la clé, l'élément se retrouve par son fichier.
   if (prefix === 'r') return { find: { target: rest, kinds: ['game'] } };
   if (prefix === 'b' && rest.trim()) return { key: gameBookmarkKey(rest) };
+  // Jeu PC : désigné par son nom simplifié, retrouvé parmi les programmes du même nom (P2-03).
+  if (prefix === 'g' && rest) return { find: { target: pcNameTarget(rest), kinds: ['program'] } };
   return {};
 }
 

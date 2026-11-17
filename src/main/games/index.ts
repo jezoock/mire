@@ -12,6 +12,7 @@ import { localPcProvider, scanGameSources } from './pc/scanner.ts';
 import { downloadGame } from './roms/download.ts';
 import { launchRom } from './roms/launch.ts';
 import { consoleLocations, listRoms, type ListOptions } from './roms/list.ts';
+import { gameCatalogFeed } from './element-sources.ts';
 import type { GamesDeps } from './types.ts';
 
 export { consoleLocations, listRoms, citedByPlaylists } from './roms/list.ts';
@@ -21,13 +22,28 @@ export type * from './types.ts';
 
 export function createGames(deps: GamesDeps) {
   const providers = deps.providers || [localPcProvider(deps.platform)];
+  const feed = deps.catalog ? gameCatalogFeed(deps.catalog, deps.platform) : null;
+  /** Le catalogue ne doit jamais empêcher une liste de jeux de répondre. */
+  const guarded = (fn: () => void) => {
+    try {
+      fn();
+    } catch (err) {
+      (deps.onCatalogError ?? ((e: Error) => console.error('Catalogue (jeux) :', e.message)))(err as Error);
+    }
+  };
+  const onScanned = feed ? (...args: Parameters<typeof feed.roms>) => guarded(() => feed.roms(...args)) : undefined;
   return {
-    scanGameSources: () => scanGameSources(deps.config.get().gameSources, providers),
+    async scanGameSources() {
+      const sources = deps.config.get().gameSources;
+      const result = await scanGameSources(sources, providers);
+      if (feed) guarded(() => feed.pc(sources, result));
+      return result;
+    },
     launchGame: (index: number) => launchGame(deps, index),
     launchGamePath: (target: unknown) => launchGamePath(deps, target),
     addGame: () => addGame(deps),
     consoleLocations,
-    listRoms: (consoleId: unknown, opts?: ListOptions) => listRoms(deps, consoleId, opts),
+    listRoms: (consoleId: unknown, opts?: ListOptions) => listRoms({ ...deps, onScanned }, consoleId, opts),
     launchRom: (consoleId: unknown, romPath: string) => launchRom(deps, consoleId, romPath),
     downloadGame: (consoleId: string, url: string) => downloadGame(deps, consoleId, url),
     deleteGame: (ref: GameRef) => deleteGame(deps, ref),
