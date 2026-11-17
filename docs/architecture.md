@@ -667,6 +667,33 @@ démarrage et ne calcule rien d'autre.
   `listsMove(id, key, to)` ; `name` : un texte ou une clé des catalogues (`{ key }`). Événement `onListsChange`
   (`lists:changed`, `{ lists: [...] }`) : ces listes, et leur page `list:<id>`, sont à redemander.
 
+### Recherche
+
+Le service (`catalog/search/`, `createSearch`, `catalog.search(query, options)` de l'architecture cible) cherche dans
+les éléments effectifs du moteur de tags. Les fournisseurs « Où regarder » (`SearchProvider`) restent interrogés à
+part, comme avant ; l'interface historique garde sa propre recherche (`src/renderer/domain/search.ts`).
+
+- **Comparaison** : celle de l'interface historique (`matcher`) : un élément est trouvé s'il contient tous les mots de
+  la recherche, dans n'importe quel ordre, sans tenir compte des accents ni de la casse (`fold`). Une recherche vide
+  ou faite d'espaces ne trouve rien.
+- **Ce qui est cherché** : le nom de l'élément, ses infos texte (type `text` du registre, éléments texte des infos de
+  liste comme `genres`, et une info non déclarée si sa valeur est un texte ; pas les nombres) et le nom affiché de
+  ses tags, dans la langue de l'interface (« films » trouve les films en français, « movies » en anglais).
+- **Calcul à la demande** : rien n'est calculé au démarrage. À la première recherche, le nom et les infos texte de
+  chaque élément sont simplifiés et gardés (une valeur qui se répète, comme un dossier, n'est simplifiée qu'une
+  fois) ; ensuite, `engine.onChange` les tient à jour. Au-delà de 500 éléments changés d'un coup, ils sont oubliés et
+  préparés de nouveau à la recherche suivante. Les noms des tags sont comparés à chaque recherche (il y en a peu).
+- **Résultats groupés par page** : pour chaque page (`pages.list()`, dans l'ordre du menu), les éléments trouvés qui y
+  entrent (même règle que la page : `require`, `exclude`, `where`) ; un élément peut être dans plusieurs groupes. Les
+  éléments qui n'entrent dans aucune page forment un dernier groupe (`page: null`, « Autres éléments », catalogues
+  `pages.outside`). Les listes ne sont pas des groupes. Un groupe rend ses `limit` premiers éléments (24 par défaut,
+  100 au plus) et son `total` : ceux dont le nom contient tous les mots d'abord, puis par nom.
+- **IPC** : `catalogSearch(query, options?)` (canal `catalog:search`) rend `{ query, total, groups }`
+  (`SearchResult`, `@mire/shared`) ; `total` compte chaque élément trouvé une fois.
+- Coût sur 20 000 éléments factices (`test/catalog/search-bench.test.ts`) : 30 à 40 ms pour la première recherche,
+  qui prépare les textes (davantage quand le ramasse-miettes passe) ; 3 à 7 ms pour les suivantes, ~15 ms pour une
+  recherche qui trouve presque tout (« e ») ; ~1 ms pour un élément changé, textes préparés.
+
 ## Configuration
 
 `src/main/config/` détient la configuration (`config.json`) ; ses types (`Config`, `WebSite`, `TvService`,

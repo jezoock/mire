@@ -31,7 +31,7 @@ export interface SearchServiceOptions {
   translate: (key: string) => string;
 }
 
-/** Texte de recherche d'un élément, simplifié (`fold`). */
+/** Textes de recherche d'un élément, simplifiés (`fold`). */
 interface Entry {
   name: string;
   /** Infos texte, simplifiées ; les valeurs qui se répètent (dossier, série, album) partagent la même chaîne. */
