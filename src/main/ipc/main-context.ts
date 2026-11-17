@@ -8,6 +8,7 @@ import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { Pages } from '../catalog/pages/index.ts';
 import type { Lists } from '../catalog/lists/index.ts';
 import type { Search } from '../catalog/search/index.ts';
+import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -34,6 +35,7 @@ export interface MainServices {
   pages: Pages;
   lists: Lists;
   search: Search;
+  fileManager: FilesService;
   access: AccessPolicy;
   window: Pick<MainWindow, 'get' | 'themeBackground'>;
   pending: PendingFiles;
@@ -64,6 +66,7 @@ export function mainContext(s: MainServices): MainContext {
     pages: s.pages,
     lists: s.lists,
     search: s.search,
+    fileManager: s.fileManager,
     access: s.access,
     get mainWindow() {
       return s.window.get();

@@ -15,7 +15,7 @@ import { checkExisting, checkFolder, isValidName, type Checked, type FilesErrorC
 /** Ce que le service fait sur le disque (injectable : les tests tournent sans Electron). */
 export interface FilesOps extends GuardFs {
   /** Identité d'un fichier sans suivre un lien (`fs.lstat`) ; rejette si rien n'existe. */
-  lstat(p: string): Promise<{ dev: number; ino: number }>;
+  lstat(p: string): Promise<{ dev: number; ino: number; isDirectory(): boolean }>;
   rename(from: string, to: string): Promise<void>;
   /** Met un fichier ou un dossier à la corbeille (`shell.trashItem` d'Electron). */
   trash(p: string): Promise<void>;
@@ -45,7 +45,8 @@ const nodeOps: Omit<FilesOps, 'trash'> = {
   rename: (from, to) => fsp.rename(from, to),
 };
 
-const failure = (code: FilesErrorCode, reason?: string): { ok: false; code: FilesErrorCode; reason?: string } => (reason ? { ok: false, code, reason } : { ok: false, code });
+const failure = (code: FilesErrorCode, reason?: string): { ok: false; code: FilesErrorCode; reason?: string } =>
+  reason ? { ok: false, code, reason } : { ok: false, code };
 
 export function createFilesService({ roots, ops: given, follow, platform = process.platform }: FilesServiceOptions) {
   const ops: FilesOps = { ...nodeOps, ...given };
@@ -92,6 +93,7 @@ export function createFilesService({ roots, ops: given, follow, platform = proce
       if (!src.ok) return src;
       const dest = await checkFolder(folder, roots(), guard);
       if (!dest.ok) return dest;
+      if (!(await ops.lstat(dest.real)).isDirectory()) return failure('notFolder');
       // Un dossier ne se déplace pas en lui-même ni dans ce qu'il contient (comparés par chemins réels).
       const srcReal = await ops.realpath(src.path);
       const key = (p: string) => (platform === 'win32' ? p.toLowerCase() : p);

@@ -157,6 +157,10 @@ const ADDED_METHODS: Record<string, string> = {
   listsRemoveItems: 'lists:removeItems',
   listsMove: 'lists:move',
   catalogSearch: 'catalog:search',
+  // P2-10 : gestion des fichiers
+  filesRename: 'files:rename',
+  filesMove: 'files:move',
+  filesRemove: 'files:remove',
 };
 
 // Événements ajoutés après P1-08.
