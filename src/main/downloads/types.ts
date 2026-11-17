@@ -1,4 +1,5 @@
 /** Types partagés par le gestionnaire de téléchargements et ses moteurs (HTTP, torrent). */
+import type { DownloadAddResult, Downloader as SdkDownloader } from '@mire/plugin-sdk';
 
 export type DownloadKind = 'http' | 'torrent';
 
@@ -44,7 +45,7 @@ export interface DownloadContext {
 }
 
 /** Résultat d'un ajout. */
-export type AddResult = { ok: true; id?: string; external?: boolean; duplicate?: boolean } | { ok: false; error: string };
+export type AddResult = DownloadAddResult;
 
 export interface Destination {
   dir: string;
@@ -70,18 +71,9 @@ export interface DownloaderHost {
   finish(it: DownloadRecord, files: string[]): Promise<void>;
 }
 
-/** Moteur de téléchargement interchangeable. */
-export interface Downloader {
+/** Moteur de téléchargement interchangeable : l'interface du SDK (contribution `downloaders`), avec les fiches de Mire. */
+export interface Downloader extends SdkDownloader<DownloadRecord, DownloadContext> {
   readonly id: DownloadKind;
-  canHandle(source: string): boolean;
-  /** Nouveau téléchargement, ou relance de la fiche `fiche`. */
-  add(source: string, ctx?: DownloadContext, fiche?: DownloadRecord | null): AddResult | Promise<AddResult>;
-  /** La fiche a-t-elle un transfert en cours dans ce moteur ? */
-  isLive(id: string): boolean;
-  pause(it: DownloadRecord): void;
-  resume(it: DownloadRecord): void | Promise<void>;
-  cancel(it: DownloadRecord, removeFiles: boolean): Promise<void>;
-  stop(): Promise<void>;
 }
 
 /** Options de la commande « télécharger dans le cache puis prévenir ». */

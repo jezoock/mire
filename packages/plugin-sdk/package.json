@@ -1,0 +1,37 @@
+{
+  "name": "@mire/plugin-sdk",
+  "version": "0.1.0",
+  "description": "Contrat public des plugins de Mire : types des contributions et du contexte, schéma et validation du manifeste",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "mire-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./validate": {
+      "mire-source": "./src/validate-dir.ts",
+      "types": "./dist/validate-dir.d.ts",
+      "default": "./dist/validate-dir.js"
+    },
+    "./mire-plugin.schema.json": "./schema/mire-plugin.schema.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "mire-plugin": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build"
+  }
+}

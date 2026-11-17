@@ -1,0 +1,14 @@
+{
+  // Construction de l'archive (`npm pack`) : JavaScript et déclarations dans dist/, imports réécrits en `.js`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": false,
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": false
+  }
+}

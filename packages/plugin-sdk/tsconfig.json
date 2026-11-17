@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // @types/node (validation d'un dossier, outil en ligne de commande) vient du paquet electron de Mire.
+    "types": ["node"]
+  },
+  "include": ["src/**/*"]
+}

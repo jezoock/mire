@@ -6,6 +6,7 @@
  */
 import type { ElementKey, ElementSourceRef, OpenSpec } from './element.ts';
 import { PAGE_ID_RE } from './pages.ts';
+import { LIST_PAGE_PREFIX } from '../../plugin-sdk/src/targets.ts';
 
 /**
  * Élément d'une liste, tel qu'il était la dernière fois que le catalogue l'avait : de quoi l'afficher (marqué
@@ -60,7 +61,7 @@ export interface ListsChange {
 }
 
 /** Préfixe d'une liste dans `catalog.page` : `list:<id>`. Les identifiants de page n'ont jamais de `:`. */
-export const LIST_PAGE_PREFIX = 'list:';
+export { LIST_PAGE_PREFIX };
 export const listPageId = (id: string): string => `${LIST_PAGE_PREFIX}${id}`;
 /** Identifiant de la liste désignée par un `pageId`, ou `null` si ce n'est pas une liste. */
 export const listIdOfPage = (pageId: unknown): string | null =>

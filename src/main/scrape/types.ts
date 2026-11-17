@@ -1,28 +1,29 @@
 /** Types du moteur de récupération d'infos (films, séries, albums, jeux) et de ses fournisseurs. */
 import type { Config } from '@mire/shared';
+import type {
+  MetadataCandidate,
+  MetadataFacts,
+  MetadataGroup,
+  MetadataKind,
+  MetadataOutcome,
+  MetadataOverride,
+  MetadataPick,
+  MetadataProvider as SdkMetadataProvider,
+  MetadataQuery,
+} from '@mire/plugin-sdk';
 import type { FetchLike } from '../net/http.ts';
 
+// Les types des fournisseurs sont publiés dans le SDK des plugins (contribution `metadata`) ; le moteur garde ses noms.
+export type { MissingRequirement } from '@mire/plugin-sdk';
+
 /** Nature d'un élément à décrire (le `kind` des demandes de l'interface). */
-export type ScrapeKind = 'video' | 'album' | 'rom' | 'pc';
+export type ScrapeKind = MetadataKind;
 
 /** Familles de la récupération groupée (`run`) : chaque fournisseur appartient à l'une d'elles. */
-export type ScrapeGroup = 'videos' | 'music' | 'games';
+export type ScrapeGroup = MetadataGroup;
 
 /** Fiche produite par un fournisseur. Les champs absents ne sont pas écrits (format de `db.json` inchangé). */
-export interface ScrapeFacts {
-  title: string;
-  year?: string;
-  overview?: string;
-  genre?: string;
-  artist?: string;
-  /** Chemin de l'image copiée dans le dossier d'images du moteur. */
-  image: string | null;
-  backdrop?: string | null;
-  series?: boolean;
-  source: string;
-  /** Fiche choisie par l'utilisateur dans la liste des candidats. */
-  picked?: boolean;
-}
+export type ScrapeFacts = MetadataFacts;
 
 /** Fiche enregistrée dans `db.json`, avec sa révision et sa date. */
 export interface ScrapeRecord extends ScrapeFacts {
@@ -56,41 +57,18 @@ export interface ScrapeStore {
 }
 
 /** Fiche choisie par l'utilisateur (un des candidats). */
-export interface ScrapePick {
-  id: string;
-  title?: string;
-  sub?: string;
-  year?: string;
-}
+export type ScrapePick = MetadataPick;
 
 /** Correction de l'utilisateur : autre titre (et type, année, artiste) ou fiche choisie. */
-export interface ScrapeOverride {
-  type?: string;
-  title?: string;
-  year?: string;
-  artist?: string;
-  pick?: ScrapePick;
-}
+export type ScrapeOverride = MetadataOverride;
 
 /** Fiche proposée au choix de l'utilisateur. */
-export interface ScrapeCandidate {
-  id: string;
-  title: string;
-  year: string;
-  sub: string;
-  image: string | null;
-  fallback?: string | null;
-}
+export type ScrapeCandidate = MetadataCandidate;
 
 /** Élément à décrire, tel que l'envoie l'interface ou le service des jeux. */
 export type ScrapeItem = Record<string, any>;
 
-export interface CandidateQuery {
-  item?: ScrapeItem;
-  query: string;
-  year?: string | number;
-  artist?: string;
-}
+export type CandidateQuery = MetadataQuery<ScrapeItem>;
 
 export interface RunOptions {
   kinds?: ScrapeGroup[];
@@ -159,35 +137,7 @@ export interface JobContext extends ProviderContext {
  * Résultat d'une récupération : une fiche (enregistrée), `null` (rien trouvé : échec noté, nouvel essai dans
  * 14 jours) ou `undefined` (rien d'enregistré : annulation, fiche choisie introuvable).
  */
-export type ScrapeOutcome = ScrapeFacts | null | undefined;
+export type ScrapeOutcome = MetadataOutcome;
 
-/** Clé TMDB manquante, par exemple : la récupération groupée saute la famille, la recherche refuse. */
-export interface MissingRequirement {
-  /** Ligne de « skipped » dans le bilan de `run`. */
-  skipped: string;
-  /** Message d'erreur de `candidates`. */
-  error: string;
-}
-
-/** Une source d'infos (TMDB, MusicBrainz, libretro, Steam). */
-export interface MetadataProvider {
-  id: string;
-  /** Natures d'éléments décrites. */
-  kinds: ScrapeKind[];
-  /** Famille de la récupération groupée. */
-  group: ScrapeGroup;
-  /** Récupérations simultanées au plus pendant `run`. */
-  concurrency: number;
-  /** Ce qui manque pour interroger la source (clé…), ou `null`. */
-  requires?(ctx: ProviderContext): MissingRequirement | null;
-  /** Clé de la fiche d'un élément dans `db.json`. */
-  key(item: ScrapeItem): string;
-  /** Éléments à décrire pour `run`, d'après ses options ou la configuration. */
-  collect(opts: RunOptions, ctx: ProviderContext): ScrapeItem[] | Promise<ScrapeItem[]>;
-  /** Cherche la fiche d'un élément (d'après son nom, ou la correction `override`). */
-  scrape(item: ScrapeItem, override: ScrapeOverride | undefined, ctx: JobContext): Promise<ScrapeOutcome>;
-  /** Fiches correspondant à une recherche, pour laisser choisir la bonne. */
-  candidates(query: CandidateQuery, ctx: ProviderContext): Promise<ScrapeCandidate[]>;
-  /** Récupère la fiche choisie par l'utilisateur. */
-  byId(pick: ScrapePick, item: ScrapeItem, ctx: JobContext): Promise<ScrapeOutcome>;
-}
+/** Une source d'infos (TMDB, MusicBrainz, libretro, Steam) : l'interface du SDK, avec le contexte du moteur. */
+export type MetadataProvider = SdkMetadataProvider<ScrapeItem, ProviderContext, JobContext, RunOptions>;

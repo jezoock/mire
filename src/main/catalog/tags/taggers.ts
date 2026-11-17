@@ -16,21 +16,10 @@ import {
 } from '@mire/shared';
 import { parseVideo } from '../../scrape/parse.ts';
 import type { Contributor } from './engine.ts';
+import type { Tagger, TaggerResult } from '@mire/plugin-sdk';
 
-/** Ce qu'un tag automatique pose sur un élément. */
-export interface TaggerResult {
-  tags?: string[];
-  infos?: Record<string, InfoValue>;
-}
-
-/**
- * Tag automatique : reçoit un élément (avec les tags du type de fichier et de la source) et rend des tags et des
- * infos, ou `null`. Rapide et sans réseau : il est appelé pour chaque élément à chaque analyse.
- */
-export interface Tagger {
-  id: string;
-  compute(element: Readonly<Element>): TaggerResult | null;
-}
+// Interfaces publiées dans le SDK des plugins (contribution `taggers`).
+export type { Tagger, TaggerResult };
 
 /** Dossier d'un fichier (chemin local ou adresse) : tout ce qui précède le dernier séparateur. */
 const dirOf = (p: string): string => p.replace(/[\\/]+[^\\/]*$/, '');
