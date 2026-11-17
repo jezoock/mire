@@ -4,6 +4,8 @@
 // data-palette d'une palette : ses jetons, et ceux du moteur qui en dérivent (theme/_base.scss), s'y appliquent.
 .mire-ui-demo {
   display: grid;
+  // Une seule colonne, jamais plus large que la vue : les rangées défilent dans leur ds-scroller, pas la page.
+  grid-template-columns: minmax(0, 1fr);
   gap: ds-spacing(5);
   padding-bottom: ds-spacing(6);
 
