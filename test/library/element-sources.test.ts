@@ -238,7 +238,9 @@ describe('sources de la bibliothèque : serveur web et liste M3U', () => {
     assert.equal(chaine?.name, 'Chaîne A');
     assert.deepEqual(chaine?.tags, ['remote']);
     assert.deepEqual(chaine?.open, { kind: 'stream', url: 'http://flux/a' });
-    assert.deepEqual(chaine?.infos, { playlist: 'chaines' });
+    // Sans extension : le type de média vient de celui de la source (P2-04) ; avec, le moteur de tags le déduit.
+    assert.deepEqual(chaine?.infos, { playlist: 'chaines', mediaType: 'video' });
+    assert.deepEqual(catalog.element(m3uEntryKey(list, `${server.base}/listes/musique/b.mp3`, PLATFORM))?.infos, { playlist: 'chaines' });
     assert.deepEqual(chaine?.images, { logo: 'http://logo/a.png' });
   });
 

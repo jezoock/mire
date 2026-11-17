@@ -29,16 +29,22 @@ export interface CatalogOptions {
 interface Instance {
   ref: ElementSourceRef;
   elements: Map<ElementKey, Element>;
+  /**
+   * Empreintes des éléments (leur JSON), calculées à la première comparaison puis gardées : une nouvelle analyse se
+   * compare sans resérialiser les éléments déjà connus, et la première analyse n'en calcule aucune.
+   */
+  prints: Map<ElementKey, string>;
   scanned: number;
 }
 
-const sameElement = (a: Element | undefined, b: Element | undefined) => JSON.stringify(a) === JSON.stringify(b);
-
-/** Mêmes éléments (l'ordre n'y entre pas). */
-function sameElements(a: Map<ElementKey, Element>, b: Map<ElementKey, Element>): boolean {
-  if (a.size !== b.size) return false;
-  for (const [key, e] of b) if (!sameElement(a.get(key), e)) return false;
-  return true;
+function printOf(inst: Instance, key: ElementKey): string | undefined {
+  let print = inst.prints.get(key);
+  if (print === undefined) {
+    const e = inst.elements.get(key);
+    if (!e) return undefined;
+    inst.prints.set(key, (print = JSON.stringify(e)));
+  }
+  return print;
 }
 
 export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnored }: CatalogOptions) {
@@ -53,6 +59,10 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
   const current = (key: ElementKey): Element | undefined => {
     const id = owners.get(key)?.[0];
     return id ? instances.get(id)?.elements.get(key) : undefined;
+  };
+  const owner = (key: ElementKey): Instance | undefined => {
+    const id = owners.get(key)?.[0];
+    return id ? instances.get(id) : undefined;
   };
 
   function storeFor(id: string, ref: ElementSourceRef, file = path.join(dir, sourceFileName(ref))): JsonStore<SourceFile> {
@@ -69,7 +79,7 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
   function apply(id: string, next: Instance | null): CatalogChange {
     const prev = instances.get(id);
     const affected = new Set<ElementKey>([...(prev?.elements.keys() ?? []), ...(next?.elements.keys() ?? [])]);
-    const before = new Map([...affected].map((k) => [k, current(k)]));
+    const before = new Map([...affected].map((k) => [k, owner(k)]));
     if (next) instances.set(id, next);
     else instances.delete(id);
     for (const key of affected) {
@@ -81,10 +91,10 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
     const change: CatalogChange = { added: [], changed: [], removed: [] };
     for (const key of affected) {
       const was = before.get(key);
-      const is = current(key);
+      const is = owner(key);
       if (!was && is) change.added.push(key);
       else if (was && !is) change.removed.push(key);
-      else if (!sameElement(was, is)) change.changed.push(key);
+      else if (was && is && was !== is && printOf(was, key) !== printOf(is, key)) change.changed.push(key);
     }
     return change;
   }
@@ -115,7 +125,7 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
         }
         const id = sourceId(data.source);
         storeFor(id, data.source, file);
-        apply(id, { ref: data.source, scanned: data.scanned, elements: new Map(data.elements.map((e) => [e.key, e])) });
+        apply(id, { ref: data.source, scanned: data.scanned, elements: new Map(data.elements.map((e) => [e.key, e])), prints: new Map() });
       }
     },
 
@@ -125,6 +135,9 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
       const found = current(key);
       return found ? structuredClone(found) : null;
     },
+
+    /** Élément d'après sa clé, sans copie (lecture seule : moteur de tags), ou `undefined`. */
+    get: (key: ElementKey): Readonly<Element> | undefined => current(key),
 
     /** Nombre d'éléments. */
     size: () => owners.size,
@@ -151,14 +164,20 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
         const added = known?.elements.get(input.key)?.added ?? input.added ?? now();
         elements.set(input.key, { ...input, source: { ...ref }, added });
       }
+      // Empreintes des nouveaux éléments, seulement s'il y a de quoi comparer.
+      const prints = new Map<ElementKey, string>();
+      if (known) for (const [key, e] of elements) prints.set(key, JSON.stringify(e));
       // Rien n'a changé (cas le plus courant) : ni copie, ni calcul des changements, ni écriture.
-      if (known && sameElements(known.elements, elements)) {
+      if (known && known.elements.size === elements.size && [...prints].every(([key, print]) => printOf(known, key) === print)) {
         known.scanned = now();
         return { added: [], changed: [], removed: [] };
       }
-      // Copie : la source garde la main sur les objets qu'elle a donnés.
-      for (const [key, e] of elements) elements.set(key, structuredClone(e));
-      const inst = { ref, elements, scanned: now() };
+      // Copie : la source garde la main sur les objets qu'elle a donnés. Un élément inchangé garde l'objet connu.
+      for (const [key, e] of elements) {
+        const old = known?.elements.get(key);
+        elements.set(key, old && printOf(known!, key) === prints.get(key) ? old : structuredClone(e));
+      }
+      const inst = { ref, elements, prints, scanned: now() };
       const change = apply(id, inst);
       persist(id, inst);
       emit(change);

@@ -26,11 +26,7 @@ export function metaHandlers(ctx: MainContext) {
     metaAll: () => ctx.userMeta,
     metaSet: (...args) => ctx.setMeta(...args),
     metaPickImage: (...args) => ctx.pickMetaImage(...args),
-    metaReset: (key) => {
-      delete ctx.userMeta[key];
-      ctx.saveMeta();
-      return true;
-    },
+    metaReset: (key) => ctx.resetMeta(key),
     pickImageFile: (title) => pickImageFile(ctx, title),
   } satisfies Partial<IpcImplementations>;
 }

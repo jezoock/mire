@@ -56,8 +56,8 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
 | `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
-| `catalog/` | Catalogue d'éléments (P2-01, P2-02) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`). Voir « Catalogue d'éléments ». |
-| `meta/` | Infos modifiées à la main (`meta/meta.json`) et images choisies (`meta/img/`). |
+| `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`). Voir « Catalogue d'éléments ». |
+| `meta/` | Façade de l'interface historique sur les infos modifiées à la main (rangées dans `catalog/overrides.json` depuis P2-04) ; images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
 | `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
 | `net/` | Client HTTP unique (`http.ts` : délais, identité, erreurs) et client TMDB (`tmdb.ts`). |
@@ -94,7 +94,8 @@ Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
 **Dans `start`** :
 
 1. Chemins du dossier de données (`dataPaths`).
-2. Services de configuration et d'usage, catalogue d'éléments (créés, pas encore lus).
+2. Services de configuration et d'usage, catalogue d'éléments et modifications faites à la main (créés, pas encore
+   lus).
 3. Politique d'accès. Un abonné à `config.onChange` la remet à zéro et met à jour les sites ouverts.
 4. Fenêtre principale (créée, pas encore ouverte) ; elle fournit `toUi`, qui envoie un événement à l'interface.
 5. Bibliothèque, boîtes de dialogue, infos modifiées à la main, télévision.
@@ -103,7 +104,9 @@ Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
    (`useLanguage`).
 8. Couche web (`createWebLayer`) : Widevine et gestionnaire des vues.
 9. Recherche « où regarder », service des jeux.
-10. Lecture des données : `config.load()`, `usage.load()`, `meta.load()`, `catalog.load()`.
+10. Lecture des données : `config.load()`, `usage.load()`, `catalog.load()`, puis `overrides.load()` (après le
+    catalogue : reprise de `meta/meta.json` au premier démarrage), et création du moteur de tags (calcul de tous les
+    éléments, abonné aux changements du catalogue et de `catalog.fileTags`).
 11. Archives, moteur de récupération d'infos, puis `access.invalidate()` : les racines autorisées se calculeront à
     la première question.
 12. Boutique, puis téléchargements. Les téléchargements reprennent (`downloads.start()`), la box de télévision est
@@ -118,7 +121,8 @@ sont alors passés par un accesseur (`downloads: () => downloads`), lu au moment
 
 `start` rend trois points d'entrée au cycle de vie : deuxième lancement (les fichiers sont ouverts dans la fenêtre
 existante), clic sur l'icône du Dock (macOS), et `beforeQuit`. Avant de quitter, les téléchargements s'arrêtent et
-les écritures différées de `scrape/db.json`, `telechargements.json`, `usage.json` et du catalogue sont attendues
+les écritures différées de `scrape/db.json`, `telechargements.json`, `usage.json`, du catalogue et de
+`catalog/overrides.json` sont attendues
 deux secondes au plus.
 
 ## Interface (renderer)
@@ -383,7 +387,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
 | `usage.json` | « Reprendre », positions de reprise des vidéos, volume, recherches récentes | service des données d'usage, stockage JSON |
 | `catalog/sources/<plugin>--<emplacement>-<empreinte>.json` | Catalogue d'éléments : résultat de la dernière analyse de chaque emplacement de source (`{ version, source, scanned, elements }`) | catalogue (`src/main/catalog/`), stockage JSON (écriture différée) |
-| `meta/meta.json` | Infos modifiées à la main (titre, année, genre, résumé, images) | `src/main/meta/user-meta.ts`, stockage JSON |
+| `catalog/overrides.json` | Modifications faites à la main : tags ajoutés ou retirés, infos et images, par clé d'élément ; tags créés par l'utilisateur ; fiches de l'ancien `meta.json` sans élément (`{ version, tags, elements, unmatched }`) | `src/main/catalog/overrides.ts`, stockage JSON |
+| `meta/meta.json` | Ancien fichier des infos modifiées à la main : repris dans `catalog/overrides.json` au premier démarrage, puis laissé en place sans être écrit | `src/main/meta/user-meta.ts` jusqu'à P2-04 |
 | `meta/img/` | Images choisies à la main | `src/main/meta/user-meta.ts` |
 | `scrape/db.json` | Infos récupérées en ligne (films, séries, jeux) et titres introuvables | moteur de récupération (`scrape/`), stockage JSON |
 | `scrape/img/` | Affiches et images de fond téléchargées | moteur de récupération (`scrape/`) |
@@ -434,9 +439,14 @@ L'interface historique ne s'en sert pas.
 - **Persistance** (`persistence.ts`) : un fichier par emplacement dans `userData/catalog/sources/`, écrit par le
   stockage JSON (atomique, différé d'une seconde). Au démarrage, `load()` relit tous les fichiers ; un fichier
   illisible ou d'une autre version est écarté (journal), un élément mal formé aussi.
-- **IPC** : `catalogElement(clé)` (canal `catalog:element`, le `catalog.element(key)` de l'architecture cible).
+- **IPC** : `catalogElement(clé)` (canal `catalog:element`, le `catalog.element(key)` de l'architecture cible) rend
+  l'élément avec ses tags, infos et images effectifs ; `catalogSetTags`, `catalogSetInfos`, `tagsList` : voir « Tags
+  et infos ».
+- `get(clé)` rend l'élément sans copie (lecture seule, pour le moteur de tags).
 - **Écritures** : une analyse qui ne change rien à un emplacement ne copie rien, n'annonce rien et ne réécrit pas son
-  fichier (`scanned` y est donc la date de la dernière analyse qui l'a changé).
+  fichier (`scanned` y est donc la date de la dernière analyse qui l'a changé). Les éléments se comparent par leur
+  empreinte (leur JSON), calculée à la première comparaison et gardée ; un élément inchangé garde son objet, seuls
+  ceux qui changent sont copiés (P2-04).
 
 ### Sources de la bibliothèque
 
@@ -455,8 +465,9 @@ les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La 
   déclaré pour plusieurs types de fichiers est une seule instance.
 - **Infos et images posées par la source** : `folder` (dossier), `server` (serveur web), `playlist` (liste M3U),
   `subtitles` (sous-titres `.srt`/`.vtt` trouvés à côté d'une vidéo, chemins ou adresses) ; affiche et fanart
-  trouvés à côté du fichier (`poster`, `background`), logo d'une entrée M3U (`logo`). Le type de fichier et les
-  épisodes viendront du moteur de tags (P2-04, P2-05).
+  trouvés à côté du fichier (`poster`, `background`), logo d'une entrée M3U (`logo`) ; `mediaType` (`video`, `audio`,
+  `image`) pour une entrée M3U sans extension reconnue, qui tient son type de celui de la source configurée. Le type de
+  fichier vient du moteur de tags (« Tags et infos ») ; les épisodes viendront des tags automatiques (P2-05).
 - **Une seule analyse** : `scanLibrary` parcourt chaque emplacement une fois, rend ses `LibraryItem` à l'interface
   historique (inchangés) et appelle `onScanned` ; le service de la bibliothèque y passe les éléments au catalogue
   (`elementsOf`). `scan(emplacement)` analyse un emplacement seul, comme le fera l'hôte des plugins.
@@ -465,6 +476,56 @@ les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La 
   l'analyse suivante. Deux emplacements qui se recouvrent (dossier inclus dans un autre) donnent un seul élément
   par fichier, qui reste tant que l'un des deux le fournit.
 - Une erreur du catalogue est passée au journal ; elle n'empêche jamais `library.scan` de répondre.
+
+### Tags et infos
+
+Le moteur (`catalog/tags/engine.ts`, `createTagEngine`) calcule les tags, infos et images effectifs de chaque élément
+et les garde dans un index en mémoire. Il suit les événements du catalogue, les modifications faites à la main et
+les règles par extension de la configuration.
+
+- **Origines** (`tags/merge.ts`) :
+
+  | Origine | Tags | Infos et images |
+  | --- | --- | --- |
+  | Type de fichier (`tags/file-rules.ts`) | `video`, `audio`, `image` d'après l'extension du fichier ou de l'adresse (formats de `EXT`) ; sans extension reconnue, l'info `mediaType` posée par la source (entrée M3U) | `extension` (`mkv`) |
+  | Source | tags de la source (`local`, `network`, `remote`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, images trouvées à côté |
+  | Tags automatiques, infos en ligne | `Contributor` (`setContributors`), en attendant P2-05 et P2-06 | |
+  | À la main (`overrides.json`) | ajout (`true`) ou **retrait** (`false`) | toute info, images |
+
+  Tags : réunion des origines automatiques, puis les ajouts et les retraits faits à la main, qui l'emportent même
+  après une nouvelle analyse. Infos et images : à la main, puis infos en ligne (le premier fournisseur l'emporte),
+  puis tags automatiques, puis source, puis type de fichier.
+- **Règles par extension** : celles des formats reconnus ; seules les extensions changées sont gardées dans la
+  configuration (`catalog.fileTags` : `{ ".ts": ["audio"], ".mkv": [] }`). La section est absente tant que rien n'y a
+  été changé : la version de la configuration ne change pas.
+- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`) et infos
+  du cœur avec leur type (`text`, `number`, `boolean`, `list`) ; noms affichés dans les catalogues de textes
+  (`catalog.tags.<id>`, `catalog.infos.<id>`). Un tag inconnu ajouté à la main devient un tag de l'utilisateur, dont
+  l'identifiant est le nom simplifié (« Vus en 2024 » → `vus-en-2024`).
+- **Index** (`tags/tag-index.ts`) : tag → clés, info → valeur → clés (un élément de liste est indexé seul).
+  `query(require, exclude)` intersecte les ensembles en partant du plus petit : « `video` et `series` » sur 20 000
+  éléments factices répond en ~2 ms (`test/catalog/tags-bench.test.ts`, générateur `test/catalog/fake-catalog.ts`).
+- **IPC** : `catalogSetTags(clé, { tag: true | false | null })`, `catalogSetInfos(clé, { info: valeur | null })`
+  (`null` : retour à l'automatique ; une valeur est ramenée au type de l'info, une valeur invalide ignorée) rendent
+  l'élément, ou `null` s'il n'est pas dans le catalogue (la modification est gardée). `tagsList()` : tags du cœur, de
+  l'utilisateur, puis ceux posés sans être déclarés, avec le nombre d'éléments.
+- **Modifications à la main** (`overrides.ts`) : `userData/catalog/overrides.json`, écrit aussitôt. Il reprend
+  l'ancien `meta/meta.json` au premier démarrage (`legacy-meta.ts`) :
+
+  | Ancienne clé | Élément |
+  | --- | --- |
+  | `v:`, `t:`, `i:` + chemin local | `local:<chemin>` (clé déduite) |
+  | `v:`, `t:`, `i:` + adresse | l'élément ouvert par cette adresse (`remote:` ou `m3u:`), cherché dans le catalogue |
+  | `r:` + fichier | le jeu ouvert par ce fichier, cherché dans le catalogue |
+  | `b:<id>` | `gamebm:<id>` |
+  | `a:` (dossier d'album), `g:` (jeu PC d'après son nom), `c:` (console) | aucun : gardée sous l'ancienne clé (`unmatched`) |
+
+  Une fiche gardée sous une adresse rejoint son élément quand une analyse l'apporte. Champs : `title`, `overview`,
+  `artist` → infos du même nom ; `year` → `year` (nombre) ; `genre` → `genres` (liste) ; `image`, `backdrop` →
+  images `poster`, `background`. `meta.json` est laissé en place et n'est plus écrit.
+- **Façade** : `src/main/meta/user-meta.ts` garde l'API de l'interface historique (`metaAll`, `metaSet`,
+  `metaPickImage`, `metaReset`), sous les anciennes clés et avec les anciens champs. « Réinitialiser » efface les
+  infos et images de la fiche, pas les tags modifiés à la main.
 
 ## Configuration
 
@@ -476,7 +537,8 @@ les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La 
 - `migrations/` : une étape par version (`v2.ts` … `v8.ts`) et leur registre ; `migrate(brut)` rend
   `{ config, from, changed }`. Nouvelle version : ajouter `vN.ts`, l'inscrire dans `MIGRATIONS`, monter
   `CONFIG_VERSION` ;
-- `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète ;
+- `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète. La
+  section `catalog` (règles par extension du moteur de tags, P2-04) est facultative : absente, elle n'est pas ajoutée ;
 - `merge.ts` : import « compléter » ;
 - `service.ts` : `createConfigService({ file })`, seul point d'accès dans le processus principal. `load()` au
   démarrage (fichier absent → valeurs par défaut écrites ; illisible → mis de côté en `config.json.illisible-<date>`) ;

@@ -13,6 +13,7 @@ import { normalizeGameSources, normalizeLibrary } from './library.ts';
 import { normalizeTv } from './tv.ts';
 import { normalizeUi } from './ui.ts';
 import { normalizeWeb } from './web.ts';
+import { normalizeCatalogSettings } from '../../catalog/tags/file-rules.ts';
 
 export function normalizeConfig(raw: unknown): Config {
   const src: Loose = isObjectLike(raw) ? raw : {};
@@ -33,6 +34,8 @@ export function normalizeConfig(raw: unknown): Config {
   c.gamesOpts = normalizeGamesOptions(c.gamesOpts);
   c.emulators = normalizeEmulators(c.emulators);
   c.tv = normalizeTv(src.tv);
+  // Absente tant que rien n'y a été changé : la configuration écrite reste la même qu'avant.
+  if (src.catalog !== undefined) c.catalog = normalizeCatalogSettings(src.catalog);
   // Ancien réglage de la télévision (avant la v5), repris par la migration.
   delete c.freebox;
   return c as Config;

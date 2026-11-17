@@ -1,12 +1,13 @@
 /**
- * Infos modifiées à la main (titre, année, genre, résumé, artiste, images) : meta/meta.json, lu au démarrage.
- * Les images choisies sur le disque sont copiées dans meta/img.
+ * Infos modifiées à la main (titre, année, genre, résumé, artiste, images), telles que l'interface historique les
+ * lit et les écrit. Depuis P2-04, elles sont gardées dans `catalog/overrides.json` ; l'ancien `meta/meta.json` est
+ * repris au premier démarrage puis laissé en place. Les images choisies sur le disque sont copiées dans meta/img.
  */
 import crypto from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { UserMeta } from '@mire/shared/ipc';
-import { createJsonStore } from '../storage/json-store.ts';
+import type { Overrides } from '../catalog/overrides.ts';
 
 export const META_FIELDS = ['title', 'year', 'genre', 'overview', 'artist', 'image', 'backdrop'];
 
@@ -28,8 +29,8 @@ export function patchMeta(current: UserMeta | undefined, patch: unknown): UserMe
 }
 
 export interface UserMetaOptions {
-  /** meta/meta.json */
-  file: string;
+  /** Modifications faites à la main (`catalog/overrides.json`), qui gardent ces infos depuis P2-04. */
+  overrides: Pick<Overrides, 'legacyAll' | 'legacySet'>;
   /** meta/img : copies des images choisies. */
   imgDir: string;
   /** Demande une image à l'utilisateur (boîte de dialogue) : son chemin, ou `null`. */
@@ -37,19 +38,16 @@ export interface UserMetaOptions {
   now?: () => number;
 }
 
-export function createUserMeta({ file, imgDir, chooseImage, now = Date.now }: UserMetaOptions) {
-  const store = createJsonStore<Record<string, UserMeta>>(file, { defaults: {}, space: 2 });
-  let all: Record<string, UserMeta> = {};
-
-  const save = () => store.set(all);
-
+/**
+ * Façade de l'interface historique sur les modifications faites à la main : mêmes clés (`v:<chemin>`, `a:<dossier>`…)
+ * et mêmes champs qu'avant, rangés dans `overrides.json` sous la clé de chaque élément (`catalog/overrides.ts`).
+ */
+export function createUserMeta({ overrides, imgDir, chooseImage, now = Date.now }: UserMetaOptions) {
   function set(key: unknown, patch: unknown): UserMeta | null {
     if (typeof key !== 'string' || !key) return null;
-    const next = patchMeta(all[key], patch);
-    if (next) all[key] = next;
-    else delete all[key];
-    save();
-    return all[key] || null;
+    const next = patchMeta(overrides.legacyAll()[key], patch);
+    overrides.legacySet(key, next);
+    return next;
   }
 
   // Image choisie sur le disque, copiée dans meta/img sous un nom unique.
@@ -64,13 +62,14 @@ export function createUserMeta({ file, imgDir, chooseImage, now = Date.now }: Us
   }
 
   return {
-    load() {
-      all = store.load();
-    },
-    /** Toutes les infos, par clé (l'objet lui-même : `metaReset` le modifie puis appelle `save`). */
-    all: () => all,
-    save,
+    /** Toutes les infos, par ancienne clé (copie : la modifier ne change rien). */
+    all: (): Record<string, UserMeta> => structuredClone(overrides.legacyAll()),
     set,
+    /** Efface les infos d'une clé (« Réinitialiser »). */
+    reset(key: unknown): boolean {
+      if (typeof key === 'string' && key) overrides.legacySet(key, null);
+      return true;
+    },
     pickImage,
   };
 }

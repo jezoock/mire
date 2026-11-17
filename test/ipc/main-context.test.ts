@@ -15,10 +15,11 @@ function services() {
     usage: { name: 'usage' },
     i18n: { name: 'i18n' },
     catalog: { name: 'catalog' },
+    tags: { name: 'tags' },
     access: { name: 'access' },
     window: { get: () => win, themeBackground: fn('theme') },
     pending: createPendingFiles(['a.mkv']),
-    meta: { all: () => meta, save: fn('save'), set: fn('set'), pickImage: fn('pickImage') },
+    meta: { all: () => meta, reset: fn('reset'), set: fn('set'), pickImage: fn('pickImage') },
     files: { config: '/data/config.json', metaDir: '/data/meta' },
     library: { scan: fn('scan'), findSubtitles: fn('subs'), itemFromPath: fn('item') },
     dialogs: { openMedia: fn('openMedia'), pickFolder: fn('pickFolder'), pickFile: fn('pickFile') },
@@ -64,7 +65,7 @@ describe('mainContext', () => {
       openMediaDialog: 'openMedia',
       pickFolder: 'pickFolder',
       pickFile: 'pickFile',
-      saveMeta: 'save',
+      resetMeta: 'reset',
       setMeta: 'set',
       pickMetaImage: 'pickImage',
       playExternal: 'play',
@@ -77,7 +78,7 @@ describe('mainContext', () => {
     assert.equal(ctx.configPath(), '/data/config.json');
     assert.equal(ctx.metaDir(), '/data/meta');
     assert.equal(ctx.locationError, locationError);
-    for (const key of ['config', 'usage', 'i18n', 'catalog', 'access', 'web', 'scraper', 'store', 'downloads', 'adblock', 'games']) {
+    for (const key of ['config', 'usage', 'i18n', 'catalog', 'tags', 'access', 'web', 'scraper', 'store', 'downloads', 'adblock', 'games']) {
       assert.deepEqual((ctx as any)[key], { name: key }, key);
     }
   });

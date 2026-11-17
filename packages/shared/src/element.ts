@@ -70,3 +70,28 @@ export interface Element {
   /** Première fois que le catalogue a vu l'élément (millisecondes depuis 1970). */
   added: number;
 }
+
+/** Type de valeur d'une info : texte, nombre, oui/non, liste de textes. */
+export type InfoType = 'text' | 'number' | 'boolean' | 'list';
+
+/**
+ * Tags modifiés à la main pour un élément, par tag : `true` l'ajoute, `false` le retire (même s'il est posé
+ * automatiquement), `null` revient à l'automatique. Un tag inconnu est créé (tag de l'utilisateur) : son identifiant
+ * est son nom simplifié.
+ */
+export type TagChanges = Record<string, boolean | null>;
+
+/** Infos modifiées à la main pour un élément, par info : la valeur saisie, ou `null` pour revenir à l'automatique. */
+export type InfoChanges = Record<string, InfoValue | null>;
+
+/** Tag connu de Mire (`tags.list`). */
+export interface TagSummary {
+  /** Identifiant stable (`video`, `series`, ou nom simplifié d'un tag de l'utilisateur). */
+  id: string;
+  /** Nom affiché, dans la langue de l'interface. */
+  name: string;
+  /** Tag du cœur, créé par l'utilisateur, ou posé sans être déclaré (`other`). */
+  origin: 'core' | 'user' | 'other';
+  /** Nombre d'éléments qui le portent. */
+  count: number;
+}
