@@ -12,6 +12,7 @@ import { isListName, listIdOfPage, listPageId, newId, validateList } from '@mire
 import type { TagEngine } from '../tags/engine.ts';
 import { createJsonStore } from '../../storage/json-store.ts';
 import { PAGE_SIZE } from '../pages/index.ts';
+import { movedKey } from '../keys.ts';
 
 export const LISTS_VERSION = 1;
 
@@ -28,6 +29,8 @@ export interface ListsOptions {
   onIgnored?: (file: string, reason: string) => void;
   /** Identifiant d'une nouvelle liste (aléatoire par défaut). */
   newId?: () => string;
+  /** Règle des chemins des clés (`movePath`) ; par défaut, celle de Mire. */
+  platform?: NodeJS.Platform;
 }
 
 const empty = (): ListsFile => ({ version: LISTS_VERSION, lists: [] });
@@ -40,7 +43,7 @@ function snapshot(e: Element): ListItem {
 
 const sameItem = (a: ListItem, b: ListItem) => JSON.stringify(a) === JSON.stringify(b);
 
-export function createLists({ file, engine, onIgnored = logIgnored, newId: makeId = newId }: ListsOptions) {
+export function createLists({ file, engine, onIgnored = logIgnored, newId: makeId = newId, platform = process.platform }: ListsOptions) {
   const store = createJsonStore<ListsFile>(file, { defaults: empty, space: 2, onCorrupt: (err, f) => onIgnored(f, err.message) });
   let data = empty();
   /** Clé d'élément → listes qui le contiennent (pour suivre les changements du moteur). */
@@ -234,6 +237,39 @@ export function createLists({ file, engine, onIgnored = logIgnored, newId: makeI
       const next = from + PAGE_SIZE < total ? String(from + PAGE_SIZE) : null;
       const elements = list.items.slice(from, from + PAGE_SIZE).map(pageElement);
       return { page: listPageId(list.id), path: [], total, next, kind: 'elements', elements };
+    },
+
+    /**
+     * Fichier ou dossier renommé ou déplacé de `from` vers `to` (P2-10) : ses éléments, et ceux de tout ce qu'il
+     * contient, gardent leur place dans les listes sous leur nouvelle clé (ce que la liste garde d'eux est mis à jour
+     * quand le catalogue les retrouve). Rend les identifiants des listes touchées.
+     */
+    movePath(from: string, to: string): string[] {
+      const touched = new Set<string>();
+      for (const list of data.lists) {
+        const seen = new Set(list.items.filter((i) => !movedKey(i.key, from, to, platform)).map((i) => i.key));
+        const items: ListItem[] = [];
+        for (const item of list.items) {
+          const next = movedKey(item.key, from, to, platform);
+          if (!next) {
+            items.push(item);
+            continue;
+          }
+          touched.add(list.id);
+          index(list, item.key, false);
+          // L'élément était déjà dans la liste sous sa nouvelle clé (ancien fichier au même endroit) : une seule place.
+          if (seen.has(next)) continue;
+          seen.add(next);
+          items.push({ ...item, key: next });
+          index(list, next, true);
+        }
+        list.items = items;
+      }
+      if (touched.size) {
+        store.set(data);
+        emit(touched);
+      }
+      return [...touched];
     },
 
     /** Abonnement aux listes dont la définition ou le contenu a changé. */

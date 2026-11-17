@@ -205,6 +205,26 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
       return change;
     },
 
+    /**
+     * Éléments disparus du disque (fichier renommé, déplacé ou supprimé par Mire, P2-10) : ils quittent tout de suite
+     * leurs emplacements, sans attendre la prochaine analyse.
+     */
+    forget(keys: Iterable<ElementKey>): CatalogChange {
+      const gone = new Set(keys);
+      const total: CatalogChange = { added: [], changed: [], removed: [] };
+      for (const [id, inst] of instances) {
+        if (![...inst.elements.keys()].some((k) => gone.has(k))) continue;
+        const elements = new Map([...inst.elements].filter(([k]) => !gone.has(k)));
+        const prints = new Map([...inst.prints].filter(([k]) => !gone.has(k)));
+        const next = { ...inst, elements, prints };
+        const change = apply(id, next);
+        persist(id, next);
+        for (const k of ['added', 'changed', 'removed'] as const) total[k].push(...change[k]);
+      }
+      emit(total);
+      return total;
+    },
+
     /** Abonnement aux changements ; renvoie de quoi se désabonner. */
     onChange(listener: CatalogListener): () => void {
       listeners.add(listener);

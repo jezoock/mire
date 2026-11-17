@@ -312,6 +312,12 @@ export interface IpcMethods {
   listsMove(id: string, key: string, to: number): boolean;
   // Recherche dans le catalogue (P2-09) : noms, infos texte et noms des tags, résultats groupés par page.
   catalogSearch(query: string, options?: SearchOptions): SearchResult;
+  // Gestion des fichiers (P2-10) : `files.*` de l'architecture cible, seulement sous les dossiers locaux de la
+  // configuration ; la confirmation est demandée par l'interface (P4-09). Rendent le nouveau chemin (ou le chemin
+  // mis à la corbeille), ou l'erreur à afficher.
+  filesRename(path: string, name: string): Outcome<{ path: string }>;
+  filesMove(path: string, folder: string): Outcome<{ path: string }>;
+  filesRemove(path: string): Outcome<{ path: string }>;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -451,6 +457,9 @@ export const IPC_METHODS = {
   listsRemoveItems: 'lists:removeItems',
   listsMove: 'lists:move',
   catalogSearch: 'catalog:search',
+  filesRename: 'files:rename',
+  filesMove: 'files:move',
+  filesRemove: 'files:remove',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

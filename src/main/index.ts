@@ -33,6 +33,9 @@ import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
 import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
+import { catalogFollow } from './files/follow.ts';
+import { managedRoots } from './files/roots.ts';
+import { createFilesService } from './files/service.ts';
 import { registerMediaProtocol, registerMediaScheme } from './media-protocol/index.ts';
 import { createUserMeta } from './meta/user-meta.ts';
 import * as http from './net/http.ts';
@@ -191,6 +194,19 @@ function start(pending: PendingFiles): Running {
   const lists = createLists({ file: files.catalogLists, engine: tags });
   lists.load();
   lists.onChange((ids) => toUi('lists:changed', { lists: ids }));
+  // Gestion des fichiers (P2-10) : seulement sous les dossiers locaux de la configuration ; suppression vers la
+  // corbeille. Le catalogue suit ; les éléments déplacés reviennent sous leur nouvelle clé à l'analyse suivante,
+  // lancée peu après la dernière opération (une sélection de plusieurs fichiers ne lance qu'une analyse).
+  let rescanTimer: NodeJS.Timeout | undefined;
+  const rescan = () => {
+    clearTimeout(rescanTimer);
+    rescanTimer = setTimeout(() => library.scan().catch((err: Error) => console.error('Catalogue (fichiers) :', err.message)), 2000);
+  };
+  const fileManager = createFilesService({
+    roots: () => managedRoots(config.get()),
+    ops: { trash: (p) => shell.trashItem(p) },
+    follow: catalogFollow({ catalog, overrides, metadata, lists, rescan }),
+  });
   // Recherche : textes préparés à la première recherche, puis suivis par le moteur de tags.
   const search = createSearch({ engine: tags, catalog, pages: catalogPages, registry, translate: t });
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
@@ -259,6 +275,7 @@ function start(pending: PendingFiles): Running {
     pages: catalogPages,
     lists,
     search,
+    fileManager,
     access,
     window,
     pending,

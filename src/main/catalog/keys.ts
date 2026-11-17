@@ -147,3 +147,31 @@ export const bookmarkKey = (id: string): ElementKey => joinKey('bookmark', requi
 
 /** Marque-page d'un jeu à télécharger (`GameBookmark.id`). */
 export const gameBookmarkKey = (id: string): ElementKey => joinKey('gameBookmark', required(id, 'marque-page'));
+
+/** Chemin `p` (déjà sous sa forme de clé) une fois `from` devenu `to`, ou `null` s'il n'est pas `from` ni dessous. */
+function movedNormalized(p: string, from: string, to: string): string | null {
+  if (p === from) return to;
+  return p.startsWith(`${from}/`) ? `${to}${p.slice(from.length)}` : null;
+}
+
+/**
+ * Clé d'un élément après le renommage ou le déplacement de `from` (fichier ou dossier) vers `to` : fichier local,
+ * jeu de console ou jeu PC dont le chemin est `from` ou dessous. `null` pour toute autre clé (rien ne change).
+ */
+export function movedKey(key: string, from: string, to: string, platform: NodeJS.Platform = process.platform): ElementKey | null {
+  const genre = keyGenre(key);
+  if (genre !== 'local' && genre !== 'rom' && genre !== 'pc') return null;
+  const body = key.slice(key.indexOf(':') + 1);
+  // Jeu de console : la console (échappée, sans `|`) puis le chemin.
+  const cut = genre === 'rom' ? body.indexOf('|') + 1 : 0;
+  if (genre === 'rom' && cut === 0) return null;
+  const p = body.slice(cut);
+  if (isUrlTarget(p) || isHttpUrl(p)) return null;
+  const next = movedNormalized(p, normalizePath(from, platform), normalizePath(to, platform));
+  return next === null ? null : `${key.slice(0, key.indexOf(':') + 1)}${body.slice(0, cut)}${next}`;
+}
+
+/** Vrai si le chemin `p` est `from` ou se trouve dessous (comparés sous leur forme de clé). */
+export function isSameOrUnder(p: string, from: string, platform: NodeJS.Platform = process.platform): boolean {
+  return movedNormalized(normalizePath(p, platform), normalizePath(from, platform), '') !== null;
+}

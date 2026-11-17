@@ -7,6 +7,7 @@ import { bookmarksHandlers } from './bookmarks.ts';
 import { catalogHandlers } from './catalog.ts';
 import { configHandlers } from './config.ts';
 import { downloadsHandlers } from './downloads.ts';
+import { filesHandlers } from './files.ts';
 import { gamesHandlers } from './games.ts';
 import { i18nHandlers } from './i18n.ts';
 import { libraryHandlers } from './library.ts';
@@ -24,6 +25,7 @@ export const DOMAINS = {
   catalog: catalogHandlers,
   config: configHandlers,
   downloads: downloadsHandlers,
+  files: filesHandlers,
   games: gamesHandlers,
   i18n: i18nHandlers,
   library: libraryHandlers,

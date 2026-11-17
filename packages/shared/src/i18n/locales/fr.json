@@ -380,6 +380,21 @@
       "games": "Jeux",
       "others": "Autres",
       "outside": "Autres éléments"
+    },
+    "files": {
+      "errors": {
+        "invalid": "Ce chemin n’est pas valable : rien n’a été changé.",
+        "outside": "Ce fichier n’est pas dans vos dossiers : Mire ne peut pas le modifier.",
+        "root": "Mire ne modifie pas un dossier principal de votre bibliothèque, ni la racine d’un disque.",
+        "missing": "Ce fichier ou ce dossier est introuvable. Il a peut-être déjà été déplacé ou supprimé.",
+        "link": "Ce raccourci mène en dehors de vos dossiers : Mire ne peut pas le modifier.",
+        "exists": "Il y a déjà un fichier ou un dossier de ce nom à cet endroit : rien n’a été remplacé.",
+        "name": "Ce nom ne convient pas. Choisissez un nom sans « / » ni « \\ ».",
+        "notFolder": "Cet emplacement n’est pas un dossier.",
+        "into": "Un dossier ne peut pas être déplacé dans lui-même.",
+        "crossDevice": "Mire ne peut pas encore déplacer un fichier vers un autre disque.",
+        "failed": "L’opération n’a pas pu se faire : {reason}"
+      }
     }
   }
 }

@@ -12,7 +12,8 @@ import fs from 'node:fs';
 import type { Element, ElementKey, InfoValue, OpenKind } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
 import { createJsonStore, readJsonFile } from '../storage/json-store.ts';
-import { FACADE_IMAGES, FACADE_INFOS, legacyTarget, metaToOverride, overrideToMeta } from './legacy-meta.ts';
+import { movedKey } from './keys.ts';
+import { FACADE_IMAGES, FACADE_INFOS, legacyTarget, metaToOverride, movedLegacyKey, overrideToMeta } from './legacy-meta.ts';
 import type { Override } from './tags/merge.ts';
 import { isInfoValue, type UserTag } from './tags/registry.ts';
 import { targetsOf } from './targets.ts';
@@ -255,6 +256,42 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
       delete data.unmatched[legacyKey];
       const key = place(legacyKey, parts);
       save(key ? [key] : []);
+    },
+
+    /**
+     * Fichier ou dossier renommé ou déplacé de `from` vers `to` (P2-10) : ses modifications, et celles de tout ce qu'il
+     * contient, passent sous les nouvelles clés (une modification restée à l'arrivée, d'un ancien fichier, est
+     * remplacée) ; les anciennes clés qui les relient à `meta.json` suivent. Rend les clés touchées (anciennes et
+     * nouvelles).
+     */
+    movePath(from: string, to: string): ElementKey[] {
+      const touched: ElementKey[] = [];
+      const moved: [ElementKey, Override][] = [];
+      let dirty = false;
+      for (const [key, o] of Object.entries(data.elements)) {
+        const next = movedKey(key, from, to, platform);
+        if (!next) continue;
+        delete data.elements[key];
+        if (o.legacy) {
+          legacyIndex.delete(o.legacy);
+          o.legacy = movedLegacyKey(o.legacy, from, to, platform) ?? o.legacy;
+        }
+        moved.push([next, o]);
+        touched.push(key, next);
+      }
+      for (const [key, o] of moved) {
+        data.elements[key] = o;
+        if (o.legacy) legacyIndex.set(o.legacy, key);
+      }
+      for (const [legacyKey, o] of Object.entries(data.unmatched)) {
+        const next = movedLegacyKey(legacyKey, from, to, platform);
+        if (!next) continue;
+        delete data.unmatched[legacyKey];
+        data.unmatched[next] = o;
+        dirty = true;
+      }
+      if (dirty || touched.length) save(touched);
+      return touched;
     },
 
     /**

@@ -380,6 +380,21 @@
       "games": "Games",
       "others": "Others",
       "outside": "Other items"
+    },
+    "files": {
+      "errors": {
+        "invalid": "This path isn't valid: nothing was changed.",
+        "outside": "This file isn't in your folders: Mire can't change it.",
+        "root": "Mire doesn't change a main folder of your library, or the root of a drive.",
+        "missing": "This file or folder can't be found. It may have already been moved or deleted.",
+        "link": "This shortcut leads outside your folders: Mire can't change it.",
+        "exists": "There's already a file or folder with this name here: nothing was replaced.",
+        "name": "This name won't work. Choose a name without “/” or “\\”.",
+        "notFolder": "This location isn't a folder.",
+        "into": "A folder can't be moved into itself.",
+        "crossDevice": "Mire can't move a file to another drive yet.",
+        "failed": "This couldn't be done: {reason}"
+      }
     }
   }
 }

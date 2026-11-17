@@ -94,7 +94,7 @@ Fiches dans `phase-2.md`.
 | P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | faite | [#58](https://github.com/jezoock/mire/pull/58) |
 | P2-08 | Listes | S | P2-07 |  | faite | |
 | P2-09 | Recherche dans le catalogue | M | P2-07 |  | faite | |
-| P2-10 | Gestion des fichiers | M | P2-02 |  | à faire | |
+| P2-10 | Gestion des fichiers | M | P2-02 |  | faite | |
 | P2-11 | Migration de la configuration (v9) | M | P2-07, P2-08 |  | à faire | |
 | **G3** | **Point d'étape : fin de la phase 2 (modèle, IPC, mesures)** | | P2-01…P2-11 | | | |
 
