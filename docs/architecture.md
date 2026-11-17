@@ -387,7 +387,14 @@ relatif, avec `..` ou hors de ces dossiers ; un lien symbolique (le fichier ou u
 (une racine de disque configurée est ignorée) ; une destination hors des dossiers, absente ou qui n'est pas un
 dossier ; un nom déjà pris (rien n'est écrasé) ; un nouveau nom vide, `.`, `..` ou avec un séparateur. La
 suppression passe par la corbeille du système (`shell.trashItem`). La confirmation est demandée par l'interface
-(P4-09). Le catalogue suit : voir « Listes » et « Tags et infos » (`movePath`).
+(P4-09). Le catalogue suit (`files/follow.ts`, `catalogFollow`, clés recalculées par `movedKey`) :
+
+| Après… | Suit le nouveau chemin | Ne bouge pas |
+| --- | --- | --- |
+| un renommage ou un déplacement (fichier, ou tout ce que contient un dossier) | modifications faites à la main (`overrides.json`), infos en ligne (`metadata.json`), listes (`lists.json`), positions de reprise et entrées de « Reprendre » (`usage.json` : chemin et clé ; nom et images gardés) ; l'élément revient sous sa nouvelle clé à l'analyse suivante | recherches récentes (des textes), adresses web et entrées M3U |
+| une mise à la corbeille | l'élément quitte le catalogue | tout le reste : modifications, infos en ligne, positions de reprise et « Reprendre » sont gardés (un fichier remis de la corbeille retrouve tout) ; une liste garde l'élément, indisponible |
+
+Détail : voir « Listes » et « Tags et infos » (`movePath`).
 
 Piste connue : un lien symbolique placé dans un dossier autorisé est servi par `media://` (voir les pistes de
 `docs/plan/BACKLOG.md`).
@@ -756,6 +763,9 @@ plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures 
   service en tire la clé. Un `usage.json` d'avant (positions par chemin) est rattaché au chargement et réécrit une
   fois ; un import ou le `localStorage` d'une version précédente aussi. Les recherches récentes sont des textes : elles
   ne désignent aucun élément et restent telles quelles.
+- **Fichier renommé ou déplacé par Mire** (P2-12, `rules.movePath`, appelé par `catalogFollow`) : les positions de
+  reprise et les entrées de « Reprendre » passent sous le nouveau chemin et la nouvelle clé ; la position du fichier
+  déplacé remplace une ancienne restée sous le nouveau chemin. Après une mise à la corbeille, rien ne change.
 - L'interface lit `usageGet()` au démarrage et garde une copie de « Reprendre », du volume et des recherches pour
   l'affichage ; chaque modification part au processus principal. La position de reprise se demande vidéo par vidéo.
 - Au premier lancement après la mise à jour, l'interface envoie ce que gardait son `localStorage` (`recent`,
