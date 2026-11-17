@@ -569,7 +569,9 @@ les règles par extension de la configuration.
   été changé : la version de la configuration ne change pas.
 - **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, `series`,
   `movie` des tags automatiques, `game`, `tv`, `stream` des sources de P2-03) et infos
-  du cœur avec leur type (`text`, `number`, `boolean`, `list`) ; noms affichés dans les catalogues de textes
+  du cœur (`InfoDeclaration` : leur type `text`, `number`, `boolean`, `list`, et `searchable`, vrai par défaut pour
+  un texte ou une liste ; faux pour `extension`, `mediaType`, `server` et `subtitles`, qui n'ont pas de sens dans une
+  recherche ; un plugin le déclarera pour ses infos, P3-01) ; noms affichés dans les catalogues de textes
   (`catalog.tags.<id>`, `catalog.infos.<id>`). Un tag inconnu ajouté à la main devient un tag de l'utilisateur, dont
   l'identifiant est le nom simplifié (« Vus en 2024 » → `vus-en-2024`).
 - **Index** (`tags/tag-index.ts`) : tag → clés, info → valeur → clés (un élément de liste est indexé seul).
@@ -695,8 +697,9 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
 - **Comparaison** : celle de l'interface historique (`matcher`) : un élément est trouvé s'il contient tous les mots de
   la recherche, dans n'importe quel ordre, sans tenir compte des accents ni de la casse (`fold`). Une recherche vide
   ou faite d'espaces ne trouve rien.
-- **Ce qui est cherché** : le nom de l'élément, ses infos texte (type `text` du registre, éléments texte des infos de
-  liste comme `genres`, et une info non déclarée si sa valeur est un texte ; pas les nombres) et le nom affiché de
+- **Ce qui est cherché** : le nom de l'élément, ses infos texte cherchables (type `text` du registre, éléments texte
+  des infos de liste comme `genres`, et une info non déclarée si sa valeur est un texte ; pas les nombres, ni une info
+  déclarée `searchable: false` comme l'extension ou les sous-titres, `searchedAs`) et le nom affiché de
   ses tags, dans la langue de l'interface (« films » trouve les films en français, « movies » en anglais).
 - **Calcul à la demande** : rien n'est calculé au démarrage. À la première recherche, le nom et les infos texte de
   chaque élément sont simplifiés et gardés (une valeur qui se répète, comme un dossier, n'est simplifiée qu'une
