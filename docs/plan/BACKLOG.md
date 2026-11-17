@@ -123,7 +123,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | faite | [#49](https://github.com/jezoock/mire/pull/49) |
 | P4-02 | Habillage du cœur et palettes | M | P4-01 |  | faite | [#51](https://github.com/jezoock/mire/pull/51) |
 | P4-03 | Navigation clavier et manette sur les composants | L | P4-01, P1-24 | 🧑 | à faire | |
-| P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | à faire | |
+| P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | faite | |
 | **G5** | **Point d'étape : intégration, palettes, navigation, contrôleurs** | | P4-01…P4-04 | | | |
 | P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | à faire | |
 | P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | à faire | |

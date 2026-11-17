@@ -11,23 +11,17 @@ import { VIDEO_KEYS, keyAction } from '../nav/keyboard.ts';
 import { focusFirst, focusSelectorOf } from '../nav/spatial.ts';
 import { audio, getVolume, setRangeFill, setVolume, video } from './volume.ts';
 import type { Playable } from './types.ts';
+import type { Controllers } from '../controllers/index.ts';
 
 export { video };
 
-/** Ce que l'interface fournit au lecteur vidéo. */
-export interface VideoHooks {
-  /** Ouvre la vidéo dans le lecteur externe, à la position donnée (s). */
-  openExternal(it: Playable, start?: number): void;
-  /** Ouvre un marque-page de site rangé parmi les vidéos. */
-  openBookmark(id: string): void;
-  addRecent(it: Playable): void;
-  /** Affiche ou masque la vue web selon ce qui recouvre l'écran. */
-  syncWeb(): void;
-  /** Affiche de nouveau la section en cours. */
-  render(): void;
-}
+/**
+ * Contrôleurs appelés par le lecteur vidéo : lecteur externe, marques-pages de sites rangés parmi les vidéos,
+ * « Reprendre », vue web (montrée ou cachée selon ce qui recouvre l'écran), vue à remettre à jour en sortant.
+ */
+export type VideoControllers = Pick<Controllers, 'player' | 'home' | 'web'>;
 
-let hooks: VideoHooks;
+let ctrl: VideoControllers;
 const viewEl = $('#view') as HTMLElement;
 const videoLayer = $('#video-layer') as HTMLElement;
 const vpPlay = $('#vp-play') as HTMLButtonElement;
@@ -136,7 +130,7 @@ function openCurrentExternally(): void {
   const it = current() as Playable;
   const t = video.currentTime;
   closeVideo();
-  hooks.openExternal(it, t);
+  ctrl.player.openExternal({ path: it.path, name: it.name, start: t });
 }
 
 function checkSilence(): void {
@@ -155,11 +149,11 @@ export function openVideo(list: Playable[], i: number): void {
   const it = list[i];
   if (!it) return;
   if (it.bookmark) {
-    hooks.openBookmark(it.bookmarkId as string);
+    ctrl.web.openBookmark({ id: it.bookmarkId as string });
     return;
   }
   if (!it.native) {
-    hooks.openExternal(it);
+    ctrl.player.openExternal({ path: it.path, name: it.name });
     return;
   }
   if (videoLayer.hidden) V.returnSel = focusSelectorOf(document.activeElement);
@@ -170,7 +164,7 @@ export function openVideo(list: Playable[], i: number): void {
   audio.pause();
   clearSubtitleTracks();
   videoLayer.hidden = false;
-  hooks.syncWeb();
+  ctrl.web.sync();
   ($('#vp-title') as HTMLElement).textContent = it.sTitle ? `${it.sTitle}${it.sYear ? ` (${it.sYear})` : ''}` : it.name;
   ($('#vp-sub') as HTMLElement).textContent = (list.length > 1 ? `${folderText(it)}, ${i + 1} sur ${list.length}` : folderText(it)) as string;
   ($('#vp-prev') as HTMLButtonElement).disabled = i <= 0;
@@ -198,7 +192,7 @@ export function openVideo(list: Playable[], i: number): void {
     { once: true },
   );
   video.play().catch(() => {});
-  hooks.addRecent(it);
+  ctrl.home.addRecent(it);
   loadSubtitles(it);
   clearTimeout(V.silentTimer);
   V.silentTimer = window.setTimeout(checkSilence, 7000);
@@ -219,8 +213,8 @@ export function closeVideo(): void {
   videoLayer.classList.remove('idle');
   V.list = [];
   V.i = -1;
-  hooks.syncWeb();
-  if (S.section === 'home') hooks.render();
+  ctrl.web.sync();
+  if (S.section === 'home') ctrl.player.refreshView();
   const back = V.returnSel && viewEl.querySelector<HTMLElement>(V.returnSel);
   if (back) back.focus();
   else focusFirst();
@@ -302,8 +296,8 @@ export function videoKey(key: string, fromPad: boolean): boolean {
 }
 
 /** Branche les commandes du lecteur. */
-export function initVideo(h: VideoHooks): void {
-  hooks = h;
+export function initVideo(controllers: VideoControllers): void {
+  ctrl = controllers;
   video.addEventListener('play', () => {
     vpPlay.innerHTML = ICON.pause;
     wakeVideo();

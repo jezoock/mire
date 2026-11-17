@@ -1,11 +1,12 @@
 /**
  * Manette : lecture à chaque image, commandes selon le contexte, et rappel des boutons à l'écran.
- * Les correspondances et libellés sont dans gamepad-data.ts ; ce que font les actions propres à l'interface
- * (changer de section, modifier, piloter un site) est fourni par app.js.
+ * Les correspondances et libellés sont dans gamepad-data.ts ; les actions propres à l'interface (changer de
+ * section, modifier, piloter un site) sont des méthodes des contrôleurs (P4-04).
  */
 import { $ } from '../core/dom.ts';
 import { S } from '../state/index.ts';
 import { toast } from '../ui/toast.ts';
+import type { Controllers } from '../controllers/index.ts';
 import { handleKey } from './keyboard.ts';
 import { moveFocus, type Direction } from './spatial.ts';
 import {
@@ -30,17 +31,13 @@ export interface GamepadHooks {
   context(): PadContext;
   /** Boîte de dialogue au premier plan, ou `null`. */
   dialog(): HTMLElement | null;
-  /** LB / RB : section précédente (-1) ou suivante (1). */
-  cycleSection(d: number): void;
-  /** X : modifier l'élément sélectionné, s'il est modifiable. */
-  edit(el: Element | null): void;
-  /** Envoie une touche au site affiché (`Up`, `Enter`, `ShiftTab`…). */
-  webKey(key: string): void;
-  /** Donne la manette au site (`toSite`), ou revient aux menus de Mire. */
-  webToggle(toSite: boolean): void;
 }
 
+/** Contrôleurs appelés par la manette : LB / RB (écran précédent ou suivant), X (modifier), site affiché. */
+export type GamepadControllers = Pick<Controllers, 'app' | 'web'>;
+
 let hooks: GamepadHooks;
+let ctrl: GamepadControllers;
 const mem: PadMemory = { prev: {}, repeatAt: {} };
 const DIRS: Readonly<Record<string, Direction>> = { up: 'up', down: 'down', left: 'left', right: 'right' };
 
@@ -48,12 +45,12 @@ function padPress(k: string): void {
   const ctx = hooks.context();
   if (ctx === 'web') {
     if (k === 'select' || k === 'home') {
-      hooks.webToggle(!S.webFocused);
+      ctrl.web.toggleFocus({ toSite: !S.webFocused });
       return;
     }
     const webKey = padKey(WEB_PAD, k);
     if (S.webFocused && webKey) {
-      hooks.webKey(webKey);
+      ctrl.web.sendKey({ key: webKey });
       return;
     }
     const key = padKey(LIST_PAD, k);
@@ -74,11 +71,11 @@ function padPress(k: string): void {
     return;
   }
   if (k === 'x') {
-    hooks.edit(document.activeElement);
+    ctrl.app.editSelection();
     return;
   }
   if (k === 'lb' || k === 'rb') {
-    hooks.cycleSection(k === 'lb' ? -1 : 1);
+    ctrl.app.cycleSection({ step: k === 'lb' ? -1 : 1 });
     return;
   }
   if (k === 'select') {
@@ -140,8 +137,9 @@ function pollPads(now: number): void {
 }
 
 /** Branche les événements de connexion de la manette. */
-export function initGamepad(h: GamepadHooks): void {
+export function initGamepad(h: GamepadHooks, controllers: GamepadControllers): void {
   hooks = h;
+  ctrl = controllers;
   window.addEventListener('gamepadconnected', (e) => setPad(e.gamepad));
   window.addEventListener('gamepaddisconnected', () => {
     const left = connectedPads();

@@ -10,6 +10,11 @@
       "cancel": "Annuler",
       "close": "Fermer"
     },
+    "app": {
+      "errors": {
+        "actionFailed": "Cette action n’a pas abouti."
+      }
+    },
     "demo": {
       "title": "Démonstration de l’interface",
       "component": {

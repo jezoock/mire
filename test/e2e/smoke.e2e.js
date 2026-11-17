@@ -270,6 +270,42 @@ describe('Test de fumée de Mire', () => {
     }
   });
 
+  // Contrôleurs et traduction (P4-04) : un ds-trigger appelle une action de mire-app ; le document porte la langue de
+  // l'interface, les vues historiques restent marquées en français.
+  it('un ds-trigger appelle les actions des contrôleurs, et le document porte la langue de l’interface', async () => {
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    page.on('pageerror', onError);
+    page.on('console', onConsole);
+    try {
+      const lang = await page.evaluate(async () => (await window.api.i18nGet()).language);
+      await page.waitForFunction((l) => document.documentElement.lang === l, lang);
+      assert.equal(await page.evaluate(() => document.body.lang), 'fr');
+
+      await page.evaluate(() => {
+        const t = document.createElement('ds-trigger');
+        t.id = 'e2e-trigger';
+        t.setAttribute('target', 'mire-app');
+        t.setAttribute('action', 'go:[{"section":"settings"}]');
+        t.style.cssText = 'position: fixed; top: 0; left: 50%; z-index: 9999';
+        t.textContent = 'Réglages';
+        document.body.append(t);
+      });
+      const trigger = page.locator('#e2e-trigger');
+      await trigger.and(page.locator('.hydrated')).waitFor();
+      await trigger.click();
+      await page.waitForFunction(() => document.body.dataset.section === 'settings');
+      assert.equal(await trigger.getAttribute('aria-busy'), null);
+      assert.deepEqual(errors, []);
+    } finally {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => document.getElementById('e2e-trigger')?.remove());
+      await goByKeyboard('home');
+    }
+  });
+
   it("l'accueil s'affiche dans chaque thème", async () => {
     // Changer de palette ne recharge pas la page : le marqueur posé ici doit survivre aux changements.
     await page.evaluate(() => (window.__sansRechargement = true));

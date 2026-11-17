@@ -9,19 +9,16 @@ import { api } from '../api/index.ts';
 import { cleanTrack, folderText } from '../domain/index.ts';
 import type { MediaItem } from '@mire/shared/ipc';
 import type { Playable } from './types.ts';
+import type { Controllers } from '../controllers/index.ts';
 import { focusFirst } from '../nav/spatial.ts';
 import { audio, setRangeFill, setVolume } from './volume.ts';
 
 export { audio };
 
-/** Ce que l'interface fournit au lecteur de musique. */
-export interface AudioHooks {
-  /** Ouvre le morceau dans le lecteur externe (formats non lus par le lecteur intégré). */
-  openExternal(it: Playable): void;
-  addRecent(it: Playable): void;
-}
+/** Contrôleurs appelés par le lecteur de musique : lecteur externe (formats non lus ici), « Reprendre ». */
+export type AudioControllers = Pick<Controllers, 'player' | 'home'>;
 
-let hooks: AudioHooks;
+let ctrl: AudioControllers;
 const viewEl = $('#view') as HTMLElement;
 const mini = $('#mini') as HTMLElement;
 const miniPlay = $('#mini-play') as HTMLButtonElement;
@@ -38,14 +35,14 @@ function loadTrack(): void {
   const t = Q.list[Q.i] as Playable | undefined;
   if (!t) return;
   if (!t.native) {
-    hooks.openExternal(t);
+    ctrl.player.openExternal({ path: t.path, name: t.name });
     return;
   }
   audio.src = mediaUrl(t.path);
   audio.play().catch(() => {
     /* lecture bloquée */
   });
-  hooks.addRecent(t);
+  ctrl.home.addRecent(t);
 
   mini.hidden = false;
   document.body.classList.add('has-mini');
@@ -111,8 +108,8 @@ export function markPlaying(): void {
 }
 
 /** Branche le mini-lecteur. */
-export function initAudio(h: AudioHooks): void {
-  hooks = h;
+export function initAudio(controllers: AudioControllers): void {
+  ctrl = controllers;
   audio.addEventListener('ended', () => stepTrack(1));
   audio.addEventListener('play', () => {
     miniPlay.innerHTML = ICON.pause;

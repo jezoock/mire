@@ -8,19 +8,15 @@ import { api } from '../api/index.ts';
 import { IMAGE_KEYS, keyAction } from '../nav/keyboard.ts';
 import { focusFirst, focusSelectorOf } from '../nav/spatial.ts';
 import type { Playable } from './types.ts';
+import type { Controllers } from '../controllers/index.ts';
 
-/** Ce que l'interface fournit à la visionneuse. */
-export interface ImagesHooks {
-  /** Ouvre l'image dans le programme du système (formats non affichés par la visionneuse). */
-  openExternal(it: Playable): void;
-  addRecent(it: Playable): void;
-  /** Affiche ou masque la vue web selon ce qui recouvre l'écran. */
-  syncWeb(): void;
-  /** Affiche de nouveau la section en cours. */
-  render(): void;
-}
+/**
+ * Contrôleurs appelés par la visionneuse : programme du système (formats non affichés ici), « Reprendre », vue web,
+ * vue à remettre à jour en sortant.
+ */
+export type ImagesControllers = Pick<Controllers, 'player' | 'home' | 'web'>;
 
-let hooks: ImagesHooks;
+let ctrl: ImagesControllers;
 const viewEl = $('#view') as HTMLElement;
 const imageLayer = $('#image-layer') as HTMLElement;
 const ivImg = $('#iv-img') as HTMLImageElement;
@@ -47,16 +43,16 @@ export function openImages(list: Playable[], i: number): void {
   const it = list[i];
   if (!it) return;
   if (!it.native) {
-    hooks.openExternal(it);
+    ctrl.player.openExternal({ path: it.path, name: it.name });
     return;
   }
   I.returnSel = focusSelectorOf(document.activeElement);
   I.list = list.filter((x) => x.native);
   I.i = Math.max(0, I.list.indexOf(it));
   imageLayer.hidden = false;
-  hooks.syncWeb();
+  ctrl.web.sync();
   showImage();
-  hooks.addRecent(it);
+  ctrl.home.addRecent(it);
   imageLayer.focus();
   wakeImages();
 }
@@ -81,8 +77,8 @@ export function closeImages(): void {
   imageLayer.hidden = true;
   imageLayer.classList.remove('idle');
   ivImg.removeAttribute('src');
-  hooks.syncWeb();
-  if (S.section === 'home') hooks.render();
+  ctrl.web.sync();
+  if (S.section === 'home') ctrl.player.refreshView();
   const back = I.returnSel && viewEl.querySelector<HTMLElement>(I.returnSel);
   if (back) back.focus();
   else focusFirst();
@@ -116,8 +112,8 @@ export function imageKey(key: string, fromPad: boolean): boolean {
 }
 
 /** Branche les commandes de la visionneuse. */
-export function initImages(h: ImagesHooks): void {
-  hooks = h;
+export function initImages(controllers: ImagesControllers): void {
+  ctrl = controllers;
   ivImg.addEventListener('error', () => {
     if (!imageLayer.hidden && ivImg.getAttribute('src')) toast('Cette image ne peut pas être affichée.');
   });

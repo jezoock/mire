@@ -1,9 +1,11 @@
 /**
  * Clavier et télécommande : correspondance touche → action selon le contexte (listes, lecteur vidéo,
  * visionneuse d'images), puis traitement des touches. La manette passe par le même chemin (`fromPad`).
- * Ce que font les actions propres à l'interface (retour, modifier, lecteurs…) est fourni par app.js.
+ * Les actions (retour, rechercher, modifier, lecteurs…) sont des méthodes des contrôleurs (P4-04) ; app.js ne fournit
+ * plus que ce que le clavier doit savoir de l'affichage (boîte de dialogue, lecteur ouvert, barre d'un site).
  */
 import { $ } from '../core/dom.ts';
+import type { Controllers } from '../controllers/index.ts';
 import { S } from '../state/index.ts';
 import { focusFirst, moveFocus, type Direction } from './spatial.ts';
 
@@ -109,16 +111,13 @@ export interface KeyboardHooks {
   overlayKey(key: string, fromPad: boolean): boolean | null;
   /** Flèche bas depuis la barre d'un site : donne le clavier au site. `false` si l'élément n'est pas dans cette barre. */
   webBarDown(el: Element | null): boolean;
-  back(): void;
-  search(): void;
-  playPause(): void;
-  /** Modifier l'élément (`false` s'il n'est pas modifiable). */
-  edit(el: Element | null): boolean;
-  /** Supprimer l'élément (`false` s'il n'est pas supprimable). */
-  remove(el: Element | null): boolean;
 }
 
+/** Contrôleurs appelés par le clavier. */
+export type KeyboardControllers = Pick<Controllers, 'app' | 'page' | 'player'>;
+
 let hooks: KeyboardHooks;
+let ctrl: KeyboardControllers;
 
 /** Traite une touche (du clavier, ou traduite depuis la manette) ; `true` si elle a été utilisée. */
 export function handleKey(key: string, fromPad = false): boolean {
@@ -175,7 +174,7 @@ export function handleKey(key: string, fromPad = false): boolean {
       }
       return false;
     case 'back':
-      hooks.back();
+      ctrl.app.back();
       return true;
     case 'page-down':
       view().scrollBy({ top: view().clientHeight * 0.8 });
@@ -184,23 +183,24 @@ export function handleKey(key: string, fromPad = false): boolean {
       view().scrollBy({ top: -view().clientHeight * 0.8 });
       return true;
     case 'play-pause':
-      hooks.playPause();
+      ctrl.player.togglePlay();
       return true;
     case 'search':
-      hooks.search();
+      ctrl.app.go({ section: 'search', focus: 'keep' });
       return true;
     case 'edit':
-      return hooks.edit(a);
+      return ctrl.app.editSelection();
     case 'delete':
-      return hooks.remove(a);
+      return ctrl.page.deleteSelection();
     default:
       return false;
   }
 }
 
 /** Branche le clavier ; le passage de la souris au clavier change l'affichage du focus (classe `mouse`). */
-export function initKeyboard(h: KeyboardHooks): void {
+export function initKeyboard(h: KeyboardHooks, controllers: KeyboardControllers): void {
   hooks = h;
+  ctrl = controllers;
   document.addEventListener('keydown', (e) => {
     document.body.classList.remove('mouse');
     S.pendingFocus = false;
