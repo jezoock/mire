@@ -324,7 +324,7 @@ fournisseurs intégrés à Mire les implémentent.
 | `MetadataProvider` | `src/main/scrape/types.ts` | Une source d'infos : natures décrites (`kinds`), famille (`group`), concurrence, `requires`, `key`, `collect`, `scrape`, `candidates`, `byId`. | `tmdbProvider`, `musicBrainzProvider`, `libretroProvider`, `steamProvider` (`defaultProviders`) |
 | `SearchProvider` | `src/main/search/streaming.ts` | Un catalogue interrogé par la recherche : `id`, `search(query, ctx)`. | `streamingSearchProvider` (TMDB, « où regarder ») |
 | `WebExtension` | `src/main/web/extensions.ts` | Ce qui s'ajoute aux vues web : `attach`/`detach`, filtres réseau (`onBeforeRequest`, `onBeforeSendHeaders`, `onHeadersReceived`), `beforePageScript`, `guardNavigation`, compteurs du bouclier. | Bloqueur de publicités, connexion Google |
-| `ElementSource` | `src/main/catalog/types.ts` | Une source d'éléments du catalogue : `id` (celui du plugin prévu), `tags` de source, `handles(emplacement)`, `instance(emplacement)`, `scan(emplacement)` → éléments. | `src-local`, `src-smb`, `src-http`, `src-m3u` (`src/main/library/element-sources.ts`) |
+| `ElementSource` | `src/main/catalog/types.ts` | Une source d'éléments du catalogue : `id` (celui du plugin prévu), `tags` de source, `handles(emplacement)`, `instance(emplacement)`, `scan(emplacement)` → éléments. | `src-local`, `src-smb`, `src-http`, `src-m3u` (`src/main/library/element-sources.ts`) ; `jeux-roms`, `jeux-pc`, `jeux-pc-manuel`, `jeux-marque` (`src/main/games/element-sources.ts`) ; `tv-m3u`, `tv-web` (`src/main/tv/element-sources.ts`) ; `svc-<id>`, `web-perso`, `web-bm` (`src/main/web/element-sources.ts`) |
 | `TvProvider` | `src/main/tv/types.ts` | Une façon de regarder un service de télévision, choisie par son `kind` : `channels(service, ctx)`. | `playlistProvider` (liste M3U), `webProvider` (portail dans une vue web) |
 | Catalogue de langue (`Catalog`) | `packages/shared/src/i18n/types.ts` | Un fichier JSON par langue : `meta` (`code`, `name`, `app`) et `messages`. Contrat détaillé dans `docs/i18n.md`. | `locales/fr.json`, `locales/en.json` |
 
@@ -416,8 +416,8 @@ par Electron.
 
 `src/main/catalog/` pose le modèle de l'architecture cible (« Éléments, tags et infos ») : tout ce que Mire peut ouvrir
 deviendra un élément (`Element`, types dans `@mire/shared`). Depuis P2-02, chaque analyse de la bibliothèque
-l'alimente (voir « Sources de la bibliothèque » plus bas) ; les jeux, la télévision et les sites suivront (P2-03).
-L'interface historique ne s'en sert pas.
+l'alimente (voir « Sources de la bibliothèque » plus bas), et depuis P2-03 les jeux, la télévision et les sites aussi
+(« Jeux, télévision et sites »). L'interface historique ne s'en sert pas.
 
 - **Clés stables** (`keys.ts`) : `<genre>:<partie>[|<partie>…]`, jamais d'après le rang ni le nom affiché. Une règle
   par genre d'élément :
@@ -484,6 +484,38 @@ les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La 
   par fichier, qui reste tant que l'un des deux le fournit.
 - Une erreur du catalogue est passée au journal ; elle n'empêche jamais `library.scan` de répondre.
 
+### Jeux, télévision et sites
+
+Les autres sources (P2-03) suivent le même modèle : une par plugin prévu à l'inventaire, identifiants repris de
+l'inventaire. Leurs éléments entrent dans le catalogue quand l'interface historique demande ses listes, ou se
+déduisent de la configuration :
+
+| Source | Emplacement (`instance`) | Tags | Élément | Quand |
+| --- | --- | --- | --- | --- |
+| `jeux-roms` | console et l'un de ses dossiers ou sources en ligne (`<console>\|<emplacement>`) | `game` | `rom:<console>\|<fichier>`, `open.kind` `game`, info `system`, jaquette (`poster`) | chaque `listRoms` (jeux sur disque : la liste `.m3u`, pas ses disques) |
+| `jeux-pc` | dossier de jeux | `game` | `pc:<programme>`, `program`, `system` = `pc` | chaque `scanGameSources` |
+| `jeux-pc-manuel` | `config` | `game` | `pc:<programme ou adresse>`, `program` (arguments), `system` = `pc`, image | configuration (`games`) |
+| `jeux-marque` | `config` | `game` | `gamebm:<id>`, ouvert comme son lien (`site`), `system` du marque-page ou de sa console | configuration (`gameBookmarks` en attente) |
+| `tv-m3u` | service | `tv` | `tv:<service>\|<numéro>`, `stream` (qualité du service, variantes), logo | chaque `tvChannels` du service choisi |
+| `tv-web` | service | `tv` | portail du service, `site` | configuration (service choisi, s'il est web) |
+| `svc-<id>` / `web-perso` | `config` | `stream` | `web:<id>`, `site`, info `category` (`video`, `music`…) | configuration (`web`) : site du catalogue intégré / ajouté |
+| `web-bm` | `config` | `stream` | `bm:<id>`, `site` (site au même domaine), `category`, `season`, `episode` | configuration (`bookmarks`) |
+
+- **Configuration** (`catalog/sync.ts`, `syncFeeds`) : au démarrage et à chaque changement de la configuration, les
+  sources qui s'en déduisent reçoivent leurs éléments ; un emplacement qui n'y est plus (console, dossier de jeux,
+  site, service qui n'est plus choisi) quitte le catalogue. `setSource` n'écrit rien quand rien ne change.
+- **Rien n'est retiré à tort** : comme pour la bibliothèque, un emplacement inaccessible (ou une liste coupée par le
+  nombre maximal de jeux) garde ses éléments. Une erreur du catalogue passe au journal ; elle n'empêche jamais une
+  liste de répondre.
+- **`system`** : posé par la source et par le tag automatique « Consoles » (jeux de console) ; le tag automatique
+  l'emporte (priorité des origines), une seule valeur par élément.
+- **Fiches gardées sous une ancienne clé** : `r:<fichier>` rejoint le jeu ouvert par ce fichier, `g:<nom simplifié>`
+  le jeu PC du même nom simplifié (cible `pcNameTarget`), `v:<adresse>` aussi un marque-page de page (l'interface
+  historique le présente comme une vidéo à cette adresse). Le rattachement se fait à l'arrivée de l'élément
+  (`adopt`), dans `overrides.json` comme dans `metadata.json`.
+- Coût mesuré (750 jeux de console, 100 jeux PC, 300 chaînes, ~70 sites et marque-pages, à côté de 20 000 fichiers) :
+  quelques millisecondes par liste, ~3 ms par changement de la configuration, rien de mesurable au chargement.
+
 ### Tags et infos
 
 Le moteur (`catalog/tags/engine.ts`, `createTagEngine`) calcule les tags, infos et images effectifs de chaque élément
@@ -495,7 +527,7 @@ les règles par extension de la configuration.
   | Origine | Tags | Infos et images |
   | --- | --- | --- |
   | Type de fichier (`tags/file-rules.ts`) | `video`, `audio`, `image` d'après l'extension du fichier ou de l'adresse (formats de `EXT`) ; sans extension reconnue, l'info `mediaType` posée par la source (entrée M3U) | `extension` (`mkv`) |
-  | Source | tags de la source (`local`, `network`, `remote`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, images trouvées à côté |
+  | Source | tags de la source (`local`, `network`, `remote`, `game`, `tv`, `stream`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, `system`, `category`, `season`, `episode`, images trouvées à côté, jaquette, logo |
   | Tags automatiques (`tags/taggers.ts`) | `series`, `movie` | `series`, `season`, `episode`, `title`, `year`, `artist`, `album`, `track`, `system`, `folder` (détail ci-dessous) |
   | Infos en ligne (`catalog/metadata.ts`) | | `title`, `year`, `genres`, `overview`, `artist` ; images `poster`, `background` (un `Contributor` d'origine `metadata` par fournisseur) |
   | À la main (`overrides.json`) | ajout (`true`) ou **retrait** (`false`) | toute info, images |
@@ -519,8 +551,8 @@ les règles par extension de la configuration.
 - **Règles par extension** : celles des formats reconnus ; seules les extensions changées sont gardées dans la
   configuration (`catalog.fileTags` : `{ ".ts": ["audio"], ".mkv": [] }`). La section est absente tant que rien n'y a
   été changé : la version de la configuration ne change pas.
-- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, et `series`,
-  `movie` des tags automatiques) et infos
+- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, `series`,
+  `movie` des tags automatiques, `game`, `tv`, `stream` des sources de P2-03) et infos
   du cœur avec leur type (`text`, `number`, `boolean`, `list`) ; noms affichés dans les catalogues de textes
   (`catalog.tags.<id>`, `catalog.infos.<id>`). Un tag inconnu ajouté à la main devient un tag de l'utilisateur, dont
   l'identifiant est le nom simplifié (« Vus en 2024 » → `vus-en-2024`).
@@ -540,7 +572,8 @@ les règles par extension de la configuration.
   | `v:`, `t:`, `i:` + adresse | l'élément ouvert par cette adresse (`remote:` ou `m3u:`), cherché dans le catalogue |
   | `r:` + fichier | le jeu ouvert par ce fichier, cherché dans le catalogue |
   | `b:<id>` | `gamebm:<id>` |
-  | `a:` (dossier d'album), `g:` (jeu PC d'après son nom), `c:` (console) | aucun : gardée sous l'ancienne clé (`unmatched`) |
+  | `g:` + nom simplifié | le jeu PC du même nom (P2-03), cherché dans le catalogue |
+  | `a:` (dossier d'album), `c:` (console) | aucun : gardée sous l'ancienne clé (`unmatched`) |
 
   Une fiche gardée sous une adresse rejoint son élément quand une analyse l'apporte. Champs : `title`, `overview`,
   `artist` → infos du même nom ; `year` → `year` (nombre) ; `genre` → `genres` (liste) ; `image`, `backdrop` →
@@ -549,7 +582,7 @@ les règles par extension de la configuration.
   (`src/main/scrape/`) par clé d'élément, puis par clé du fournisseur (un élément peut en avoir plusieurs). Il reprend
   `scrape/db.json` au premier démarrage, avec la même correspondance des clés que `meta.json` (`r:`, `b:`, `v:` ; `a:`
   et `g:` gardées dans `unmatched`), et les échecs (`misses`, sous les clés des fournisseurs). Une fiche gardée sous
-  une adresse rejoint son élément quand une analyse l'apporte ; `db.json` est laissé en place et n'est plus écrit.
+  une adresse rejoint son élément quand une analyse l'apporte, une fiche `g:` le jeu PC du même nom (P2-03) ; `db.json` est laissé en place et n'est plus écrit.
   - Le moteur de récupération lit et écrit toujours sous les clés des fournisseurs (`scrapeStore`) : recherches,
     annulation, « Tout effacer » et l'interface historique (`scrapeData`) ne changent pas. Chaque fiche enregistrée
     ou oubliée recalcule son élément (`engine.refresh`).
