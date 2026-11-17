@@ -1,0 +1,24 @@
+/* Palette « Contraste élevé : noir, blanc, couleurs franches, anneau de focus jaune épais ». Jetons : docs/themes.md. */
+[data-palette='contraste'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-rail: #000000;
+  --surface: #141414;
+  --surface-2: #222222;
+  --line: #8a8a8a;
+  --line-strong: #d0d0d0;
+  --text: #ffffff;
+  --muted: #e0e0e0;
+  --ink: #000000;
+  --bar-white: #ffffff;
+  --bar-yellow: #ffe600;
+  --bar-cyan: #00f0ff;
+  --bar-green: #00e676;
+  --bar-magenta: #ff40ff;
+  --bar-red: #ff3b30;
+  --bar-blue: #5c8dff;
+  --ring-mix: 100%;
+  --ring-w: 4px;
+  /* Anneau de focus toujours jaune, quelle que soit la couleur de la section. */
+  --ring-from: #ffe600;
+}

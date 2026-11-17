@@ -2,7 +2,7 @@
  * Page de démonstration interne de l'interface (P4-01), cachée : aucune entrée du menu n'y mène. On l'ouvre avec
  * l'adresse `#demo` (dans les outils de développement, F12 : `location.hash = 'demo'`). Elle montre le composant
  * `mire-demo` de `@mire/ui` dans le gabarit historique, et les composants ds-* utilisés par Mire dans les cinq
- * thèmes actuels (palettes en P4-02). Ses textes viennent des catalogues, dans la langue de l'interface.
+ * palettes (P4-02). Ses textes viennent des catalogues, dans la langue de l'interface.
  */
 import { createI18n, lookup } from '@mire/shared/i18n';
 import type { I18n } from '@mire/shared/i18n';
@@ -11,7 +11,7 @@ import { esc } from '../core/dom.ts';
 
 export const DEMO_SECTION = 'demo';
 
-/** Les cinq thèmes actuels, futurs jeux de jetons (palettes, P4-02). */
+/** Les cinq palettes du cœur et des futurs plugins (P5-02) ; nom : clé `palettes.<id>` des catalogues. */
 const PALETTES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'] as const;
 
 let i18n: I18n | null = null;
@@ -36,8 +36,8 @@ export const demoTitle = (): string => t('demo.title');
 
 function palette(id: (typeof PALETTES)[number], index: number): string {
   const range = `demo-range-${index}`;
-  return `<section class="mire-ui-demo__palette" data-theme="${id}" aria-labelledby="demo-palette-${index}">
-    <p class="mire-ui-demo__name" id="demo-palette-${index}">${esc(t(`demo.palettes.${id}`))}</p>
+  return `<section class="mire-ui-demo__palette" data-palette="${id}" aria-labelledby="demo-palette-${index}">
+    <p class="mire-ui-demo__name" id="demo-palette-${index}">${esc(t(`palettes.${id}`))}</p>
     <div class="mire-ui-demo__row">
       <ds-trigger type="button" mods="stl-1">${esc(t('demo.samples.button'))}</ds-trigger>
       <ds-trigger type="link">${esc(t('demo.samples.link'))}</ds-trigger>

@@ -1,4 +1,4 @@
-@use 'pkg:dot-stash/scss/themes/default/tokens' as *;
+@use '../../theme/tokens' as *;
 
 // Composant de démonstration : bloc, compteur et bouton, avec les accesseurs du moteur (classes et modificateurs à la
 // manière de dot-stash : .mire-demo, .mire-demo__count).
@@ -9,7 +9,7 @@
   align-items: center;
   padding: ds-spacing(4);
   color: ds-color(gray, darkest);
-  background-color: ds-color(gray, white);
+  background-color: ds-color(gray, lightest);
   border-radius: ds-radius(md);
 
   &__heading {

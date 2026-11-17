@@ -1,0 +1,21 @@
+/* Palette « Écran éteint (par défaut) : gris-vert sombre, le thème d'origine ». Jetons : docs/themes.md. */
+[data-palette='ecran'] {
+  color-scheme: dark;
+  --bg: #1f2321;
+  --bg-rail: #1a1d1c;
+  --surface: #282d2a;
+  --surface-2: #323834;
+  --line: #3b423d;
+  --line-strong: #59625b;
+  --text: #eeefea;
+  --muted: #a4aba4;
+  --ink: #171a18;
+  --bar-white: #e9e7df;
+  --bar-yellow: #f1d347;
+  --bar-cyan: #46d3d6;
+  --bar-green: #67cf66;
+  --bar-magenta: #dc62dc;
+  --bar-red: #ee5a55;
+  --bar-blue: #6e88f7;
+  --ring-mix: 100%;
+}

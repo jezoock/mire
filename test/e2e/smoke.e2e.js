@@ -81,6 +81,9 @@ function prepareData() {
   return data;
 }
 
+// #RRGGBB → rgb(r, g, b), comme le rend getComputedStyle.
+const hexToRgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+
 async function shot(name) {
   await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
 }
@@ -218,6 +221,12 @@ describe('Test de fumée de Mire', () => {
         [...document.querySelectorAll('#view *')].filter((e) => e.localName.startsWith('ds-')).every((e) => e.classList.contains('hydrated')),
       );
       assert.equal(await page.locator('.mire-ui-demo__palette').count(), 5);
+      // Chaque cadre affiche sa palette : son fond est celui de palette.json.
+      const frames = await page.$$eval('.mire-ui-demo__palette', (els) => els.map((e) => [e.dataset.palette, getComputedStyle(e).backgroundColor]));
+      assert.deepEqual(
+        frames,
+        THEMES.map((id) => [id, hexToRgb(JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', id, 'palette.json'), 'utf8')).background)]),
+      );
       assert.equal(await page.locator('mire-demo .mire-demo__count').textContent(), countText(0));
 
       // ds-trigger appelle la méthode publique du composant : au clic, puis à la touche Entrée (une seule fois).
@@ -227,7 +236,20 @@ describe('Test de fumée de Mire', () => {
       });
       await trigger.click();
       await page.locator('mire-demo .mire-demo__count', { hasText: countText(1) }).waitFor();
+      // Dernière action au clavier : le focus donné ensuite est visible (:focus-visible), comme à la manette.
+      await page.keyboard.press('Shift');
       await trigger.focus();
+      // Anneau de focus de Mire (accent de la section, épaisseur de la palette), pas celui du navigateur.
+      const ring = await trigger.evaluate((e) => {
+        const s = getComputedStyle(e);
+        const probe = document.createElement('span');
+        probe.style.color = getComputedStyle(document.body).getPropertyValue('--ring');
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return { style: s.outlineStyle, width: s.outlineWidth, color: s.outlineColor, expected: color };
+      });
+      assert.deepEqual(ring, { style: 'solid', width: '3px', color: ring.expected, expected: ring.expected });
       await page.keyboard.press('Enter');
       await page.locator('mire-demo .mire-demo__count', { hasText: countText(2) }).waitFor();
       assert.deepEqual(await page.evaluate(() => window.__mireDemo), [1, 2]);
@@ -249,15 +271,21 @@ describe('Test de fumée de Mire', () => {
   });
 
   it("l'accueil s'affiche dans chaque thème", async () => {
+    // Changer de palette ne recharge pas la page : le marqueur posé ici doit survivre aux changements.
+    await page.evaluate(() => (window.__sansRechargement = true));
     for (const theme of THEMES.slice(1)) {
       await goByKeyboard('settings');
       await page.locator(`.theme-card[data-id="${theme}"]`).click();
-      await page.waitForFunction((t) => document.documentElement.dataset.theme === t, theme);
+      await page.waitForFunction((t) => document.documentElement.dataset.palette === t, theme);
+      // Couleur de fond de la palette (palette.json), appliquée tout de suite.
+      const bg = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', theme, 'palette.json'), 'utf8')).background;
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), hexToRgb(bg));
       await goByKeyboard('home');
       await page.waitForFunction(() => document.body.dataset.section === 'home');
       await settle();
       await shot(`accueil-${theme}`);
     }
+    assert.equal(await page.evaluate(() => window.__sansRechargement), true);
   });
 
   it('aucune requête réseau sortante, hors Widevine', () => {

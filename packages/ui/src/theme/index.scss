@@ -1,0 +1,30 @@
+// Habillage du cœur de Mire (P4-02, D-17) sur le moteur de dot-stash : jetons du moteur, styles de base, contrôles
+// (ds-trigger), habillages des autres composants ds-* utilisés, contrat des palettes. Les composants mire-* ont
+// chacun leur feuille, à côté de leur code ; styles/index.scss les assemble avec celle-ci.
+//
+// Les autres composants ds-* gardent l'habillage du thème default de dot-stash : il ne lit que les jetons du
+// moteur, qui sont ici ceux de Mire (couleurs des palettes, échelles agrandies). Une palette ne change que des
+// jetons (docs/themes.md) : rien ici n'est à refaire pour elle.
+
+@use './tokens' as *;
+
+@use './base';
+@use './palettes';
+
+// Contrôles : avant les habillages qui ajoutent des variantes de bouton.
+@use './components/trigger';
+@use 'pkg:dot-stash/scss/themes/default/components/alert';
+@use 'pkg:dot-stash/scss/themes/default/components/badge';
+@use 'pkg:dot-stash/scss/themes/default/components/field';
+@use 'pkg:dot-stash/scss/themes/default/components/icon';
+@use 'pkg:dot-stash/scss/themes/default/components/loader';
+@use 'pkg:dot-stash/scss/themes/default/components/modal';
+@use 'pkg:dot-stash/scss/themes/default/components/panel';
+@use 'pkg:dot-stash/scss/themes/default/components/range';
+@use 'pkg:dot-stash/scss/themes/default/components/scroller';
+@use 'pkg:dot-stash/scss/themes/default/components/select';
+@use 'pkg:dot-stash/scss/themes/default/components/sortable';
+@use 'pkg:dot-stash/scss/themes/default/components/thumb';
+@use 'pkg:dot-stash/scss/themes/default/components/toaster';
+@use 'pkg:dot-stash/scss/themes/default/components/toggle';
+@use 'pkg:dot-stash/scss/themes/default/components/tooltip';

@@ -1,0 +1,91 @@
+// Réglages du moteur de dot-stash pour l'habillage du cœur de Mire. Le moteur ne se configure qu'à son premier
+// chargement : toute la feuille de @mire/ui charge ce module en premier (`@use '<chemin>/theme/tokens' as *;`).
+//
+// Les couleurs du moteur ne sont pas des valeurs : ce sont les jetons des palettes (var(--bg), var(--text)…, voir
+// docs/themes.md), et l'accent de la section (var(--ring), calculé par styles.css sur body et redéclaré par
+// _base.scss là où il change). Les fonctions du moteur
+// qui calculent sur une couleur (ds-color-value() et color.*) ne s'emploient donc pas dans cet habillage.
+//
+// Échelles agrandies pour la lecture à distance : texte de base à 18 px (comme l'interface historique), espacements et
+// arrondis de Mire.
+
+@forward 'pkg:dot-stash/scss/engine' with (
+  $colors: (
+    // Couleur d'action : celle du texte, comme les boutons principaux de l'interface historique (.btn-primary),
+    // lisible dans toutes les palettes. L'accent de la section (--ring) reste au focus et aux contrôles (input).
+    primary: (darker: var(--text), dark: color-mix(in srgb, var(--text) 85%, var(--bg)), base: var(--text), light: var(--surface-2)),
+    secondary: (darker: var(--text), dark: color-mix(in srgb, var(--muted) 85%, var(--bg)), base: var(--muted), light: var(--line)),
+    // Du fond (white) au texte (black), dans une palette claire comme dans une sombre.
+    gray: (
+        white: var(--bg),
+        lightest: var(--surface),
+        lighter: var(--surface-2),
+        light: var(--line),
+        base: var(--line-strong),
+        dark: var(--muted),
+        darker: var(--text),
+        darkest: var(--text),
+        black: var(--text)
+      ),
+    // Les barres de la mire, assombries comme l'anneau de focus dans une palette claire (--ring-mix).
+    status: (
+        success: color-mix(in srgb, var(--bar-green) var(--ring-mix), #000),
+        warning: color-mix(in srgb, var(--bar-yellow) var(--ring-mix), #000),
+        error: color-mix(in srgb, var(--bar-red) var(--ring-mix), #000),
+        info: color-mix(in srgb, var(--bar-blue) var(--ring-mix), #000),
+        busy: var(--muted),
+        disabled: var(--line-strong),
+        discount: color-mix(in srgb, var(--bar-red) var(--ring-mix), #000),
+        new: color-mix(in srgb, var(--bar-magenta) var(--ring-mix), #000)
+      ),
+    input: (
+      caret: var(--text),
+      unchecked: var(--line-strong),
+      checked: var(--ring),
+      disabled: var(--line),
+      track: var(--line),
+      track-disabled: var(--surface-2),
+      knob: var(--muted),
+      knob-checked: var(--ring),
+      knob-disabled: var(--line-strong)
+    ),
+    shadow: (base: rgb(0 0 0 / 30%), strong: rgb(0 0 0 / 70%)),
+    indicator: (base: var(--line-strong), active: var(--ring)),
+  ),
+  // Anneau de focus de l'interface historique : couleur de l'accent, épaisseur donnée par la palette.
+  $focus: (
+      color: var(--ring),
+      width: var(--ring-w),
+      style: solid,
+      offset: 2px,
+    ),
+  $font-family-base: var(--font),
+  $font-size-100: 0.9375rem,
+  $font-size-200: 1.125rem,
+  $font-size-300: 1.25rem,
+  $font-size-400: 1.5rem,
+  $font-size-500: 1.75rem,
+  $font-size-600: 2rem,
+  $font-size-700: 2.5rem,
+  $font-size-800: 3rem,
+  $font-size-900: 3.5rem,
+  $spacings: (
+    0: 0,
+    1: 0.375rem,
+    2: 0.625rem,
+    3: 0.875rem,
+    4: 1.25rem,
+    5: 1.75rem,
+    6: 2.5rem,
+    7: 3.5rem,
+    8: 5rem,
+  ),
+  $radii: (
+    none: 0,
+    sm: 4px,
+    md: 10px,
+    lg: 16px,
+    pill: 999px,
+    circle: 50%,
+  )
+);

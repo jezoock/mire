@@ -7,13 +7,6 @@ export const CONFIG_VERSION = 8;
 // Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
 export const HOME_BARS: readonly HomeBar[] = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
 export const THEMES: readonly Theme[] = ['auto', 'ecran', 'jour', 'minuit', 'velours', 'contraste'];
-export const THEME_BG: Readonly<Record<Exclude<Theme, 'auto'>, string>> = {
-  ecran: '#1F2321',
-  jour: '#F1EFE8',
-  minuit: '#0F1524',
-  velours: '#1C1513',
-  contraste: '#000000',
-};
 
 export const DEFAULT_CONFIG: Readonly<Config> = {
   version: CONFIG_VERSION,

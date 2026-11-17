@@ -562,7 +562,7 @@ npm install --save-dev --save-exact https://github.com/jezoock/dot-stash/release
 npm run build
 ```
 
-(en remplaçant `0.2.0`, aux deux endroits de l’adresse, par la nouvelle version). Lisez d’abord son CHANGELOG : un changement des jetons ou des habillages peut demander d’adapter `packages/ui/src/styles/`.
+(en remplaçant `0.2.0`, aux deux endroits de l’adresse, par la nouvelle version). Lisez d’abord son CHANGELOG : un changement des jetons ou des habillages peut demander d’adapter l’habillage du cœur (`packages/ui/src/theme/`, voir [`docs/themes.md`](docs/themes.md)).
 
 Une page de démonstration interne, cachée, montre les composants : ouvrez les outils de développement (<kbd>F12</kbd>) et tapez `location.hash = 'demo'`.
 

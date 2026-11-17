@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-palette="ecran">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' media: data: blob: https: http:; media-src 'self' media: blob: http: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src 'self' media:">
@@ -8,6 +8,12 @@
   <link rel="stylesheet" href="fonts/archivo.css">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ui/mire-ui.css">
+  <!-- Palettes du cœur, après l'habillage (valeurs par défaut des jetons) ; le chargeur ajoute les autres. -->
+  <link rel="stylesheet" href="palettes/ecran/ecran.css" data-palette-tokens="ecran">
+  <link rel="stylesheet" href="palettes/jour/jour.css" data-palette-tokens="jour">
+  <link rel="stylesheet" href="palettes/minuit/minuit.css" data-palette-tokens="minuit">
+  <link rel="stylesheet" href="palettes/velours/velours.css" data-palette-tokens="velours">
+  <link rel="stylesheet" href="palettes/contraste/contraste.css" data-palette-tokens="contraste">
   <script type="module" src="vendor/dot-stash/dot-stash.esm.js"></script>
 </head>
 <body data-section="home">

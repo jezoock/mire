@@ -120,8 +120,8 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | en revue | |
-| P4-02 | Habillage du cœur et palettes | M | P4-01 |  | à faire | |
+| P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | faite | |
+| P4-02 | Habillage du cœur et palettes | M | P4-01 |  | faite | |
 | P4-03 | Navigation clavier et manette sur les composants | L | P4-01, P1-24 | 🧑 | à faire | |
 | P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | à faire | |
 | **G5** | **Point d'étape : intégration, palettes, navigation, contrôleurs** | | P4-01…P4-04 | | | |
@@ -166,7 +166,7 @@ avancer en parallèle des tâches de Mire. La colonne « dot-stash » donne la t
 | DS-04 | `ds-thumb` : image à proportions fixes, chargement différé, carton de remplacement | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-05 | `ds-scroller` : rangée défilante qui garde l'élément focalisé visible | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
 | DS-06 | `ds-sortable` : liste ordonnable au clavier | M | — | à créer | faite | [dot-stash#3](https://github.com/jezoock/dot-stash/pull/3) |
-| DS-07 | Imports par composant (`dist-custom-elements`), si P4-01 en a besoin | S | — | B-122, B-123 | selon P4-01 | |
+| DS-07 | Imports par composant (`dist-custom-elements`), si P4-01 en a besoin | S | — | B-122, B-123 | abandonnée | P4-01 : le chargeur paresseux suffit |
 | DS-08 | Rendre le dépôt public (action de ta part, D-13) : l'archive de la release s'installe par son adresse sans jeton | XS | DS-01 | — | faite (dépôt public, release [v0.2.0](https://github.com/jezoock/dot-stash/releases/tag/v0.2.0) avec `dot-stash-0.2.0.tgz`) | |
 
 ## Phase 5 — Extraction en plugins
