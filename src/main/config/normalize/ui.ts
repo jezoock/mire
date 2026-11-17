@@ -1,5 +1,6 @@
 /** Interface : thème, menu, vue de départ, accueil et langue. */
 import { normalizeLanguageSetting } from '@mire/shared/i18n';
+import { isTarget, listPageId, parseTarget } from '@mire/shared';
 import type { HomeRow, HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
 import { homeRowsFromV8 } from '../migrations/v9.ts';
 import { DEFAULT_CONFIG, HOME_BARS, THEMES } from '../defaults.ts';
@@ -25,11 +26,19 @@ const textList = (v: unknown, keep: (s: string) => boolean = () => true): string
 function normalizeRow(r: unknown): HomeRow | null {
   if (!isObjectLike(r)) return null;
   if (r.kind === 'recent') return { kind: 'recent' };
-  if (r.kind === 'bars') return { kind: 'bars', targets: textList(r.targets) };
+  // Une cible invalide (notation, écran inconnu) est retirée : voir `parseTarget` (@mire/shared).
+  if (r.kind === 'bars') return { kind: 'bars', targets: textList(r.targets, isTarget) };
   // Les sites gardent leur clé même s'ils quittent `web` : ils deviendront des éléments de plugins (P5-01).
   if (r.kind === 'sites') return { kind: 'sites', keys: textList(r.keys, (k) => k.startsWith('web:')) };
-  if ((r.kind === 'page' || r.kind === 'list') && typeof r.id === 'string' && r.id) return { kind: r.kind, id: r.id };
+  if (r.kind === 'page' || r.kind === 'list') return rowTarget(r.kind, r.id);
   return null;
+}
+
+/** Rangée d'une page ou d'une liste : son identifiant suit la même règle que dans une cible. */
+function rowTarget(kind: 'page' | 'list', id: unknown): HomeRow | null {
+  if (typeof id !== 'string') return null;
+  const target = parseTarget(kind === 'list' ? listPageId(id) : id);
+  return target?.kind === kind ? { kind, id } : null;
 }
 
 /** Rangées valides, chacune une seule fois (une seule rangée de barres, de sites et « Reprendre »). */
