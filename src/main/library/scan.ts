@@ -9,7 +9,7 @@ import { resolveLocation } from './location.ts';
 import { localProvider } from './providers/local.ts';
 import { httpIndexProvider } from './providers/http-index.ts';
 import { m3uProvider } from './providers/m3u.ts';
-import type { LibraryItem, RemoteSubtitles, ScanContext, ScanResult, SourceProvider, SourceStatus, SourceTarget } from './types.ts';
+import type { LibraryItem, RemoteSubtitles, ScanContext, ScannedLocation, ScanResult, SourceProvider, SourceStatus, SourceTarget } from './types.ts';
 import { t } from '../i18n/current.ts';
 
 /** Nombre maximal d'éléments d'une analyse. */
@@ -24,6 +24,8 @@ export interface ScanOptions {
   providers?: readonly SourceProvider[];
   maxItems?: number;
   platform?: NodeJS.Platform;
+  /** Appelé après chaque emplacement analysé (catalogue d'éléments). */
+  onScanned?: (scanned: ScannedLocation) => void;
 }
 
 interface SourceGroup {
@@ -70,11 +72,13 @@ export function bookmarkItem(b: Bookmark): LibraryItem {
 }
 
 export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
-  const { sources, bookmarks = [], providers = DEFAULT_PROVIDERS, maxItems = MAX_ITEMS, platform } = opts;
+  const { sources, bookmarks = [], providers = DEFAULT_PROVIDERS, maxItems = MAX_ITEMS, platform, onScanned } = opts;
   const items: LibraryItem[] = [];
   const subtitles: RemoteSubtitles = new Map();
   const status: Record<string, SourceStatus> = {};
   const ctx: ScanContext = { out: items, maxItems, subtitles, platform };
+  if (onScanned) ctx.localSubtitles = new Map();
+  const subtitlesOf = (p: string) => ctx.localSubtitles?.get(p) ?? subtitles.get(p)?.map((s) => s.url) ?? [];
   for (const g of groupSources(sources, platform)) {
     const start = items.length;
     let error: string | null = null;
@@ -88,6 +92,9 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
       const count = items.slice(start).filter((it) => it.kind === src.kind).length;
       status[src.id] = { ok: !error, error, count };
     }
+    // Nombre maximal atteint : la liste de cet emplacement peut être incomplète.
+    const complete = !error && items.length < maxItems;
+    onScanned?.({ target: g.target, kinds: g.kinds, items: items.slice(start), subtitles: subtitlesOf, complete });
   }
   for (const b of bookmarks) items.push(bookmarkItem(b));
   return { items, status, subtitles };

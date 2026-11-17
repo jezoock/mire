@@ -2,45 +2,14 @@
 // profondeur, dossiers cachés ; regroupement des sources, marque-pages, sous-titres locaux, fichiers ouverts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { scanLibrary, findSubtitles, itemFromPath, MAX_ITEMS } from '../../src/main/library/index.ts';
 import type { LibraryItem } from '../../src/main/library/index.ts';
 import type { Bookmark, LibrarySource } from '@mire/shared';
+import { libraryTree } from './fixtures.ts';
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-library-'));
-test.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
-function touch(rel: string, content = '') {
-  const file = path.join(root, rel);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, content);
-  return file;
-}
-
-const deep = Array.from({ length: 17 }, (_, i) => `n${i + 1}`);
-[
-  'Films/Amélie (2001).mkv',
-  'Films/Amélie (2001).jpg',
-  'Films/Amélie (2001)-fanart.jpg',
-  'Films/Sans affiche (1999).mp4',
-  'Films/poster.jpg',
-  'Films/fanart.jpg',
-  'Films/Photo de tournage.png',
-  'Films/notes.txt',
-  'Films/.cachée.mkv',
-  'Films/.cache/Caché.mkv',
-  'Films/$RECYCLE.BIN/Supprimé.mkv',
-  'Séries/Ma Série/Saison 1/Ma Série S01E02.mkv',
-  'Musique/Album/01 - Début.mp3',
-  'Musique/Album/cover.jpg',
-  'Images/Vacances/Plage.png',
-  'Images/Vacances/folder.jpg',
-  'Images/Vacances/Plage-thumb.png',
-  `Profond/${deep.slice(0, 16).join('/')}/Niveau 16.mkv`,
-  `Profond/${deep.join('/')}/Niveau 17.mkv`,
-].forEach((rel) => touch(rel));
+const { root, touch, remove } = libraryTree();
+test.after(remove);
 
 const src = (id: string, kind: LibrarySource['kind'], rel: string): LibrarySource => ({ id, kind, location: path.join(root, rel) });
 const byName = (items: LibraryItem[]) => new Map(items.map((i) => [i.name, i]));
