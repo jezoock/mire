@@ -15,6 +15,8 @@ export interface UsageServiceOptions {
   debounceMs?: number;
   /** Message d'erreur (fichier illisible) ; `console.error` par défaut. */
   log?: (message: string) => void;
+  /** Règle des clés d'éléments (celle de Mire par défaut ; paramètre pour les tests). */
+  platform?: NodeJS.Platform;
 }
 
 export interface UsageService {
@@ -41,7 +43,7 @@ export interface UsageService {
   flush(): Promise<void>;
 }
 
-export function createUsageService({ file, debounceMs = 1000, log = (m) => console.error(m) }: UsageServiceOptions): UsageService {
+export function createUsageService({ file, debounceMs = 1000, log = (m) => console.error(m), platform = process.platform }: UsageServiceOptions): UsageService {
   const store = createJsonStore<UsageData>(file, {
     defaults: rules.emptyUsage,
     debounceMs,
@@ -60,22 +62,28 @@ export function createUsageService({ file, debounceMs = 1000, log = (m) => conso
   return {
     file,
     load() {
-      current = rules.normalizeUsage(store.load());
+      const raw = store.load();
+      current = rules.normalizeUsage(raw, platform);
+      // Fichier d'avant P2-11 (positions rangées par chemin, « Reprendre » sans clé) : réécrit une fois, rattaché.
+      if (JSON.stringify(raw) !== JSON.stringify(current)) store.set(current);
       return current;
     },
     get: () => current,
     snapshot: () => ({ recent: current.recent, volume: current.volume, queries: current.queries }),
-    addRecent: (entry) => patch({ recent: rules.addRecent(current.recent, entry) }).recent,
+    addRecent: (entry) => patch({ recent: rules.addRecent(current.recent, entry, platform) }).recent,
     removeRecent: (path) => patch({ recent: rules.removeRecent(current.recent, path) }).recent,
-    resume: (path) => current.resume[path] ?? 0,
+    resume: (path) => current.resume[rules.resumeId(path, platform)] ?? 0,
     saveResume(path, time, duration) {
-      const resume = rules.resumeAfter(current.resume, path, time, duration);
-      if (resume[path] !== current.resume[path]) patch({ resume });
+      if (typeof path !== 'string' || !path) return true;
+      const id = rules.resumeId(path, platform);
+      const resume = rules.resumeAfter(current.resume, id, time, duration);
+      if (resume[id] !== current.resume[id]) patch({ resume });
       return true;
     },
     clearResume(path) {
-      if (!Object.hasOwn(current.resume, path)) return true;
-      const { [path]: _gone, ...resume } = current.resume;
+      const id = typeof path === 'string' && path ? rules.resumeId(path, platform) : '';
+      if (!id || !Object.hasOwn(current.resume, id)) return true;
+      const { [id]: _gone, ...resume } = current.resume;
       patch({ resume });
       return true;
     },
@@ -86,9 +94,9 @@ export function createUsageService({ file, debounceMs = 1000, log = (m) => conso
     },
     addQuery: (query) => patch({ queries: rules.addQuery(current.queries, query) }).queries,
     clearQueries: () => (patch({ queries: [] }), true),
-    replace: (data) => commit(rules.normalizeUsage(data)),
-    merge: (data) => commit(rules.mergeUsage(current, rules.normalizeUsage(data))),
-    migrate: (legacy) => commit(rules.mergeLegacy(current, rules.isObject(legacy) ? legacy : {})),
+    replace: (data) => commit(rules.normalizeUsage(data, platform)),
+    merge: (data) => commit(rules.mergeUsage(current, rules.normalizeUsage(data, platform))),
+    migrate: (legacy) => commit(rules.mergeLegacy(current, rules.isObject(legacy) ? legacy : {}, platform)),
     flush: () => store.flush(),
   };
 }

@@ -2,7 +2,7 @@
 import type { Config, HomeBar, Theme } from '@mire/shared';
 import { DEFAULT_TV } from './catalogs/tv.ts';
 
-export const CONFIG_VERSION = 8;
+export const CONFIG_VERSION = 9;
 
 // Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
 export const HOME_BARS: readonly HomeBar[] = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
@@ -25,7 +25,14 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
     // Menu principal : à gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable ou non.
     menu: { position: 'left', autohide: false },
     start: 'home',
-    home: { clock: true, recent: true, bars: [...HOME_BARS], services: [] },
+    // rows : rangées de l'accueil de la phase 4, tirées des réglages ci-dessus (migrations/v9.ts).
+    home: {
+      clock: true,
+      recent: true,
+      bars: [...HOME_BARS],
+      services: [],
+      rows: [{ kind: 'bars', targets: ['screen:search', 'movies', 'series', 'music', 'images', 'streaming', 'tv', 'games'] }, { kind: 'recent' }],
+    },
     // Langue de l'interface : auto = celle du système, ramenée au français ou à l'anglais (src/main/i18n).
     // Une configuration d'avant la v7 passe en français (migrations/v7.ts).
     language: 'auto',

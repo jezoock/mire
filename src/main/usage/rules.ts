@@ -3,8 +3,10 @@
  * lecture tolérante d'un contenu reçu (fichier, interface, import), fusion de l'import « compléter » et reprise des
  * valeurs laissées dans le `localStorage` par une version précédente. Mêmes règles que l'ancien renderer.
  */
-import { fold } from '@mire/shared';
+import path from 'node:path';
+import { fold, isHttpUrl } from '@mire/shared';
 import type { LegacyUsage, RecentEntry, UsageData } from '@mire/shared/ipc';
+import { keyGenre, localFileKey, remoteFileKey } from '../catalog/keys.ts';
 
 export const RECENT_MAX = 18;
 export const QUERIES_MAX = 10;
@@ -22,15 +24,33 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 export const emptyUsage = (): UsageData => ({ recent: [], resume: {}, volume: DEFAULT_VOLUME, queries: [] });
 
-/** Entrée de « Reprendre » limitée aux champs utiles ; `null` sans chemin. */
-export function recentEntry(raw: unknown): RecentEntry | null {
+/**
+ * Clé d'élément d'un chemin de « Reprendre » ou d'une position de reprise (P2-11) : `remote:` pour une adresse web,
+ * `local:` pour un chemin absolu (dont un partage réseau). Une clé `local:`/`remote:` est rendue telle quelle (données
+ * déjà rattachées). `null` pour le reste (lien magnet, adresse d'un autre protocole, chemin relatif).
+ */
+export function usageKey(target: string, platform: NodeJS.Platform = process.platform): string | null {
+  const genre = keyGenre(target);
+  if (genre === 'local' || genre === 'remote') return target;
+  if (isHttpUrl(target)) return remoteFileKey(target);
+  const absolute = platform === 'win32' ? path.win32.isAbsolute(target) : path.posix.isAbsolute(target);
+  return absolute ? localFileKey(target, platform) : null;
+}
+
+/** Nom sous lequel ranger la position de reprise d'un chemin : sa clé, ou le chemin lui-même s'il n'en a pas. */
+export const resumeId = (target: string, platform: NodeJS.Platform = process.platform): string => usageKey(target, platform) ?? target;
+
+/** Entrée de « Reprendre » limitée aux champs utiles, avec sa clé ; `null` sans chemin. */
+export function recentEntry(raw: unknown, platform: NodeJS.Platform = process.platform): RecentEntry | null {
   if (!isObject(raw) || typeof raw.path !== 'string' || !raw.path) return null;
-  return Object.fromEntries(RECENT_KEYS.map((k) => [k, raw[k] ?? null])) as unknown as RecentEntry;
+  const entry = Object.fromEntries(RECENT_KEYS.map((k) => [k, raw[k] ?? null])) as unknown as RecentEntry;
+  entry.key = usageKey(raw.path, platform);
+  return entry;
 }
 
 /** Ajoute en tête (une seule fois par chemin), 18 au plus. */
-export function addRecent(list: RecentEntry[], raw: unknown): RecentEntry[] {
-  const entry = recentEntry(raw);
+export function addRecent(list: RecentEntry[], raw: unknown, platform: NodeJS.Platform = process.platform): RecentEntry[] {
+  const entry = recentEntry(raw, platform);
   if (!entry) return list;
   return [entry, ...list.filter((x) => x.path !== entry.path)].slice(0, RECENT_MAX);
 }
@@ -61,9 +81,9 @@ export function normalizeVolume(raw: unknown, fallback = DEFAULT_VOLUME): number
   return Number.isFinite(v) ? clamp(v, 0, 1) : fallback;
 }
 
-function normalizeRecent(raw: unknown): RecentEntry[] {
+function normalizeRecent(raw: unknown, platform: NodeJS.Platform): RecentEntry[] {
   if (!Array.isArray(raw)) return [];
-  return raw.reduceRight<RecentEntry[]>((list, item) => addRecent(list, item), []);
+  return raw.reduceRight<RecentEntry[]>((list, item) => addRecent(list, item, platform), []);
 }
 
 function normalizeQueries(raw: unknown): string[] {
@@ -71,22 +91,28 @@ function normalizeQueries(raw: unknown): string[] {
   return raw.reduceRight<string[]>((list, q) => addQuery(list, q), []);
 }
 
-function normalizeResume(raw: unknown): Record<string, number> {
+/**
+ * Positions de reprise rangées par clé d'élément (une position rangée par chemin, d'avant P2-11, y passe). Deux
+ * chemins de même clé (casse différente sous Windows) : la plus grande position est gardée.
+ */
+function normalizeResume(raw: unknown, platform: NodeJS.Platform): Record<string, number> {
   if (!isObject(raw)) return {};
   const out: Record<string, number> = {};
-  for (const [path, value] of Object.entries(raw)) {
+  for (const [name, value] of Object.entries(raw)) {
     const t = Math.floor(Number(value));
-    if (path && Number.isFinite(t) && t > 0) out[path] = t;
+    if (!name || !Number.isFinite(t) || t <= 0) continue;
+    const id = resumeId(name, platform);
+    out[id] = Math.max(out[id] ?? 0, t);
   }
   return out;
 }
 
-/** Données d'usage complètes et valides, quel que soit le contenu reçu. */
-export function normalizeUsage(raw: unknown): UsageData {
+/** Données d'usage complètes et valides, quel que soit le contenu reçu ; rattachées aux clés d'éléments. */
+export function normalizeUsage(raw: unknown, platform: NodeJS.Platform = process.platform): UsageData {
   const data = isObject(raw) ? raw : {};
   return {
-    recent: normalizeRecent(data.recent),
-    resume: normalizeResume(data.resume),
+    recent: normalizeRecent(data.recent, platform),
+    resume: normalizeResume(data.resume, platform),
     volume: normalizeVolume(data.volume),
     queries: normalizeQueries(data.queries),
   };
@@ -108,7 +134,7 @@ export function mergeUsage(base: UsageData, extra: UsageData): UsageData {
 }
 
 /** Reprise du `localStorage` d'une version précédente : comme « compléter », mais le volume réglé alors est repris. */
-export function mergeLegacy(base: UsageData, legacy: LegacyUsage): UsageData {
-  const extra = normalizeUsage(legacy);
+export function mergeLegacy(base: UsageData, legacy: LegacyUsage, platform: NodeJS.Platform = process.platform): UsageData {
+  const extra = normalizeUsage(legacy, platform);
   return { ...mergeUsage(base, extra), volume: normalizeVolume(legacy?.volume, base.volume) };
 }

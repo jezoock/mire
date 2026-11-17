@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createUsageService, mergeLegacy, mergeUsage, normalizeUsage, resumeAfter } from '../../src/main/usage/index.ts';
-import { addQuery, addRecent, emptyUsage } from '../../src/main/usage/rules.ts';
+import { addQuery, addRecent, emptyUsage, usageKey } from '../../src/main/usage/rules.ts';
 
 let tmp: string;
 beforeEach(() => {
@@ -26,6 +26,7 @@ const entry = (p: string) => ({
   folder: null,
   dir: null,
   remote: null,
+  key: `local:${p}`,
 });
 
 describe('usage : « Reprendre »', () => {
@@ -92,7 +93,7 @@ describe('usage : lecture tolérante', () => {
     assert.deepEqual(normalizeUsage(null), emptyUsage());
     assert.deepEqual(normalizeUsage({ volume: 'x', recent: 'x', queries: [1, 'a', 'A'], resume: { '/a': '12', '/b': 'x', '/c': -1 } }), {
       recent: [],
-      resume: { '/a': 12 },
+      resume: { 'local:/a': 12 },
       volume: 0.9,
       queries: ['a'],
     });
@@ -116,7 +117,7 @@ describe('usage : fusion de l’import « compléter »', () => {
     const extra = normalizeUsage({ recent: [item('/c'), item('/a')], resume: { '/a': 500, '/c': 200 }, volume: 1, queries: ['ete', 'dune'] });
     assert.deepEqual(mergeUsage(base, extra), {
       recent: [entry('/a'), entry('/b'), entry('/c')],
-      resume: { '/a': 100, '/c': 200 },
+      resume: { 'local:/a': 100, 'local:/c': 200 },
       volume: 0.4,
       queries: ['Été', 'dune'],
     });
@@ -131,7 +132,7 @@ describe('usage : fusion de l’import « compléter »', () => {
 
   it('reprise du localStorage : comme « compléter », mais avec le volume réglé alors', () => {
     const legacy = { recent: [item('/a')], resume: { '/a': '321' }, volume: '0.35', queries: ['dune'] };
-    assert.deepEqual(mergeLegacy(emptyUsage(), legacy), { recent: [entry('/a')], resume: { '/a': 321 }, volume: 0.35, queries: ['dune'] });
+    assert.deepEqual(mergeLegacy(emptyUsage(), legacy), { recent: [entry('/a')], resume: { 'local:/a': 321 }, volume: 0.35, queries: ['dune'] });
     assert.equal(mergeLegacy({ ...emptyUsage(), volume: 0.5 }, { volume: null }).volume, 0.5);
   });
 });
@@ -162,7 +163,7 @@ describe('usage : service et fichier usage.json', () => {
     usage.clearQueries();
     usage.addQuery('alien');
     await usage.flush();
-    assert.deepEqual(read(), { recent: [entry('/v/a.mkv')], resume: { '/v/a.mkv': 400 }, volume: 0.42, queries: ['alien'] });
+    assert.deepEqual(read(), { recent: [entry('/v/a.mkv')], resume: { 'local:/v/a.mkv': 400 }, volume: 0.42, queries: ['alien'] });
     const again = createUsageService({ file: file() });
     again.load();
     assert.equal(again.resume('/v/a.mkv'), 400);
@@ -188,7 +189,7 @@ describe('usage : service et fichier usage.json', () => {
       fs.promises.rename = original;
     }
     assert.equal(writes.length, 1);
-    assert.deepEqual(read().resume, { '/v/a.mkv': 95 });
+    assert.deepEqual(read().resume, { 'local:/v/a.mkv': 95 });
     assert.equal(read().volume, 1);
   });
 
@@ -212,9 +213,67 @@ describe('usage : service et fichier usage.json', () => {
     usage.replace({ recent: [item('/c')] });
     assert.deepEqual(usage.get(), { ...emptyUsage(), recent: [entry('/c')] });
     usage.migrate({ volume: '0.3', resume: { '/c': '120' } });
-    assert.deepEqual(usage.get(), { recent: [entry('/c')], resume: { '/c': 120 }, volume: 0.3, queries: [] });
+    assert.deepEqual(usage.get(), { recent: [entry('/c')], resume: { 'local:/c': 120 }, volume: 0.3, queries: [] });
     usage.migrate('n’importe quoi');
     assert.equal(usage.get().volume, 0.3);
+    return usage.flush();
+  });
+});
+
+describe('usage : rattachement aux clés d’éléments (P2-11)', () => {
+  const file = () => path.join(tmp, 'usage.json');
+
+  it('clé d’un chemin local, d’un partage, d’une adresse web ; rien pour le reste', () => {
+    assert.equal(usageKey('/films/A.mkv', 'linux'), 'local:/films/A.mkv');
+    assert.equal(usageKey('C:\\Films\\A.mkv', 'win32'), 'local:c:/films/a.mkv');
+    assert.equal(usageKey('\\\\NAS\\Films\\A.mkv', 'win32'), 'local://nas/films/a.mkv');
+    assert.equal(usageKey('https://nas.local/films/a.mkv#t=3', 'linux'), 'remote:https://nas.local/films/a.mkv');
+    assert.equal(usageKey('local:/films/A.mkv', 'linux'), 'local:/films/A.mkv');
+    assert.equal(usageKey('magnet:?xt=urn:btih:abc', 'linux'), null);
+    assert.equal(usageKey('films/a.mkv', 'linux'), null);
+  });
+
+  it('positions par chemin et « Reprendre » sans clé : rattachés au chargement, réécrits une fois', async () => {
+    const before = {
+      recent: [item('C:\\Films\\A.mkv'), item('magnet:?xt=urn:btih:abc')],
+      resume: { 'C:\\Films\\A.mkv': 300, 'c:/films/a.mkv': 200, 'https://nas/b.mkv': 50, 'magnet:?xt=urn:btih:abc': 40 },
+      volume: 0.5,
+      queries: ['dune'],
+    };
+    fs.writeFileSync(file(), JSON.stringify(before));
+    const usage = createUsageService({ file: file(), debounceMs: 5, platform: 'win32' });
+    const data = usage.load();
+    assert.deepEqual(
+      data.recent.map((x) => [x.path, x.key]),
+      [
+        ['C:\\Films\\A.mkv', 'local:c:/films/a.mkv'],
+        ['magnet:?xt=urn:btih:abc', null],
+      ],
+    );
+    // Rien n'est perdu : ce qui n'a pas de clé garde son chemin ; deux chemins de même clé gardent la plus grande position.
+    assert.deepEqual(data.resume, { 'local:c:/films/a.mkv': 300, 'remote:https://nas/b.mkv': 50, 'magnet:?xt=urn:btih:abc': 40 });
+    assert.deepEqual(data.queries, ['dune']);
+    // L'interface historique demande toujours par chemin.
+    assert.equal(usage.resume('C:\\FILMS\\a.mkv'), 300);
+    assert.equal(usage.resume('magnet:?xt=urn:btih:abc'), 40);
+    await usage.flush();
+    const written = fs.readFileSync(file(), 'utf8');
+    assert.deepEqual(JSON.parse(written).resume, data.resume);
+    // Deuxième chargement : rien ne change, rien n'est réécrit.
+    const again = createUsageService({ file: file(), debounceMs: 5, platform: 'win32' });
+    assert.deepEqual(again.load(), data);
+    await again.flush();
+    assert.equal(fs.readFileSync(file(), 'utf8'), written);
+  });
+
+  it('import d’un export d’avant P2-11 : rattaché aussi', () => {
+    const usage = createUsageService({ file: file(), debounceMs: 5, platform: 'linux' });
+    usage.load();
+    usage.saveResume('/v/a.mkv', 400, 3600);
+    usage.merge({ resume: { '/v/a.mkv': 10, '/v/b.mkv': 60 } });
+    assert.deepEqual(usage.get().resume, { 'local:/v/a.mkv': 400, 'local:/v/b.mkv': 60 });
+    usage.clearResume('/v/b.mkv');
+    assert.deepEqual(usage.get().resume, { 'local:/v/a.mkv': 400 });
     return usage.flush();
   });
 });
