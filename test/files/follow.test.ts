@@ -74,7 +74,7 @@ describe('gestion des fichiers : le catalogue suit', () => {
     assert.deepEqual(s.overrides.get(key(OTHER))?.infos, { year: 1999 });
     // Infos en ligne, sous la nouvelle clé d'élément et la nouvelle clé du fournisseur.
     assert.equal(s.metadata.forElement(key(C)), undefined);
-    assert.equal(s.metadata.forElement(key(C2))?.get('tmdb')?.infos.title, 'C en ligne');
+    assert.equal(s.metadata.forElement(key(C2))?.get('tmdb')?.infos?.title, 'C en ligne');
     assert.equal(s.metadata.scrapeStore.get(`v:${C2}`)?.title, 'C en ligne');
     assert.equal(s.metadata.scrapeStore.missedAt(`v:${A2}`), 5);
     // Listes : même ordre, nouvelles clés.

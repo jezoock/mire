@@ -70,6 +70,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `archive/` | Décompression `.zip` et `.7z` avec le 7za de `7zip-bin` (boutique, téléchargements). |
 | `i18n/` | Langue de l'interface (`index.ts`), traduction des textes du processus principal (`current.ts`, fonction `t`), langue des fiches (`metadata.ts`). |
 | `fs/` | Parcours générique d'une arborescence de dossiers (`walk.ts`). |
+| `files/` | Gestion des fichiers (P2-10) : renommer, déplacer, mettre à la corbeille sous les dossiers locaux de la configuration (`service.ts`, `guard.ts`, `roots.ts`) ; le catalogue suit (`follow.ts`). |
 | `lib/` | Petites fonctions pures : chemin sous un dossier autorisé (`paths.ts`), arguments d'une ligne de commande (`args.ts`), texte (`text.ts`), entrées des vues web (`web-entry.ts`). |
 
 Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
@@ -375,6 +376,19 @@ Autres points d'extension du même genre, plus internes :
 - `media://` toujours derrière la politique d'accès, limitée aux dossiers autorisés ;
 - la séparation des sessions : les sites ne partagent ni la session ni le preload de l'interface.
 
+### Gestion des fichiers
+
+Le service `files/` (P2-10, IPC `filesRename(path, name)`, `filesMove(path, folder)`, `filesRemove(path)`) ne croit
+jamais l'interface sur parole. Il n'agit que sous les dossiers **locaux** de la configuration (`managedRoots` :
+bibliothèque, dossiers de jeux, dossiers des consoles), jamais sur un fichier autorisé un par un ou ouvert à part,
+ni dans les dossiers de données de Mire, ni sur un partage réseau ou un serveur web. Sont refusés : un chemin
+relatif, avec `..` ou hors de ces dossiers ; un lien symbolique (le fichier ou un dossier parent) dont le chemin réel
+(`realpath`, comparé aux chemins réels des dossiers) en sort ; un dossier configuré lui-même et la racine d'un disque
+(une racine de disque configurée est ignorée) ; une destination hors des dossiers, absente ou qui n'est pas un
+dossier ; un nom déjà pris (rien n'est écrasé) ; un nouveau nom vide, `.`, `..` ou avec un séparateur. La
+suppression passe par la corbeille du système (`shell.trashItem`). La confirmation est demandée par l'interface
+(P4-09). Le catalogue suit : voir « Listes » et « Tags et infos » (`movePath`).
+
 Piste connue : un lien symbolique placé dans un dossier autorisé est servi par `media://` (voir les pistes de
 `docs/plan/BACKLOG.md`).
 
@@ -662,6 +676,11 @@ démarrage et ne calcule rien d'autre.
   élément déjà dans la liste n'y est pas mis deux fois. Une position trop grande met l'élément à la fin.
 - **`lists.json`** : une liste mal formée (identifiant, nom, doublon d'identifiant) est écartée à la lecture, un
   élément mal formé ou en double aussi, sans perdre le reste (journal).
+- **Fichier renommé ou déplacé par Mire** (P2-10, `movePath`) : ses éléments (et ceux de tout ce que contient un
+  dossier) gardent leur place sous leur nouvelle clé, comme les modifications faites à la main et les infos en ligne
+  (`overrides.movePath`, `metadata.movePath`). Les anciens éléments quittent le catalogue (`catalog.forget`) et une
+  analyse de la bibliothèque est relancée peu après. Un fichier mis à la corbeille quitte le catalogue ; les listes
+  le gardent, indisponible.
 - **IPC** : `listsList()` (`{ id, name, count }`), `listsGet(id)` (éléments avec `available`), `listsCreate(name)`,
   `listsRename(id, name)`, `listsRemove(id)`, `listsAdd(id, keys, at?)`, `listsRemoveItems(id, keys)`,
   `listsMove(id, key, to)` ; `name` : un texte ou une clé des catalogues (`{ key }`). Événement `onListsChange`
