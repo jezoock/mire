@@ -6,7 +6,7 @@
 
 const NUM = '(?:0|[1-9]\\d*)';
 const IDENT = '[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*';
-const VERSION_RE = new RegExp(`^${NUM}\\.${NUM}\\.${NUM}(?:-${IDENT})?(?:\\+${IDENT})?$`);
+export const VERSION_RE = new RegExp(`^${NUM}\\.${NUM}\\.${NUM}(?:-${IDENT})?(?:\\+${IDENT})?$`);
 
 const PART = `(?:${NUM}|[xX*])`;
 // Comparateur : opérateur facultatif, puis une version éventuellement partielle (`1`, `1.2`, `1.x`) ou joker.
