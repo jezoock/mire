@@ -89,7 +89,7 @@ Fiches dans `phase-2.md`.
 | P2-02 | Sources de la bibliothèque → éléments | M | P2-01 |  | faite | [#50](https://github.com/jezoock/mire/pull/50) |
 | P2-03 | Jeux, télévision et sites → éléments | M | P2-02 |  | à faire | |
 | P2-04 | Moteur de tags et d'infos | L | P2-02 |  | faite | [#52](https://github.com/jezoock/mire/pull/52) |
-| P2-05 | Tags automatiques existants | M | P2-04 |  | à faire | |
+| P2-05 | Tags automatiques existants | M | P2-04 |  | faite | |
 | P2-06 | Infos en ligne dans le catalogue | M | P2-04 |  | à faire | |
 | P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | à faire | |
 | P2-08 | Listes | S | P2-07 |  | à faire | |
@@ -123,7 +123,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-01 | Intégration de dot-stash et `@mire/ui` | M | G2c, DS-01, DS-02, DS-08 |  | faite | [#49](https://github.com/jezoock/mire/pull/49) |
 | P4-02 | Habillage du cœur et palettes | M | P4-01 |  | faite | [#51](https://github.com/jezoock/mire/pull/51) |
 | P4-03 | Navigation clavier et manette sur les composants | L | P4-01, P1-24 | 🧑 | à faire | |
-| P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | faite | |
+| P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | faite | [#53](https://github.com/jezoock/mire/pull/53) |
 | **G5** | **Point d'étape : intégration, palettes, navigation, contrôleurs** | | P4-01…P4-04 | | | |
 | P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | à faire | |
 | P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | à faire | |

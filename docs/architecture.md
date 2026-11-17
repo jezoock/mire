@@ -472,7 +472,7 @@ les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La 
   `subtitles` (sous-titres `.srt`/`.vtt` trouvés à côté d'une vidéo, chemins ou adresses) ; affiche et fanart
   trouvés à côté du fichier (`poster`, `background`), logo d'une entrée M3U (`logo`) ; `mediaType` (`video`, `audio`,
   `image`) pour une entrée M3U sans extension reconnue, qui tient son type de celui de la source configurée. Le type de
-  fichier vient du moteur de tags (« Tags et infos ») ; les épisodes viendront des tags automatiques (P2-05).
+  fichier vient du moteur de tags (« Tags et infos ») ; les séries, films, albums et systèmes viennent des tags automatiques (« Tags et infos »).
 - **Une seule analyse** : `scanLibrary` parcourt chaque emplacement une fois, rend ses `LibraryItem` à l'interface
   historique (inchangés) et appelle `onScanned` ; le service de la bibliothèque y passe les éléments au catalogue
   (`elementsOf`). `scan(emplacement)` analyse un emplacement seul, comme le fera l'hôte des plugins.
@@ -494,16 +494,31 @@ les règles par extension de la configuration.
   | --- | --- | --- |
   | Type de fichier (`tags/file-rules.ts`) | `video`, `audio`, `image` d'après l'extension du fichier ou de l'adresse (formats de `EXT`) ; sans extension reconnue, l'info `mediaType` posée par la source (entrée M3U) | `extension` (`mkv`) |
   | Source | tags de la source (`local`, `network`, `remote`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, images trouvées à côté |
-  | Tags automatiques, infos en ligne | `Contributor` (`setContributors`), en attendant P2-05 et P2-06 | |
+  | Tags automatiques (`tags/taggers.ts`) | `series`, `movie` | `series`, `season`, `episode`, `title`, `year`, `artist`, `album`, `track`, `system`, `folder` (détail ci-dessous) |
+  | Infos en ligne | `Contributor` (`setContributors`), en attendant P2-06 | |
   | À la main (`overrides.json`) | ajout (`true`) ou **retrait** (`false`) | toute info, images |
 
   Tags : réunion des origines automatiques, puis les ajouts et les retraits faits à la main, qui l'emportent même
   après une nouvelle analyse. Infos et images : à la main, puis infos en ligne (le premier fournisseur l'emporte),
   puis tags automatiques, puis source, puis type de fichier.
+- **Tags automatiques** (`tags/taggers.ts`) : interface `Tagger` (reçoit l'élément avec les tags du type de fichier et
+  de la source, rend des tags et des infos ; rapide, sans réseau), branchée sur le moteur par `taggerContributor`. Les
+  cinq tags internes (plugins inclus en phase 5) ne regardent que les fichiers :
+
+  | Tag automatique | Éléments | Pose |
+  | --- | --- | --- |
+  | Séries | `video` | tag `series`, infos `series`, `season`, `episode` (`parseVideo`, « Friends S01E03 ») |
+  | Films | `video` qui n'est pas un épisode | tag `movie`, infos `title`, `year` (`parseVideo`) |
+  | Musique | `audio` | `artist` et `album` (dossier « Artiste - Album », sinon `album` : le dossier, ou son parent pour un « CD 2 »), `track` (numéro en tête du nom), `title` (nom sans ce numéro) |
+  | Consoles | jeux (`open.kind` `game`) | `system` (`guessSystem` sur la console de la configuration, sinon l'extension du jeu) ; recalculé quand les consoles changent |
+  | Photos | `image` | `folder` : groupe de dossier de l'interface (« Mariage, Partie 2 » pour un dossier générique) |
+
+  Coût sur 20 000 éléments factices : ~5 µs par élément (+100 à 150 ms par analyse complète).
 - **Règles par extension** : celles des formats reconnus ; seules les extensions changées sont gardées dans la
   configuration (`catalog.fileTags` : `{ ".ts": ["audio"], ".mkv": [] }`). La section est absente tant que rien n'y a
   été changé : la version de la configuration ne change pas.
-- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`) et infos
+- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, et `series`,
+  `movie` des tags automatiques) et infos
   du cœur avec leur type (`text`, `number`, `boolean`, `list`) ; noms affichés dans les catalogues de textes
   (`catalog.tags.<id>`, `catalog.infos.<id>`). Un tag inconnu ajouté à la main devient un tag de l'utilisateur, dont
   l'identifiant est le nom simplifié (« Vus en 2024 » → `vus-en-2024`).
