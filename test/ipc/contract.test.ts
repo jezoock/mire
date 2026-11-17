@@ -146,6 +146,7 @@ const ADDED_METHODS: Record<string, string> = {
 // Événements ajoutés après P1-08.
 const ADDED_EVENTS: Record<string, string> = {
   onLanguageChange: 'i18n:changed', // P1-28 : changement de langue à chaud
+  onPagesChange: 'pages:changed', // P2-07 : contenu d'une page changé
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

@@ -8,3 +8,4 @@ export * from './systems.ts';
 export * from './palette.ts';
 export type * from './config.ts';
 export type * from './element.ts';
+export * from './pages.ts';

@@ -14,6 +14,7 @@ import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
+import { createPages } from './catalog/pages/index.ts';
 import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
@@ -179,6 +180,10 @@ function start(pending: PendingFiles): Running {
     const providers = JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders);
     if (providers || JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(contributors());
   });
+  // Pages : définitions lues, rien n'est calculé avant la première demande ; les pages touchées sont annoncées.
+  const catalogPages = createPages({ file: files.catalogPages, engine: tags, catalog, translate: t });
+  catalogPages.load();
+  catalogPages.onChange((ids) => toUi('pages:changed', { pages: ids }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
   catalog.onChange(({ added }) => {
@@ -236,7 +241,26 @@ function start(pending: PendingFiles): Running {
   const adblock = webLayer.start();
 
   // Les handlers IPC (src/main/ipc/handlers/) reçoivent les services par leur contexte.
-  const services = { config, usage, i18n, catalog, tags, access, window, pending, meta, files, library, dialogs, web, scraper, store, downloads, adblock };
+  const services = {
+    config,
+    usage,
+    i18n,
+    catalog,
+    tags,
+    pages: catalogPages,
+    access,
+    window,
+    pending,
+    meta,
+    files,
+    library,
+    dialogs,
+    web,
+    scraper,
+    store,
+    downloads,
+    adblock,
+  };
   const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
   window.open();

@@ -36,6 +36,8 @@ export const CORE_INFOS: Readonly<Record<string, InfoType>> = {
   system: 'text',
   // Sources des sites (P2-03) : rangement du site dans Streaming (`video`, `music`…).
   category: 'text',
+  // Source des chaînes (P2-07) : numéro de la chaîne, pour le tri de la page Télévision.
+  channel: 'number',
 };
 
 /** Identifiant d'une info : lettres et chiffres, en commençant par une minuscule (`season`, `releaseDate`). */

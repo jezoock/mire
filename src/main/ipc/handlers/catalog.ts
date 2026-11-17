@@ -12,5 +12,11 @@ export function catalogHandlers(ctx: MainContext) {
     catalogSetTags: (key, changes) => ctx.tags.setTags(key, changes),
     catalogSetInfos: (key, changes) => ctx.tags.setInfos(key, changes),
     tagsList: () => ctx.tags.tagsList(),
+    // Pages et regroupements (P2-07).
+    pagesList: () => ctx.pages.list(),
+    pagesGet: (id) => ctx.pages.get(id),
+    pagesSave: (page) => ctx.pages.save(page),
+    pagesRemove: (id) => ctx.pages.remove(id),
+    catalogPage: (pageId, path, cursor) => ctx.pages.page(pageId, path, cursor),
   } satisfies Partial<IpcImplementations>;
 }
