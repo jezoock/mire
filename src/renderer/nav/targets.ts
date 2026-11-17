@@ -73,13 +73,13 @@ export function nextColumn(count: number, from: number, dir: Direction, hasTarge
 }
 
 /**
- * Destination dans la colonne d'arrivée : la ligne sélectionnée, sinon la dernière visitée (`remembered`), sinon la
+ * Destination dans la colonne d'arrivée : la dernière visitée (`remembered`), sinon la ligne sélectionnée, sinon la
  * plus proche en hauteur de l'élément de départ (la première à égalité).
  */
 export function pickInColumn<T extends Navigable & ElementLike>(from: Rect, targets: readonly T[], remembered: T | null = null): T | null {
+  if (remembered && targets.includes(remembered)) return remembered;
   const selected = targets.find(isSelectedRow);
   if (selected) return selected;
-  if (remembered && targets.includes(remembered)) return remembered;
   const middle = (r: Rect) => (r.top + r.bottom) / 2;
   let best: T | null = null;
   let bestGap = Infinity;

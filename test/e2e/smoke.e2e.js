@@ -324,6 +324,218 @@ describe('Test de fumée de Mire', () => {
     assert.equal(await page.evaluate(() => window.__sansRechargement), true);
   });
 
+  // Service de focus (P4-03) : banc d'essai de composants inséré dans la vue de la page de démonstration.
+  describe('navigation sur les composants (P4-03)', () => {
+    const FIXTURE = `<div id="e2e-nav" style="display: grid; gap: 24px; padding: 16px">
+      <div style="display: flex; gap: 24px">
+        <button class="focusable" id="n-start">Départ</button>
+        <ds-trigger id="n-a" type="button">A</ds-trigger>
+        <ds-trigger id="n-b" type="button" disabled>B</ds-trigger>
+        <ds-trigger id="n-c"><button aria-disabled="true">C</button></ds-trigger>
+        <ds-trigger id="n-off" disabled><button>Off</button></ds-trigger>
+        <ds-trigger id="n-d" type="button">D</ds-trigger>
+      </div>
+      <div data-nav="columns" id="n-cols" style="display: flex; gap: 24px; align-items: flex-start; margin-top: 160px">
+        <div data-nav-column id="n-col1" style="display: grid; gap: 8px; max-height: 120px; overflow-y: auto">
+          ${[1, 2, 3, 4, 5, 6].map((i) => `<ds-trigger id="n-r1-${i}" type="button" style="display: block; height: 32px">1.${i}</ds-trigger>`).join('')}
+        </div>
+        <div data-nav-column id="n-col2" style="display: grid; gap: 8px">
+          ${[1, 2, 3].map((i) => `<ds-trigger id="n-r2-${i}" type="button"${i === 3 ? ' aria-current="true"' : ''}>2.${i}</ds-trigger>`).join('')}
+        </div>
+        <div data-nav-column id="n-col3"></div>
+        <div data-nav-column id="n-col4"><ds-trigger id="n-r4-1" type="button">4.1</ds-trigger></div>
+      </div>
+      <div style="display: flex; gap: 24px; align-items: center">
+        <ds-trigger id="n-below" type="button">Dessous</ds-trigger>
+        <ds-panel-group id="n-tabs" label="Onglets">
+          <ds-panel><span slot="title">Un</span><p>Premier</p></ds-panel>
+          <ds-panel><span slot="title">Deux</span><p>Deuxième</p></ds-panel>
+        </ds-panel-group>
+        <ds-combo id="n-combo" label="Liste" options='[{"name":"Un","value":"1"},{"name":"Deux","value":"2"},{"name":"Trois","value":"3"}]'></ds-combo>
+      </div>
+      <ds-modal id="n-modal" label="Fenêtre">
+        <ds-trigger id="n-m1" type="button">M1</ds-trigger>
+        <ds-trigger id="n-m2" type="button">M2</ds-trigger>
+      </ds-modal>
+    </div>`;
+    const active = () => page.evaluate(() => document.activeElement?.closest('[id]')?.id ?? null);
+    const press = async (key) => {
+      await page.keyboard.press(key);
+      await settle();
+    };
+    const PAD = { a: 0, b: 1, up: 12, down: 13, left: 14, right: 15 };
+    // Manette simulée (API Gamepad) : un appui = bouton enfoncé pendant quelques images, puis relâché.
+    // Enfoncé moins longtemps que le délai de répétition des directions (REPEAT_DELAY).
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+      await page.evaluate(() => (location.hash = 'demo'));
+      await page.waitForFunction(() => document.body.dataset.section === 'demo');
+      await page.locator('#view mire-demo.hydrated').waitFor();
+    });
+
+    after(async () => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => {
+        document.getElementById('e2e-nav')?.remove();
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+        location.hash = '';
+      });
+    });
+
+    it('attend le rendu des composants, puis les flèches les parcourent en écartant les désactivés', async () => {
+      // Flèche envoyée juste après l'insertion, avant le rendu des ds-* : le choix attend la classe hydrated.
+      const first = await page.evaluate((html) => {
+        document.getElementById('view').insertAdjacentHTML('beforeend', html);
+        const start = document.getElementById('n-start');
+        start.focus();
+        const hydrated = document.getElementById('n-a').classList.contains('hydrated');
+        start.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+        return { hydrated, focus: document.activeElement.id };
+      }, FIXTURE);
+      assert.deepEqual(first, { hydrated: false, focus: 'n-start' });
+      await page.waitForFunction(() => document.activeElement?.id === 'n-a');
+      // B (disabled), C (aria-disabled) et le bouton d'un ds-trigger désactivé ne sont pas des destinations.
+      await press('ArrowRight');
+      assert.equal(await active(), 'n-d');
+      await press('ArrowLeft');
+      assert.equal(await active(), 'n-a');
+      await press('ArrowLeft');
+      assert.equal(await active(), 'n-start');
+    });
+
+    it('Entrée et Espace déclenchent une seule fois un ds-trigger', async () => {
+      await page.evaluate(() => {
+        window.__clicks = 0;
+        document.getElementById('n-a').addEventListener('click', () => window.__clicks++);
+        document.getElementById('n-a').focus();
+      });
+      await press('Enter');
+      assert.equal(await page.evaluate(() => window.__clicks), 1);
+      await press(' ');
+      assert.equal(await page.evaluate(() => window.__clicks), 2);
+    });
+
+    it('colonnes : haut et bas dans la colonne, gauche et droite de colonne en colonne', async () => {
+      await page.evaluate(() => document.getElementById('n-r1-2').focus());
+      await press('ArrowDown');
+      assert.equal(await active(), 'n-r1-3');
+      await press('ArrowRight');
+      assert.equal(await active(), 'n-r2-3', 'la ligne en cours de la colonne voisine');
+      await press('ArrowUp');
+      assert.equal(await active(), 'n-r2-2', 'haut dans la colonne');
+      await press('ArrowRight');
+      assert.equal(await active(), 'n-r4-1', 'la colonne vide est sautée');
+      await press('ArrowLeft');
+      assert.equal(await active(), 'n-r2-2', 'la dernière ligne visitée');
+      await press('ArrowLeft');
+      assert.equal(await active(), 'n-r1-3', 'la dernière ligne visitée');
+      for (let i = 0; i < 3; i++) await press('ArrowDown');
+      assert.equal(await active(), 'n-r1-6');
+      await press('ArrowDown');
+      assert.equal(await active(), 'n-below', 'au bord, on sort du conteneur');
+      await press('ArrowUp');
+      assert.notEqual(await active(), 'n-below');
+    });
+
+    it('onglets et liste déroulante gardent leurs flèches', async () => {
+      await page.locator('#n-tabs [role="tab"]').first().focus();
+      await press('ArrowRight');
+      assert.equal(await page.evaluate(() => document.activeElement.textContent.trim()), 'Deux', 'un seul onglet plus loin');
+      await press('ArrowDown');
+      assert.notEqual(await page.evaluate(() => document.activeElement.getAttribute('role')), 'tab', 'bas quitte les onglets');
+
+      await page.locator('#n-combo [role="combobox"]').focus();
+      await press('Enter');
+      await page.waitForFunction(() => document.querySelector('#n-combo [role="combobox"]').getAttribute('aria-expanded') === 'true');
+      await press('ArrowDown');
+      assert.equal(await page.evaluate(() => document.activeElement.closest('ds-combo')?.id), 'n-combo', 'la liste ouverte garde le focus');
+      await press('Escape');
+      assert.equal(await page.evaluate(() => document.body.dataset.section), 'demo', 'Échap ferme la liste, sans retour');
+      assert.equal(await page.locator('#n-combo [role="combobox"]').getAttribute('aria-expanded'), 'false');
+    });
+
+    it('ds-modal : les flèches restent dans la fenêtre au premier plan', async () => {
+      await page.evaluate(() => document.getElementById('n-a').focus());
+      await page.evaluate(() => (document.getElementById('n-modal').shown = true));
+      await page.waitForFunction(() => document.activeElement?.id === 'n-m1');
+      await press('ArrowRight');
+      assert.equal(await active(), 'n-m2');
+      await press('ArrowDown');
+      await press('ArrowRight');
+      assert.equal(await active(), 'n-m2', 'aucune destination hors de la fenêtre');
+      await press('Escape');
+      await page.waitForFunction(() => document.activeElement?.id === 'n-a');
+      assert.equal(await page.evaluate(() => document.body.dataset.section), 'demo');
+    });
+
+    it('manette : croix, A une seule fois, B ferme la fenêtre, colonnes et stick droit', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+        window.__clicks = 0;
+        document.getElementById('n-a').focus();
+      });
+      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
+      await padPress('right');
+      assert.equal(await active(), 'n-d');
+      await padPress('left');
+      await padPress('a');
+      assert.equal(await page.evaluate(() => window.__clicks), 1, 'A clique une seule fois');
+
+      await page.evaluate(() => (document.getElementById('n-modal').shown = true));
+      await page.waitForFunction(() => document.activeElement?.id === 'n-m1');
+      await padPress('right');
+      assert.equal(await active(), 'n-m2');
+      await padPress('b');
+      await page.waitForFunction(() => !document.getElementById('n-modal').shown);
+      assert.equal(await active(), 'n-a');
+
+      await page.evaluate(() => document.getElementById('n-r1-1').focus());
+      await settle();
+      const hints = await page.locator('#padbar').innerHTML();
+      await padPress('down');
+      assert.equal(await active(), 'n-r1-2');
+      await padPress('right');
+      assert.equal(await active(), 'n-r2-2', 'la dernière ligne visitée au clavier');
+      await padPress('left');
+      assert.equal(await page.locator('#padbar').innerHTML(), hints);
+      // Stick droit : la colonne qui a le focus défile, pas la vue.
+      const before = await page.evaluate(() => [document.getElementById('n-col1').scrollTop, document.getElementById('view').scrollTop]);
+      await page.evaluate(() => (window.__pad.axes = [0, 0, 0, 1]));
+      await settle();
+      await page.evaluate(() => (window.__pad.axes = [0, 0, 0, 0]));
+      const after = await page.evaluate(() => [document.getElementById('n-col1').scrollTop, document.getElementById('view').scrollTop]);
+      assert.ok(after[0] > before[0], 'la colonne défile');
+      assert.equal(after[1], before[1], 'la vue ne défile pas');
+      assert.deepEqual(errors, []);
+    });
+  });
+
   it('aucune requête réseau sortante, hors Widevine', () => {
     const log = fs
       .readFileSync(path.join(tmp, 'reseau.log'), 'utf8')
