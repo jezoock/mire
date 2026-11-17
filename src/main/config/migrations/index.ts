@@ -12,8 +12,9 @@ import { v5 } from './v5.ts';
 import { v6 } from './v6.ts';
 import { v7 } from './v7.ts';
 import { v8 } from './v8.ts';
+import { v9 } from './v9.ts';
 
-export const MIGRATIONS: readonly Migration[] = [v2, v3, v4, v5, v6, v7, v8];
+export const MIGRATIONS: readonly Migration[] = [v2, v3, v4, v5, v6, v7, v8, v9];
 
 export interface MigrationResult {
   /** Configuration migrée (le même objet, modifié sur place), ou la valeur reçue si ce n'est pas un objet. */

@@ -5,6 +5,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, MIGRATIONS, mergeConfig, migrate, normalizeConfig } from '../../src/main/config/index.ts';
+import { createConfigService } from '../../src/main/config/service.ts';
+import { homeRowsFromV8 } from '../../src/main/config/migrations/v9.ts';
+import os from 'node:os';
 
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
 type Any = any;
@@ -59,7 +62,16 @@ test.describe('normalizeConfig', () => {
     assert.equal(c.ui.backdrop, false);
     assert.equal(c.ui.start, 'tv');
     assert.deepEqual(c.ui.menu, { position: 'bottom', autohide: true });
-    assert.deepEqual(c.ui.home, { clock: false, recent: false, bars: ['tv', 'games'], services: ['netflix'] });
+    assert.deepEqual(c.ui.home, {
+      clock: false,
+      recent: false,
+      bars: ['tv', 'games'],
+      services: ['netflix'],
+      rows: [
+        { kind: 'bars', targets: ['tv', 'games'] },
+        { kind: 'sites', keys: ['web:netflix'] },
+      ],
+    });
     assert.deepEqual(c.gamesOpts, { autoOnline: true });
     assert.deepEqual(c.pcSites, raw.pcSites);
     assert.equal(c.tv.active, 'orange');
@@ -171,7 +183,7 @@ test.describe('migrateConfig', () => {
     return res;
   };
 
-  for (let v = 1; v <= 5; v++) {
+  for (const v of [1, 2, 3, 4, 5, 8]) {
     test(`version ${v} : résultat figé`, () => {
       const { config, from, changed } = migrate(readFixture(`config-v${v}.json`));
       assert.equal(from, v);
@@ -192,7 +204,7 @@ test.describe('migrateConfig', () => {
   test('registre : une étape par version, dans l’ordre, jusqu’à la version courante', () => {
     assert.deepEqual(
       MIGRATIONS.map((m) => m.version),
-      [2, 3, 4, 5, 6, 7, 8],
+      [2, 3, 4, 5, 6, 7, 8, 9],
     );
     assert.equal(MIGRATIONS.at(-1)?.version, CONFIG_VERSION);
   });
@@ -203,6 +215,101 @@ test.describe('migrateConfig', () => {
     assert.equal(config.web[0].search, 'https://www.deezer.com/search/{q}');
     assert.equal(config.web[0].background, true);
     assert.equal(config.web[0].group, 'music');
+  });
+});
+
+test.describe('migration v9 (P2-11)', () => {
+  const v8 = () => readFixture('config-v8.json');
+  const migrated = () => migrate(v8()).config as Any;
+
+  test('aucune donnée perdue : seuls la version et les rangées de l’accueil changent', () => {
+    const out = migrated();
+    assert.deepEqual(out.ui.home.rows, [
+      { kind: 'bars', targets: ['games', 'movies', 'series', 'screen:search', 'tv'] },
+      { kind: 'sites', keys: ['web:netflix', 'web:arte'] },
+      { kind: 'recent' },
+    ]);
+    delete out.ui.home.rows;
+    assert.deepEqual(out, { ...v8(), version: 9 });
+  });
+
+  test('l’interface historique retrouve ses réglages (accueil, menu, page de démarrage)', () => {
+    const c = normalizeConfig(migrated());
+    assert.deepEqual(c.ui.menu, { position: 'right', autohide: true });
+    assert.equal(c.ui.start, 'music');
+    assert.deepEqual(
+      { clock: c.ui.home.clock, recent: c.ui.home.recent, bars: c.ui.home.bars, services: c.ui.home.services },
+      { clock: false, recent: true, bars: ['games', 'videos', 'search', 'tv'], services: ['netflix', 'arte'] },
+    );
+  });
+
+  test('une seule fois : une deuxième migration ne change rien', () => {
+    const once = migrated();
+    const again = migrate(structuredClone(once));
+    assert.equal(again.changed, false);
+    assert.deepEqual(again.config, once);
+    // Des rangées déjà là (configuration écrite à la main en v8) ne sont pas remplacées.
+    const own = { version: 8, ui: { home: { bars: ['tv'], rows: [{ kind: 'recent' }] } } };
+    assert.deepEqual((migrate(own).config as Any).ui.home.rows, [{ kind: 'recent' }]);
+  });
+
+  test('accueil partiel ou absent : rangées tirées des valeurs par défaut de la v8', () => {
+    assert.deepEqual((migrate({ version: 8, ui: { home: { recent: false } } }).config as Any).ui.home.rows, [DEFAULT_CONFIG.ui.home.rows[0]]);
+    assert.deepEqual(normalizeConfig(migrate({ version: 8 }).config).ui.home.rows, DEFAULT_CONFIG.ui.home.rows);
+    assert.deepEqual(homeRowsFromV8(DEFAULT_CONFIG.ui.home as Any), DEFAULT_CONFIG.ui.home.rows);
+    // Un service dont le site n'existe plus n'était pas affiché : il ne devient pas un site épinglé.
+    const gone = migrate({ version: 8, web: [{ id: 'a', url: 'https://a/' }], ui: { home: { bars: [], services: ['a', 'b'] } } }).config as Any;
+    assert.deepEqual(gone.ui.home.rows, [{ kind: 'sites', keys: ['web:a'] }, { kind: 'recent' }]);
+  });
+
+  test('rangées : normalisées sans doublon, les autres réglages de l’accueil n’y touchent pas', () => {
+    const rows = [
+      { kind: 'recent' },
+      { kind: 'recent' },
+      { kind: 'page', id: 'movies' },
+      { kind: 'list', id: 'favorites' },
+      { kind: 'page', id: 'movies' },
+      { kind: 'sites', keys: ['web:x', 'x', 'web:x'] },
+      { kind: 'bars', targets: ['tv', '', 3] },
+      { kind: 'inconnue' },
+      null,
+    ];
+    assert.deepEqual(normalizeConfig({ ui: { home: { bars: [], rows } } }).ui.home.rows, [
+      { kind: 'recent' },
+      { kind: 'page', id: 'movies' },
+      { kind: 'list', id: 'favorites' },
+      { kind: 'sites', keys: ['web:x'] },
+      { kind: 'bars', targets: ['tv'] },
+    ]);
+  });
+
+  test('la configuration migrée se réimporte (« remplacer » et « compléter »)', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-v9-'));
+    try {
+      const config = createConfigService({ file: path.join(dir, 'config.json'), log: () => {} });
+      config.load();
+      // Import « remplacer » d'un fichier v8, puis de son résultat (export d'une installation migrée).
+      const replaced = config.replace(migrate(v8()).config);
+      assert.deepEqual(replaced, normalizeConfig(migrated()));
+      assert.deepEqual(config.replace(migrate(structuredClone(replaced)).config), replaced);
+      // Relu depuis le disque : identique.
+      const reread = createConfigService({ file: path.join(dir, 'config.json'), log: () => {} });
+      assert.deepEqual(reread.load(), replaced);
+      // « Compléter » avec le même fichier : rien en double.
+      assert.deepEqual(config.replace(mergeConfig(config.get(), migrate(v8()).config)), replaced);
+      // « Compléter » une installation neuve : sites, consoles, jeux et sources ajoutés ; ses réglages gardés.
+      const fresh = normalizeConfig({});
+      const merged = normalizeConfig(mergeConfig(fresh, migrated()));
+      assert.deepEqual(
+        merged.web.map((w) => w.id),
+        ['netflix', 'arte', 'mon-site'],
+      );
+      assert.equal(merged.emulators.length, 1);
+      assert.equal(merged.library.sources.length, 3);
+      assert.deepEqual(merged.ui, fresh.ui);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

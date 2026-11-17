@@ -110,12 +110,17 @@ export interface RecentEntry {
   folder: string | null;
   dir: string | null;
   remote: boolean | null;
+  /** Clé de l'élément (`local:…`, `remote:…`), tirée du chemin ; `null` pour ce qui n'est ni un fichier ni une adresse web. */
+  key: string | null;
 }
 
 /** Données d'usage (usage.json) : « Reprendre », positions de reprise des vidéos, volume, recherches récentes. */
 export interface UsageData {
   recent: RecentEntry[];
-  /** Position de reprise (secondes entières) par chemin de vidéo. */
+  /**
+   * Position de reprise (secondes entières) par clé d'élément (`local:…`, `remote:…`) ; par chemin pour ce qui n'a
+   * pas de clé. Le contrat IPC reste par chemin : le service en tire la clé.
+   */
   resume: Record<string, number>;
   volume: number;
   queries: string[];

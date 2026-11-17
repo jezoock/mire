@@ -84,7 +84,23 @@ export interface HomeSettings {
   bars: HomeBar[];
   /** Sites (identifiants de `web`) affichés sur l'accueil. */
   services: string[];
+  /**
+   * Rangées de l'accueil de la phase 4 (P4-12), dans l'ordre (v9, P2-11). `clock`, `recent`, `bars` et `services`
+   * restent ceux de l'interface historique ; la migration v9 en tire ces rangées, une fois.
+   */
+  rows: HomeRow[];
 }
+
+/**
+ * Rangée de l'accueil (v9) :
+ * - `bars` : barres de la mire ; chacune désigne une page (son identifiant), une liste (`list:<id>`) ou un écran
+ *   du cœur (`screen:search`) ;
+ * - `sites` : sites épinglés (anciennement « Vos services »), par clé d'élément (`web:<id>`) ;
+ * - `recent` : « Reprendre » ;
+ * - `page`, `list` : les premiers éléments d'une page ou d'une liste.
+ */
+export type HomeRow =
+  { kind: 'bars'; targets: string[] } | { kind: 'sites'; keys: string[] } | { kind: 'recent' } | { kind: 'page'; id: string } | { kind: 'list'; id: string };
 
 export interface UiSettings {
   fullscreen: boolean;

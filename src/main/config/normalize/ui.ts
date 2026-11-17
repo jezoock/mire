@@ -1,6 +1,7 @@
 /** Interface : thème, menu, vue de départ, accueil et langue. */
 import { normalizeLanguageSetting } from '@mire/shared/i18n';
-import type { HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
+import type { HomeRow, HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
+import { homeRowsFromV8 } from '../migrations/v9.ts';
 import { DEFAULT_CONFIG, HOME_BARS, THEMES } from '../defaults.ts';
 import { isObjectLike, type Loose } from './common.ts';
 
@@ -13,7 +14,36 @@ function normalizeHome(src: unknown, web: WebSite[]): HomeSettings {
   home.recent = home.recent !== false;
   home.bars = [...new Set(Array.isArray(home.bars) ? home.bars : [])].filter((b) => HOME_BARS.includes(b));
   home.services = [...new Set(Array.isArray(home.services) ? home.services : [])].filter((id) => web.some((w) => w.id === id));
+  // Sans rangées (installation neuve, fichier écrit à la main) : celles que la migration v9 aurait tirées.
+  home.rows = isObjectLike(src) && Array.isArray(src.rows) ? normalizeRows(src.rows) : homeRowsFromV8(home);
   return home as HomeSettings;
+}
+
+const textList = (v: unknown, keep: (s: string) => boolean = () => true): string[] =>
+  Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === 'string' && x !== '' && keep(x)))] : [];
+
+function normalizeRow(r: unknown): HomeRow | null {
+  if (!isObjectLike(r)) return null;
+  if (r.kind === 'recent') return { kind: 'recent' };
+  if (r.kind === 'bars') return { kind: 'bars', targets: textList(r.targets) };
+  // Les sites gardent leur clé même s'ils quittent `web` : ils deviendront des éléments de plugins (P5-01).
+  if (r.kind === 'sites') return { kind: 'sites', keys: textList(r.keys, (k) => k.startsWith('web:')) };
+  if ((r.kind === 'page' || r.kind === 'list') && typeof r.id === 'string' && r.id) return { kind: r.kind, id: r.id };
+  return null;
+}
+
+/** Rangées valides, chacune une seule fois (une seule rangée de barres, de sites et « Reprendre »). */
+function normalizeRows(src: unknown[]): HomeRow[] {
+  const seen = new Set<string>();
+  const rows: HomeRow[] = [];
+  for (const r of src.map(normalizeRow)) {
+    if (!r) continue;
+    const id = r.kind === 'page' || r.kind === 'list' ? `${r.kind}:${r.id}` : r.kind;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    rows.push(r);
+  }
+  return rows;
 }
 
 function normalizeMenu(src: unknown): UiSettings['menu'] {
