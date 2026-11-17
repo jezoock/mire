@@ -10,7 +10,7 @@ import { cleanTrack, folderText } from '../domain/index.ts';
 import type { MediaItem } from '@mire/shared/ipc';
 import type { Playable } from './types.ts';
 import type { Controllers } from '../controllers/index.ts';
-import { focusFirst } from '../nav/spatial.ts';
+import { focusFirst } from '../nav/focus.ts';
 import { audio, setRangeFill, setVolume } from './volume.ts';
 
 export { audio };

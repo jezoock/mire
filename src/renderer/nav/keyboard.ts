@@ -7,7 +7,8 @@
 import { $ } from '../core/dom.ts';
 import type { Controllers } from '../controllers/index.ts';
 import { S } from '../state/index.ts';
-import { focusFirst, moveFocus, type Direction } from './spatial.ts';
+import { activeDialog, closeDialog, focusFirst, handledByComponent, initFocus, isRelayed, moveFocus } from './focus.ts';
+import type { Direction } from './spatial.ts';
 
 export type ListAction = Direction | 'activate' | 'back' | 'page-down' | 'page-up' | 'play-pause' | 'search' | 'edit' | 'delete';
 export type VideoAction =
@@ -121,7 +122,7 @@ let ctrl: KeyboardControllers;
 
 /** Traite une touche (du clavier, ou traduite depuis la manette) ; `true` si elle a été utilisée. */
 export function handleKey(key: string, fromPad = false): boolean {
-  const dlg = hooks.dialog();
+  const dlg = activeDialog(hooks.dialog());
   if (dlg) {
     const inField = (document.activeElement as Element | null)?.matches?.('input, textarea, select');
     const dir = keyAction(ARROW_KEYS, key);
@@ -130,7 +131,7 @@ export function handleKey(key: string, fromPad = false): boolean {
       return true;
     }
     if (key === 'Escape' && fromPad) {
-      dlg.dispatchEvent(new Event('cancel', { cancelable: true }));
+      closeDialog(dlg);
       return true;
     }
     if (key === 'Enter' && fromPad) {
@@ -201,7 +202,10 @@ export function handleKey(key: string, fromPad = false): boolean {
 export function initKeyboard(h: KeyboardHooks, controllers: KeyboardControllers): void {
   hooks = h;
   ctrl = controllers;
+  initFocus();
   document.addEventListener('keydown', (e) => {
+    // Touche relayée par la manette, ou déjà traitée par un composant (onglets, liste ouverte, Entrée d'un ds-trigger).
+    if (isRelayed(e) || handledByComponent(e)) return;
     document.body.classList.remove('mouse');
     S.pendingFocus = false;
     if (e.altKey || e.ctrlKey || e.metaKey) return;

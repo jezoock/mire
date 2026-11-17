@@ -182,7 +182,8 @@ export const V = {
   silentTimer: 0,
   /** Dernier enregistrement de la position de reprise (horodatage). */
   lastSave: 0,
-  returnSel: null as string | null,
+  /** Focus à rendre en sortant (`rememberFocus` de nav/focus.ts). */
+  returnFocus: null as { el: HTMLElement | null; sel: string | null } | null,
   seeking: false,
   cuesUp: null as boolean | null,
 };
@@ -193,5 +194,6 @@ export const I = {
   i: 0,
   timer: 0,
   hideTimer: 0,
-  returnSel: null as string | null,
+  /** Focus à rendre en sortant (`rememberFocus` de nav/focus.ts). */
+  returnFocus: null as { el: HTMLElement | null; sel: string | null } | null,
 };

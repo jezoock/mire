@@ -166,6 +166,43 @@ composants). Le service suit `api.onLanguageChange` et tient à jour `lang` sur 
 français jusqu'à leur remplacement, sont marquées `lang="fr"` (sur `<body>`) : un lecteur d'écran les lit en
 français quelle que soit la langue de l'interface, et leur rendu ne change pas.
 
+### 10. Navigation clavier et manette sur les composants (P4-03)
+
+Le service de focus (`src/renderer/nav/focus.ts`, règles sans DOM dans `nav/targets.ts`) garde la navigation
+spatiale de Mire sur les composants. Les vues historiques ne changent pas : leurs destinations restent les
+`.focusable` affichés dont la propriété `disabled` est fausse.
+
+- **Destinations dans un composant** : les éléments qu'atteint Tab selon les aides de dot-stash (`isTabbable`,
+  `getTabbableElements` de `dot-stash/dist/collection/utils/focus.js` : ni masqués, ni inertes, `checkVisibility`,
+  pas de `tabindex="-1"`, ce qui écarte les onglets non choisis), affichés, puis triés dans l'ordre du document avec
+  les `.focusable`. Le voisin est choisi par `pickNeighbor` (P1-24).
+- **Règle des éléments désactivés** : un élément n'est pas une destination si sa propriété `disabled` est vraie, ou si
+  lui-même ou l'un de ses parents porte l'attribut `disabled` ou `aria-disabled="true"`. Le contenu d'un composant
+  désactivé (le vrai bouton d'un `ds-trigger disabled`) est donc écarté.
+- **Rendu asynchrone** : tant qu'un composant défini de la portée n'a pas la classe `hydrated`, le choix de la
+  destination attend son rendu (au plus 1,5 s ; une balise inconnue, jamais définie, n'est pas attendue).
+- **Touches traitées par un composant** : une vraie touche dont un composant a empêché l'effet par défaut (onglets de
+  `ds-panel-group`, `ds-combo` ouvert, Entrée et Espace de `ds-trigger`) n'est pas traitée une seconde fois par Mire.
+  Une `select` native (`ds-select`) garde haut et bas, comme dans les vues historiques. La manette propose d'abord ses
+  touches (flèches, A = Entrée, B = Échap) au composant qui a le focus, par un `keydown` relayé : s'il l'a traitée
+  (effet empêché ou propagation arrêtée), elle s'arrête là, sinon la navigation de Mire s'applique. A ne déclenche
+  donc qu'une fois un `ds-trigger`. Sur une liste fermée (`aria-haspopup`, `aria-expanded="false"`), haut et bas de la
+  manette vont à l'élément voisin ; A ouvre la liste.
+- **Boîtes de dialogue** : la portée des flèches et de la manette est la dernière boîte ouverte, `dialog` historique
+  ou `ds-modal` affiché (son cadre `role="dialog"`) ; B ferme un `ds-modal` comme Échap, et dot-stash rend le focus
+  à l'élément qui l'avait.
+- **Navigation par colonnes** (explorateur, P4-08) : conteneur `data-nav="columns"`, colonnes `data-nav-column`. Haut
+  et bas restent dans la colonne, gauche et droite passent à la colonne voisine qui a des destinations, sur la dernière
+  ligne visitée, sinon la ligne sélectionnée (`aria-selected="true"` ou `aria-current`), sinon la plus proche en
+  hauteur. Au bord, on sort du conteneur. Contexte de manette `columns`, avec le rappel des listes.
+- **Retour d'un lecteur** : un élément d'un composant est retrouvé tel quel s'il est toujours affiché, sinon par un
+  sélecteur (`data-key`, ou l'action de son `ds-trigger`), en attendant le rendu des composants réaffichés.
+- **Défilement** : un élément d'un `ds-scroller` est montré par la rangée elle-même ; au stick droit, la zone qui
+  contient le focus défile (rangée, colonne, cadre d'un `ds-modal`) ; dans les vues historiques, la vue, comme avant.
+- **Anneau de focus** : celui de Mire (`--ring`, P4-02), inchangé.
+- **Tests** : règles sans DOM sous `node:test` (`test/renderer/nav-targets.test.ts`) ; service dans Electron, dans le
+  test de fumée (banc d'essai inséré dans la page de démonstration, manette simulée par l'API Gamepad).
+
 ## Conséquences
 
 - Les composants `ds-*` sont utilisables dans n'importe quelle vue, historique ou nouvelle, sans changer la CSP.

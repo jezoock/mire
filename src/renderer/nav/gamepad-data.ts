@@ -7,7 +7,7 @@ import { esc } from '../core/dom.ts';
 
 export type PadFamily = 'xbox' | 'ps' | 'nintendo';
 export type PadButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select' | 'start' | 'home';
-export type PadContext = 'dialog' | 'video' | 'image' | 'web' | 'list';
+export type PadContext = 'dialog' | 'video' | 'image' | 'web' | 'list' | 'columns';
 export type PadState = Record<PadButton, boolean>;
 
 /** Familles reconnues d'après l'identifiant annoncé par la manette, dans l'ordre de priorité ; Xbox par défaut. */
@@ -34,15 +34,19 @@ export const PAD_GLYPHS: Readonly<Record<PadFamily, Readonly<Record<GlyphButton,
   nintendo: { a: 'B', b: 'A', x: 'Y', y: 'X', lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR', select: '−' },
 };
 
+const LIST_HINTS: ReadonlyArray<readonly [string, string]> = [
+  ['a', 'Ouvrir'],
+  ['b', 'Retour'],
+  ['x', 'Modifier'],
+  ['y', 'Rechercher'],
+  ['lb rb', 'Section'],
+];
+
 /** Rappel des commandes en bas de l'écran : boutons (séparés par une espace) et ce qu'ils font. */
 export const PAD_HINTS: Readonly<Partial<Record<PadContext, ReadonlyArray<readonly [string, string]>>>> = {
-  list: [
-    ['a', 'Ouvrir'],
-    ['b', 'Retour'],
-    ['x', 'Modifier'],
-    ['y', 'Rechercher'],
-    ['lb rb', 'Section'],
-  ],
+  list: LIST_HINTS,
+  // Colonnes (explorateur) : mêmes commandes que les listes ; la croix change de ligne et de colonne.
+  columns: LIST_HINTS,
   video: [
     ['a', 'Pause'],
     ['lt rt', '1 min'],
