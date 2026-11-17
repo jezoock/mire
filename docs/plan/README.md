@@ -34,7 +34,7 @@ On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est
 | **G2c** | ✅ 16/11/2026 | Nouvelle architecture (`docs/architecture-cible.md`, décisions D-14 à D-23) et nouveau plan |
 | **G3** | Fin de la phase 2 | Modèle d'éléments, tags et pages : types, contrat IPC, mesures sur 20 000 éléments |
 | **G4** | Fin de la phase 3 | Prototype de l'hôte isolé (mesures, choix), SDK, chaîne de publication de `mire-addons` |
-| **G5** | Après P4-01 à P4-04 | Intégration de dot-stash (ADR), palettes, navigation et contrôleurs, avant de construire les écrans |
+| **G5** | ✅ 17/11/2026 | Intégration de dot-stash, palettes, navigation et contrôleurs validées ; ADR 0001 acceptée (pas de Vitest, contrôleurs par écran dans `src/renderer/controllers/`) ; parcours manette de P4-03 à faire à la main |
 | **G6** | Fin de la phase 4 | Interface complète, interface historique retirée, thèmes avec code |
 | **G7** | Fin de la phase 5 | Bilan du cœur : il ne contient plus que les éléments « Cœur » de l'inventaire |
 

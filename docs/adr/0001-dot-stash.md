@@ -1,6 +1,6 @@
 # ADR 0001 — Intégration de dot-stash et `@mire/ui`
 
-- **État** : proposée (P4-01), à relire au point d'étape G5.
+- **État** : acceptée au point d'étape G5 (17/11/2026).
 - **Contexte** : décisions D-05 (interface avec dot-stash), D-13 (livraison par une release publique), D-03
   (dépendances minimales), D-12 (vérification du TypeScript). Version intégrée : dot-stash **0.2.0**.
 
@@ -212,9 +212,9 @@ spatiale de Mire sur les composants. Les vues historiques ne changent pas : leur
 - Les composants `ds-*` reçoivent l'habillage du cœur (P4-02) : contrôles propres à Mire, habillages du thème
   `default` réglés par les jetons de Mire pour les autres.
 
-## Points à trancher au point G5
+## Décisions du point G5
 
-- Garder le test des composants dans Electron, ou adopter Vitest pour la phase des composants (P4-05).
-- Contrôleurs (P4-04) : ils restent dans `src/renderer/controllers/` et se lient aux `mire-*` par le DOM (§ 8),
-  plutôt que de déplacer l'état et le client API dans un paquet, que Stencil copierait dans les composants. À
-  confirmer, ainsi que le découpage des contrôleurs par écran.
+1. **Pas de Vitest** : la logique des composants se teste sous `node:test`, leur rendu et leur navigation dans le test
+   de fumée Electron (§ 5). À revoir si le test de fumée dépasse 3 minutes en CI.
+2. **Contrôleurs** : ils restent dans `src/renderer/controllers/`, liés aux `mire-*` par le DOM (§ 8), un contrôleur
+   par écran ; le découpage de P4-04 est confirmé.
