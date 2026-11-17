@@ -91,7 +91,7 @@ Fiches dans `phase-2.md`.
 | P2-04 | Moteur de tags et d'infos | L | P2-02 |  | faite | [#52](https://github.com/jezoock/mire/pull/52) |
 | P2-05 | Tags automatiques existants | M | P2-04 |  | faite | [#54](https://github.com/jezoock/mire/pull/54) |
 | P2-06 | Infos en ligne dans le catalogue | M | P2-04 |  | faite | [#55](https://github.com/jezoock/mire/pull/55) |
-| P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | à faire | |
+| P2-07 | Pages et regroupements | L | P2-03, P2-05, P2-06 |  | faite | [#58](https://github.com/jezoock/mire/pull/58) |
 | P2-08 | Listes | S | P2-07 |  | à faire | |
 | P2-09 | Recherche dans le catalogue | M | P2-07 |  | à faire | |
 | P2-10 | Gestion des fichiers | M | P2-02 |  | à faire | |

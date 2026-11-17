@@ -141,6 +141,12 @@ const ADDED_METHODS: Record<string, string> = {
   catalogSetTags: 'catalog:setTags',
   catalogSetInfos: 'catalog:setInfos',
   tagsList: 'tags:list',
+  // P2-07 : pages et regroupements
+  pagesList: 'pages:list',
+  pagesGet: 'pages:get',
+  pagesSave: 'pages:save',
+  pagesRemove: 'pages:remove',
+  catalogPage: 'catalog:page',
 };
 
 // Événements ajoutés après P1-08.

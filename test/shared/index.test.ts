@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes et les palettes', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes et les pages', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
@@ -20,6 +20,9 @@ describe('@mire/shared', () => {
       'MEDIA_KINDS',
       'MIME',
       'NATIVE',
+      'PAGE_DEFINITION_SCHEMA',
+      'PAGE_DISPLAYS',
+      'PAGE_ID_RE',
       'PALETTE_AUTO',
       'PALETTE_OPTIONAL_TOKENS',
       'PALETTE_TOKENS',
@@ -51,6 +54,7 @@ describe('@mire/shared', () => {
       'systemById',
       'titleKey',
       'trackNumber',
+      'validatePage',
     ]);
   });
 
