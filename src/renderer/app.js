@@ -20,6 +20,10 @@ import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from
 import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
 import { DEMO_SECTION, demoTitle, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
+import { createControllers } from './controllers/index.ts';
+import { runLegacyAction } from './controllers/bridge.ts';
+import { callAction, setActionErrorHandler } from './controllers/registry.ts';
+import { i18n, t } from './i18n/index.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
@@ -1272,8 +1276,7 @@ function openItems(items) {
   else playList(list, 0);
 }
 
-async function playRecent(i) {
-  const it = S.recent[i];
+async function playRecent(it) {
   if (!it) return;
   if (it.remote || /^https?:\/\//i.test(it.path)) { playInContext(it); return; }
   const [fresh] = await api.fromPaths([it.path]);
@@ -1756,20 +1759,11 @@ api.onWebState((st) => {
 });
 viewEl.addEventListener('change', (e) => {
   if (e.target.matches('[data-action="rom-source"]')) {
-    S.romsSource = e.target.value;
-    S.romsOnline = true;
-    S.romsOnlineLoading = true;
-    S.limit = PAGE;
-    render();
-    api.romListSource(S.romsOf, S.romsSource || undefined).then((r) => {
-      S.romsOnlineLoading = false;
-      if (r?.ok) { S.roms = r.roms; S.romsWarnings = r.errors || []; } else toast(r?.error || 'Source illisible.', { duration: 7000 });
-      render();
-    });
+    runLegacyAction(e.target, legacyView);
     return;
   }
   if (e.target.id !== 'wb-sites') return;
-  openRomBrowser(String(S.webActive).slice(4), { site: Number(e.target.value) });
+  callAction('mire-page', 'openRomSites', { consoleId: String(S.webActive).slice(4), site: Number(e.target.value) });
 });
 api.onWebSessions((list) => {
   S.webSessions = Array.isArray(list) ? list : [];
@@ -2858,422 +2852,50 @@ async function afterStoreChange(r, okMessage) {
 }
 
 /* Délégation des clics dans la vue */
-async function onActionClick(e) {
-  const t = e.target.closest('[data-action]');
-  if (!t || !e.currentTarget.contains(t)) return;
-  const i = t.dataset.index != null ? Number(t.dataset.index) : -1;
-  // Actions d'une console : son identifiant (jamais sa position dans la liste).
-  const cid = t.dataset.console;
+/* ---------- Contrôleurs (P4-04) : les actions de l'interface, et le pont des data-action historiques ---------- */
 
-  switch (t.dataset.action) {
-    case 'go': go(t.dataset.go, { focus: 'content' }); break;
-    case 'open-file': openFileDialog(); break;
-    case 'more': {
-      const first = S.limit;
-      S.limit += PAGE;
-      render();
-      viewEl.querySelector(`[data-index="${first}"]`)?.focus();
-      break;
-    }
-    case 'play-video': openVideo(S.list, i); break;
-    case 'play-track': {
-      const t0 = S.list[i];
-      if (S.query) playQueue(S.list, i);
-      else { const album = S.list.filter((x) => x.dir === t0.dir); playQueue(album, album.indexOf(t0)); }
-      break;
-    }
-    case 'play-album': {
-      const t0 = S.list[i];
-      playQueue(S.list.filter((x) => x.dir === t0.dir), 0);
-      break;
-    }
-    case 'show-image': openImages(S.list, i); break;
-    case 'play-recent': playRecent(i); break;
-    case 'open-web': openWeb(t.dataset.id); break;
-    case 'play-channel': playChannel(S.list[i]); break;
-    case 'tv-reload': S.channels = null; S.tvWeb = null; loadChannels(); break;
-    case 'tv-detect': {
-      toast('Recherche de votre box sur le réseau…', { duration: 3000 });
-      const r = await api.tvDetect();
-      S.config = (await api.getConfig()).config;
-      if (r?.id) { S.channels = null; S.tvWeb = null; loadChannels(); toast(`${r.name} détecté.`); }
-      else toast('Aucune box reconnue. Choisissez votre service dans la liste.', { duration: 6000 });
-      render();
-      break;
-    }
-    case 'tv-open-web': if (S.tvWeb) openTvWeb(S.tvWeb); break;
-    case 'games-cleanup': cleanupGames(); break;
-    case 'launch-game': launchEntry(S.gameList[i]); break;
-    case 'gamebm': downloadGameBookmark(S.gameList[i]?.bookmarkId); break;
-    case 'gamebm-download': downloadGameBookmark(t.dataset.id); break;
-    case 'gamebm-remove': {
-      const ok = await confirmDialog('Retirer ce jeu ?', 'Le marque-page et son téléchargement en attente seront retirés.', 'Retirer');
-      if (!ok) break;
-      const r = await api.gameBookmarkRemove(t.dataset.id);
-      if (r?.config) S.config = r.config;
-      await loadDownloads();
-      toast('Jeu retiré');
-      render();
-      break;
-    }
-    case 'add-game': addGame(); break;
-    case 'open-emu': openEmu(cid); break;
-    case 'launch-rom': launchRom(S.list[i]); break;
-    case 'launch-rom-u': { const it = S.list[i]; launchRom(it, it.consoleId); break; }
-    case 'back-games': closeRoms(); break;
-    case 'game-system': {
-      S.gameSystem = t.dataset.id;
-      S.genre = '';
-      S.limit = PAGE;
-      render({ resetScroll: true });
-      viewEl.querySelector(`[data-action="game-system"][data-id="${CSS.escape(t.dataset.id)}"]`)?.focus();
-      break;
-    }
-    case 'rom-online': {
-      S.romsOnline = true;
-      S.romsOnlineLoading = true;
-      S.limit = PAGE;
-      render();
-      const r = await api.romListSource(S.romsOf, S.romsSource || undefined);
-      if (S.romsOf !== cid && S.romsOf !== null) { /* console changée entre-temps */ }
-      S.romsOnlineLoading = false;
-      if (r?.ok) { S.roms = r.roms; S.romsWarnings = r.errors || []; }
-      else toast(r?.error || 'Impossible de lire la source en ligne.', { duration: 7000 });
-      render();
-      break;
-    }
-    case 'game-delete': {
-      const ref = JSON.parse(t.dataset.ref);
-      const ok = await confirmDialog(`Supprimer « ${ref.label} » ?`, ref.kind === 'rom' ? 'Le fichier du jeu sera supprimé de l’ordinateur.' : 'Le jeu sera retiré de la liste.', 'Supprimer');
-      if (!ok) break;
-      const r = await api.gameDelete(ref);
-      if (!r?.ok) { toast(r?.error || 'Suppression impossible.', { duration: 8000 }); break; }
-      if (r.config) S.config = r.config;
-      if (ref.kind === 'rom' && ref.consoleId != null) { const rr = await api.listRoms(ref.consoleId); if (rr?.ok) S.localRoms[ref.consoleId] = rr.roms; if (S.romsOf === ref.consoleId) S.roms = rr.roms; }
-      else S.autoGames = S.autoGames.filter((g) => g.path !== ref.path);
-      toast('Jeu supprimé');
-      render();
-      break;
-    }
-    case 'src-add-folder': addSourceFolder(t.dataset.kind); break;
-    case 'src-add-url': askSourceAddress(t.dataset.kind); break;
-    case 'src-remove': removeSource(t.dataset.kind, t.dataset.id); break;
-    case 'manage-sources': {
-      go('settings');
-      const block = $('#set-sources');
-      block?.scrollIntoView({ block: 'start' });
-      block?.querySelector('.focusable')?.focus({ preventScroll: true });
-      break;
-    }
-    case 'genre': {
-      S.genre = t.dataset.id;
-      S.limit = PAGE;
-      render();
-      viewEl.querySelector(`[data-action="genre"][data-id="${CSS.escape(S.genre)}"]`)?.focus();
-      break;
-    }
-    case 'edit-focused': editRef(S.focusRef || refFromEl(viewEl.querySelector('.tile, .track'))); break;
-    case 'edit-album': editRef({ kind: 'album', item: S.list[i] }); break;
-    case 'edit-console': editConsole(cid); break;
-    case 'browse': {
-      const p = await api.pickFile(t.dataset.kind);
-      if (p) $(`#${t.dataset.id}`).value = p;
-      break;
-    }
-    case 'reveal-config': api.revealConfig(); break;
-    case 'open-store': openPageSettings('store'); break;
-    case 'rom-sites': openRomBrowser(cid); break;
-    case 'games-download': {
-      if (t.dataset.id && t.dataset.id !== 'pc') { openRomBrowser(t.dataset.id); break; }
-      if (!(S.config.pcSites || []).length) { toast('Ajoutez d’abord un site dans les réglages de la page Jeux, onglet Jeux PC.', { duration: 7000 }); openPageSettings('pc'); break; }
-      openRomBrowser('pc');
-      break;
-    }
-    case 'save-pc-sites': {
-      const sites = D.parseSites($('#pc-sites').value);
-      S.config = await api.saveConfig({ ...S.config, pcSites: sites });
-      toast(`${plural(sites.length, 'site enregistré', 'sites enregistrés')}.`);
-      break;
-    }
-    case 'config-export': {
-      const r = await api.configExport();
-      if (r?.ok) toast('Configuration exportée.');
-      else if (r && !r.canceled) toast('Export impossible.', { duration: 6000 });
-      break;
-    }
-    case 'config-import': {
-      const mode = t.dataset.mode || 'replace';
-      const r = await api.configImport(mode);
-      if (r?.ok) { S.config = r.config; if (r.usage) S.usage = r.usage; S.autoGames = []; S.localRoms = {}; toast('Configuration importée.'); scan(); loadLocalRoms(); go(S.section); }
-      else if (r && !r.canceled) toast(r?.error || 'Import impossible.', { duration: 8000 });
-      break;
-    }
-    case 'tv-service-radio': api.tvSetActive(t.dataset.id).then((cfg) => { S.config = cfg; S.channels = null; S.tvWeb = null; S.tvError = null; refreshPanel(); if (S.section === 'tv') loadChannels(); }); break;
-    case 'rom-dl': {
-      const r = await api.romDownload(S.romsOf, t.dataset.path);
-      if (!r?.ok) toast(r?.error || 'Téléchargement impossible.', { duration: 6000 });
-      else if (r.total > 1 && !r.count) toast('Tous les fichiers de ce jeu sont déjà sur l’ordinateur.');
-      else toast(r.total > 1 ? `${plural(r.count, 'fichier', 'fichiers')} à télécharger pour ce jeu (l’index et ses pistes), dans un dossier à son nom. Suivez-les dans Téléchargements.` : 'Téléchargement ajouté : il ira dans le dossier de la console. Suivez-le dans Téléchargements.', { duration: 7000 });
-      break;
-    }
-    case 'rom-dl-all': {
-      const all = (S.roms || []).filter((r) => r.remote);
-      const fileOf = (r) => decodeURIComponent(String(r.path).split('/').pop().split('?')[0]).toLowerCase();
-      const localNames = new Set((S.roms || []).filter((r) => !r.remote).map((r) => String(r.path).split(/[\\/]/).pop().toLowerCase()));
-      const todo = all.filter((r) => !localNames.has(fileOf(r)));
-      if (!todo.length) break;
-      const ok = await confirmDialog(`Télécharger ${plural(todo.length, 'jeu', 'jeux')} dans le dossier de ${consoleOf(S.romsOf)?.name || 'la console'} ?`, 'Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans Téléchargements.', 'Tout télécharger');
-      if (!ok) break;
-      let n = 0;
-      for (const r of todo) { const res = await api.romDownload(S.romsOf, r.path); if (res?.ok) n++; }
-      toast(`${plural(n, 'téléchargement ajouté', 'téléchargements ajoutés')}. Suivez-les dans Téléchargements.`, { duration: 6000 });
-      break;
-    }
-    case 'dl-add': {
-      const url = $('#dl-url').value.trim();
-      if (!url) { toast('Collez d’abord un lien (https://… ou magnet:?…).'); break; }
-      const dest = $('#dl-dest').value;
-      const r = await api.downloadsAddUrl(url, dest === '' ? {} : { console: dest });
-      if (!r?.ok) { toast(r?.error || 'Ce lien n’a pas pu être ajouté.', { duration: 8000 }); break; }
-      $('#dl-url').value = '';
-      toast(r.external ? 'Lien confié à votre logiciel de torrent.' : 'Téléchargement ajouté.');
-      break;
-    }
-    case 'dl-torrent': {
-      const dest = $('#dl-dest')?.value || '';
-      const r = await api.downloadsAddTorrentFile(dest === '' ? {} : { console: dest });
-      if (r && !r.ok && !r.canceled) toast(r.error || 'Ce fichier .torrent n’a pas pu être ajouté.', { duration: 8000 });
-      break;
-    }
-    case 'dl-pause': await api.downloadsPause(t.dataset.id); break;
-    case 'dl-resume': await api.downloadsResume(t.dataset.id); break;
-    case 'dl-start': { await api.downloadsResume(t.dataset.id); toast('Téléchargement lancé.'); break; }
-    case 'dl-cancel': {
-      const d = S.downloads.find((x) => x.id === t.dataset.id);
-      const ok = await confirmDialog(`Annuler « ${d?.name || 'ce téléchargement'} » ?`, 'Les fichiers déjà téléchargés pour lui seront supprimés.', 'Annuler le téléchargement');
-      if (ok) await api.downloadsCancel(t.dataset.id, true);
-      break;
-    }
-    case 'dl-remove': await api.downloadsRemove(t.dataset.id); break;
-    case 'dl-clear': { const r = await api.downloadsClear(); S.downloads = r || []; render(); updateDlBadge(); break; }
-    case 'dl-reveal': await api.downloadsReveal(t.dataset.id); break;
-    case 'dl-install': {
-      const r = await api.downloadsRunInstaller(t.dataset.id, t.dataset.file);
-      if (!r?.ok) toast(r?.error || 'Le programme d’installation n’a pas pu être lancé.', { duration: 8000 });
-      break;
-    }
-    case 'dl-pick-dir': {
-      const dir = await api.downloadsPickDir();
-      if (dir) { await setCfg('downloads.dir', dir); S.dlSettings.dir = dir; refreshPanel(); }
-      break;
-    }
-    case 'bios-add': {
-      const r = await api.biosAdd(t.dataset.id);
-      if (r?.ok) { toast(`${plural(r.copied.length, 'fichier copié', 'fichiers copiés')} dans le dossier des BIOS.`); await loadCatalog(); }
-      else if (r && !r.canceled) toast(r.error || 'Copie impossible.', { duration: 8000 });
-      break;
-    }
-    case 'bios-open': { const r = await api.biosOpen(t.dataset.id); if (r && !r.ok && r.error) toast(r.error); break; }
-    case 'rom-site-search': {
-      const site = (S.romSites[cid] || [])[Number(t.dataset.id)];
-      if (!site) break;
-      if (!site.search) { openRomBrowser(cid, { site: Number(t.dataset.id) }); setTimeout(() => toast(`La recherche de ${site.name} n’est pas encore connue : cherchez le mot « mire » sur le site, puis appuyez sur la loupe.`, { duration: 9000 }), 2600); break; }
-      openRomBrowser(cid, { site: Number(t.dataset.id), url: D.searchUrlFor(site, S.query) });
-      break;
-    }
-    case 'scrape-section': {
-      if (S.scraping?.running) { api.scrapeCancel(); break; }
-      startScrape([t.dataset.kind], { force: t.dataset.force === '1' });
-      updateScrapeButton();
-      break;
-    }
-    case 'menu-pos': {
-      const pos = t.dataset.id;
-      await saveUi((ui) => { ui.menu = { ...ui.menu, position: pos }; });
-      applyMenu();
-      for (const b of $$('[data-action="menu-pos"]')) b.setAttribute('aria-pressed', String(b.dataset.id === pos));
-      break;
-    }
-    case 'clear-queries': S.usage.queries = []; api.usageClearQueries(); toast('Recherches récentes effacées'); break;
-    case 'add-site': {
-      const name = $('#ns-name').value.trim();
-      let url = $('#ns-url').value.trim();
-      if (!name || !url) { toast('Indiquez un nom et une adresse.'); break; }
-      if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-      const next = structuredClone(S.config);
-      next.web.push({ name, url, mode: 'integrated', color: '#59625B', search: '' });
-      S.config = await api.saveConfig(next);
-      $('#ns-name').value = '';
-      $('#ns-url').value = '';
-      toast(`${name} ajouté dans Streaming`);
-      break;
-    }
-    case 'ra-pick': {
-      const id = t.dataset.id;
-      if (S.raPick.has(id)) S.raPick.delete(id); else S.raPick.add(id);
-      if (panel.open) refreshPanel(); else render();
-      break;
-    }
-    case 'store-install': {
-      const id = t.dataset.id;
-      const systems = id === 'retroarch' ? [...S.raPick] : [];
-      S.storeProgress[id] = { phase: 'resolve', label: 'Préparation…' };
-      refreshPanel();
-      const r = await api.storeInstall(id, systems);
-      delete S.storeProgress[id];
-      if (r?.ok && id === 'retroarch') S.raPick.clear();
-      await afterStoreChange(r, r?.ok ? 'Installé. Les consoles sont prêtes dans « Ma ludothèque ».' : '');
-      break;
-    }
-    case 'store-uninstall': {
-      const r = await api.storeUninstall(t.dataset.id);
-      await afterStoreChange(r, 'Émulateur désinstallé. Vos jeux sont conservés.');
-      break;
-    }
-    case 'store-game': {
-      const id = `game:${t.dataset.id}`;
-      S.storeProgress[id] = { phase: 'download', label: 'Téléchargement…' };
-      refreshPanel();
-      const r = await api.storeGame(t.dataset.id);
-      delete S.storeProgress[id];
-      await afterStoreChange(r, r?.ok ? 'Jeu ajouté à votre ludothèque.' : '');
-      if (!r?.ok && r?.error) toast(r.error, { duration: 7000 });
-      break;
-    }
-    case 'store-import': {
-      const r = await api.storeImport($('#st-console')?.value);
-      if (r?.ok && r.count) { S.romsCache = {}; toast(`${plural(r.count, 'jeu copié', 'jeux copiés')} dans ${r.console}.`); }
-      else if (r && !r.ok) toast(r.error, { duration: 7000 });
-      break;
-    }
-    case 'store-root': {
-      const cfg = await api.storePickRoot();
-      if (cfg) { S.config = cfg; await loadCatalog(); toast('Les prochaines consoles utiliseront ce dossier.'); }
-      break;
-    }
-    case 'theme': {
-      const id = t.dataset.id;
-      await saveUi((ui) => { ui.theme = id; });
-      for (const card of $$('.theme-card', viewEl)) card.setAttribute('aria-pressed', String(card.dataset.id === id));
-      break;
-    }
-    case 'order-move': {
-      const { kind, id } = t.dataset;
-      const dir = Number(t.dataset.dir);
-      await saveUi((ui) => {
-        const list = [...ui.home[kind]];
-        const k = list.indexOf(id);
-        const j = k + dir;
-        if (k < 0 || j < 0 || j >= list.length) return;
-        [list[k], list[j]] = [list[j], list[k]];
-        ui.home[kind] = list;
-      });
-      refreshOrderList(kind, id, t.dataset.dir);
-      break;
-    }
-    case 'personalize': {
-      go('settings');
-      const block = $('#set-home');
-      block?.scrollIntoView({ block: 'start' });
-      block?.querySelector('.focusable')?.focus({ preventScroll: true });
-      break;
-    }
-    case 'scrape-all': startScrape(['videos', 'music', 'games'], { force: true }); toast('Récupération lancée : le bouton en haut des sections Vidéos, Musique et Jeux montre l’avancement.', { duration: 6000 }); break;
-    case 'scrape-clear': await api.scrapeClear(); await reloadScrape(); toast('Infos récupérées effacées'); break;
-    case 'web-nav': api.webNav(t.dataset.id); break;
-    case 'web-adblock': {
-      const r = await api.adblockToggleSite();
-      if (!r) break;
-      S.config = (await api.getConfig()).config;
-      S.adblock = r;
-      const cur = S.webStates[S.webActive] || {};
-      cur.adOn = r.adOn;
-      cur.blocked = 0;
-      setAdButton(cur);
-      toast(r.adOn ? 'Bloqueur réactivé sur ce site. La page se recharge.' : 'Bloqueur désactivé sur ce site. La page se recharge.');
-      break;
-    }
-    case 'adblock-update': {
-      toast('Mise à jour des listes de filtres…', { duration: 2500 });
-      const el = $('#adblock-status');
-      if (el) el.textContent = 'Mise à jour des listes en cours…';
-      const st = await api.adblockUpdate();
-      if (st?.ok === false) toast(st.error, { duration: 8000 });
-      else { await afterAdblockChange(st); toast('Listes de filtres à jour'); }
-      break;
-    }
-    case 'adblock-remove': {
-      const st = S.adblock || await api.adblockStatus();
-      const kind = t.dataset.kind;
-      const next = st[kind].filter((x) => x !== t.dataset.id);
-      await afterAdblockChange(await api.adblockSetLists({ [kind]: next }));
-      if (kind === 'customLists') toast('Liste retirée. Elle ne servira plus après la prochaine mise à jour des listes.');
-      break;
-    }
-    case 'adblock-add-list': {
-      const input = $('#adblock-new');
-      const url = input.value.trim();
-      if (!/^https?:\/\//i.test(url)) { toast('Indiquez l’adresse complète de la liste (https://…).'); break; }
-      const st = S.adblock || await api.adblockStatus();
-      await afterAdblockChange(await api.adblockSetLists({ customLists: [...new Set([...st.customLists, url])] }));
-      input.value = '';
-      toast('Liste ajoutée. Mise à jour des listes…', { duration: 2500 });
-      const st2 = await api.adblockUpdate();
-      if (st2?.ok === false) toast(st2.error, { duration: 8000 }); else await afterAdblockChange(st2);
-      break;
-    }
-    case 'web-close': api.webClose(S.webActive); break;
-    case 'web-bookmark': bookmarkCurrentPage(); break;
-    case 'game-bookmark': bookmarkCurrentGame(); break;
-    case 'open-series': {
-      const c = S.videoCards[i];
-      if (c) { S.videoSeries = c.key; S.videoSeason = null; S.limit = PAGE; render({ resetScroll: true }); }
-      break;
-    }
-    case 'open-season': {
-      S.videoSeason = Number(t.dataset.season);
-      S.limit = PAGE;
-      render({ resetScroll: true });
-      break;
-    }
-    case 'back-videos': S.videoSeries = null; S.videoSeason = null; render({ resetScroll: true }); break;
-    case 'back-season': S.videoSeason = null; render({ resetScroll: true }); break;
-    case 'video-source': S.videoSource = t.dataset.id; S.limit = PAGE; render({ resetScroll: true }); break;
-    case 'video-sort': S.videoSort = t.dataset.id; S.limit = PAGE; render({ resetScroll: true }); break;
-    case 'web-learn': learnSearch(); break;
-    case 'gs-recent': {
-      const q = getQueries()[i];
-      if (q) { const input = $('#gsearch'); input.value = q; S.gq = q; refreshSearch(); }
-      break;
-    }
-    case 'gs-video': rememberQuery(S.gq); playInContext(S.gs.videos[i]); break;
-    case 'gs-track': rememberQuery(S.gq); playInContext(S.gs.tracks[i]); break;
-    case 'gs-image': rememberQuery(S.gq); openImages(S.gs.images, i); break;
-    case 'gs-channel': rememberQuery(S.gq); playChannel(S.gs.channels[i]); break;
-    case 'gs-game': rememberQuery(S.gq); launchEntry(S.gs.games?.[i]); break;
-    case 'gs-rom': {
-      rememberQuery(S.gq);
-      const rom = S.gs.roms[i];
-      if (rom) {
-        toast(`Lancement de ${rom.displayName}…`, { duration: 2500 });
-        audio.pause();
-        api.launchRom(rom.emu, rom.path).then((r) => { if (!r.ok) toast(r.error, { duration: 7000 }); });
-      }
-      break;
-    }
-    case 'gs-tmdb': { const r = S.tmdb.results?.[i]; if (r) openTmdbResult(r); break; }
-    case 'gs-site': {
-      rememberQuery(S.gq);
-      const w = S.config.web.find((x) => x.id === t.dataset.id);
-      if (!w) break;
-      const url = D.searchUrlFor(w, S.gq);
-      if (!url) setTimeout(() => toast(`Pour chercher sur ${w.name} depuis Mire : cherchez le mot « mire » sur le site, puis appuyez sur « Mémoriser la recherche ».`, { duration: 10000 }), 2600);
-      openWeb(w.id, url || undefined);
-      break;
-    }
-    case 'rescan': S.scanned = false; scan(); toast('Analyse de la bibliothèque…', { duration: 2000 }); break;
-    default: break;
-  }
+// Opérations des vues historiques dont les contrôleurs ont besoin, tant qu'elles ne sont pas remplacées.
+const legacyUi = {
+  render, go, back, nextSection, webHome, openPageSettings, refreshPanel, confirm: confirmDialog,
+  isPanelOpen: () => panel.open,
+  revealSettings(blockId) {
+    go('settings');
+    const block = $(`#${blockId}`);
+    block?.scrollIntoView({ block: 'start' });
+    block?.querySelector('.focusable')?.focus({ preventScroll: true });
+  },
+  selectedRef: () => refFromEl(document.activeElement),
+  firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
+  editRef, editConsole, deletableGame, deleteGameRef,
+  consoleName: (id) => consoleOf(id)?.name,
+  openFileDialog, scan, addSourceFolder, askSourceAddress, removeSource, startScrape, updateScrapeButton, reloadScrape,
+  playInContext, playRecent, openVideo, playQueue, openImages,
+  pauseAudio: () => audio.pause(),
+  toggleAudio, openExternal, addRecent,
+  playChannel, loadChannels,
+  launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
+  openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,
+  getQueries, rememberQuery, openTmdbResult,
+  setSearchQuery(q) {
+    $('#gsearch').value = q;
+    S.gq = q;
+    refreshSearch();
+  },
+  loadDownloads, updateDlBadge, loadCatalog, afterStoreChange, afterAdblockChange, setCfg, saveUi, applyMenu,
+};
+const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE });
+setActionErrorHandler((error, { tag, method }) => {
+  console.error(`Action ${tag}.${method} :`, error);
+  toast(t('app.errors.actionFailed'), { duration: 6000 });
+});
+const legacyView = { root: viewEl, refreshOrderList };
+
+function onActionClick(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el || !e.currentTarget.contains(el)) return;
+  // Une liste déroulante agit quand on change sa valeur, pas quand on clique dessus.
+  if (el.tagName === 'SELECT') return;
+  runLegacyAction(el, legacyView);
 }
 viewEl.addEventListener('click', onActionClick);
 panelBody.addEventListener('click', onActionClick);
@@ -3283,17 +2905,17 @@ $('#rail').addEventListener('click', (e) => {
   const sub = e.target.closest('.rail-sub');
   if (sub) {
     const id = sub.dataset.web;
-    if (id.startsWith('tv:')) openTvWeb({ id: id.slice(3) });
-    else if (id.startsWith('rom:')) openRomBrowser(id.slice(4));
-    else if (id.startsWith('bm:')) openBookmark(id.slice(3));
-    else openWeb(id);
+    if (id.startsWith('tv:')) callAction('mire-web', 'openPortal', { id: id.slice(3) });
+    else if (id.startsWith('rom:')) callAction('mire-page', 'openRomSites', { consoleId: id.slice(4) });
+    else if (id.startsWith('bm:')) callAction('mire-web', 'openBookmark', { id: id.slice(3) });
+    else callAction('mire-web', 'open', { id });
     return;
   }
   const b = e.target.closest('.rail-item');
   if (!b) return;
-  if (b.hasAttribute('data-quit')) { api.quit(); return; }
-  if (b.hasAttribute('data-open-file')) { openFileDialog(); return; }
-  go(b.dataset.go);
+  if (b.hasAttribute('data-quit')) { callAction('mire-app', 'quit'); return; }
+  if (b.hasAttribute('data-open-file')) { callAction('mire-app', 'openFile'); return; }
+  callAction('mire-app', 'go', { section: b.dataset.go, focus: 'keep' });
 });
 
 let searchTimer = 0;
@@ -3315,7 +2937,7 @@ headerToolsRightEl.addEventListener('click', (e) => {
   const dl = e.target.closest('[data-action="games-download"]');
   if (dl) {
     if (dl.dataset.id === 'pc') onActionClick({ target: dl, currentTarget: headerToolsRightEl });
-    else openRomBrowser(Number(dl.dataset.id));
+    else callAction('mire-page', 'openRomSites', { consoleId: Number(dl.dataset.id) });
     return;
   }
   // Ouvrir/fermer un menu (filtre, tri).
@@ -3349,9 +2971,9 @@ searchEl.addEventListener('keydown', (e) => {
 /* Lecteurs intégrés, clavier et manette (players/, nav/)              */
 /* ------------------------------------------------------------------ */
 
-initAudio({ openExternal, addRecent });
-initVideo({ openExternal, openBookmark, addRecent, syncWeb, render: () => render() });
-initImages({ openExternal, addRecent, syncWeb, render: () => render() });
+initAudio(C);
+initVideo(C);
+initImages(C);
 
 // Contexte des touches et de la manette : la dernière boîte de dialogue ouverte, puis les lecteurs, puis le site affiché.
 function padContext() {
@@ -3362,44 +2984,20 @@ function padContext() {
   return 'list';
 }
 
-function editFocused(el) {
-  const ref = refFromEl(el);
-  if (ref) editRef(ref);
-  return !!ref;
-}
-
 initKeyboard({
   dialog: topDialog,
   overlayKey: (key, fromPad) => (isVideoOpen() ? videoKey(key, fromPad) : isImagesOpen() ? imageKey(key, fromPad) : null),
   webBarDown: (el) => {
     if (S.section !== 'web' || !el?.closest('.webbar')) return false;
-    api.webFocus();
+    C.web.focusSite();
     return true;
   },
-  back,
-  search: () => go('search'),
-  playPause: toggleAudio,
-  edit: editFocused,
-  remove: (el) => {
-    const ref = refFromEl(el);
-    if (!deletableGame(ref)) return false;
-    deleteGameRef(ref);
-    return true;
-  },
-});
+}, C);
 
 initGamepad({
   context: padContext,
   dialog: topDialog,
-  // Depuis un site, on part de sa page d'origine (Jeux, Télévision ou Streaming).
-  cycleSection: (d) => {
-    const next = nextSection(S.section === 'web' ? webHome() : S.section, d);
-    go(next, { focus: next === 'search' ? 'keep' : 'content' });
-  },
-  edit: editFocused,
-  webKey: (key) => api.webKey(key),
-  webToggle: (toSite) => (toSite ? api.webFocus() : api.webNav('mire')),
-});
+}, C);
 
 if ('mediaSession' in navigator) {
   const ms = navigator.mediaSession;
@@ -3458,6 +3056,8 @@ function tick() {
 /* ------------------------------------------------------------------ */
 
 (async function init() {
+  // Traduction : catalogues demandés pendant le reste du démarrage (lang du document, textes des contrôleurs).
+  i18n.start(api);
   for (const el of $$('[data-icon]')) el.innerHTML = ICON[el.dataset.icon] || '';
   const res = await api.getConfig();
   S.config = res.config;

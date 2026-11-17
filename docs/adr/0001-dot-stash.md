@@ -61,11 +61,15 @@ traduction de la page de démonstration), et de la feuille de `@mire/ui` (59 Ko,
   script de l'interface (un seul script, toujours chargé par `script-src 'self'`). Les deux moteurs de Stencil (celui
   des `ds-*`, paresseux, et celui des `mire-*`) cohabitent sans conflit ; les `mire-*` rendent des `ds-*` dans leur
   contenu.
-- **Imports d'un composant** : le code partagé (état, client API, logique) s'importe par les paquets de l'espace de
-  travail (`@mire/shared`…), que Stencil laisse en importations (`rollupConfig.inputOptions.external`) et
-  qu'esbuild résout : l'interface et les composants partagent ainsi un seul exemplaire de chaque module. Un chemin
-  relatif hors de `packages/ui/` serait copié par Stencil dans les composants : à proscrire. (Stencil ne sait pas
-  non plus lire `@mire/shared` lui-même : sa syntaxe TypeScript récente le fait échouer.)
+- **Imports d'un composant** : un composant n'importe que des modules de `packages/ui/src/` sans état (aides comme
+  `utils/`), que Stencil copie dans les composants. Il n'importe **ni l'état, ni le client API, ni les contrôleurs**
+  de l'interface : constaté en P4-04, Stencil intègre aux composants tout module qu'il compile, même un module de
+  `@mire/ui` importé par son nom de paquet (deux exemplaires dans le script de l'interface), et refuse un module
+  situé hors de `packages/ui/src/` (hors de son `rootDir`), qu'il soit importé par chemin ou par un paquet. Le lien
+  avec l'interface passe par le DOM : actions par les contrôleurs (§ 8), textes en attributs, langue sur `lang`.
+  (`rollupConfig.inputOptions.external` garde `@mire/*` en importations, pour un paquet que Stencil n'a pas à lire.)
+- **Types des `ds-*` dans le JSX** : `src/dot-stash.d.ts` importe les types de dot-stash (dépendance déjà installée) ;
+  `npm run typecheck` vérifie ainsi les attributs des `ds-*` écrits dans le JSX des `mire-*`.
 - **TypeScript** : `packages/ui/tsconfig.json` hérite de `tsconfig.base.json` (décorateurs historiques et JSX de
   Stencil en plus) et `npm run typecheck` le vérifie (D-12). Stencil, qui doit produire du JavaScript, lit
   `tsconfig.stencil.json` (le même, avec émission et réécriture des extensions `.ts`). `src/components.d.ts` est
@@ -124,6 +128,44 @@ utilisés par Mire dans les cinq thèmes actuels. En attendant les palettes (P4-
 `data-theme` d'un thème de `styles.css`, et un pont temporaire (`_demo-page.scss`) relie quelques jetons de
 dot-stash aux couleurs du thème ; P4-02 le remplacera par les fichiers de palettes. Code : `src/renderer/demo/`.
 
+### 8. Contrôleurs et actions (P4-04)
+
+- **Un contrôleur par écran**, désigné par la balise de son composant : `mire-app` (écrans, menu, réglages de la page,
+  édition, notifications), `mire-home`, `mire-page` (pages de contenus, télévision, jeux et consoles),
+  `mire-explorer` (sources), `mire-search`, `mire-centre` (téléchargements, boutique, BIOS), `mire-settings`,
+  `mire-player` (lecteurs), `mire-web` (vue web). Code : `src/renderer/controllers/`, une classe par fichier, avec le
+  reste de l'interface (état, client API) ; tout leur est injecté (`ControllerContext`), ils se testent sous Node.
+- **Les méthodes publiques sont les actions** : un verbe en camelCase (`playVideo`, `openSeries`), au plus un argument,
+  un objet JSON qui désigne les éléments par une **clé stable** (`{ path }`, `{ id }`, `{ consoleId }`), jamais par leur
+  position dans une liste. Les aides d'un contrôleur sont privées (`#aide`).
+- **Appel** : `<ds-trigger target="mire-app" action='go:[{"section":"videos"}]'>`. Le registre
+  (`controllers/registry.ts`) donne à chaque élément `mire-*` les actions de son contrôleur : un composant qui a un
+  contrôleur émet `mireConnect` à sa connexion (sans rien importer de l'interface), le registre lui ajoute alors les
+  méthodes. `<mire-app>` est dans `index.html` (caché, vide jusqu'à la coquille, P4-07), pour que les `ds-trigger`
+  le trouvent. La cible d'un `ds-trigger` est toujours la balise d'un `mire-*` : `npm run check:actions` le vérifie,
+  avec l'existence de chaque méthode.
+- **Erreurs** : une action qui échoue rejette ; le registre l'attrape, l'écrit dans la console et affiche un message
+  (`app.errors.actionFailed`). Les échecs attendus (réponse `{ ok: false, error }` du processus principal) gardent leur
+  propre message.
+- **Actions asynchrones** : pendant l'action, le `ds-trigger` qui l'a lancée porte `aria-busy="true"` et un nouveau
+  clic ne la relance pas. (dot-stash n'a pas d'état « en cours » pour `ds-trigger` ; l'habillage de P4-02 pourra
+  s'appuyer sur `[aria-busy="true"]`.)
+- **Navigation et lecteurs** : `nav/` et `players/` reçoivent les contrôleurs à leur initialisation et appellent leurs
+  méthodes (retour, rechercher, modifier, écran suivant, lecteur externe, « Reprendre », vue web) ; `app.js` ne leur
+  fournit plus que ce qu'ils doivent savoir de l'affichage (boîte de dialogue ouverte, lecteur ouvert, contexte).
+- **Pont temporaire** (`controllers/bridge.ts`, jusqu'à P4-24) : chaque `data-action` des vues historiques a une
+  entrée qui appelle la même méthode, en traduisant `data-index` en clé stable ; ce qui ne regarde que la vue
+  historique (focus après l'action, champ à vider) reste dans le pont. `npm run check:actions` vérifie que chaque
+  `data-action` des gabarits a une entrée et que chaque entrée désigne une méthode existante.
+
+### 9. Traduction de l'interface (P4-04)
+
+`src/renderer/i18n/` : au démarrage, `api.i18nGet()` donne la langue retenue et les catalogues ; le moteur de
+`@mire/shared/i18n` fournit `t()` aux contrôleurs (et aux pages qui tirent des catalogues les textes des
+composants). Le service suit `api.onLanguageChange` et tient à jour `lang` sur `<html>`. Les vues historiques, en
+français jusqu'à leur remplacement, sont marquées `lang="fr"` (sur `<body>`) : un lecteur d'écran les lit en
+français quelle que soit la langue de l'interface, et leur rendu ne change pas.
+
 ## Conséquences
 
 - Les composants `ds-*` sont utilisables dans n'importe quelle vue, historique ou nouvelle, sans changer la CSP.
@@ -135,6 +177,6 @@ dot-stash aux couleurs du thème ; P4-02 le remplacera par les fichiers de palet
 ## Points à trancher au point G5
 
 - Garder le test des composants dans Electron, ou adopter Vitest pour la phase des composants (P4-05).
-- La règle d'imports des `mire-*` (paquets `@mire/*` seulement) suffit-elle aux contrôleurs de P4-04, qui ont besoin
-  de l'état et du client API de `src/renderer/` ? Piste : déplacer ces modules dans un paquet (`@mire/ui` ou un
-  nouveau) plutôt que de les importer par chemin relatif.
+- Contrôleurs (P4-04) : ils restent dans `src/renderer/controllers/` et se lient aux `mire-*` par le DOM (§ 8),
+  plutôt que de déplacer l'état et le client API dans un paquet, que Stencil copierait dans les composants. À
+  confirmer, ainsi que le découpage des contrôleurs par écran.

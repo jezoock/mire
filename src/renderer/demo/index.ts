@@ -4,33 +4,26 @@
  * `mire-demo` de `@mire/ui` dans le gabarit historique, et les composants ds-* utilisés par Mire dans les cinq
  * thèmes actuels (palettes en P4-02). Ses textes viennent des catalogues, dans la langue de l'interface.
  */
-import { createI18n, lookup } from '@mire/shared/i18n';
-import type { I18n } from '@mire/shared/i18n';
-import { api } from '../api/index.ts';
 import { esc } from '../core/dom.ts';
+import { i18n, t } from '../i18n/index.ts';
 
 export const DEMO_SECTION = 'demo';
 
 /** Les cinq thèmes actuels, futurs jeux de jetons (palettes, P4-02). */
 const PALETTES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'] as const;
 
-let i18n: I18n | null = null;
 let countForms = '';
 
 /** Vrai si l'adresse de la page demande la démonstration. */
 export const isDemoHash = (hash: string): boolean => hash.replace(/^#/, '') === DEMO_SECTION;
 
-/** Charge les textes de la page (catalogues de la langue de l'interface), avant son premier affichage. */
+/** Attend les textes de la page (service de traduction de l'interface), avant son premier affichage. */
 export async function loadDemoTexts(): Promise<void> {
-  const info = await api.i18nGet();
+  await i18n.ready();
   // Catalogues indisponibles : la page affiche les clés, elle reste utilisable.
-  if ('ok' in info) return;
-  i18n = createI18n({ locale: info.language, catalogs: info.catalogs });
-  const forms = i18n.chain.map((code) => lookup(info.catalogs[code]!.messages, 'demo.component.count')).find((node) => node && typeof node === 'object');
-  countForms = forms ? JSON.stringify(forms) : '';
+  const forms = i18n.raw('demo.component.count');
+  countForms = forms && typeof forms === 'object' ? JSON.stringify(forms) : '';
 }
-
-const t = (key: string, vars?: Record<string, string | number>): string => (i18n ? i18n.t(key, vars) : key);
 
 export const demoTitle = (): string => t('demo.title');
 
@@ -57,7 +50,7 @@ function palette(id: (typeof PALETTES)[number], index: number): string {
 
 /** Contenu de la page, inséré dans la vue de l'interface historique. */
 export function viewDemo(): string {
-  return `<div class="mire-ui-demo" lang="${esc(i18n?.locale || 'fr')}">
+  return `<div class="mire-ui-demo" lang="${esc(i18n.language || 'fr')}">
     <mire-demo heading="${esc(t('demo.component.heading'))}" action-label="${esc(t('demo.component.action'))}" count-labels="${esc(countForms)}"></mire-demo>
     <div class="mire-ui-demo__palettes">${PALETTES.map(palette).join('')}</div>
   </div>`;

@@ -38,6 +38,8 @@ ne se commence pas : signale-le.
 - `npm install` puis `npm start` : lancer l'application (télécharge le moteur Electron au premier lancement).
 - `npm run lint` : ESLint (fichiers `.js` et `.mjs` seulement ; le TypeScript est vérifié par `npm run typecheck`, D-12) ; `npm run format:check` : vérifie le formatage Prettier (`npm run format` le corrige).
 - `npm run i18n:check` : vérifie les catalogues de textes (mêmes clés et variables en français et en anglais, aucun texte vide).
+- `npm run check:actions` : chaque action d'un `ds-trigger` (et chaque `data-action` historique, par le pont) désigne une
+  méthode existante d'un contrôleur (`src/renderer/controllers/`).
 - `npm run build` : construit `dist/` (esbuild) ; `npm run dev` : reconstruit en continu et lance Mire ;
   `npm run typecheck` : TypeScript (strict, variables et paramètres inutilisés refusés : préfixer d'un `_` un
   paramètre imposé mais inutile). L'installateur de `npm run dist` sort dans `release/`.
@@ -46,7 +48,7 @@ ne se commence pas : signale-le.
 - `npm run test:e2e` : test de fumée dans Electron (construit `dist/`, réécrit les captures de `test/e2e/__screenshots__/`) ;
   sous Linux sans écran : `xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:e2e`. Les captures varient selon
   l'environnement : ne versionner que celles qu'un changement d'interface modifie vraiment.
-- La CI (`.github/workflows/ci.yml`) lance lint, formatage, types, catalogues, tests (sous Node 22 et 24) et le test
+- La CI (`.github/workflows/ci.yml`) lance lint, formatage, types, catalogues, actions, tests (sous Node 22 et 24) et le test
   de fumée à chaque push et à chaque PR.
 - `MIRE_USER_DATA=<dossier>` : dossier de données à utiliser à la place de celui de Mire (essais, test de fumée).
 

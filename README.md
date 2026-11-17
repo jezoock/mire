@@ -522,6 +522,7 @@ Le rôle de chaque module, les flux principaux, le contrat IPC et les règles de
 | `npm run format:check` | Vérifie le formatage Prettier. `npm run format` le corrige. |
 | `npm run typecheck` | TypeScript, sans rien produire : `src/`, `test/`, `scripts/`, puis `packages/shared/` et `packages/ui/`. Mode strict, et refus des variables et paramètres inutilisés (un paramètre imposé mais inutile commence par `_`), des `case` qui tombent dans le suivant et des fonctions qui ne rendent pas toujours une valeur. |
 | `npm run i18n:check` | Vérifie les catalogues de textes (voir plus bas). |
+| `npm run check:actions` | Vérifie que chaque action de l’interface (`ds-trigger`, `data-action` des vues historiques) désigne une méthode existante d’un contrôleur ([`docs/adr/0001-dot-stash.md`](docs/adr/0001-dot-stash.md), § 8). |
 | `npm test` | Tests unitaires. |
 | `npm run test:e2e` | Test de fumée dans Electron (voir plus bas). |
 | `npm run dist` | Fabrique l’installateur dans `release/`. |
@@ -574,7 +575,7 @@ Tout nouveau texte affiché passe par les catalogues de `packages/shared/src/i18
 
 La CI (`.github/workflows/ci.yml`) tourne à chaque push et à chaque pull request :
 
-- **Lint et formatage** (Node 24) : `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run i18n:check` ;
+- **Lint et formatage** (Node 24) : `npm run lint`, `npm run format:check`, `npm run typecheck`, `npm run i18n:check`, `npm run check:actions` ;
 - **Tests** : `npm test` sous Node 22 et sous Node 24 ;
 - **Test de fumée Electron** (Node 24) : téléchargement du moteur Electron, puis `npm run test:e2e` sous `xvfb-run`. Les captures sont publiées en artefact (`captures-e2e`), même en cas d’échec.
 

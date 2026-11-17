@@ -10,7 +10,8 @@
   <link rel="stylesheet" href="ui/mire-ui.css">
   <script type="module" src="vendor/dot-stash/dot-stash.esm.js"></script>
 </head>
-<body data-section="home">
+<!-- Les vues historiques sont en français jusqu'à leur remplacement ; la langue de l'interface est sur <html> (P4-04). -->
+<body data-section="home" lang="fr">
   <div class="app">
     <nav class="rail" id="rail" aria-label="Menu principal">
       <div class="brand">
@@ -155,6 +156,9 @@
   <div class="padbar" id="padbar" hidden aria-hidden="true"></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="drop" id="drop" hidden><span>Déposez vos fichiers pour les lire</span></div>
+
+  <!-- Racine de l'interface : porte les actions du contrôleur mire-app (P4-04) ; la coquille (P4-07) l'habillera. -->
+  <mire-app hidden></mire-app>
 
   <script src="main.js"></script>
 </body>

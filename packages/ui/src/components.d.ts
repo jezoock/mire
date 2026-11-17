@@ -7,6 +7,13 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
     /**
+     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
+     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
+     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     */
+    interface MireApp {
+    }
+    /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
      * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
      * attributs, fournis par la page à partir des catalogues.
@@ -38,6 +45,17 @@ export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     target: HTMLMireDemoElement;
 }
 declare global {
+    /**
+     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
+     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
+     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     */
+    interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
+    }
+    var HTMLMireAppElement: {
+        prototype: HTMLMireAppElement;
+        new (): HTMLMireAppElement;
+    };
     interface HTMLMireDemoElementEventMap {
         "mireDemoChange": { count: number };
     }
@@ -61,10 +79,18 @@ declare global {
         new (): HTMLMireDemoElement;
     };
     interface HTMLElementTagNameMap {
+        "mire-app": HTMLMireAppElement;
         "mire-demo": HTMLMireDemoElement;
     }
 }
 declare namespace LocalJSX {
+    /**
+     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
+     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
+     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     */
+    interface MireApp {
+    }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
      * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
@@ -99,6 +125,7 @@ declare namespace LocalJSX {
     }
 
     interface IntrinsicElements {
+        "mire-app": MireApp;
         "mire-demo": Omit<MireDemo, keyof MireDemoAttributes> & { [K in keyof MireDemo & keyof MireDemoAttributes]?: MireDemo[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `attr:${K}`]?: MireDemoAttributes[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `prop:${K}`]?: MireDemo[K] };
     }
 }
@@ -106,6 +133,12 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
+            /**
+             * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
+             * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
+             * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+             */
+            "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
             /**
              * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
              * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des

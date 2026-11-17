@@ -131,7 +131,9 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 
 | Dossier ou fichier | Rôle |
 | --- | --- |
-| `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, `switch` des actions (`data-action`), boîtes de dialogue, réception des événements du processus principal. Elle sera remplacée vue par vue pendant la phase 2. |
+| `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
+| `controllers/` | Contrôleurs (P4-04) : un par écran (`mire-app`, `mire-page`…), dont les méthodes publiques sont les actions de Mire, appelées par `ds-trigger`, par la navigation et les lecteurs ; registre et pont des `data-action` historiques (`bridge.ts`). Voir `docs/adr/0001-dot-stash.md` § 8. |
+| `i18n/` | Traduction de l'interface : catalogues reçus du processus principal, `t()`, langue courante, `lang` du document. |
 | `core/` | Outils sans état : accès au DOM et échappement (`dom.ts`), mise en forme (`format.ts`), icônes (`icons.ts`), couleurs (`colors.ts`), adresse de lecture d'un média (`media.ts`). |
 | `state/` | État partagé par toutes les vues : `S` (section, données reçues, caches, choix en cours), `Q` (file de musique), `V` (lecteur vidéo), `I` (visionneuse d'images), et `PAGE` (nombre d'éléments affichés d'abord, puis à chaque « Afficher plus »). |
 | `api/` | Seul accès à `window.api` (`api`), typé par le contrat IPC. |
@@ -142,12 +144,14 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
 | `styles.css`, `fonts/` | Styles (cinq thèmes, par `data-theme`) et police Archivo. |
 
-Les modules `nav/` et `players/` ne connaissent pas l'interface : `app.js` leur passe ce qu'ils doivent faire
-(retour, modifier, ouvrir le lecteur externe…) par des objets de rappels, lors de leur initialisation (`initKeyboard`,
-`initVideo`…).
+Les modules `nav/` et `players/` ne connaissent pas l'interface : ils reçoivent les contrôleurs à leur
+initialisation (`initKeyboard`, `initVideo`…) et appellent leurs méthodes (retour, modifier, ouvrir le lecteur
+externe…) ; `app.js` ne leur fournit plus que ce qu'ils doivent savoir de l'affichage (boîte de dialogue ouverte,
+lecteur ouvert).
 
-L'interface ne passe pas encore par les catalogues de textes : ses textes sont en français, écrits en dur. Elle ne
-s'abonne pas encore au changement de langue. Les deux viendront avec la phase 2.
+Le service de traduction (`i18n/`) reçoit les catalogues au démarrage et suit les changements de langue ; la langue
+de l'interface est sur `<html lang>`. Les vues historiques restent en français, écrites en dur et marquées
+`lang="fr"`, jusqu'à leur remplacement.
 
 ## `@mire/shared`
 
