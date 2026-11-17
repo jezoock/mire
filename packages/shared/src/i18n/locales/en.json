@@ -341,7 +341,9 @@
         "image": "Image",
         "local": "On this computer",
         "network": "On the network",
-        "remote": "Online"
+        "remote": "Online",
+        "series": "TV shows",
+        "movie": "Movies"
       },
       "infos": {
         "extension": "Extension",
@@ -354,7 +356,13 @@
         "year": "Year",
         "genres": "Genres",
         "overview": "Summary",
-        "artist": "Artist"
+        "artist": "Artist",
+        "series": "TV show",
+        "season": "Season",
+        "episode": "Episode",
+        "album": "Album",
+        "track": "Track",
+        "system": "Console"
       }
     }
   }

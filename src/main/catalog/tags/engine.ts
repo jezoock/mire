@@ -13,8 +13,9 @@ import { coerceInfo, INFO_ID_RE, userTagId, type Registry } from './registry.ts'
 import { createTagIndex } from './tag-index.ts';
 
 /**
- * Contribution automatique (tags automatiques, infos en ligne) : ce qu'elle pose sur un élément, ou `null`.
- * Les plugins `taggers` (P2-05) et `metadata` (P2-06) passeront par là.
+ * Contribution automatique (tags automatiques, infos en ligne) : ce qu'elle pose sur un élément, ou `null`. Elle
+ * reçoit l'élément avec les tags du type de fichier et de la source. Les tags automatiques (`tags/taggers.ts`) et les
+ * infos en ligne (P2-06) passent par là.
  */
 export interface Contributor {
   id: string;
@@ -28,24 +29,29 @@ export interface TagEngineOptions {
   registry: Registry;
   /** Règles par extension en vigueur (configuration). */
   rules: () => FileTagRules;
+  /** Contributions automatiques dès le départ (tags automatiques internes), sans second calcul. */
+  contributors?: readonly Contributor[];
 }
 
 export type TagEngineListener = (keys: ElementKey[]) => void;
 
-export function createTagEngine({ catalog, overrides, registry, rules }: TagEngineOptions) {
+export function createTagEngine({ catalog, overrides, registry, rules, contributors: initial = [] }: TagEngineOptions) {
   const effective = new Map<ElementKey, Effective>();
   const index = createTagIndex();
   const listeners = new Set<TagEngineListener>();
-  let contributors: readonly Contributor[] = [];
+  let contributors: readonly Contributor[] = [...initial];
   let currentRules = rules();
 
   function compute(e: Readonly<Element>): Effective {
+    const file = fileLayer(e, currentRules);
     const layers: Layer[] = [
-      { origin: 'file', ...fileLayer(e, currentRules) },
+      { origin: 'file', ...file },
       { origin: 'source', tags: e.tags, infos: e.infos, images: e.images },
     ];
+    // Les contributions voient les tags du type de fichier et de la source (`video`, `local`…).
+    const seen = contributors.length && file.tags.length ? { ...e, tags: [...file.tags, ...e.tags] } : e;
     for (const c of contributors) {
-      const layer = c.compute(e);
+      const layer = c.compute(seen);
       if (layer) layers.push({ ...layer, origin: c.origin });
     }
     return mergeLayers(layers, overrides.get(e.key));

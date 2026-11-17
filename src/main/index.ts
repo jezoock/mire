@@ -12,6 +12,7 @@ import { runApp, setApplicationMenu, type PendingFiles, type Running } from './a
 import { createCatalog } from './catalog/index.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
+import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
 import { createTargetFinder } from './catalog/targets.ts';
@@ -145,9 +146,12 @@ function start(pending: PendingFiles): Running {
       `Catalogue : infos modifiées à la main reprises (${migrated.matched} rattachées à un élément, ${migrated.unmatched.length} gardées sous leur ancienne clé).`,
     );
   // Tags et infos effectifs, index ; les règles par extension suivent la configuration.
-  const tags = createTagEngine({ catalog, overrides, registry: createRegistry(t), rules: () => fileTagRules(config.get().catalog) });
+  // Tags automatiques internes (séries, films, musique, consoles, photos) : ils suivent les consoles configurées.
+  const taggers = () => builtinTaggers(() => config.get().emulators).map(taggerContributor);
+  const tags = createTagEngine({ catalog, overrides, registry: createRegistry(t), rules: () => fileTagRules(config.get().catalog), contributors: taggers() });
   config.onChange((next, prev) => {
     if (JSON.stringify(next.catalog?.fileTags) !== JSON.stringify(prev.catalog?.fileTags)) tags.refreshRules();
+    if (JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(taggers());
   });
   const sevenZipPath = path7za.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   const archive = createArchive({ sevenZipPath, copyPath: files.sevenZip });
