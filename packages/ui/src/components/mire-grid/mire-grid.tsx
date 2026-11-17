@@ -61,14 +61,25 @@ export class MireGrid {
   private resizeObserver?: ResizeObserver;
   /** Carte qui doit recevoir le focus quand elle sera rendue (première carte montrée par « Afficher plus »). */
   private focusKey: string | null = null;
-  /** La grille avait le focus quand une carte a disparu (défilement au stick) : il revient sur une carte visible. */
+  /**
+   * Dernière carte de la grille qui a eu le focus (clé et groupe) : la part rendue la garde, et si elle a tout de même
+   * disparu (défilement au stick), le focus revient sur une carte visible. Oubliée quand le focus quitte la grille.
+   */
   private lastFocused: string | null = null;
+  private lastGroup = '';
 
   private readonly onScroll = () => this.schedule();
   private readonly onFocusIn = (e: FocusEvent) => {
-    this.lastFocused = (e.target as HTMLElement).closest('[data-key]')?.getAttribute('data-key') ?? null;
+    const target = e.target as HTMLElement;
+    this.lastFocused = target.closest('[data-key]')?.getAttribute('data-key') ?? null;
+    this.lastGroup = (target.closest('.mire-grid__items') as HTMLElement | null)?.dataset.group ?? '';
     // La part rendue suit la carte qui a le focus (lignes suivantes prêtes avant que la page ait défilé).
     this.schedule();
+  };
+  // Focus parti hors de la grille ; sans destination (carte retirée du document), la grille le garde en mémoire.
+  private readonly onFocusOut = (e: FocusEvent) => {
+    const to = e.relatedTarget as Node | null;
+    if (to && !this.host.contains(to)) this.lastFocused = null;
   };
 
   /** Montre une page de plus du groupe `key` ; méthode publique, appelée aussi par le bouton « Afficher plus ». */
@@ -84,6 +95,7 @@ export class MireGrid {
   connectedCallback() {
     document.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
     this.host.addEventListener('focusin', this.onFocusIn);
+    this.host.addEventListener('focusout', this.onFocusOut);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.schedule());
       this.resizeObserver.observe(this.host);
@@ -93,6 +105,7 @@ export class MireGrid {
   disconnectedCallback() {
     document.removeEventListener('scroll', this.onScroll, { capture: true });
     this.host.removeEventListener('focusin', this.onFocusIn);
+    this.host.removeEventListener('focusout', this.onFocusOut);
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
   }
@@ -160,17 +173,15 @@ export class MireGrid {
     this.ranges = ranges;
   }
 
-  /** Carte de la grille qui a le focus : son groupe et son rang, ou `null`. */
+  /** Dernière carte de la grille qui a eu le focus : son groupe et son rang, ou `null`. */
   private focusedCard(view: GridGroup[]): { group: string; index: number } | null {
-    const active = document.activeElement;
-    if (!this.lastFocused || !active || !this.host.contains(active)) return null;
-    const section = active.closest('.mire-grid__items') as HTMLElement | null;
-    const group = view.find((g) => g.key === (section?.dataset.group ?? ''));
+    if (!this.lastFocused) return null;
+    const group = view.find((g) => g.key === this.lastGroup);
     const index = group ? group.elements.findIndex((el) => el.key === this.lastFocused) : -1;
     return group && index >= 0 ? { group: group.key, index } : null;
   }
 
-  /** Focus demandé par « Afficher plus », ou focus perdu parce que sa carte n'est plus rendue. */
+  /** Focus demandé par « Afficher plus », ou focus perdu pendant le rendu. */
   private restoreFocus() {
     const byKey = (key: string) => this.host.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`);
     if (this.focusKey) {
@@ -182,11 +193,13 @@ export class MireGrid {
       return;
     }
     const active = document.activeElement;
-    if (this.lastFocused && (!active || active === document.body) && !byKey(this.lastFocused)) {
-      const vp = this.viewport();
-      const visible = [...this.host.querySelectorAll<HTMLElement>('mire-card [data-key]')].find((el) => el.getBoundingClientRect().top >= vp.top);
-      visible?.focus({ preventScroll: true });
-    }
+    if (!this.lastFocused || (active && active !== document.body)) return;
+    // Quand la première ligne rendue change, Stencil déplace les cartes gardées dans le DOM, et une carte déplacée perd
+    // le focus : il lui est rendu. Une carte qui n'est plus rendue le cède à la première carte visible.
+    const vp = this.viewport();
+    const back =
+      byKey(this.lastFocused) ?? [...this.host.querySelectorAll<HTMLElement>('mire-card [data-key]')].find((el) => el.getBoundingClientRect().top >= vp.top);
+    back?.focus({ preventScroll: true });
   }
 
   private moreText(remaining: number): string {
