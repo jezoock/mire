@@ -17,6 +17,7 @@ import { createTargetFinder } from '../../src/main/catalog/targets.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { normalizeConfig } from '../../src/main/config/normalize/index.ts';
+import { CONFIG_VERSION } from '../../src/main/config/defaults.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
 import type { MainContext } from '../../src/main/ipc/context.ts';
 
@@ -96,7 +97,7 @@ describe('tags selon le type de fichier', () => {
     // La configuration garde la section telle quelle ; absente, elle n'est pas ajoutée.
     const withRules = normalizeConfig({ version: 8, catalog: { fileTags: { '.TS': ['audio'] } } });
     assert.deepEqual(withRules.catalog, { fileTags: { '.ts': ['audio'] } });
-    assert.equal(withRules.version, 8);
+    assert.equal(withRules.version, CONFIG_VERSION);
     assert.equal('catalog' in normalizeConfig({ version: 8 }), false);
   });
 

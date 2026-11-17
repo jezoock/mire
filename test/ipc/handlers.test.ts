@@ -184,7 +184,7 @@ describe('export et import de la configuration', () => {
       r.usage.recent.map((x: Any) => x.path),
       ['/a', '/c'],
     );
-    assert.deepEqual(ctx.usage.get().resume, { '/a': 100, '/c': 50 });
+    assert.deepEqual(ctx.usage.get().resume, { 'local:/a': 100, 'local:/c': 50 });
     assert.equal(r.usage.volume, 0.9);
     assert.deepEqual(r.usage.queries, ['alien', 'dune']);
 
