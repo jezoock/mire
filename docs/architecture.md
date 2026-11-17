@@ -405,7 +405,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | --- | --- | --- |
 | `config.json` | Configuration (bibliothèque, consoles, sites, TV, interface…) | service de configuration, stockage JSON |
 | `config.json.illisible-<date>` | Configuration illisible mise de côté au démarrage | service de configuration |
-| `usage.json` | « Reprendre », positions de reprise des vidéos, volume, recherches récentes | service des données d'usage, stockage JSON |
+| `usage.json` | « Reprendre », positions de reprise des vidéos (par clé d'élément depuis P2-11), volume, recherches récentes | service des données d'usage, stockage JSON |
 | `catalog/sources/<plugin>--<emplacement>-<empreinte>.json` | Catalogue d'éléments : résultat de la dernière analyse de chaque emplacement de source (`{ version, source, scanned, elements }`) | catalogue (`src/main/catalog/`), stockage JSON (écriture différée) |
 | `catalog/overrides.json` | Modifications faites à la main : tags ajoutés ou retirés, infos et images, par clé d'élément ; tags créés par l'utilisateur ; fiches de l'ancien `meta.json` sans élément (`{ version, tags, elements, unmatched }`) | `src/main/catalog/overrides.ts`, stockage JSON |
 | `meta/meta.json` | Ancien fichier des infos modifiées à la main : repris dans `catalog/overrides.json` au premier démarrage, puis laissé en place sans être écrit | `src/main/meta/user-meta.ts` jusqu'à P2-04 |
@@ -720,9 +720,17 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
 
 - `defaults.ts` (`DEFAULT_CONFIG`, valeurs admises) et `catalogs/` (`DEFAULT_TV`, `DEFAULT_WEB` : données, futur
   contenu d'addons) ;
-- `migrations/` : une étape par version (`v2.ts` … `v8.ts`) et leur registre ; `migrate(brut)` rend
+- `migrations/` : une étape par version (`v2.ts` … `v9.ts`) et leur registre ; `migrate(brut)` rend
   `{ config, from, changed }`. Nouvelle version : ajouter `vN.ts`, l'inscrire dans `MIGRATIONS`, monter
   `CONFIG_VERSION` ;
+- v9 (P2-11, sections → pages) : les pages prêtes à l'emploi reprennent les sections de la v8 telles quelles (toutes
+  épinglées, dans l'ordre du menu de la v8, qui n'était ni modifiable ni masquable) : rien n'est écrit dans
+  `catalog/pages.json` ni dans `catalog/lists.json` (la v8 n'a pas de favoris). La position et le repli du menu
+  (`ui.menu`) ne bougent pas. Les barres de la mire, « Vos services » et « Reprendre » deviennent les rangées de
+  l'accueil (`ui.home.rows`, `HomeRow` : `bars` vers des pages, `list:<id>` ou `screen:search` ; `sites` par clé
+  `web:<id>` ; `recent` ; `page` ; `list`). `ui.home.clock`, `recent`, `bars`, `services` et `ui.start` restent en
+  place pour l'interface historique ; une configuration sans rangées (installation neuve) reçoit celles qu'on tire de
+  ces réglages. Les réglages qui iront aux plugins ne bougent pas (P5-01) ;
 - `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète. La
   section `catalog` (règles par extension du moteur de tags, P2-04) est facultative : absente, elle n'est pas ajoutée ;
 - `merge.ts` : import « compléter » ;
@@ -739,6 +747,12 @@ fin moins 90 s, pour les vidéos de 5 min et plus), le volume (0,9 par défaut) 
 plus), dans `usage.json` (décision D-06). Les règles sont des fonctions pures (`rules.ts`) ; le service
 (`createUsageService({ file })`) est passé aux handlers IPC par `ctx.usage` (canaux `usage:*`).
 
+- **Clés d'éléments** (P2-11) : chaque entrée de « Reprendre » porte la clé de son élément (`key`, `null` pour un
+  lien magnet ou un chemin relatif) et les positions de reprise sont rangées par clé (`local:` pour un chemin absolu
+  ou un partage, `remote:` pour une adresse web ; par chemin pour le reste). Le contrat IPC reste par chemin : le
+  service en tire la clé. Un `usage.json` d'avant (positions par chemin) est rattaché au chargement et réécrit une
+  fois ; un import ou le `localStorage` d'une version précédente aussi. Les recherches récentes sont des textes : elles
+  ne désignent aucun élément et restent telles quelles.
 - L'interface lit `usageGet()` au démarrage et garde une copie de « Reprendre », du volume et des recherches pour
   l'affichage ; chaque modification part au processus principal. La position de reprise se demande vidéo par vidéo.
 - Au premier lancement après la mise à jour, l'interface envoie ce que gardait son `localStorage` (`recent`,
