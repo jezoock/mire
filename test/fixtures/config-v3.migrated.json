@@ -1,6 +1,6 @@
 {
   "raw": {
-    "version": 8,
+    "version": 9,
     "web": [
       {
         "id": "youtube",
@@ -38,7 +38,20 @@
     },
     "ui": {
       "home": {
-        "services": ["youtube"]
+        "services": ["youtube"],
+        "rows": [
+          {
+            "kind": "bars",
+            "targets": ["screen:search", "movies", "series", "music", "images", "streaming", "tv", "games"]
+          },
+          {
+            "kind": "sites",
+            "keys": ["web:youtube"]
+          },
+          {
+            "kind": "recent"
+          }
+        ]
       },
       "language": "fr"
     },

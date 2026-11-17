@@ -100,11 +100,7 @@ export interface HomeSettings {
  * - `page`, `list` : les premiers éléments d'une page ou d'une liste.
  */
 export type HomeRow =
-  | { kind: 'bars'; targets: string[] }
-  | { kind: 'sites'; keys: string[] }
-  | { kind: 'recent' }
-  | { kind: 'page'; id: string }
-  | { kind: 'list'; id: string };
+  { kind: 'bars'; targets: string[] } | { kind: 'sites'; keys: string[] } | { kind: 'recent' } | { kind: 'page'; id: string } | { kind: 'list'; id: string };
 
 export interface UiSettings {
   fullscreen: boolean;
