@@ -1,8 +1,8 @@
 /**
  * Moteur de récupération d'infos de base et d'une image pour les listes de Mire. Les sources sont des
- * fournisseurs (`MetadataProvider`) : le moteur tient la base `db.json`, décide de ce qui doit être récupéré
- * (révision, nouvel essai après 14 jours), fait tourner les récupérations avec la concurrence de chaque
- * fournisseur, annonce la progression et gère l'annulation.
+ * fournisseurs (`MetadataProvider`) : le moteur tient la base des fiches (`ScrapeStore` : celle du catalogue, ou
+ * `db.json`), décide de ce qui doit être récupéré (révision, nouvel essai après 14 jours), fait tourner les
+ * récupérations avec la concurrence de chaque fournisseur, annonce la progression et gère l'annulation.
  *
  * Les images sont copiées dans <données de Mire>/scrape/img ; rien n'est écrit dans vos dossiers.
  */
