@@ -55,8 +55,8 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `storage/` | Arborescence du dossier de données (`paths.ts`) et stockage JSON atomique (`json-store.ts`). Voir « Stockage JSON ». |
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
-| `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert. |
-| `catalog/` | Catalogue d'éléments (P2-01) : clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`). Voir « Catalogue d'éléments ». |
+| `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
+| `catalog/` | Catalogue d'éléments (P2-01, P2-02) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`). Voir « Catalogue d'éléments ». |
 | `meta/` | Infos modifiées à la main (`meta/meta.json`) et images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
 | `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
@@ -315,6 +315,7 @@ fournisseurs intégrés à Mire les implémentent.
 | `MetadataProvider` | `src/main/scrape/types.ts` | Une source d'infos : natures décrites (`kinds`), famille (`group`), concurrence, `requires`, `key`, `collect`, `scrape`, `candidates`, `byId`. | `tmdbProvider`, `musicBrainzProvider`, `libretroProvider`, `steamProvider` (`defaultProviders`) |
 | `SearchProvider` | `src/main/search/streaming.ts` | Un catalogue interrogé par la recherche : `id`, `search(query, ctx)`. | `streamingSearchProvider` (TMDB, « où regarder ») |
 | `WebExtension` | `src/main/web/extensions.ts` | Ce qui s'ajoute aux vues web : `attach`/`detach`, filtres réseau (`onBeforeRequest`, `onBeforeSendHeaders`, `onHeadersReceived`), `beforePageScript`, `guardNavigation`, compteurs du bouclier. | Bloqueur de publicités, connexion Google |
+| `ElementSource` | `src/main/catalog/types.ts` | Une source d'éléments du catalogue : `id` (celui du plugin prévu), `tags` de source, `handles(emplacement)`, `instance(emplacement)`, `scan(emplacement)` → éléments. | `src-local`, `src-smb`, `src-http`, `src-m3u` (`src/main/library/element-sources.ts`) |
 | `TvProvider` | `src/main/tv/types.ts` | Une façon de regarder un service de télévision, choisie par son `kind` : `channels(service, ctx)`. | `playlistProvider` (liste M3U), `webProvider` (portail dans une vue web) |
 | Catalogue de langue (`Catalog`) | `packages/shared/src/i18n/types.ts` | Un fichier JSON par langue : `meta` (`code`, `name`, `app`) et `messages`. Contrat détaillé dans `docs/i18n.md`. | `locales/fr.json`, `locales/en.json` |
 
@@ -403,8 +404,9 @@ par Electron.
 ## Catalogue d'éléments
 
 `src/main/catalog/` pose le modèle de l'architecture cible (« Éléments, tags et infos ») : tout ce que Mire peut ouvrir
-deviendra un élément (`Element`, types dans `@mire/shared`). À ce stade (P2-01), le catalogue existe et se lit au
-démarrage, mais aucune source ne l'alimente encore (P2-02, P2-03) et l'interface historique ne s'en sert pas.
+deviendra un élément (`Element`, types dans `@mire/shared`). Depuis P2-02, chaque analyse de la bibliothèque
+l'alimente (voir « Sources de la bibliothèque » plus bas) ; les jeux, la télévision et les sites suivront (P2-03).
+L'interface historique ne s'en sert pas.
 
 - **Clés stables** (`keys.ts`) : `<genre>:<partie>[|<partie>…]`, jamais d'après le rang ni le nom affiché. Une règle
   par genre d'élément :
@@ -434,6 +436,36 @@ démarrage, mais aucune source ne l'alimente encore (P2-02, P2-03) et l'interfac
   stockage JSON (atomique, différé d'une seconde). Au démarrage, `load()` relit tous les fichiers ; un fichier
   illisible ou d'une autre version est écarté (journal), un élément mal formé aussi.
 - **IPC** : `catalogElement(clé)` (canal `catalog:element`, le `catalog.element(key)` de l'architecture cible).
+- **Écritures** : une analyse qui ne change rien à un emplacement ne copie rien, n'annonce rien et ne réécrit pas son
+  fichier (`scanned` y est donc la date de la dernière analyse qui l'a changé).
+
+### Sources de la bibliothèque
+
+Une source d'éléments (`ElementSource`, `catalog/types.ts`) trouve des éléments dans les emplacements qu'elle gère et
+les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La bibliothèque en a quatre
+(`library/element-sources.ts`), une par plugin prévu à l'inventaire :
+
+| Source | Emplacements | Tags de source | Élément |
+| --- | --- | --- | --- |
+| `src-local` | dossier de cet ordinateur | `local` | `local:<chemin>`, ouvert comme un fichier |
+| `src-smb` | partage réseau (`\\NAS\…`, `smb://…`) | `network` | `local:<chemin>`, ouvert comme un fichier |
+| `src-http` | page d'index d'un serveur web | `remote` | `remote:<adresse>`, ouvert comme un fichier |
+| `src-m3u` | liste M3U en ligne | `remote` | `m3u:<liste>\|<flux>`, ouvert comme un flux |
+
+- **Instance** : l'emplacement normalisé (chemin selon les règles des clés, ou adresse canonique). Un même emplacement
+  déclaré pour plusieurs types de fichiers est une seule instance.
+- **Infos et images posées par la source** : `folder` (dossier), `server` (serveur web), `playlist` (liste M3U),
+  `subtitles` (sous-titres `.srt`/`.vtt` trouvés à côté d'une vidéo, chemins ou adresses) ; affiche et fanart
+  trouvés à côté du fichier (`poster`, `background`), logo d'une entrée M3U (`logo`). Le type de fichier et les
+  épisodes viendront du moteur de tags (P2-04, P2-05).
+- **Une seule analyse** : `scanLibrary` parcourt chaque emplacement une fois, rend ses `LibraryItem` à l'interface
+  historique (inchangés) et appelle `onScanned` ; le service de la bibliothèque y passe les éléments au catalogue
+  (`elementsOf`). `scan(emplacement)` analyse un emplacement seul, comme le fera l'hôte des plugins.
+- **Rien n'est retiré à tort** : un emplacement inaccessible, ou coupé par le nombre maximal d'éléments, garde les
+  éléments de l'analyse précédente. Un emplacement qui n'est plus dans la configuration quitte le catalogue à
+  l'analyse suivante. Deux emplacements qui se recouvrent (dossier inclus dans un autre) donnent un seul élément
+  par fichier, qui reste tant que l'un des deux le fournit.
+- Une erreur du catalogue est passée au journal ; elle n'empêche jamais `library.scan` de répondre.
 
 ## Configuration
 
