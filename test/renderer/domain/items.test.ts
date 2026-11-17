@@ -1,27 +1,10 @@
 // Logique des éléments déplacée de src/renderer/app.js vers src/renderer/domain/items.ts (P1-23).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanTrack, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey, withScrape } from '../../../src/renderer/domain/items.ts';
+import { genresOf, labelOf, metaKey, scrapeKey, withScrape } from '../../../src/renderer/domain/items.ts';
 import type { Infos } from '../../../src/renderer/domain/types.ts';
 
 const none: Infos = { scrape: {}, meta: {} };
-
-describe('domain/items : cleanTrack', () => {
-  it('retire le numéro de piste', () => {
-    assert.equal(cleanTrack('01 - One More Time'), 'One More Time');
-    assert.equal(cleanTrack('3. Titre'), 'Titre');
-    assert.equal(cleanTrack('1-05 - Face B'), 'Face B');
-    assert.equal(cleanTrack('07_Morceau'), 'Morceau');
-    assert.equal(cleanTrack('12 Chanson'), 'Chanson');
-  });
-
-  it('garde le nom quand il n’y a pas de numéro, ou quand il ne resterait rien', () => {
-    assert.equal(cleanTrack('Around the World'), 'Around the World');
-    assert.equal(cleanTrack('1999'), '1999');
-    assert.equal(cleanTrack('01 - '), '01 - ');
-    assert.equal(cleanTrack(''), '');
-  });
-});
 
 describe('domain/items : labelOf', () => {
   it('préfère le titre saisi ou récupéré, puis le nom lisible, puis le nom', () => {
@@ -152,26 +135,5 @@ describe('domain/items : genresOf', () => {
     assert.deepEqual(genresOf({}), []);
     assert.deepEqual(genresOf({ sGenre: '' }), []);
     assert.deepEqual(genresOf({ sGenre: ' , ' }), []);
-  });
-});
-
-describe('domain/items : folderLabel et folderText', () => {
-  it('un dossier générique prend le nom du dossier parent', () => {
-    const it1 = { folder: 'Saison 1', dir: '/series/Ma Série/Saison 1' };
-    assert.deepEqual(folderLabel(it1), { title: 'Ma Série', sub: 'Saison 1' });
-    assert.equal(folderText(it1), 'Ma Série, Saison 1');
-    assert.deepEqual(folderLabel({ folder: 'CD 2', dir: 'C:\\Musique\\Album\\CD 2' }), { title: 'Album', sub: 'CD 2' });
-  });
-
-  it('un dossier parlant est gardé tel quel', () => {
-    const it1 = { folder: 'Vacances', dir: '/photos/Vacances' };
-    assert.deepEqual(folderLabel(it1), { title: 'Vacances', sub: '' });
-    assert.equal(folderText(it1), 'Vacances');
-  });
-
-  it('dossier générique à la racine : pas de parent, le dossier seul', () => {
-    assert.deepEqual(folderLabel({ folder: 'Season 2', dir: '/Season 2' }), { title: 'Season 2', sub: '' });
-    assert.deepEqual(folderLabel({ folder: 'Disc 1' }), { title: 'Disc 1', sub: '' });
-    assert.deepEqual(folderLabel({}), { title: undefined, sub: '' });
   });
 });

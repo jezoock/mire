@@ -5,8 +5,11 @@
  */
 import { slug, type InfoType, type InfoValue } from '@mire/shared';
 
-/** Tags posés par le cœur : type de fichier, puis tags des sources de la bibliothèque (P2-02). */
-export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote'] as const;
+/**
+ * Tags posés par le cœur : type de fichier, tags des sources de la bibliothèque (P2-02), puis tags automatiques
+ * internes (P2-05, plugins inclus en phase 5).
+ */
+export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote', 'series', 'movie'] as const;
 
 /** Infos du cœur et leur type de valeur. */
 export const CORE_INFOS: Readonly<Record<string, InfoType>> = {
@@ -24,6 +27,13 @@ export const CORE_INFOS: Readonly<Record<string, InfoType>> = {
   genres: 'list',
   overview: 'text',
   artist: 'text',
+  // Tags automatiques (P2-05).
+  series: 'text',
+  season: 'number',
+  episode: 'number',
+  album: 'text',
+  track: 'number',
+  system: 'text',
 };
 
 /** Identifiant d'une info : lettres et chiffres, en commençant par une minuscule (`season`, `releaseDate`). */

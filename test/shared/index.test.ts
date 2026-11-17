@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, d’adresse et d’identifiant, les formats, les systèmes et les palettes', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes et les palettes', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
@@ -27,7 +27,10 @@ describe('@mire/shared', () => {
       'bigramDice',
       'cleanRomName',
       'cleanTitle',
+      'cleanTrack',
       'fold',
+      'folderLabel',
+      'folderText',
       'guessSystem',
       'hostOf',
       'isHttpUrl',
@@ -43,9 +46,11 @@ describe('@mire/shared', () => {
       'similarity',
       'siteOf',
       'slug',
+      'splitAlbumFolder',
       'stripTags',
       'systemById',
       'titleKey',
+      'trackNumber',
     ]);
   });
 

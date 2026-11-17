@@ -13,6 +13,7 @@ import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
+import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
 import { createTargetFinder } from './catalog/targets.ts';
@@ -153,12 +154,24 @@ function start(pending: PendingFiles): Running {
     console.log(
       `Catalogue : infos en ligne reprises (${scraped.matched} rattachées à un élément, ${scraped.unmatched.length} gardées sous leur ancienne clé).`,
     );
-  // Tags et infos effectifs, index ; les règles par extension et l'ordre des fournisseurs suivent la configuration.
-  const online = () => metadataContributors(metadata, metadataOrder(config.get().catalog));
-  const tags = createTagEngine({ catalog, overrides, registry: createRegistry(t), rules: () => fileTagRules(config.get().catalog), contributors: online() });
+  // Tags et infos effectifs, index ; les règles par extension, les consoles et l'ordre des fournisseurs suivent la
+  // configuration. Tags automatiques internes (séries, films, musique, consoles, photos), puis infos en ligne : le
+  // moteur fait passer les infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
+  const contributors = () => [
+    ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
+    ...metadataContributors(metadata, metadataOrder(config.get().catalog)),
+  ];
+  const tags = createTagEngine({
+    catalog,
+    overrides,
+    registry: createRegistry(t),
+    rules: () => fileTagRules(config.get().catalog),
+    contributors: contributors(),
+  });
   config.onChange((next, prev) => {
     if (JSON.stringify(next.catalog?.fileTags) !== JSON.stringify(prev.catalog?.fileTags)) tags.refreshRules();
-    if (JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders)) tags.setContributors(online());
+    const providers = JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders);
+    if (providers || JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(contributors());
   });
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));

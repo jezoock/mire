@@ -1,12 +1,13 @@
 /** Éléments de la bibliothèque : libellés, clés des infos, infos fusionnées, genres, dossiers. */
-import { fold, GENERIC_DIR } from '@mire/shared';
+import { cleanTrack, fold } from '@mire/shared';
 import type { Info, Infos, Item } from './types.ts';
 
 /** Ordre alphabétique de l'interface : chiffres comparés comme des nombres, accents et casse ignorés. */
 export const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 
-/** Titre d'un morceau sans son numéro de piste : « 01 - One More Time » → « One More Time ». */
-export const cleanTrack = (name: string): string => name.replace(/^(?:\d{1,2}[-.])?\d{1,3}\s*[-._)]\s*|^\d{2}\s+(?=\S)/, '') || name;
+// Titres de morceaux et groupes de dossier : déplacés dans `@mire/shared` (P2-05), utilisés ici et par les tags
+// automatiques du processus principal.
+export { cleanTrack, folderLabel, folderText } from '@mire/shared';
 
 /** Libellé affiché : titre saisi ou récupéré, sinon nom lisible, sinon nom du fichier. */
 export const labelOf = (it: Item): string =>
@@ -76,22 +77,3 @@ export const genresOf = (it: Item): string[] =>
     .split(',')
     .map((g) => g.trim())
     .filter(Boolean);
-
-const parentName = (dir: unknown): string => {
-  const parts = String(dir || '')
-    .split(/[\\/]/)
-    .filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 2] : '';
-};
-
-/** Titre d'un groupe de dossier. « Saison 1 » seul ne dit rien : on ajoute le dossier parent (le nom de la série). */
-export function folderLabel(it: Item): { title: string | undefined; sub: string } {
-  const parent = GENERIC_DIR.test(it.folder || '') ? parentName(it.dir) : '';
-  return parent ? { title: parent, sub: it.folder as string } : { title: it.folder, sub: '' };
-}
-
-/** Le même titre sur une ligne : « Ma série, Saison 1 ». */
-export const folderText = (it: Item): string | undefined => {
-  const f = folderLabel(it);
-  return f.sub ? `${f.title}, ${f.sub}` : f.title;
-};

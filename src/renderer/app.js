@@ -7,7 +7,7 @@ import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
 import { toast } from './ui/toast.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
-import { fold } from '@mire/shared';
+import { fold, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
@@ -670,11 +670,11 @@ function viewMusic() {
         if (last !== null) html += '</div>';
         last = t.dir;
         n = 0;
-        const m = /^(.+?)\s+-\s+(.+)$/.exec(t.folder);
+        const m = splitAlbumFolder(t.folder);
         const sc = S.scrape[`a:${t.dir}`] || {};
         const um = S.meta[`a:${t.dir}`] || {};
-        const albumName = um.title || (m ? m[2] : (sc.title || folderLabel(t).title));
-        const artist = um.artist || (m ? m[1] : (sc.artist || folderLabel(t).sub));
+        const albumName = um.title || (m ? m.album : (sc.title || folderLabel(t).title));
+        const artist = um.artist || (m ? m.artist : (sc.artist || folderLabel(t).sub));
         const details = [artist, um.year || sc.year, um.genre || sc.genre, plural(counts.get(t.dir), 'morceau', 'morceaux')].filter(Boolean).join(', ');
         html += `<div class="album">
           ${art({ ...t, kind: 'audio', name: albumName, sImage: sc.image || null, uImage: um.image || null }, 'album-cover')}
@@ -2454,10 +2454,10 @@ function knownGenres(kind) {
 // Valeurs « d'origine » (fichier et infos en ligne), sans les modifications manuelles.
 function baseValues(kind, it) {
   const sc = kind === 'track' ? {} : S.scrape[kind === 'album' ? `a:${it.dir}` : scrapeKey(it)] || {};
-  const m = kind === 'album' ? /^(.+?)\s+-\s+(.+)$/.exec(it.folder || '') : null;
+  const m = kind === 'album' ? splitAlbumFolder(it.folder) : null;
   const title = {
     video: sc.series ? it.name : (sc.title || it.name),
-    album: m ? m[2] : (sc.title || it.folder),
+    album: m ? m.album : (sc.title || it.folder),
     track: cleanTrack(it.name),
     image: it.name,
     rom: sc.title || it.displayName || it.name,
@@ -2465,7 +2465,7 @@ function baseValues(kind, it) {
   }[kind];
   return {
     title,
-    artist: kind === 'album' ? (m ? m[1] : sc.artist || '') : '',
+    artist: kind === 'album' ? (m ? m.artist : sc.artist || '') : '',
     year: sc.year || '',
     genre: sc.genre || '',
     overview: sc.overview || '',

@@ -2,7 +2,6 @@
 // photos, et quelques flux M3U sans extension) pour les tests et les mesures du moteur de tags. Déterministe.
 import type { ElementSourceRef } from '@mire/shared';
 import { localFileKey, m3uEntryKey } from '../../src/main/catalog/keys.ts';
-import type { Contributor } from '../../src/main/catalog/tags/engine.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 
 export interface FakeSource {
@@ -52,14 +51,3 @@ export function fakeCatalog(n: number, root = '/bib'): FakeSource[] {
   }
   return [series, films, music, photos, tv];
 }
-
-/** Tags automatiques factices (en attendant P2-05) : `series`, saison et épisode d'après « S01E02 », `movie` sinon. */
-export const fakeTagger: Contributor = {
-  id: 'fake-tagger',
-  origin: 'tagger',
-  compute(e) {
-    const m = /^(.*) S(\d{2})E(\d{2})/.exec(e.name);
-    if (m) return { tags: ['series'], infos: { series: m[1], season: Number(m[2]), episode: Number(m[3]) } };
-    return e.open.kind === 'file' && e.open.path.endsWith('.mp4') ? { tags: ['movie'] } : null;
-  },
-};
