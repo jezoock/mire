@@ -64,7 +64,10 @@ const validSites = (config: Config) => config.web.filter((site) => site?.id && s
  */
 export function siteSources(config: Config): ConfigSource[] {
   const apps = [...new Set(validSites(config).map(siteSourceId))].filter((id) => id !== 'web-perso');
-  const sitesOf = (id: string) => (c: Config) => validSites(c).filter((site) => siteSourceId(site) === id).map(siteElement);
+  const sitesOf = (id: string) => (c: Config) =>
+    validSites(c)
+      .filter((site) => siteSourceId(site) === id)
+      .map(siteElement);
   return [
     ...apps.map((id) => configSource(id, SITE_TAGS, sitesOf(id))),
     configSource('web-perso', SITE_TAGS, sitesOf('web-perso')),

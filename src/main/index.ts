@@ -195,7 +195,10 @@ function start(pending: PendingFiles): Running {
   };
   syncConfig(config.get());
   // Fiches gardées sous une ancienne clé dont l'élément était déjà là (jeux d'une version précédente) : rattachées.
-  const known = catalog.keys().map((k) => catalog.get(k)).filter((e) => !!e);
+  const known = catalog
+    .keys()
+    .map((k) => catalog.get(k))
+    .filter((e) => !!e);
   overrides.adopt(known);
   metadata.adopt(known);
   config.onChange((next) => syncConfig(next));

@@ -9,14 +9,7 @@ import type { Config, Emulator, GameBookmark } from '@mire/shared';
 import { createCatalog } from '../../src/main/catalog/index.ts';
 import { gameBookmarkKey, pcGameKey, romKey } from '../../src/main/catalog/keys.ts';
 import { syncFeeds } from '../../src/main/catalog/sync.ts';
-import {
-  gameBookmarkElement,
-  gameConfigFeed,
-  manualGameElement,
-  pcSource,
-  romInstance,
-  romSource,
-} from '../../src/main/games/element-sources.ts';
+import { gameBookmarkElement, gameConfigFeed, manualGameElement, pcSource, romInstance, romSource } from '../../src/main/games/element-sources.ts';
 import { createGames, localPcProvider } from '../../src/main/games/index.ts';
 import type { GamesDeps } from '../../src/main/games/types.ts';
 
@@ -169,7 +162,18 @@ describe('jeux PC → éléments (`jeux-pc`, `jeux-pc-manuel`)', () => {
 
 describe('marque-pages de jeux → éléments (`jeux-marque`)', () => {
   const bm = (o: Partial<GameBookmark>): GameBookmark =>
-    ({ id: 'b1', source: 'https://jeux/zelda.zip', kind: 'http', title: 'Zelda', console: null, system: '', downloadId: null, done: false, added: 1, ...o }) as GameBookmark;
+    ({
+      id: 'b1',
+      source: 'https://jeux/zelda.zip',
+      kind: 'http',
+      title: 'Zelda',
+      console: null,
+      system: '',
+      downloadId: null,
+      done: false,
+      added: 1,
+      ...o,
+    }) as GameBookmark;
 
   it('ouvert comme son lien, avec le système du marque-page, de sa console, ou `pc`', () => {
     assert.deepEqual(gameBookmarkElement(bm({ system: 'Sega - Mega Drive - Genesis' }), []), {
