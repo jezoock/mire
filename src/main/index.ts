@@ -15,6 +15,7 @@ import { createMetadataStore, metadataContributors, metadataOrder } from './cata
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
 import { createPages } from './catalog/pages/index.ts';
+import { createLists } from './catalog/lists/index.ts';
 import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
@@ -184,6 +185,10 @@ function start(pending: PendingFiles): Running {
   const catalogPages = createPages({ file: files.catalogPages, engine: tags, catalog, translate: t });
   catalogPages.load();
   catalogPages.onChange((ids) => toUi('pages:changed', { pages: ids }));
+  // Listes : fichier lu ; un élément disparu ou revenu fait annoncer les listes qui le contiennent.
+  const lists = createLists({ file: files.catalogLists, engine: tags });
+  lists.load();
+  lists.onChange((ids) => toUi('lists:changed', { lists: ids }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
   catalog.onChange(({ added }) => {
@@ -248,6 +253,7 @@ function start(pending: PendingFiles): Running {
     catalog,
     tags,
     pages: catalogPages,
+    lists,
     access,
     window,
     pending,

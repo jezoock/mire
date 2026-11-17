@@ -7,6 +7,7 @@
 import type { Catalog } from '../catalog/index.ts';
 import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { Pages } from '../catalog/pages/index.ts';
+import type { Lists } from '../catalog/lists/index.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { LanguageService } from '../i18n/index.ts';
@@ -43,6 +44,8 @@ export interface MainContext {
   readonly tags: TagEngine;
   /** Pages et regroupements (pages.json, calcul à la demande). */
   readonly pages: Pages;
+  /** Listes faites à la main (lists.json). */
+  readonly lists: Lists;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;
