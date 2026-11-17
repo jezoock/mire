@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   componentOf,
+  deferredFocusStands,
   isComponentTag,
   isDisabled,
   isSelectedRow,
@@ -129,5 +130,15 @@ describe('nav/targets : navigation par colonnes', () => {
   it('le rappel de la manette en colonnes est celui des listes (aucun nouveau texte)', () => {
     assert.deepEqual(PAD_HINTS.columns, PAD_HINTS.list);
     assert.equal(padHintsHtml('columns', 'xbox'), padHintsHtml('list', 'xbox'));
+  });
+
+  it('un focus différé cède à une flèche pressée pendant l’attente ou à un focus placé ailleurs (P4-03b)', () => {
+    const [body, start, other] = ['body', 'start', 'other'];
+    const req = { ticket: 3, from: start };
+    assert.equal(deferredFocusStands(req, 3, start, body), true, 'rien ne s’est passé');
+    assert.equal(deferredFocusStands(req, 3, body, body), true, 'focus perdu par un nouvel affichage');
+    assert.equal(deferredFocusStands(req, 3, null, body), true);
+    assert.equal(deferredFocusStands(req, 4, start, body), false, 'une flèche est venue après');
+    assert.equal(deferredFocusStands(req, 3, other, body), false, 'le focus a été placé ailleurs');
   });
 });

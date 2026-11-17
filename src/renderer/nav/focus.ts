@@ -9,7 +9,18 @@
 import { getTabbableElements, isTabbable } from 'dot-stash/dist/collection/utils/focus.js';
 import { $, $$ } from '../core/dom.ts';
 import { NAV_SELECTOR, focusSelectorOf, isShown, pickNeighbor, type Direction } from './spatial.ts';
-import { COLUMN_ATTR, COLUMNS_ATTR, COLUMNS_VALUE, componentOf, isComponentTag, isDisabled, nextColumn, pickInColumn, relaysPadKey } from './targets.ts';
+import {
+  COLUMN_ATTR,
+  COLUMNS_ATTR,
+  COLUMNS_VALUE,
+  componentOf,
+  deferredFocusStands,
+  isComponentTag,
+  isDisabled,
+  nextColumn,
+  pickInColumn,
+  relaysPadKey,
+} from './targets.ts';
 
 const viewEl = () => $('#view') as HTMLElement;
 const COLUMNS_SELECTOR = `[${COLUMNS_ATTR}="${COLUMNS_VALUE}"]`;
@@ -86,6 +97,20 @@ export async function whenHydrated(scope: ParentNode = document, timeout = 1500)
   while (hasPending(scope) && performance.now() < end) await nextFrame();
 }
 
+/** Numéro de la dernière demande de focus (flèche, premier élément, retour d'un lecteur). */
+let latestRequest = 0;
+
+/**
+ * Focus automatique différé jusqu'au rendu du contenu. Abandonné si une demande plus récente est venue entre-temps
+ * (une flèche pressée pendant l'attente) ou si le focus a été placé ailleurs (`deferredFocusStands`).
+ */
+function whenViewHydrated(run: () => void): void {
+  const req = { ticket: ++latestRequest, from: document.activeElement };
+  void whenHydrated(viewEl()).then(() => {
+    if (deferredFocusStands(req, latestRequest, document.activeElement, document.body)) run();
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Déplacement du focus                                                 */
 /* ------------------------------------------------------------------ */
@@ -160,6 +185,7 @@ function moveNow(dir: Direction, scope: ParentNode): void {
  * le choix attend leur rendu.
  */
 export function moveFocus(dir: Direction, scope: ParentNode = document): void {
+  latestRequest++;
   if (hasPending(scope)) void whenHydrated(scope).then(() => moveNow(dir, scope));
   else moveNow(dir, scope);
 }
@@ -172,8 +198,11 @@ function focusFirstNow(): void {
 
 /** Premier élément du contenu ; le panneau d'infos et les onglets ne passent qu'en dernier recours. */
 export function focusFirst(): void {
-  if (hasPending(viewEl())) void whenHydrated(viewEl()).then(focusFirstNow);
-  else focusFirstNow();
+  if (hasPending(viewEl())) whenViewHydrated(focusFirstNow);
+  else {
+    latestRequest++;
+    focusFirstNow();
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -209,9 +238,10 @@ export function restoreFocus(memo: FocusMemo | null): void {
     focusFirst();
     return;
   }
+  latestRequest++;
   back.focus();
   if (document.activeElement === back || !hasPending(viewEl())) return;
-  void whenHydrated(viewEl()).then(() => {
+  whenViewHydrated(() => {
     const again = memoTarget(memo);
     if (again) again.focus();
     else focusFirstNow();
