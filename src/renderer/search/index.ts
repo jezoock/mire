@@ -7,10 +7,10 @@
 import type { PageDefinition, SearchResult, WebSite } from '@mire/shared';
 import { keepGroups } from '@mire/ui/utils';
 import type { SearchGroupView } from '@mire/ui/utils';
-import { pageOfResult, searchGroups, siteViews, watchView, withRecent } from './model.ts';
+import { pageOfResult, searchGroups, siteViews, watchView } from './model.ts';
 import type { SiteColors, WatchResult, WatchState } from './model.ts';
 
-export { MAX_RECENT, pageOfResult, searchGroups, siteViews, watchTargets, watchView, withRecent } from './model.ts';
+export { MAX_RECENT, pageOfResult, searchGroups, siteName, siteViews, watchTargets, watchView, withRecent } from './model.ts';
 export type { WatchResult, WatchState } from './model.ts';
 
 /** Pause après la dernière frappe avant de chercher dans le catalogue, puis avant d'interroger « Où regarder ». */
@@ -195,4 +195,3 @@ export function createSearch(opts: SearchOptions, doc: Document = document): Sea
     watchResult: (key) => (watch.status === 'done' && watch.results.find((r) => r.key === key)) || null,
   };
 }
-

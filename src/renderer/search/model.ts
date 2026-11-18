@@ -74,6 +74,9 @@ export interface SiteColors {
   ink(color: string): string;
 }
 
+/** Nom affiché d'un site (son identifiant s'il n'en a pas). */
+export const siteName = (w: WebSite): string => w.name || w.id;
+
 /** Services montrés sur une carte. */
 const SHOWN_OFFERS = 3;
 
@@ -82,7 +85,7 @@ function watchCard(r: WatchResult, sites: readonly WebSite[], colors: SiteColors
     const w = pv.webId ? sites.find((x) => x.id === pv.webId) : undefined;
     if (!w) return { name: pv.name };
     const color = colors.color(w.color);
-    return { name: w.name, color, ink: colors.ink(color) };
+    return { name: siteName(w), color, ink: colors.ink(color) };
   });
   const extra = r.providers.length - SHOWN_OFFERS;
   const more = extra > 0 ? `+${extra}` : r.providers.length ? '' : t('search.watch.noOffer');
@@ -106,7 +109,7 @@ export function siteViews(sites: readonly WebSite[], query: string, colors: Site
     const color = colors.color(w.color);
     return {
       id: w.id,
-      name: w.name,
+      name: siteName(w),
       color,
       ink: colors.ink(color),
       how: w.search ? t('search.sites.search', { query }) : t('search.sites.learn'),

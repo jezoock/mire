@@ -27,9 +27,10 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
 import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
+import { createSearch } from './search/index.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -130,6 +131,27 @@ const centre = createCentre({
     if (S.section !== CENTRE_VIEW) return;
     const a = document.activeElement;
     if (!a || a === document.body || !a.isConnected) focusFirst();
+  },
+});
+
+// Recherche (P4-13) : le catalogue groupé par page, « Où regarder » et les sites, rédigés par les catalogues.
+const search = createSearch({
+  t,
+  raw: (key) => i18n.raw(key),
+  catalog: (q) => api.catalogSearch(q),
+  watch: (q) => (S.config?.search?.tmdbToken ? api.searchStreaming(q) : null),
+  pages: () => shell.pages(),
+  sites: () => S.config?.web ?? [],
+  color: safeColor,
+  ink: onColor,
+  recent: () => getQueries(),
+  remember: (q) => rememberQuery(q),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  // Recherche redessinée : le focus, s'il était sur une carte retirée, va au champ.
+  onRendered: () => {
+    if (S.section !== SEARCH_VIEW) return;
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) search.focusField();
   },
 });
 
@@ -234,10 +256,7 @@ function go(section, { focus = 'keep' } = {}) {
   renderRailSessions();
   render({ resetScroll: changed });
   updateScrapeButton();
-  if (section === 'search') {
-    $('#gsearch')?.focus();
-    ensureSearchSources();
-  }
+  if (section === SEARCH_VIEW) search.focusField();
   if (focus === 'content') {
     focusFirst();
     // Vue encore en chargement (télé) : le focus ira au contenu dès qu'il arrive.
@@ -356,13 +375,14 @@ function render({ resetScroll = false } = {}) {
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, settings: viewSettings, [DEMO_SECTION]: viewDemo };
+  const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, settings: viewSettings, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
-  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, et pour le Centre (P4-18).
-  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === CENTRE_VIEW ? centre.host : null;
+  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13) et le Centre (P4-18).
+  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : null;
   if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
   else viewEl.innerHTML = views[sec]();
   if (sec === HOME_VIEW) home.refresh();
+  if (sec === SEARCH_VIEW) search.refresh();
   if (sec === CENTRE_VIEW) centre.refresh();
   if (resetScroll) viewEl.scrollTop = 0;
 
@@ -598,18 +618,13 @@ function refFromEl(el) {
   switch (t.dataset.action) {
     case 'play-video': return { kind: 'video', item: S.list[i] };
     case 'open-series': { const c = S.videoCards[i]; return c ? { kind: 'series', item: c.item, count: c.count } : null; }
-    case 'gs-video': return { kind: 'video', item: S.gs.videos?.[i] };
     case 'play-track': return { kind: 'track', item: S.list[i] };
-    case 'gs-track': return { kind: 'track', item: S.gs.tracks?.[i] };
     case 'play-album': return { kind: 'album', item: S.list[i] };
     case 'show-image': return { kind: 'image', item: S.list[i] };
-    case 'gs-image': return { kind: 'image', item: S.gs.images?.[i] };
     case 'launch-rom': return { kind: 'rom', item: S.list[i], emu: S.romsOf };
     case 'launch-rom-u': { const it = S.list[i]; return it ? { kind: 'rom', item: it, emu: it.consoleId } : null; }
-    case 'gs-rom': return { kind: 'rom', item: S.gs.roms?.[i], emu: S.gs.roms?.[i]?.emu };
     case 'launch-game': return { kind: 'game', item: S.gameList[i] };
     case 'gamebm': { const it = S.gameList[i]; return it ? { kind: 'gamebm', item: it } : null; }
-    case 'gs-game': return { kind: 'game', item: S.gs.games?.[i] };
     case 'open-emu': return { kind: 'console', consoleId: t.dataset.console };
     case 'play-recent': {
       const it = S.recent[i];
@@ -1387,7 +1402,6 @@ async function loadChannels() {
     if (S.pendingFocus || document.activeElement === document.body) focusFirst();
     S.pendingFocus = false;
   }
-  if (S.section === 'search') refreshSearch();
 }
 
 async function launchEntry(g) {
@@ -1513,7 +1527,7 @@ async function saveSettings() {
   S.config = saved;
 
   S.romsCache = {};
-  S.tmdb = { q: '', status: 'idle', results: [] };
+  search.resetWatch();
   $('#set-adv').value = JSON.stringify({ web: saved.web, games: saved.games, emulators: saved.emulators }, null, 2);
   toast('Réglages enregistrés');
 }
@@ -1703,158 +1717,6 @@ function rememberQuery(q) {
   api.usageAddQuery(q);
 }
 
-function viewSearch() {
-  return `<div class="gsearch">
-    <input class="gsearch-input focusable" id="gsearch" type="search" value="${esc(S.gq)}" placeholder="Film, série, chanson, chaîne, jeu…" aria-label="Rechercher partout" autocomplete="off" spellcheck="false">
-  </div>
-  <div id="gresults">${searchResultsHtml()}</div>`;
-}
-
-// Charge en arrière-plan ce qui n'est pas encore en mémoire : chaînes et listes de jeux des consoles.
-async function ensureSearchSources() {
-  if (!S.channels && !S.tvLoading && !S.tvError) loadChannels();
-  const missing = S.config.emulators.map((e) => e.id).filter((id) => !S.romsCache[id]);
-  if (!missing.length) return;
-  await Promise.all(missing.map(async (i) => {
-    const r = await api.listRoms(i);
-    S.romsCache[i] = r?.ok ? r.roms : [];
-  }));
-  if (S.section === 'search' && S.gq) refreshSearch();
-}
-
-function localResults(q) {
-  const data = { videos: S.videos, tracks: S.tracks, images: S.images, channels: S.channels, games: pcGameEntries(), roms: D.allRoms(S.config.emulators, S.romsCache) };
-  return D.localResults(q, data, infos());
-}
-
-function gsSection(title, count, body, id = '') {
-  return `<section class="gs-sec"${id ? ` id="${id}"` : ''}><h2 class="row-h">${esc(title)}${count != null ? `<span class="group-n">${count}</span>` : ''}</h2>${body}</section>`;
-}
-
-function siteTiles(q) {
-  return `<div class="site-grid">${S.config.web.map((w) => {
-    const color = safeColor(w.color);
-    const how = w.search ? `Chercher « ${q} »` : 'Ouvrir le site (recherche à mémoriser)';
-    return `<button class="site focusable" data-action="gs-site" data-id="${esc(w.id)}" style="--brand:${color};--on:${onColor(color)}"><span class="site-name">${esc(w.name)}</span><span class="site-how">${esc(how)}</span></button>`;
-  }).join('')}</div>`;
-}
-
-function tmdbRowInner() {
-  const t = S.tmdb;
-  if (!S.config.search.tmdbToken) {
-    return `<div class="gs-note"><p>Ajoutez une clé TMDB gratuite pour voir ici les films et séries correspondants, avec le service où les regarder.</p><button class="btn btn-sm focusable" data-action="go" data-go="settings">Ajouter la clé</button></div>`;
-  }
-  if (t.q !== S.gq || t.status === 'loading' || t.status === 'idle') return loading('Recherche dans les catalogues…');
-  if (t.status === 'error') return `<div class="gs-note"><p>${esc(t.error)}</p></div>`;
-  if (!t.results.length) return '<div class="gs-note"><p>Aucun film ni série trouvé.</p></div>';
-  const tiles = t.results.map((r, i) => {
-    const chips = r.providers.slice(0, 3).map((pv) => {
-      const w = pv.webId && S.config.web.find((x) => x.id === pv.webId);
-      return w ? `<span class="pchip mine" style="--pc:${safeColor(w.color)};--pon:${onColor(safeColor(w.color))}">${esc(w.name)}</span>` : `<span class="pchip">${esc(pv.name)}</span>`;
-    }).join('') + (r.providers.length > 3 ? `<span class="pchip">+${r.providers.length - 3}</span>` : '');
-    const kind = r.type === 'tv' ? 'Série' : 'Film';
-    return `<button class="tile focusable" data-action="gs-tmdb" data-index="${i}">
-      <span class="art r-poster"><span class="art-fallback" style="--mono:var(--bar-${barFor(r.title)})" aria-hidden="true">${esc(monogram(r.title))}</span>${r.poster ? `<img loading="lazy" alt="" src="${esc(r.poster)}">` : ''}</span>
-      <span class="tile-t">${esc(r.title)}</span><span class="tile-s">${esc([kind, r.year].filter(Boolean).join(', '))}</span>
-      <span class="pchips">${chips || '<span class="pchip none">Pas en abonnement</span>'}</span>
-    </button>`;
-  }).join('');
-  return `<div class="strip">${tiles}</div><p class="attrib">Catalogue : TMDB. Disponibilités : JustWatch.</p>`;
-}
-
-function searchResultsHtml() {
-  const q = S.gq;
-  if (!q) {
-    const recent = getQueries();
-    return `<div class="gs-intro">
-      <p>Une seule recherche couvre vos fichiers, les chaînes de la Freebox, vos jeux et vos services de streaming.</p>
-      ${recent.length ? `<div class="qchips">${recent.map((x, i) => `<button class="qchip focusable" data-action="gs-recent" data-index="${i}">${esc(x)}</button>`).join('')}</div>` : ''}
-    </div>`;
-  }
-  const r = localResults(q);
-  S.gs = r;
-  let html = '';
-  if (r.videos.length) html += gsSection('Vos vidéos', r.videos.length, `<div class="strip">${r.videos.map((it, i) => tile(it, i, 'gs-video', 'r-poster', { sub: folderText(it) })).join('')}</div>`);
-  html += gsSection('Films et séries en streaming', null, tmdbRowInner(), 'gs-tmdb');
-  html += gsSection('Chercher sur vos sites', null, siteTiles(q));
-  if (r.tracks.length) html += gsSection('Votre musique', r.tracks.length, `<div class="tracks">${r.tracks.map((t, i) => `<button class="track flat focusable" data-action="gs-track" data-index="${i}"><span class="tk-t">${esc(cleanTrack(t.name))}</span><span class="tk-f">${esc(folderText(t))}</span><span class="tk-e">${esc(t.ext.slice(1))}</span></button>`).join('')}</div>`);
-  if (r.channels.length) html += gsSection('Télévision', r.channels.length, `<div class="ch-grid">${r.channels.map((c, i) => `<button class="ch focusable" data-action="gs-channel" data-index="${i}">${c.number != null ? `<span class="ch-num">${c.number}</span>` : ''}<span class="ch-txt"><span class="ch-name">${esc(c.name)}</span></span></button>`).join('')}</div>`);
-  const gameTiles = r.games.map((g, i) => tile(g, i, 'gs-game', 'r-game', { sub: 'Jeu PC' }))
-    .concat(r.roms.map((rom, i) => tile({ ...rom, kind: 'rom' }, i, 'gs-rom', 'r-game', { sub: rom.emuName })));
-  if (gameTiles.length) html += gsSection('Jeux', gameTiles.length, `<div class="strip">${gameTiles.join('')}</div>`);
-  if (r.images.length) html += gsSection('Vos images', r.images.length, `<div class="strip strip-square">${r.images.map((it, i) => tile(it, i, 'gs-image', 'r-square', { noText: true })).join('')}</div>`);
-  return html;
-}
-
-// Réaffiche les résultats sans toucher au champ de saisie, en gardant le focus.
-function refreshSearch() {
-  const box = $('#gresults');
-  if (!box) return;
-  const active = document.activeElement;
-  const sel = box.contains(active) ? focusSelectorOf(active) : null;
-  box.innerHTML = searchResultsHtml();
-  if (sel) (box.querySelector(sel) || box.querySelector('.focusable') || $('#gsearch'))?.focus({ preventScroll: true });
-  fetchTmdb();
-}
-
-let tmdbSeq = 0;
-async function fetchTmdb() {
-  const q = S.gq;
-  if (!q || !S.config.search.tmdbToken) return;
-  if (S.tmdb.q === q && S.tmdb.status !== 'idle') return;
-  const seq = ++tmdbSeq;
-  S.tmdb = { q, status: 'loading', results: [] };
-  updateTmdbRow();
-  await new Promise((r) => { setTimeout(r, 350); });
-  if (seq !== tmdbSeq) return;
-  const r = await api.searchStreaming(q);
-  if (seq !== tmdbSeq) return;
-  if (r?.ok) S.tmdb = { q, status: 'done', results: r.results || [] };
-  else S.tmdb = { q, status: 'error', results: [], error: r?.error || 'Recherche impossible.' };
-  updateTmdbRow();
-}
-function updateTmdbRow() {
-  const sec = $('#gs-tmdb');
-  if (!sec) return;
-  const active = document.activeElement;
-  const sel = sec.contains(active) ? focusSelectorOf(active) : null;
-  sec.innerHTML = `<h2 class="row-h">Films et séries en streaming</h2>${tmdbRowInner()}`;
-  if (sel) (sec.querySelector(sel) || sec.querySelector('.focusable'))?.focus({ preventScroll: true });
-}
-
-let gsTimer = 0;
-viewEl.addEventListener('input', (e) => {
-  if (e.target.id !== 'gsearch') return;
-  clearTimeout(gsTimer);
-  gsTimer = setTimeout(() => { S.gq = e.target.value.trim(); refreshSearch(); }, 180);
-});
-viewEl.addEventListener('keydown', (e) => {
-  if (e.target.id !== 'gsearch' || e.key !== 'Enter') return;
-  e.preventDefault();
-  e.stopPropagation();
-  clearTimeout(gsTimer);
-  S.gq = e.target.value.trim();
-  rememberQuery(S.gq);
-  refreshSearch();
-  $('#gresults .focusable')?.focus();
-});
-
-function openTmdbResult(r) {
-  rememberQuery(S.gq);
-  const mine = r.providers.filter((pv) => pv.webId);
-  if (mine.length) {
-    const w = S.config.web.find((x) => x.id === mine[0].webId);
-    openWeb(w.id, D.searchUrlFor(w, r.title) || undefined);
-    if (mine.length > 1) {
-      const w2 = S.config.web.find((x) => x.id === mine[1].webId);
-      setTimeout(() => toast(`Aussi disponible sur ${w2.name}`, { action: `Ouvrir ${w2.name}`, onAction: () => openWeb(w2.id, D.searchUrlFor(w2, r.title) || undefined) }), 2600);
-    }
-    return;
-  }
-  if (r.providers.length) toast(`Disponible sur ${r.providers.map((pv) => pv.name).join(', ')}, qui n’est pas configuré dans Mire.`, { duration: 7000 });
-  else toast('Ce titre n’est proposé en abonnement sur aucun service en France pour le moment (d’après JustWatch).', { duration: 7000 });
-}
-
 async function fillAdblock(fresh) {
   const st = fresh || await api.adblockStatus();
   S.adblock = st;
@@ -1940,9 +1802,7 @@ async function reloadScrape() {
   S.scrape = (await api.scrapeData()) || {};
   S.meta = (await api.metaAll()) || {};
   S.romsCache = {};
-  if (['home', 'videos', 'music', 'games', 'search'].includes(S.section)) {
-    if (S.section === 'search') refreshSearch(); else render();
-  }
+  if (['home', 'videos', 'music', 'games', 'search'].includes(S.section)) render();
 }
 
 // Seule la fin est signalée : le suivi du téléchargement se fait dans le gestionnaire.
@@ -2170,7 +2030,7 @@ async function setCfg(pathStr, value) {
   o[keys[keys.length - 1]] = value;
   S.config = await api.saveConfig(next);
   if (pathStr.startsWith('tv.')) { S.channels = null; S.tvError = null; }
-  if (pathStr.startsWith('search.')) S.tmdb = { q: '', status: 'idle', results: [] };
+  if (pathStr.startsWith('search.')) search.resetWatch();
   if (pathStr.startsWith('downloads.')) S.dlSettings = { ...S.dlSettings, ...(S.config.downloads || {}) };
   toast('Enregistré', { duration: 1500 });
 }
@@ -2494,7 +2354,7 @@ async function editRef(ref) {
   }
   // Les fiches modifiées pendant l'édition (images) sont à jour : on réaffiche la vue en gardant le focus.
   S.focusRef = null;
-  if (S.section === 'search') refreshSearch(); else render();
+  render();
 }
 
 /* ---------- Modifier une console : programme, dossiers et sources de jeux ---------- */
@@ -2687,12 +2547,7 @@ const legacyUi = {
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,
-  getQueries, rememberQuery, openTmdbResult,
-  setSearchQuery(q) {
-    $('#gsearch').value = q;
-    S.gq = q;
-    refreshSearch();
-  },
+  getQueries, rememberQuery, search,
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),

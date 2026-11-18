@@ -251,6 +251,38 @@
         "tmdbUnreachable": "Can't reach the TMDB catalog. Check your internet connection.",
         "tmdbKeyRefused": "TMDB key refused. Check it in Settings.",
         "tmdbStatus": "TMDB responded with code {status}."
+      },
+      "field": "Search everything",
+      "placeholder": "Film, series, song, channel, game…",
+      "intro": "One search covers your files, your TV channels, your games and your streaming services.",
+      "recent": {
+        "label": "Recent searches",
+        "clear": "Clear recent searches",
+        "cleared": "Recent searches cleared"
+      },
+      "seeAll": "See all",
+      "none": "Nothing found in your library.",
+      "watch": {
+        "heading": "Streaming films and series",
+        "noKey": "Add a free TMDB key to see matching films and series here, with the service where you can watch them.",
+        "addKey": "Add the key",
+        "loading": "Searching the catalogues…",
+        "failed": "Search failed.",
+        "empty": "No film or series found.",
+        "attribution": "Catalogue: TMDB. Availability: JustWatch.",
+        "movie": "Film",
+        "series": "Series",
+        "noOffer": "Not on subscription",
+        "notConfigured": "Available on {services}, which is not set up in Mire.",
+        "nowhere": "This title is not offered on any subscription service at the moment (according to JustWatch).",
+        "alsoOn": "Also available on {name}",
+        "openOn": "Open {name}"
+      },
+      "sites": {
+        "heading": "Search your sites",
+        "search": "Search for “{query}”",
+        "learn": "Open the site (search to remember)",
+        "howToLearn": "To search {name} from Mire: search for the word “mire” on the site, then press “Remember the search”."
       }
     },
     "scrape": {

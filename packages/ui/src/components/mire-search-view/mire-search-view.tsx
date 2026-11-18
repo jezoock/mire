@@ -168,7 +168,10 @@ export class MireSearchView {
           <span class="mire-search-view__watch-meta">{c.meta}</span>
           <span class="mire-search-view__chips">
             {c.chips.map((x) => (
-              <span class={{ 'mire-search-view__provider': true, '--mine': !!x.color }} style={x.color ? { '--mire-search-chip': x.color, '--mire-search-chip-ink': x.ink ?? '' } : {}}>
+              <span
+                class={{ 'mire-search-view__provider': true, '--mine': !!x.color }}
+                style={x.color ? { '--mire-search-chip': x.color, '--mire-search-chip-ink': x.ink ?? '' } : {}}
+              >
                 {x.name}
               </span>
             ))}

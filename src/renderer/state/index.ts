@@ -13,13 +13,6 @@ type Dict<T = unknown> = Record<string, T>;
 /** Nombre d'éléments affichés d'une liste, puis ajoutés à chaque « Afficher plus ». */
 export const PAGE = 120;
 
-export interface TmdbSearch {
-  q: string;
-  status: 'idle' | 'loading' | 'done' | 'error';
-  results: Data[];
-  error?: string;
-}
-
 export interface State {
   config: MireConfig | null;
   configPath: string;
@@ -62,11 +55,8 @@ export interface State {
   webStates: Dict<Data>;
   webFocused: boolean;
   webFocusOnShow: boolean;
-  // Recherche globale
-  gq: string;
-  tmdb: TmdbSearch;
+  /** Jeux de chaque console déjà lus (nombre affiché par la fiche d'une console). */
   romsCache: Dict;
-  gs: Data;
   /** Infos et images récupérées (clé : v:chemin, a:dossier, r:chemin, g:nom). */
   scrape: Dict<Data>;
   scraping: Data | null;
@@ -134,10 +124,7 @@ export const S: State = {
   webStates: {},
   webFocused: false,
   webFocusOnShow: false,
-  gq: '',
-  tmdb: { q: '', status: 'idle', results: [] },
   romsCache: {},
-  gs: {},
   scrape: {},
   scraping: null,
   scrapeQuiet: false,

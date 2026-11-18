@@ -14,7 +14,7 @@ import type { WebSession } from './menu.ts';
 import { createRouter } from './router.ts';
 import type { Router, RouterHost } from './router.ts';
 
-export { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, legacySectionOf, legacyViewOf, routeOf, targetOfLegacyView, viewOf } from './router.ts';
+export { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, legacySectionOf, legacyViewOf, routeOf, targetOfLegacyView, viewOf } from './router.ts';
 export type { Route, Router } from './router.ts';
 
 type Rendered = HTMLElement & { componentOnReady?: () => Promise<unknown> };

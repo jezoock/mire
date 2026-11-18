@@ -269,11 +269,12 @@ describe('pont des data-action historiques', () => {
     assert.deepEqual(args('go', { go: 'settings' }), { section: 'settings' });
   });
 
-  it('npm run check:actions ne trouve aucun problème, et relie les ~80 actions historiques', () => {
+  it('npm run check:actions ne trouve aucun problème, et relie les ~70 actions historiques', () => {
     const { errors, legacy, triggers } = checkActions();
     assert.deepEqual(errors, []);
-    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le Centre en retire dix-huit).
-    assert.ok(legacy >= 80, `${legacy} actions`);
+    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le
+    // Centre en retire dix-huit ; P4-13 : la Recherche en retire neuf).
+    assert.ok(legacy >= 70, `${legacy} actions`);
     assert.ok(triggers >= 1);
   });
 
