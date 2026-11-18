@@ -338,7 +338,8 @@ export interface IpcMethods {
   pagesSave(page: PageDefinition): PageSaveResult;
   pagesRemove(id: string): boolean;
   // Un niveau d'une page (regroupements ou éléments), par tranches ; `null` : page inconnue ou chemin invalide.
-  // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08).
+  // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08) ; `tag:<id>` : les éléments d'un tag, par
+  // nom (explorateur, P4-08).
   catalogPage(pageId: string, path?: PagePath, cursor?: string | null): PageLevel | null;
   // Listes (P2-08) : `lists.*` de l'architecture cible. `null` / `false` : liste inconnue ou valeur invalide.
   listsList(): ListSummary[];

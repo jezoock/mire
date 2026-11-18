@@ -279,6 +279,19 @@ describe('calcul d’une page', () => {
     catalog.setSource({ plugin: 'tv-m3u', instance: 'freebox' }, [ch(10, 'TMC'), ch(2, 'France 2'), ch(null, 'Sans numéro'), ch(1, 'TF1')]);
     assert.deepEqual(names(pages.page('tv')), ['TF1', 'France 2', 'TMC', 'Sans numéro']);
   });
+
+  it('tag:<id> (explorateur) : les éléments du tag par nom, sans regroupement, à jour après un changement', () => {
+    const { catalog, engine, pages } = setup();
+    catalog.setSource(LIB, [file('/bib/Zorro.mkv'), file('/bib/Amélie.mkv'), file('/bib/chanson.mp3')]);
+    assert.deepEqual(names(pages.page('tag:video')), ['Amélie', 'Zorro']);
+    assert.equal(pages.page('tag:video', ['x']), null);
+    assert.deepEqual(names(pages.page('tag:inconnu')), []);
+    assert.equal(pages.page('tag:'), null);
+    // Jamais listée, et un changement du moteur l'efface du cache.
+    assert.ok(!pages.list().some((p) => p.id.startsWith('tag:')));
+    engine.setTags(localFileKey('/bib/Zorro.mkv', 'linux'), { video: false });
+    assert.deepEqual(names(pages.page('tag:video')), ['Amélie']);
+  });
 });
 
 describe('pages.json', () => {

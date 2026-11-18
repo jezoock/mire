@@ -4,7 +4,7 @@
  *
  * Chaque page épinglée a son entrée, avec le nom de la page (P4-11) : Films et Séries ont chacune la leur, une page
  * créée par l'utilisateur aussi. Une page prête à l'emploi garde la couleur et les sites ouverts de son ancienne vue
- * (`LEGACY_PAGE_SECTIONS`). L'explorateur n'apparaît qu'avec sa vue (P4-08).
+ * (`LEGACY_PAGE_SECTIONS`). L'explorateur (P4-08) est en bas, avec le Centre et les Réglages.
  */
 import type { PageDefinition } from '@mire/shared';
 import type { RailEntry, RailSession } from '@mire/ui/utils';
@@ -76,6 +76,7 @@ export function railEntries(pages: readonly PageDefinition[] | null, t: Translat
     screen(t, 'home', 'home', '', VIEW_COLORS.home as string),
     ...pageEntries,
     screen(t, 'center', 'downloads', 'download', MUTED, true),
+    screen(t, 'explorer', 'explorer', 'layers', MUTED, true),
     { key: 'openFile', kind: 'openFile', label: t('shell.menu.openFile'), icon: 'folder', color: MUTED, bottom: true },
     screen(t, 'settings', 'settings', 'gear', MUTED, true),
     { key: 'quit', kind: 'quit', label: t('shell.menu.quit'), icon: 'power', color: MUTED, bottom: true },

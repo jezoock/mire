@@ -571,7 +571,8 @@
         "tv": "TV",
         "games": "Games",
         "downloads": "Centre",
-        "settings": "Settings"
+        "settings": "Settings",
+        "explorer": "Explorer"
       },
       "menu": {
         "label": "Main menu",
@@ -951,6 +952,44 @@
         "nameRequired": "Give this group a name.",
         "gone": "This group is no longer in the library."
       }
+    },
+    "explorer": {
+      "heading": "Explorer",
+      "sections": {
+        "pages": "Pages",
+        "lists": "Lists",
+        "tags": "Tags"
+      },
+      "columns": "Explorer columns",
+      "empty": "Nothing here yet.",
+      "unavailable": "Unavailable",
+      "preview": {
+        "label": "Preview",
+        "infos": "Details",
+        "tags": "Tags",
+        "noTags": "No tags.",
+        "source": "Source",
+        "location": "Location"
+      },
+      "actions": {
+        "play": "Play",
+        "edit": "Edit details",
+        "tags": "Tags",
+        "addToList": "Add to a list"
+      },
+      "addToList": {
+        "title": "Add to a list",
+        "help": "“{name}” will be added at the end of the chosen list.",
+        "list": "List",
+        "newList": "Or a new list",
+        "newListHint": "Name of the new list",
+        "add": "Add",
+        "cancel": "Cancel",
+        "added": "Added to “{list}”.",
+        "already": "Already in “{list}”.",
+        "failed": "Couldn't add to this list."
+      },
+      "gone": "This item is no longer in the catalog."
     }
   }
 }

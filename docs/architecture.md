@@ -141,6 +141,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
 | `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>` et des vues historiques (`mire-legacy-view`), entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une page s'affiche dans la vue de page (section `page`, P4-11), un écran du cœur sans vue à lui dans la vue historique qui en tient lieu. |
 | `pages/` | Vue de page (P4-11) : l'hôte `<mire-page>` et sa `mire-page-view`, remplis d'après la route (page et chemin) ; niveaux chargés par tranches (`catalog.page`), regroupements (« Autres », « Saison 1 »), chemin parcouru, rangées (`model.ts`, sans DOM). |
+| `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes et Tags, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. |
 | `home/` | Accueil (P4-12) : l'hôte `<mire-home>` et sa `mire-home-view`, remplis d'après `ui.home` (rangées : barres de la mire vers des cibles, sites épinglés, « Reprendre », pages et listes ; `model.ts`, sans DOM) ; réglages de l'accueil (rangées, barres, sites, ordre ; `settings.ts`, sans DOM). |
 | `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). |
 | `themes/` | Moteur de thèmes (P4-11) et thèmes intégrés (`<id>/theme.json` et leurs fichiers) : palette, polices et fond posés sur `<mire-page>` et `<mire-home>` (portée commune, P4-12), mise en page transmise à la vue de page et à l'accueil. Voir `docs/themes.md`. |
@@ -868,6 +869,10 @@ sur plusieurs niveaux (`groupBy`, une info par niveau). Le service (`catalog/pag
   choisie à chaque niveau, `null` pour « Autres » ; rend `{ kind: 'groups', info, groups }` ou
   `{ kind: 'elements', elements }`, avec `total` et `next`, ou `null`). Événement `onPagesChange` (`pages:changed`,
   `{ pages: [...] }`) : le contenu de ces pages est à redemander.
+- **Tag vu comme une page** (explorateur, P4-08) : `catalogPage('tag:<id>', [], cursor)` rend les éléments qui portent
+  ce tag, triés par nom, sans regroupement (`TAG_PAGE_PREFIX`, `tagPageId`). Calculé et gardé en cache comme une page,
+  il n'est ni listé ni annoncé : un changement du moteur l'efface, l'explorateur relit ses colonnes à chaque
+  `pages:changed`.
 - Coût sur 20 000 éléments factices (`test/catalog/pages-bench.test.ts`) : 2 à 4 ms pour un niveau jamais calculé
   (première page des Séries, épisodes d'une saison, 4 000 films triés), moins de 0,5 ms en cache ; ~1 ms pour un
   élément changé avec les sept pages en cache.

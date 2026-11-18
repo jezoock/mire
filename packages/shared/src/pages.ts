@@ -129,6 +129,16 @@ export interface PagesChange {
 }
 
 export { PAGE_ID_RE };
+
+/**
+ * Préfixe des éléments d'un tag dans `catalog.page` (`tag:<id>`, P4-08) : tous les éléments qui portent ce tag, triés
+ * par nom, sans regroupement. L'explorateur s'en sert pour sa colonne Tags ; ce n'est pas une cible.
+ */
+export const TAG_PAGE_PREFIX = 'tag:';
+export const tagPageId = (id: string): string => `${TAG_PAGE_PREFIX}${id}`;
+/** Identifiant du tag désigné par un `pageId`, ou `null` si ce n'en est pas un. */
+export const tagIdOfPage = (pageId: unknown): string | null =>
+  typeof pageId === 'string' && pageId.startsWith(TAG_PAGE_PREFIX) && pageId.length > TAG_PAGE_PREFIX.length ? pageId.slice(TAG_PAGE_PREFIX.length) : null;
 const INFO_RE = /^[a-z][a-zA-Z0-9]{0,63}$/;
 const TAG_RE = /^[^\s].{0,63}$/;
 export const PAGE_DISPLAYS: readonly PageDisplay[] = ['posters', 'thumbnails', 'list', 'rows'];
