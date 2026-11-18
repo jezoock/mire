@@ -12,6 +12,9 @@
  * - hôte isolé des plugins (P3-03, docs/adr/0002-hote-isole.md) : sa page et le Worker de chaque plugin (modules ES
  *   pour le navigateur, sans carte de source : seuls trois fichiers nommés sont servis par mire-plugin://host/), son
  *   preload (CommonJS) et sa page HTML, dans dist/plugin-host/, à part du processus principal.
+ * - plugins inclus (P3-05) : chaque dossier de plugins/ est copié dans resources/plugins/, que l'hôte de plugins lit
+ *   en développement et qu'electron-builder emporte dans l'installateur (`extraResources` : process.resourcesPath/plugins).
+ *   Ils sont vérifiés par le cœur au lancement et par test/plugins/bundled-sources.test.ts.
  * Usage : node scripts/build.mjs [--watch [--electron]]
  * --electron (avec --watch) : lance Mire une fois la première construction faite ; fermer Mire arrête la
  * surveillance. Les changements du processus principal demandent de relancer Mire, ceux du renderer
@@ -30,6 +33,8 @@ const DIST = path.join(ROOT, 'dist');
 const RENDERER = path.join(ROOT, 'src', 'renderer');
 const UI = path.join(ROOT, 'packages', 'ui');
 const DOT_STASH = path.join(ROOT, 'node_modules', 'dot-stash');
+const BUNDLED_PLUGINS = path.join(ROOT, 'plugins');
+const RESOURCES_PLUGINS = path.join(ROOT, 'resources', 'plugins');
 const watch = process.argv.includes('--watch');
 const require = createRequire(import.meta.url);
 
@@ -185,6 +190,15 @@ const options = targets.map((t, i) => ({
   plugins: i === 0 ? [...t.plugins, copyPlugin] : t.plugins,
 }));
 
+// Plugins inclus : resources/plugins/ est refait à chaque construction (un plugin retiré de plugins/ en disparaît).
+function copyBundledPlugins() {
+  fs.rmSync(RESOURCES_PLUGINS, { recursive: true, force: true });
+  fs.mkdirSync(RESOURCES_PLUGINS, { recursive: true });
+  for (const e of fs.readdirSync(BUNDLED_PLUGINS, { withFileTypes: true })) {
+    if (e.isDirectory()) fs.cpSync(path.join(BUNDLED_PLUGINS, e.name), path.join(RESOURCES_PLUGINS, e.name), { recursive: true });
+  }
+}
+
 function buildUiAssets() {
   buildStyles();
   copyDotStash();
@@ -193,6 +207,7 @@ function buildUiAssets() {
 if (watch) {
   const components = await watchComponents();
   buildUiAssets();
+  copyBundledPlugins();
   const contexts = await Promise.all(options.map((o) => esbuild.context(o)));
   // Première construction terminée avant de lancer Mire, puis reconstruction à chaque changement.
   await Promise.all(contexts.map((c) => c.rebuild()));
@@ -226,5 +241,6 @@ if (watch) {
   fs.rmSync(DIST, { recursive: true, force: true });
   await buildComponents();
   buildUiAssets();
+  copyBundledPlugins();
   await Promise.all(options.map((o) => esbuild.build(o)));
 }

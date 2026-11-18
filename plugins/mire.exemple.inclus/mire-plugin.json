@@ -1,0 +1,17 @@
+{
+  "id": "mire.exemple.inclus",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "packs": [
+      {
+        "id": "vide",
+        "file": "packs/vide.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}
