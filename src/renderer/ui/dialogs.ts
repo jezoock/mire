@@ -61,6 +61,8 @@ export interface FormOptions {
   wide?: boolean;
   /** Libellé affiché devant une entrée d'une liste de sources (son type : dossier, réseau…). */
   entryLabel?(value: string): string;
+  /** Textes des boîtes propres à ce formulaire (liste vide des tags d'un éditeur…), à la place de ceux de `forms.*`. */
+  labels?: Partial<FormLabels>;
 }
 
 export interface NotifyOptions {
@@ -148,7 +150,7 @@ function mount(tag: string, props: Record<string, unknown>, entry: Omit<FormEntr
   if (!host) throw new Error('Service des boîtes non initialisé (initDialogs)');
   const id = stack.nextId();
   const el = document.createElement(tag) as DialogElement;
-  Object.assign(el, props, { dialog: id, labels: labels() });
+  Object.assign(el, { labels: labels() }, props, { dialog: id });
   const returnFocus = document.activeElement;
   containerFor().appendChild(el);
   stack.push(id, { ...entry, el, openedAt: Date.now() + Math.random(), returnFocus } as Entry);
@@ -174,6 +176,7 @@ export function openForm(opts: FormOptions): Promise<FormResult> {
         values: { ...values },
         wide: !!opts.wide,
         entryLabels: entryLabels(opts, values),
+        ...(opts.labels ? { labels: { ...labels(), ...opts.labels } } : {}),
       },
       entry,
     );

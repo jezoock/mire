@@ -218,6 +218,14 @@ export namespace Components {
         "row": DownloadRow | null;
     }
     /**
+     * Hôte des éditeurs (P4-22) : ses méthodes sont les actions du contrôleur `mire-editor` (modifier un élément désigné
+     * par sa clé, ou celui qui a le focus), qui vit avec l'état de l'interface (`src/renderer/controllers/editor.ts`). Les
+     * formulaires eux-mêmes sont les boîtes de P4-06 (`mire-form`, `mire-pick`, dans `mire-dialogs`). Une seule balise
+     * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireEditor {
+    }
+    /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
      * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
      * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
@@ -999,6 +1007,18 @@ declare global {
         new (): HTMLMireDownloadRowElement;
     };
     /**
+     * Hôte des éditeurs (P4-22) : ses méthodes sont les actions du contrôleur `mire-editor` (modifier un élément désigné
+     * par sa clé, ou celui qui a le focus), qui vit avec l'état de l'interface (`src/renderer/controllers/editor.ts`). Les
+     * formulaires eux-mêmes sont les boîtes de P4-06 (`mire-form`, `mire-pick`, dans `mire-dialogs`). Une seule balise
+     * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireEditorElement extends Components.MireEditor, HTMLStencilElement {
+    }
+    var HTMLMireEditorElement: {
+        prototype: HTMLMireEditorElement;
+        new (): HTMLMireEditorElement;
+    };
+    /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
      * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
      * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
@@ -1257,6 +1277,7 @@ declare global {
         "mire-demo": HTMLMireDemoElement;
         "mire-dialogs": HTMLMireDialogsElement;
         "mire-download-row": HTMLMireDownloadRowElement;
+        "mire-editor": HTMLMireEditorElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
         "mire-form": HTMLMireFormElement;
         "mire-grid": HTMLMireGridElement;
@@ -1468,6 +1489,14 @@ declare namespace LocalJSX {
           * @default null
          */
         "row"?: DownloadRow | null;
+    }
+    /**
+     * Hôte des éditeurs (P4-22) : ses méthodes sont les actions du contrôleur `mire-editor` (modifier un élément désigné
+     * par sa clé, ou celui qui a le focus), qui vit avec l'état de l'interface (`src/renderer/controllers/editor.ts`). Les
+     * formulaires eux-mêmes sont les boîtes de P4-06 (`mire-form`, `mire-pick`, dans `mire-dialogs`). Une seule balise
+     * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireEditor {
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -2286,6 +2315,7 @@ declare namespace LocalJSX {
         "mire-demo": Omit<MireDemo, keyof MireDemoAttributes> & { [K in keyof MireDemo & keyof MireDemoAttributes]?: MireDemo[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `attr:${K}`]?: MireDemoAttributes[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `prop:${K}`]?: MireDemo[K] };
         "mire-dialogs": MireDialogs;
         "mire-download-row": Omit<MireDownloadRow, keyof MireDownloadRowAttributes> & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes]?: MireDownloadRow[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `attr:${K}`]?: MireDownloadRowAttributes[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `prop:${K}`]?: MireDownloadRow[K] };
+        "mire-editor": MireEditor;
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
@@ -2368,6 +2398,13 @@ declare module "@stencil/core" {
              * téléchargement (`pauseDownload:[{"id":"…"}]`).
              */
             "mire-download-row": LocalJSX.IntrinsicElements["mire-download-row"] & JSXBase.HTMLAttributes<HTMLMireDownloadRowElement>;
+            /**
+             * Hôte des éditeurs (P4-22) : ses méthodes sont les actions du contrôleur `mire-editor` (modifier un élément désigné
+             * par sa clé, ou celui qui a le focus), qui vit avec l'état de l'interface (`src/renderer/controllers/editor.ts`). Les
+             * formulaires eux-mêmes sont les boîtes de P4-06 (`mire-form`, `mire-pick`, dans `mire-dialogs`). Une seule balise
+             * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-editor": LocalJSX.IntrinsicElements["mire-editor"] & JSXBase.HTMLAttributes<HTMLMireEditorElement>;
             /**
              * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
              * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
