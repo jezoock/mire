@@ -2440,4 +2440,138 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+  describe('Explorateur : Sources et Dossiers (P4-08)', () => {
+    const PAD = { a: 0, b: 1, down: 13, right: 15 };
+    const VIEW = '#view mire-explorer mire-explorer-view';
+    const COL = `${VIEW} .mire-explorer-view__column:not(.mire-explorer-view__preview)`;
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    // Une touche de la manette ; la ligne qui a le focus est rendue (hydrated) avant chaque appui.
+    const padPress = async (button) => {
+      await page.waitForFunction(() => document.activeElement?.classList.contains('hydrated'));
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const headings = () => page.$$eval(COL, (cols) => cols.map((c) => c.getAttribute('aria-label')));
+    const columns = (n) => page.waitForFunction(([sel, k]) => document.querySelectorAll(sel).length === k, [COL, n]);
+    const row = (col, text) =>
+      page.locator(`${VIEW} .mire-explorer-view__column:nth-child(${col + 1}) .mire-explorer-view__row.hydrated`, { hasText: text }).first();
+    const focusedRow = () =>
+      page.evaluate((sel) => {
+        const r = document.activeElement?.closest('.mire-explorer-view__row');
+        if (!r) return null;
+        const cols = [...document.querySelectorAll(`${sel} .mire-explorer-view__column`)];
+        return [cols.indexOf(r.closest('.mire-explorer-view__column')), r.querySelector('.mire-explorer-view__label')?.textContent];
+      }, VIEW);
+    const inColumn = (n) => page.waitForFunction((k) => document.activeElement?.closest(`.mire-explorer-view__column:nth-child(${k})`), n + 1);
+    const openExplorer = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:explorer' }));
+      await page.waitForFunction(
+        (sel) => document.body.dataset.section === 'explorer' && document.querySelector(`${sel} .mire-explorer-view__row.hydrated`),
+        VIEW,
+      );
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('souris : Sources › la source Images › Vacances, puis une image et son aperçu', async () => {
+      await openExplorer();
+      await row(0, 'Sources').click();
+      await columns(2);
+      // Les sources de la configuration de démonstration, avec leur sorte et leur emplacement.
+      const sources = await page.$$eval(`${VIEW} .mire-explorer-view__column:nth-child(2) .mire-explorer-view__label`, (ls) => ls.map((l) => l.textContent));
+      for (const name of ['Images', 'Musique', 'Vidéos'])
+        assert.ok(
+          sources.some((s) => s.startsWith('Dossier · ') && s.endsWith(`/bibliotheque/${name}`)),
+          sources.join(' | '),
+        );
+      await row(1, '/bibliotheque/Images').click();
+      await columns(3);
+      await row(2, 'Vacances').click();
+      await columns(4);
+      assert.deepEqual((await headings()).slice(0, 2), ['Explorateur', 'Sources']);
+      assert.equal((await headings())[3], 'Vacances');
+      await page.locator(`${VIEW} .mire-explorer-view__column:nth-child(4) .mire-explorer-view__row.hydrated`).first().click();
+      await page.locator(`${VIEW} .mire-explorer-view__preview .mire-explorer-view__action.hydrated`, { hasText: 'Lire' }).waitFor();
+      const preview = await page.$eval(`${VIEW} .mire-explorer-view__preview`, (p) => ({
+        image: !!p.querySelector('ds-thumb'),
+        location: p.querySelector('.mire-explorer-view__location')?.textContent ?? '',
+      }));
+      assert.ok(preview.image);
+      assert.ok(preview.location.includes('/bibliotheque/Images/Vacances/'), preview.location);
+      await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
+      await shot('section-explorer-sources');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix descend jusqu’à Dossiers, A ouvre un dossier puis un élément, B revient jusqu’à l’accueil', async () => {
+      await connectPad();
+      await openExplorer();
+      await row(0, 'Pages').focus();
+      for (let i = 0; i < 4; i++) await padPress('down');
+      await page.waitForFunction(() => document.activeElement?.textContent?.includes('Dossiers'));
+      // A sur Dossiers : les dossiers autorisés, le focus sur le premier (Vidéos, premier de la configuration).
+      await padPress('a');
+      await inColumn(1);
+      const [, first] = await focusedRow();
+      assert.ok(first.endsWith('/bibliotheque/Vidéos'), first);
+      // A : les sous-dossiers, puis les fichiers de Vidéos.
+      await padPress('a');
+      await inColumn(2);
+      assert.deepEqual(await focusedRow(), [2, 'Série']);
+      // La croix descend sur un film : son aperçu s'affiche ; A y porte le focus (« Lire »).
+      await padPress('down');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__preview .mire-explorer-view__action.hydrated`), VIEW);
+      const film = (await focusedRow())[1];
+      await padPress('a');
+      await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
+      // B : retour au film, puis au dossier Vidéos, puis à Dossiers, puis à l'accueil.
+      await padPress('b');
+      assert.deepEqual(await focusedRow(), [2, film]);
+      await padPress('b');
+      await inColumn(1);
+      assert.ok((await focusedRow())[1].endsWith('/bibliotheque/Vidéos'));
+      await padPress('b');
+      assert.deepEqual(await focusedRow(), [0, 'Dossiers']);
+      await padPress('b');
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });
