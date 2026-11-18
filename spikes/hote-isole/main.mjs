@@ -166,10 +166,6 @@ async function creerHoteA(plugins, { journalReseau = null, parades = true, trava
   });
   ses.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
   ses.setPermissionCheckHandler(() => false);
-  // Parades pour ce que webRequest ne voit pas (constaté par les vérifications) : la résolution de noms anticipée
-  // (dns-prefetch) et l'UDP de WebRTC. Un proxy SOCKS5 injoignable laisse la résolution au proxy ; la politique
-  // WebRTC interdit l'UDP qui ne passe pas par lui.
-  if (parades) await ses.setProxy({ mode: 'fixed_servers', proxyRules: process.env.MIRE_PROXY ?? 'socks5://127.0.0.1:9' });
   ses.protocol.handle('mire-plugin', servir(dossiers));
   if (journalReseau) await ses.netLog.startLogging(journalReseau);
 
@@ -186,6 +182,8 @@ async function creerHoteA(plugins, { journalReseau = null, parades = true, trava
     },
   });
   const wc = fenetre.webContents;
+  // webRequest ne voit ni l'UDP de WebRTC, ni la résolution anticipée (dns-prefetch), ni WebTransport (constaté).
+  // WebRTC : politique sans UDP. Les deux autres : le code des plugins tourne dans un Worker (hote-a/travailleur.mjs).
   if (parades) wc.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
   wc.setWindowOpenHandler(() => {
     observe.fenetres++;
@@ -543,10 +541,10 @@ async function avecRetard(f) {
 
 /**
  * Plugin fautif : `boucle` (boucle sans fin) ou `memoire` (épuise la mémoire). Un chien de garde envoie un ping
- * toutes les 250 ms (délai 500 ms) ; au premier ping sans réponse, l'hôte est arrêté. Un autre hôte, sain, doit
- * continuer de répondre pendant ce temps.
+ * toutes les 250 ms (délai 500 ms) ; au premier ping sans réponse, l'hôte est arrêté. Sans chien de garde
+ * (`garde: false`), on attend que l'hôte tombe seul. Un autre hôte, sain, doit continuer de répondre pendant ce temps.
  */
-async function verifierFautif(env, plugins, nom) {
+async function verifierFautif(env, plugins, nom, { garde: avecGarde = true } = {}) {
   const sain = await CREER[env]([plugins.essai]);
   await charger(sain, env, plugins.essai);
   const hote = await CREER[env]([plugins[nom]]);
@@ -565,12 +563,14 @@ async function verifierFautif(env, plugins, nom) {
     let pingsSains = 0;
     let pingsSainsRates = 0;
     const garde = setInterval(() => {
-      hote.canal.demander('hote', 'ping', [], { delai: 500 }).catch((e) => {
-        if (detecte === null && e.code === 'timeout') {
-          detecte = maintenant();
-          hote.tuer();
-        }
-      });
+      if (avecGarde) {
+        hote.canal.demander('hote', 'ping', [], { delai: 500 }).catch((e) => {
+          if (detecte === null && e.code === 'timeout') {
+            detecte = maintenant();
+            hote.tuer();
+          }
+        });
+      }
       sain.canal.demander('hote', 'ping', [], { delai: 500 }).then(
         () => pingsSains++,
         () => pingsSainsRates++,
@@ -612,6 +612,7 @@ async function verifications(plugins) {
     if (nom === env) {
       sortie[nom].boucle = await verifierFautif(env, plugins, 'boucle');
       sortie[nom].memoire = await verifierFautif(env, plugins, 'memoire');
+      sortie[nom].plantage = await verifierFautif(env, plugins, 'memoire', { garde: false });
     }
     process.stdout.write(`vérifications ${nom} faites\n`);
   }
@@ -660,11 +661,16 @@ function rapport(res) {
     for (const env of Object.keys(res.verifications)) {
       const v = res.verifications[env];
       l.push('', `Vérifications ${env} :`, '', '| Essai | Isolé | Détail |', '| --- | --- | --- |');
-      for (const e of v.isolement) l.push(`| ${e.nom} | ${e.isole ? 'oui' : '**non**'} | ${String(e.preuve).replace(/\|/g, '/')} |`);
-      for (const nom of ['boucle', 'memoire'].filter((n) => v[n])) {
+      for (const e of v.isolement) l.push(`| ${e.nom} | ${e.isole ? 'oui' : '**non**'} | ${String(e.preuve).replace(/\|/g, '/').replace(/\s+/g, ' ')} |`);
+      const titres = {
+        boucle: 'plugin qui boucle',
+        memoire: 'plugin qui épuise la mémoire',
+        plantage: 'plugin qui fait planter son hôte (mémoire, sans chien de garde)',
+      };
+      for (const nom of Object.keys(titres).filter((n) => v[n])) {
         const f = v[nom];
         l.push(
-          `| plugin ${nom === 'boucle' ? 'qui boucle' : 'qui épuise la mémoire'} | ${f.total !== null && f.sainRepond ? 'oui' : '**non**'} | ` +
+          `| ${titres[nom]} | ${f.total !== null && f.sainRepond ? 'oui' : '**non**'} | ` +
             `${f.chienDeGarde ? `détecté par le chien de garde en ${ms(f.detection)}, arrêté en ${ms(f.arret)}` : `hôte tombé seul (${f.raison}) en ${ms(f.total)}`} ; ` +
             `autre hôte : ${f.pingsSains} pings, ${f.pingsSainsRates} sans réponse ; retard max. du principal ${ms(f.retardPrincipal)} |`,
         );
