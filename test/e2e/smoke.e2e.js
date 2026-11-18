@@ -1419,4 +1419,173 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('accueil (P4-12)', () => {
+    const PAD = { a: 0, b: 1, right: 15 };
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    // Accueil affiché et rendu : la vue, ses rangées voulues, et chaque composant qu'elle contient, ont la classe hydrated.
+    const homeReady = (rows) =>
+      page.waitForFunction((want) => {
+        const v = document.querySelector('#view mire-home mire-home-view');
+        if (document.body.dataset.section !== 'home' || !v?.classList.contains('hydrated')) return false;
+        const ids = [...v.querySelectorAll('.mire-home-view__section')].map((x) => x.dataset.row);
+        if (want.some((id) => !ids.includes(id))) return false;
+        return [...v.querySelectorAll('mire-card, mire-group-card, mire-row, ds-trigger, ds-thumb, ds-scroller')].every((c) =>
+          c.classList.contains('hydrated'),
+        );
+      }, rows);
+    const openHome = async (rows = ['bars']) => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:home' }));
+      await homeReady(rows);
+    };
+    const focusedBar = () => page.evaluate(() => document.activeElement?.closest('.mire-home-view__bar')?.dataset.target ?? null);
+    const pageShown = (title) =>
+      page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title').textContent === t, title);
+    // Thème des pages et de l'accueil, choisi dans les réglages ; une rangée de l'accueil, montrée ou cachée.
+    async function setTheme(id) {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.waitForFunction(
+        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        id,
+      );
+    }
+    // Capture de l'accueil, défilé jusqu'aux barres pour montrer aussi les rangées, sans message en cours.
+    async function homeShot(name) {
+      await page.waitForFunction(() => !document.getElementById('toast').classList.contains('show'), null, { timeout: 5000 });
+      await page.evaluate(() => document.querySelector('#view .mire-home-view__bars').scrollIntoView({ block: 'start' }));
+      await settle();
+      await shot(name);
+      await page.evaluate(() => (document.getElementById('view').scrollTop = 0));
+    }
+    async function setRow(kind, id, on) {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      const box = page.locator(`#view [data-order="${kind}"][data-id="${id}"]`);
+      if ((await box.isChecked()) !== on) await box.click();
+      await page.waitForFunction(([k, i, o]) => document.querySelector(`#view [data-order="${k}"][data-id="${i}"]`)?.checked === o, [kind, id, on]);
+    }
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+
+    after(async () => {
+      await page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+      });
+      await setTheme('mire');
+      await setRow('rows', 'page:series', false);
+      await setRow('rows', 'sites', false);
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('les réglages ajoutent des rangées ; l’accueil s’affiche avec le thème Mire, puis avec Papier', async () => {
+      // Rangées choisies dans les réglages : la page Séries et les sites épinglés (Arte).
+      await setRow('rows', 'page:series', true);
+      await setRow('sites', 'web:arte', true);
+      await setTheme('mire');
+      await openHome(['bars', 'page:series', 'sites']);
+      const shown = () =>
+        page.evaluate(() => {
+          const host = document.querySelector('#view mire-home');
+          const v = host.querySelector('mire-home-view');
+          return {
+            theme: host.dataset.theme,
+            palette: host.dataset.palette ?? null,
+            layout: v.classList.contains('--layout-grid') ? 'grid' : 'rows',
+            font: getComputedStyle(v.querySelector('.mire-home-view__time')).fontFamily,
+            rows: [...v.querySelectorAll('.mire-home-view__section')].map((x) => x.dataset.row),
+            bars: [...v.querySelectorAll('.mire-home-view__bar')].map((b) => b.dataset.target),
+            sites: [...v.querySelectorAll('.mire-home-view__site-name')].map((x) => x.textContent),
+            series: v.querySelectorAll('[data-row="page:series"] mire-group-card, [data-row="page:series"] mire-card').length,
+          };
+        });
+      const mire = await shown();
+      assert.equal(mire.theme, 'mire');
+      assert.equal(mire.palette, null, 'Mire garde la palette des réglages');
+      assert.equal(mire.layout, 'rows');
+      // Les barres de la v8 (sans réglage) : la recherche, puis les pages prêtes à l'emploi.
+      assert.deepEqual(mire.bars, ['screen:search', 'movies', 'series', 'music', 'images', 'streaming', 'tv', 'games']);
+      assert.deepEqual(mire.sites, ['Arte']);
+      assert.ok(mire.series > 0, 'la rangée Séries montre ses séries');
+      assert.deepEqual(
+        mire.rows.filter((r) => r !== 'recent'),
+        ['bars', 'page:series', 'sites'],
+      );
+      await homeShot('accueil-mire');
+
+      await setTheme('papier');
+      await openHome(['bars', 'page:series', 'sites']);
+      const papier = await shown();
+      assert.equal(papier.theme, 'papier');
+      assert.equal(papier.palette, 'jour', 'Papier pose sa palette sur l’accueil comme sur les pages');
+      assert.equal(papier.layout, 'grid');
+      assert.match(papier.font, /Palatino|Georgia/);
+      assert.equal(await page.evaluate(() => document.querySelector('#view mire-home').dataset.background), 'image');
+      // Les écrans du cœur gardent la palette des réglages.
+      assert.equal(await page.evaluate(() => document.querySelector('mire-app').dataset.palette ?? null), null);
+      await homeShot('accueil-papier');
+      await setTheme('mire');
+      assert.deepEqual(errors, []);
+    });
+
+    it('clavier : le focus arrive sur la première barre, la flèche passe à Films, Entrée ouvre la page, Échap revient', async () => {
+      await openHome();
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-home-view__bar'));
+      assert.equal(await focusedBar(), 'screen:search');
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await focusedBar(), 'movies');
+      await page.keyboard.press('Enter');
+      await pageShown('Films');
+      assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'movies');
+      await page.keyboard.press('Escape');
+      await homeReady(['bars']);
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-home-view__bar'));
+      // Le titre d'une rangée ouvre sa page.
+      await page.locator('#view .mire-home-view__heading-link.hydrated').first().focus();
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.body.dataset.section === 'page');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt les barres, A ouvre une page, B revient à l’accueil', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await openHome();
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-home-view__bar'));
+      await padPress('right');
+      await padPress('right');
+      assert.equal(await focusedBar(), 'series');
+      await padPress('a');
+      await pageShown('Séries');
+      await padPress('b');
+      await homeReady(['bars']);
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-home-view__bar'));
+      assert.deepEqual(errors, []);
+    });
+  });
 });

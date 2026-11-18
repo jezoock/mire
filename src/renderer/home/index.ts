@@ -81,6 +81,7 @@ export function createHome(opts: HomeOptions, doc: Document = document): Home {
     // Une mise à jour plus récente a été demandée pendant la lecture du catalogue.
     if (gen !== generation) return;
     Object.assign(view, {
+      ready: true,
       sections,
       clock: home.clock,
       labels: labels(),
@@ -88,8 +89,7 @@ export function createHome(opts: HomeOptions, doc: Document = document): Home {
       countLabels: json('elements.group.count'),
       scrollerLabels: json('elements.row'),
     });
-    await (view as HTMLElement & { componentOnReady?: () => Promise<unknown> }).componentOnReady?.();
-    if (gen === generation) opts.onRendered();
+    announce = gen;
   }
 
   function tick(now: Date) {
@@ -100,6 +100,14 @@ export function createHome(opts: HomeOptions, doc: Document = document): Home {
       datetime: now.toISOString(),
     });
   }
+
+  // Rangées lues puis rendues par la vue : elles sont à l'écran (le focus peut y aller).
+  let announce = 0;
+  view.addEventListener('mireHomeRender', () => {
+    if (!announce || announce !== generation) return;
+    announce = 0;
+    opts.onRendered();
+  });
 
   opts.onLanguageChange(() => void refresh());
   opts.onPagesChange(() => void refresh());

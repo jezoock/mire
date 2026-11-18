@@ -449,6 +449,11 @@ export namespace Components {
          */
         "layout": string;
         /**
+          * Rangées lues : avant, seule l'horloge est rendue, pour que le premier focus attende les barres au lieu de tomber sur « Personnaliser l'accueil ».
+          * @default false
+         */
+        "ready": boolean;
+        /**
           * @default ''
          */
         "scrollerLabels": string;
@@ -1476,6 +1481,11 @@ declare namespace LocalJSX {
          */
         "layout"?: string;
         /**
+          * Rangées lues : avant, seule l'horloge est rendue, pour que le premier focus attende les barres au lieu de tomber sur « Personnaliser l'accueil ».
+          * @default false
+         */
+        "ready"?: boolean;
+        /**
           * @default ''
          */
         "scrollerLabels"?: string;
@@ -1836,6 +1846,7 @@ declare namespace LocalJSX {
     }
     interface MireHomeViewAttributes {
         "sections": HomeSection[] | string;
+        "ready": boolean;
         "clock": boolean;
         "time": string;
         "date": string;

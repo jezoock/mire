@@ -20,6 +20,12 @@ export class MireHomeView {
   /** Rangées, dans l'ordre (JSON ou propriété, voir `HomeSection`). */
   @Prop() sections: HomeSection[] | string = [];
 
+  /**
+   * Rangées lues : avant, seule l'horloge est rendue, pour que le premier focus attende les barres au lieu de tomber sur
+   * « Personnaliser l'accueil ».
+   */
+  @Prop() ready = false;
+
   /** Horloge : affichée ou non, heure et date déjà mises en forme, et l'instant (`datetime`). */
   @Prop() clock = true;
   @Prop() time = '';
@@ -35,6 +41,11 @@ export class MireHomeView {
   @Prop() cardLabels = '';
   @Prop() countLabels = '';
   @Prop() scrollerLabels = '';
+
+  // Chaque rendu est signalé (`mireHomeRender`) : la page sait ainsi quand les rangées lues sont à l'écran (focus).
+  componentDidRender() {
+    this.host.dispatchEvent(new CustomEvent('mireHomeRender', { detail: { ready: this.ready } }));
+  }
 
   private renderBars(bars: HomeBar[], labels: HomeLabels) {
     return (
@@ -169,22 +180,25 @@ export class MireHomeView {
             <p class="mire-home-view__date">{this.date}</p>
           </div>
         )}
-        {sections.map((s) => (
-          <section
-            key={s.id}
-            class={{ 'mire-home-view__section': true, [`--${s.kind}`]: true }}
-            data-row={s.id}
-            aria-label={s.kind === 'bars' ? undefined : s.heading}
-          >
-            {this.renderSection(s, labels, layout === 'grid')}
-          </section>
-        ))}
-        {empty && labels.empty && <p class="mire-home-view__empty">{labels.empty}</p>}
-        <div class="mire-home-view__foot">
-          <ds-trigger class="mire-home-view__customize" mods="stl-2" data-focus-last target="mire-app" action='openSettings:[{"part":"home"}]'>
-            {labels.customize}
-          </ds-trigger>
-        </div>
+        {this.ready &&
+          sections.map((s) => (
+            <section
+              key={s.id}
+              class={{ 'mire-home-view__section': true, [`--${s.kind}`]: true }}
+              data-row={s.id}
+              aria-label={s.kind === 'bars' ? undefined : s.heading}
+            >
+              {this.renderSection(s, labels, layout === 'grid')}
+            </section>
+          ))}
+        {this.ready && empty && labels.empty && <p class="mire-home-view__empty">{labels.empty}</p>}
+        {this.ready && (
+          <div class="mire-home-view__foot">
+            <ds-trigger class="mire-home-view__customize" mods="stl-2" data-focus-last target="mire-app" action='openSettings:[{"part":"home"}]'>
+              {labels.customize}
+            </ds-trigger>
+          </div>
+        )}
       </Host>
     );
   }
