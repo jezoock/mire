@@ -151,6 +151,23 @@ export function createPluginSettings({ read, write, box, log = (m) => console.er
       return out;
     },
 
+    /**
+     * Réglages d'un plugin pour l'écran Réglages (P4-20) : les valeurs, sauf celles des secrets, dont on dit seulement
+     * s'ils sont saisis.
+     */
+    view(id: string, declared: readonly PluginSetting[] = []): { values: Record<string, SettingValue>; secrets: string[] } {
+      const stored = read()?.[id] ?? {};
+      const all = this.values(id, declared);
+      const values: Record<string, SettingValue> = {};
+      const secrets: string[] = [];
+      for (const decl of declared) {
+        if (decl.type === 'secret') {
+          if (isStoredSecret(stored[decl.key])) secrets.push(decl.key);
+        } else if (Object.hasOwn(all, decl.key)) values[decl.key] = all[decl.key] as SettingValue;
+      }
+      return { values, secrets };
+    },
+
     /** Change un réglage déclaré ; `null` le remet à sa valeur par défaut. Rend la valeur vue par le plugin. */
     set(id: string, declared: readonly PluginSetting[], key: string, value: unknown): SettingValue | undefined {
       const decl = declared.find((d) => d.key === key);

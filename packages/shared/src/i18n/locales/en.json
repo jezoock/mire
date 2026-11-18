@@ -736,6 +736,9 @@
       "uninstall": {
         "needed": "“{name}” cannot be uninstalled: “{by}” needs it.",
         "bundled": "“{name}” comes with Mire: it can be turned off, not uninstalled."
+      },
+      "settings": {
+        "refused": "{name} does not accept this value."
       }
     },
     "shell": {

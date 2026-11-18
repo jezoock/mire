@@ -736,6 +736,9 @@
       "uninstall": {
         "needed": "« {name} » ne peut pas être désinstallé : « {by} » en a besoin.",
         "bundled": "« {name} » est livré avec Mire : on peut le désactiver, pas le désinstaller."
+      },
+      "settings": {
+        "refused": "{name} n’accepte pas cette valeur."
       }
     },
     "shell": {

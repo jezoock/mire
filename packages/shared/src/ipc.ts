@@ -171,6 +171,24 @@ export interface PluginSummary {
   restartRequired: boolean;
 }
 
+/** Réglages d'un plugin, pour l'écran Réglages (P4-20) : ses déclarations (manifeste) et ses valeurs. */
+export interface PluginSettingsInfo {
+  id: string;
+  /** Nom affiché (textes du plugin), ou l'identifiant. */
+  name: string;
+  /** Réglages déclarés ; libellés : `settings.<key>.label` dans les textes du plugin. */
+  settings: {
+    key: string;
+    type: 'text' | 'secret' | 'choice' | 'toggle' | 'path' | 'list';
+    default?: string | number | boolean | string[];
+    options?: string[];
+  }[];
+  /** Valeurs (changées, sinon par défaut), sans celles des secrets. */
+  values: Record<string, string | number | boolean | string[]>;
+  /** Réglages secrets déjà saisis : leur valeur ne quitte jamais le processus principal. */
+  secrets: string[];
+}
+
 export interface Bounds {
   x: number;
   y: number;
@@ -354,6 +372,10 @@ export interface IpcMethods {
   // plugin inconnu.
   pluginsList(): PluginSummary[];
   pluginsSetEnabled(id: string, enabled: boolean): PluginSummary | null;
+  // Réglages des plugins (P4-20) : ceux que déclarent les manifestes, et en changer un (`null` : valeur par défaut).
+  // Rend les réglages du plugin, ou l'erreur à afficher (valeur refusée) ; jamais la valeur d'un secret.
+  pluginsSettings(): PluginSettingsInfo[];
+  pluginsSetSetting(id: string, key: string, value: unknown): Outcome<{ plugin: PluginSettingsInfo }>;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -501,6 +523,8 @@ export const IPC_METHODS = {
   filesRemove: 'files:remove',
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  pluginsSettings: 'plugins:settings',
+  pluginsSetSetting: 'plugins:setSetting',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
