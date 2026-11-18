@@ -12,7 +12,7 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 export type EditorKind = 'video' | 'track' | 'image' | 'game' | 'program' | 'other';
 
 /** Infos que l'éditeur modifie, dans l'ordre du formulaire. */
-export type InfoField = 'title' | 'year' | 'genres' | 'overview';
+export type InfoField = 'title' | 'year' | 'genres' | 'overview' | 'artist';
 /** Images que l'éditeur modifie. */
 export type ImageField = Extract<keyof ElementImages, 'poster' | 'background'>;
 

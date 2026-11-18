@@ -57,6 +57,8 @@ export interface Pages {
   /** Section historique de la page affichée (« Ancienne vue »), ou `null`. */
   legacySection(): string | null;
   current(): PageViewData | null;
+  /** Page et chemin affichés (éditeurs des regroupements, P4-22), ou `null`. */
+  route(): { page: string; path: PagePath } | null;
 }
 
 type ViewEl = HTMLElement & Record<string, unknown>;
@@ -191,5 +193,9 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
       return r ? legacySectionOf(r.page.id) : null;
     },
     current: () => model.current(),
+    route() {
+      const r = model.route();
+      return r ? { page: r.page.id, path: r.path } : null;
+    },
   };
 }
