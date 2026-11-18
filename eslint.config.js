@@ -31,6 +31,11 @@ module.exports = [
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
   },
   {
+    // Prototypes (spikes/, hors de dist/) : processus principal d'Electron, page cachée, Worker et utilityProcess.
+    files: ['spikes/**/*.js', 'spikes/**/*.mjs'],
+    languageOptions: { ecmaVersion: 'latest', globals: { ...globals.node, ...globals.browser, ...globals.worker } },
+  },
+  {
     // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.
     files: ['test/e2e/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
