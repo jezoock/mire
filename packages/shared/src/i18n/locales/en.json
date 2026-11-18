@@ -1119,6 +1119,94 @@
         "fetchFailed": "Couldn’t get this match.",
         "fetched": "“{title}” found: check the fields, then save."
       }
+    },
+    "settingsView": {
+      "checking": "Checking…",
+      "saved": "Saved",
+      "browse": "Browse…",
+      "add": "Add",
+      "remove": "Remove",
+      "empty": "None.",
+      "secretSet": "Already entered (type to replace it)",
+      "current": "active",
+      "save": "Save",
+      "show": "Show",
+      "hide": "Hide",
+      "hidden": "Hidden:",
+      "openPage": "Set in {name}",
+      "start": {
+        "sites": "Straight to a service"
+      },
+      "palettes": {
+        "auto": "Automatic"
+      },
+      "providers": {
+        "tmdb": "TMDB (movies and series)",
+        "musicbrainz": "MusicBrainz (music)",
+        "libretro": "libretro (console games)",
+        "steam": "Steam (PC games)"
+      },
+      "plugin": {
+        "help": "Settings of this plugin. They apply right away."
+      },
+      "drm": {
+        "title": "Protected playback",
+        "noWidevine": "This version of Electron does not contain Widevine: Netflix, Prime Video and Amazon Music will not be able to play their content. Reinstall Mire with npm install (see the README).",
+        "installed": "Widevine is installed (version {version}).",
+        "sign": "If Netflix or Prime Video refuse to play, sign Mire once with npm run drm:signer (see the README).",
+        "pending": "Widevine is installed on first start (Internet connection needed). Restart Mire if playback fails."
+      },
+      "adblock": {
+        "updating": "Updating the lists…",
+        "loaded": {
+          "one": "{count} list loaded.",
+          "other": "{count} lists loaded."
+        },
+        "loadedOn": {
+          "one": "{count} list loaded, updated on {date}.",
+          "other": "{count} lists loaded, updated on {date}."
+        },
+        "notLoaded": "The lists are downloaded when the blocker is on.",
+        "failed": "Unavailable for now: {lists}.",
+        "on": "Blocker on. The open sites reload.",
+        "off": "Blocker off.",
+        "badList": "Enter the full address of the list (https://…)."
+      },
+      "advanced": {
+        "title": "Sites, games and consoles",
+        "help": "List in JSON format. For a site, “search” is its search address ({q} is replaced by the words searched) and “background”: true lets playback go on when you leave the site. For a game, “image” can point to a cover. For a console, {rom} is replaced by the path of the game. The README file gives examples.",
+        "error": "The JSON list has an error: {message}",
+        "notObject": "The JSON list must be an object { \"web\": […], \"games\": […], \"emulators\": […] }.",
+        "notList": "“{key}” must be a list between brackets [ ].",
+        "saved": "Sites, games and consoles saved"
+      },
+      "config": {
+        "title": "Configuration",
+        "help": "Your whole setup (streaming sites, consoles, PC games, sources, download sites) fits in one file. Export it to back it up or to use it on another computer. When importing, “replace” overwrites the current configuration, “complete” adds what is missing without removing anything.",
+        "exported": "Configuration exported.",
+        "exportFailed": "Export failed.",
+        "imported": "Configuration imported.",
+        "importFailed": "Import failed."
+      },
+      "actions": {
+        "rescan": "Scan again",
+        "scrapeAll": "Fetch everything again",
+        "scrapeClear": "Clear the fetched details",
+        "adblockUpdate": "Update the lists",
+        "export": "Export the configuration",
+        "importReplace": "Import (replace)",
+        "importMerge": "Import (complete)",
+        "reveal": "Show the configuration file"
+      },
+      "sortable": {
+        "instructions": "Space or Enter to pick up, arrows to move, Space or Enter to drop, Escape to cancel.",
+        "grabbed": "{label} picked up, position {index} of {count}.",
+        "moved": "{label} moved to position {index} of {count}.",
+        "dropped": "{label} dropped at position {index} of {count}.",
+        "cancelled": "{label} back to position {index} of {count}.",
+        "moveBefore": "Move {label} before {other}",
+        "moveAfter": "Move {label} after {other}"
+      }
     }
   }
 }

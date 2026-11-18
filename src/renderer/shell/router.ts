@@ -4,10 +4,10 @@
  * liste) ou `screen:<nom>` (un écran du cœur, `CORE_SCREENS`).
  *
  * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
- * `mire-home`, P4-12), toutes deux dessinées par le thème ; la Recherche (`SEARCH_VIEW`, `mire-search`, P4-13) et le
- * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) dans les leurs, avec l'habillage du cœur. Tant qu'un
- * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
- * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
+ * `mire-home`, P4-12), toutes deux dessinées par le thème ; la Recherche (`SEARCH_VIEW`, `mire-search`, P4-13), le
+ * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) et les Réglages (`SETTINGS_VIEW`, `mire-settings`, P4-20) dans les
+ * leurs, avec l'habillage du cœur. Un écran du cœur sans vue (l'explorateur, P4-08) ne s'ouvre pas encore. Les
+ * sections historiques des pages prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
  */
 import { formatTarget, parseTarget } from '@mire/shared';
@@ -44,17 +44,24 @@ export const SEARCH_TARGET = formatTarget({ kind: 'screen', screen: 'search' });
 /** Vue qui affiche la Recherche (P4-13) : la section `search` de l'interface, qui contient `<mire-search>`. */
 export const SEARCH_VIEW = 'search';
 
-/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre). */
+export const SETTINGS_TARGET = formatTarget({ kind: 'screen', screen: 'settings' });
+
+/**
+ * Vue qui affiche les Réglages (P4-20) : la section `settings` de l'interface, qui contient `<mire-settings>`. Elle garde
+ * le nom de l'ancienne section, que l'interface historique emploie encore (`go('settings')`, rouage).
+ */
+export const SETTINGS_VIEW = 'settings';
+
+/**
+ * Écrans du cœur, chacun avec sa vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre ;
+ * P4-20 : les Réglages). Depuis P4-20, plus aucun écran ne s'affiche dans une vue historique.
+ */
 export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   [HOME_TARGET, HOME_VIEW],
   [SEARCH_TARGET, SEARCH_VIEW],
   [CENTRE_TARGET, CENTRE_VIEW],
+  [SETTINGS_TARGET, SETTINGS_VIEW],
 ];
-
-/**
- * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
- */
-export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [['screen:settings', 'settings']];
 
 /**
  * Section historique de chaque page prête à l'emploi (« Ancienne vue ») : elle garde ce que la vue de page ne fait pas
@@ -71,23 +78,18 @@ export const LEGACY_PAGE_SECTIONS: ReadonlyArray<readonly [page: string, section
   ['games', 'games'],
 ];
 
-/** Section historique qui affiche un écran du cœur ; `null` pour une page, une liste ou l'explorateur. */
-export function legacyViewOf(target: string): string | null {
-  return LEGACY_VIEWS.find(([t]) => t === target)?.[1] ?? null;
-}
-
 /** Section historique d'une page prête à l'emploi (« Ancienne vue ») ; `null` pour une autre page. */
 export function legacySectionOf(page: string): string | null {
   return LEGACY_PAGE_SECTIONS.find(([p]) => p === page)?.[1] ?? null;
 }
 
-/** Vue qui affiche une cible : la vue de page pour une page, la vue historique d'un écran ; `null` sinon. */
+/** Vue qui affiche une cible : la vue de page pour une page, celle d'un écran du cœur ; `null` sinon. */
 export function viewOf(target: string): string | null {
   const t = parseTarget(target);
   if (!t) return null;
   if (t.kind === 'page') return PAGE_VIEW;
   if (t.kind !== 'screen') return null;
-  return SCREEN_VIEWS.find(([s]) => s === target)?.[1] ?? legacyViewOf(target);
+  return SCREEN_VIEWS.find(([s]) => s === target)?.[1] ?? null;
 }
 
 /**
@@ -95,12 +97,7 @@ export function viewOf(target: string): string | null {
  * `null` pour une vue sans cible (site ouvert, démonstration).
  */
 export function targetOfLegacyView(section: string): string | null {
-  return (
-    SCREEN_VIEWS.find(([, s]) => s === section)?.[0] ??
-    LEGACY_VIEWS.find(([, s]) => s === section)?.[0] ??
-    LEGACY_PAGE_SECTIONS.find(([, s]) => s === section)?.[0] ??
-    null
-  );
+  return SCREEN_VIEWS.find(([, s]) => s === section)?.[0] ?? LEGACY_PAGE_SECTIONS.find(([, s]) => s === section)?.[0] ?? null;
 }
 
 /** Route d'une cible ; `null` si le texte n'est pas une cible. Le chemin ne vaut que pour une page ou une liste. */

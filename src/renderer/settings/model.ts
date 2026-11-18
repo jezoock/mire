@@ -13,6 +13,7 @@ import type {
   PaletteView,
   SettingsActionView,
   SettingsFieldView,
+  SettingsLabels,
   SettingsOptionView,
   SettingsPanelView,
 } from '@mire/ui/utils';
@@ -139,17 +140,16 @@ export function fieldView(field: SettingsField, block: SettingsBlock, src: Panel
 /** Informations et boutons d'action propres à un bloc (ce ne sont pas des réglages). */
 function blockExtras(block: SettingsBlock, src: PanelSources): Pick<SettingsPanelView, 'notes' | 'actions'> {
   const { t } = src;
-  const a = (key: string, action: string, args?: Record<string, unknown>, ghost?: boolean): SettingsActionView => ({
+  const a = (key: string, action: SettingsActionView['action'], ghost?: boolean): SettingsActionView => ({
     label: t(`settingsView.actions.${key}`),
     action,
-    ...(args ? { args } : {}),
     ...(ghost ? { ghost } : {}),
   });
   switch (block.id) {
     case 'sources':
-      return { actions: [a('rescan', 'rescan', undefined, true)] };
+      return { actions: [a('rescan', 'rescan', true)] };
     case 'scrape':
-      return { actions: [a('scrapeAll', 'scrapeAll'), a('scrapeClear', 'clearScrape', undefined, true)] };
+      return { actions: [a('scrapeAll', 'scrapeAll'), a('scrapeClear', 'clearScrape', true)] };
     case 'adblock':
       return { notes: src.adblockStatus ? [src.adblockStatus] : [], actions: [a('adblockUpdate', 'updateFilterLists')] };
     default:
@@ -233,11 +233,61 @@ export function settingsPanels(src: PanelSources): SettingsPanelView[] {
       notes: src.configPath ? [src.configPath] : [],
       actions: [
         { label: t('settingsView.actions.export'), action: 'exportConfig' },
-        { label: t('settingsView.actions.importReplace'), action: 'importConfig', args: { mode: 'replace' } },
-        { label: t('settingsView.actions.importMerge'), action: 'importConfig', args: { mode: 'merge' }, ghost: true },
+        { label: t('settingsView.actions.importReplace'), action: 'importConfig', mode: 'replace' },
+        { label: t('settingsView.actions.importMerge'), action: 'importConfig', mode: 'merge', ghost: true },
         { label: t('settingsView.actions.reveal'), action: 'revealConfig', ghost: true },
       ],
     },
     ...pluginPanels(src.plugins, t),
   ];
+}
+
+/** État du bloqueur (`adblockStatus`), tel que l'écran l'affiche. */
+export interface AdblockState {
+  updating?: boolean;
+  ready?: boolean;
+  loaded?: number;
+  updated?: number | string | null;
+  failed?: string[];
+}
+
+/** Texte de l'état du bloqueur ; `date` met en forme le jour de la dernière mise à jour. */
+export function adblockStatusText(st: AdblockState | null | undefined, t: Translate, date: (d: Date) => string): string {
+  if (!st) return t('settingsView.checking');
+  let text: string;
+  if (st.updating) text = t('settingsView.adblock.updating');
+  else if (st.ready) {
+    const count = st.loaded ?? 0;
+    text = st.updated ? t('settingsView.adblock.loadedOn', { count, date: date(new Date(st.updated)) }) : t('settingsView.adblock.loaded', { count });
+  } else text = t('settingsView.adblock.notLoaded');
+  if (st.failed?.length) text += ` ${t('settingsView.adblock.failed', { lists: st.failed.map((u) => u.split('/').pop()).join(', ') })}`;
+  return text;
+}
+
+/** État de la lecture protégée (`drmStatus`), tel que l'écran l'affiche. */
+export function drmStatusText(d: { ecs?: boolean; widevine?: { version?: string } | null; platform?: string } | null | undefined, t: Translate): string {
+  if (!d) return t('settingsView.checking');
+  if (!d.ecs) return t('settingsView.drm.noWidevine');
+  if (!d.widevine?.version) return t('settingsView.drm.pending');
+  const text = t('settingsView.drm.installed', { version: d.widevine.version });
+  return d.platform === 'linux' ? text : `${text} ${t('settingsView.drm.sign')}`;
+}
+
+/** Textes de la vue (`SettingsLabels`). */
+export function settingsLabels(t: Translate): SettingsLabels {
+  const k = (key: string) => t(`settingsView.${key}`);
+  const sortable = ['instructions', 'grabbed', 'moved', 'dropped', 'cancelled', 'moveBefore', 'moveAfter'];
+  return {
+    browse: k('browse'),
+    add: k('add'),
+    remove: k('remove'),
+    empty: k('empty'),
+    secretSet: k('secretSet'),
+    current: k('current'),
+    save: k('save'),
+    show: k('show'),
+    hide: k('hide'),
+    hidden: k('hidden'),
+    sortable: JSON.stringify(Object.fromEntries(sortable.map((s) => [s, k(`sortable.${s}`)]))),
+  };
 }

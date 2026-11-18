@@ -79,11 +79,14 @@ export interface PageLinkView {
   label: string;
 }
 
-/** Bouton d'action d'un panneau : une méthode du contrôleur `mire-settings` et son argument. */
+/** Actions des boutons d'un panneau (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */
+export type SettingsPanelAction = 'rescan' | 'scrapeAll' | 'clearScrape' | 'updateFilterLists' | 'exportConfig' | 'importConfig' | 'revealConfig';
+
+/** Bouton d'action d'un panneau ; `mode` : celui de `importConfig` (`replace` ou `merge`). */
 export interface SettingsActionView {
   label: string;
-  action: string;
-  args?: Record<string, unknown>;
+  action: SettingsPanelAction;
+  mode?: 'replace' | 'merge';
   /** Bouton secondaire (contour). */
   ghost?: boolean;
 }
@@ -117,8 +120,8 @@ export interface SettingsLabels {
   sortable?: string;
 }
 
-/** Action `ds-trigger` vers `mire-settings` : `méthode:[argument]`. */
-export const settingsAction = (method: string, args?: Record<string, unknown>): string => `${method}:${JSON.stringify([args ?? {}])}`;
+/** Arguments d'une action `ds-trigger` vers `mire-settings` (`méthode:[argument]`). */
+export const settingsArgs = (args: Record<string, unknown>): string => JSON.stringify([args]);
 
 /** Identifiant d'élément tiré d'une clé (`ui.home.clock` → `set-ui-home-clock`), pour lier libellé et champ. */
 export const settingsDomId = (key: string): string => `set-${key.replace(/[^A-Za-z0-9_-]/g, '-')}`;

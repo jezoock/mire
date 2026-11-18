@@ -42,7 +42,7 @@ const FILLED = {
   tv: 'Chaîne Deux',
   games: 'Super Nintendo',
   downloads: 'Manuel de démonstration',
-  settings: 'Thème',
+  settings: 'Apparence',
 };
 
 // Téléchargement de Widevine par castLabs Electron (composant Google) : seule requête attendue.
@@ -1289,9 +1289,9 @@ describe('Test de fumée de Mire', () => {
     // Thème des pages, choisi dans les réglages : appliqué sans redémarrage.
     async function setTheme(id) {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.locator(`#view .mire-settings-view__theme[data-key="${id}"]`).click();
       await page.waitForFunction(
-        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        (t) => document.querySelector(`#view .mire-settings-view__theme[data-key="${t}"]`)?.getAttribute('aria-pressed') === 'true',
         id,
       );
     }
@@ -1458,9 +1458,9 @@ describe('Test de fumée de Mire', () => {
     // Thème des pages et de l'accueil, choisi dans les réglages ; une rangée de l'accueil, montrée ou cachée.
     async function setTheme(id) {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.locator(`#view .mire-settings-view__theme[data-key="${id}"]`).click();
       await page.waitForFunction(
-        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        (t) => document.querySelector(`#view .mire-settings-view__theme[data-key="${t}"]`)?.getAttribute('aria-pressed') === 'true',
         id,
       );
     }
@@ -1473,10 +1473,18 @@ describe('Test de fumée de Mire', () => {
       await page.evaluate(() => (document.getElementById('view').scrollTop = 0));
     }
     async function setRow(kind, id, on) {
+      // Écran Réglages (P4-20) : une valeur montrée est dans la liste ordonnable, une valeur cachée a son bouton « Afficher ».
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      const box = page.locator(`#view [data-order="${kind}"][data-id="${id}"]`);
-      if ((await box.isChecked()) !== on) await box.click();
-      await page.waitForFunction(([k, i, o]) => document.querySelector(`#view [data-order="${k}"][data-id="${i}"]`)?.checked === o, [kind, id, on]);
+      const shown = ([k, i]) => !!document.querySelector(`#view ds-sortable[data-list="${k}"] [data-key="${CSS.escape(i)}"]`);
+      await page.waitForSelector('#view mire-settings-view.hydrated ds-sortable');
+      if ((await page.evaluate(shown, [kind, id])) !== on) {
+        const list = on ? '.mire-settings-view__hidden' : 'ds-sortable';
+        await page.locator(`#view .mire-settings-view__order[data-list="${kind}"] ${list} ds-trigger[action*='"id":"${id}"']`).click();
+      }
+      await page.waitForFunction(
+        ([k, i, o]) => !!document.querySelector(`#view ds-sortable[data-list="${k}"] [data-key="${CSS.escape(i)}"]`) === o,
+        [kind, id, on],
+      );
     }
 
     before(async () => {

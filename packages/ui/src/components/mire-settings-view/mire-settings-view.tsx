@@ -1,7 +1,7 @@
 import { Component, Element, Event, Host, Prop, h } from '@stencil/core';
 import type { EventEmitter } from '@stencil/core';
 import { readJson, readList } from '../../utils/elements.ts';
-import { settingsAction, settingsDomId } from '../../utils/settings.ts';
+import { settingsArgs, settingsDomId } from '../../utils/settings.ts';
 import type { OrderListView, SettingsActionView, SettingsFieldView, SettingsLabels, SettingsOptionView, SettingsPanelView } from '../../utils/settings.ts';
 
 /**
@@ -33,14 +33,6 @@ export class MireSettingsView {
     this.host.dispatchEvent(new CustomEvent('mireSettingsRender'));
   }
 
-  private trigger(label: string, method: string, args?: Record<string, unknown>, mods = 'stl-2', extra: Record<string, unknown> = {}) {
-    return (
-      <ds-trigger type="button" mods={mods} target="mire-settings" action={settingsAction(method, args)} {...extra}>
-        {label}
-      </ds-trigger>
-    );
-  }
-
   private change(key: string, value: string | boolean) {
     this.mireSettingChange.emit({ key, value });
   }
@@ -70,7 +62,15 @@ export class MireSettingsView {
             values.map((v) => (
               <li class="mire-settings-view__entry" key={v}>
                 <span class="mire-settings-view__value">{v}</span>
-                {this.trigger(l.remove ?? '', 'removeFromList', { key: f.key, value: v }, 'stl-3', { 'aria-label': `${l.remove ?? ''} : ${v}` })}
+                <ds-trigger
+                  type="button"
+                  mods="stl-3"
+                  target="mire-settings"
+                  action={`removeFromList:${settingsArgs({ key: f.key, value: v })}`}
+                  aria-label={`${l.remove ?? ''} : ${v}`}
+                >
+                  {l.remove}
+                </ds-trigger>
               </li>
             ))
           ) : (
@@ -86,7 +86,9 @@ export class MireSettingsView {
             placeholder={f.placeholder}
             onInput={(e) => this.mireSettingDraft.emit({ key: f.key, value: (e.target as HTMLInputElement).value })}
           />
-          {this.trigger(l.add ?? '', 'addToList', { key: f.key })}
+          <ds-trigger type="button" mods="stl-2" target="mire-settings" action={`addToList:${settingsArgs({ key: f.key })}`}>
+            {l.add}
+          </ds-trigger>
         </div>
       </div>
     );
@@ -101,7 +103,7 @@ export class MireSettingsView {
             mods="stl-3"
             class="mire-settings-view__palette"
             target="mire-settings"
-            action={settingsAction('setTheme', { id: p.id })}
+            action={`setTheme:${settingsArgs({ id: p.id })}`}
             aria-pressed={String(p.current)}
             data-key={p.id}
           >
@@ -143,7 +145,7 @@ export class MireSettingsView {
               mods="stl-3"
               class="mire-settings-view__theme"
               target="mire-settings"
-              action={settingsAction('setPageTheme', { id: th.id })}
+              action={`setPageTheme:${settingsArgs({ id: th.id })}`}
               aria-pressed={String(th.current)}
               data-key={th.id}
             >
@@ -174,10 +176,17 @@ export class MireSettingsView {
             <div class="mire-settings-view__item" key={x.id} data-key={x.id} data-label={x.label}>
               <span class="mire-settings-view__chip" style={{ background: x.color }} />
               <span class="mire-settings-view__item-label">{x.label}</span>
-              {list.toggle &&
-                this.trigger(l.hide ?? '', 'toggleHomeItem', { kind: list.kind, id: x.id, on: false }, 'stl-3', {
-                  'aria-label': `${l.hide ?? ''} : ${x.label}`,
-                })}
+              {list.toggle && (
+                <ds-trigger
+                  type="button"
+                  mods="stl-3"
+                  target="mire-settings"
+                  action={`toggleHomeItem:${settingsArgs({ kind: list.kind, id: x.id, on: false })}`}
+                  aria-label={`${l.hide ?? ''} : ${x.label}`}
+                >
+                  {l.hide}
+                </ds-trigger>
+              )}
             </div>
           ))}
         </ds-sortable>
@@ -187,7 +196,15 @@ export class MireSettingsView {
             {off.map((x) => (
               <span class="mire-settings-view__off" key={x.id}>
                 <span class="mire-settings-view__chip" style={{ background: x.color }} />
-                {this.trigger(x.label, 'toggleHomeItem', { kind: list.kind, id: x.id, on: true }, 'stl-3', { 'aria-label': `${l.show ?? ''} : ${x.label}` })}
+                <ds-trigger
+                  type="button"
+                  mods="stl-3"
+                  target="mire-settings"
+                  action={`toggleHomeItem:${settingsArgs({ kind: list.kind, id: x.id, on: true })}`}
+                  aria-label={`${l.show ?? ''} : ${x.label}`}
+                >
+                  {x.label}
+                </ds-trigger>
               </span>
             ))}
           </div>
@@ -239,7 +256,11 @@ export class MireSettingsView {
           <div class="mire-settings-view__field --full">
             <span class="mire-settings-view__label">{f.label}</span>
             <div class="mire-settings-view__buttons">
-              {(f.links ?? []).map((k) => this.trigger(k.label, 'openPageSettings', { page: k.page, tab: k.tab }, 'stl-3'))}
+              {(f.links ?? []).map((k) => (
+                <ds-trigger type="button" mods="stl-3" target="mire-settings" action={`openPageSettings:${settingsArgs({ page: k.page, tab: k.tab })}`}>
+                  {k.label}
+                </ds-trigger>
+              ))}
             </div>
           </div>
         );
@@ -260,15 +281,70 @@ export class MireSettingsView {
                 onChange={(e) => this.change(f.key, (e.target as HTMLInputElement).value.trim())}
               />
             </ds-field>
-            {f.kind === 'path' && this.trigger(l.browse ?? '', 'pickPath', { key: f.key, pick: f.pick ?? 'folder' }, 'stl-3')}
+            {f.kind === 'path' && (
+              <ds-trigger type="button" mods="stl-3" target="mire-settings" action={`pickPath:${settingsArgs({ key: f.key, pick: f.pick ?? 'folder' })}`}>
+                {l.browse}
+              </ds-trigger>
+            )}
           </div>
         );
       }
     }
   }
 
+  // Chaque action est écrite telle quelle (le script de P4-04 vérifie qu'elle existe dans le contrôleur).
+  private renderAction(a: SettingsActionView) {
+    const mods = a.ghost ? 'stl-3' : 'stl-2';
+    switch (a.action) {
+      case 'rescan':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="rescan">
+            {a.label}
+          </ds-trigger>
+        );
+      case 'scrapeAll':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="scrapeAll">
+            {a.label}
+          </ds-trigger>
+        );
+      case 'clearScrape':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="clearScrape">
+            {a.label}
+          </ds-trigger>
+        );
+      case 'updateFilterLists':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="updateFilterLists">
+            {a.label}
+          </ds-trigger>
+        );
+      case 'exportConfig':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="exportConfig">
+            {a.label}
+          </ds-trigger>
+        );
+      case 'importConfig':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action={`importConfig:${settingsArgs({ mode: a.mode ?? 'replace' })}`}>
+            {a.label}
+          </ds-trigger>
+        );
+      case 'revealConfig':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="revealConfig">
+            {a.label}
+          </ds-trigger>
+        );
+      default:
+        return null;
+    }
+  }
+
   private renderActions(actions: SettingsActionView[]) {
-    return <div class="mire-settings-view__buttons">{actions.map((a) => this.trigger(a.label, a.action, a.args, a.ghost ? 'stl-3' : 'stl-2'))}</div>;
+    return <div class="mire-settings-view__buttons">{actions.map((a) => this.renderAction(a))}</div>;
   }
 
   private renderPanel(p: SettingsPanelView, l: SettingsLabels) {
@@ -293,7 +369,11 @@ export class MireSettingsView {
               value={p.json}
               onInput={(e) => this.mireSettingDraft.emit({ key: 'advanced', value: (e.target as HTMLTextAreaElement).value })}
             />
-            <div class="mire-settings-view__buttons">{this.trigger(l.save ?? '', 'saveAdvanced', {}, 'stl-1')}</div>
+            <div class="mire-settings-view__buttons">
+              <ds-trigger type="button" mods="stl-1" target="mire-settings" action="saveAdvanced">
+                {l.save}
+              </ds-trigger>
+            </div>
           </div>
         )}
         {p.actions && p.actions.length > 0 && this.renderActions(p.actions)}
