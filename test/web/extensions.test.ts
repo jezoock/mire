@@ -191,3 +191,31 @@ describe('script d’avant-page agrégé', () => {
     delete (globalThis as Any).__vu;
   });
 });
+
+describe('extensions des plugins (P3-05)', () => {
+  test('ajoutées après le branchement : branchées aussitôt, écouteurs recomposés, une qui échoue est écartée', async () => {
+    const listeners: Record<string, Any> = {};
+    const session = {
+      webRequest: Object.fromEntries(['onBeforeRequest', 'onBeforeSendHeaders', 'onHeadersReceived'].map((e) => [e, (l: Any) => (listeners[e] = l)])),
+    };
+    const seen: string[] = [];
+    const host = createWebExtensions([ext('coeur', { webRequest: { onBeforeRequest: () => void seen.push('coeur') } })]);
+    host.attach(session as Any);
+    const added = host.add([
+      ext('plugin', { attach: () => void seen.push('attach'), webRequest: { onBeforeRequest: () => (seen.push('plugin'), { cancel: true }) } }),
+      ext('casse', {
+        attach() {
+          throw new Error('panne');
+        },
+      }),
+      ext('coeur'),
+    ]);
+    assert.equal(added, 1);
+    assert.deepEqual(
+      host.extensions.map((e) => e.id),
+      ['coeur', 'plugin'],
+    );
+    assert.deepEqual(await call(listeners.onBeforeRequest, { url: 'https://pub/' }), { cancel: true });
+    assert.deepEqual(seen, ['attach', 'coeur', 'plugin']);
+  });
+});

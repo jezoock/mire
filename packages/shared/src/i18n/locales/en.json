@@ -526,6 +526,7 @@
         "cycle": "“{name}” depends on itself through other plugins: {details}."
       },
       "waiting": "“{name}” will start once “{dependency}” is turned on.",
+      "engineMissing": "The plugin that handled this download is no longer available.",
       "uninstall": {
         "needed": "“{name}” cannot be uninstalled: “{by}” needs it.",
         "bundled": "“{name}” comes with Mire: it can be turned off, not uninstalled."

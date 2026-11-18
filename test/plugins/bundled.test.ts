@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { MessageChannel } from 'node:worker_threads';
+import { fileBase, startInProcess } from '../../src/main/plugins/in-process.ts';
 import { createJournal } from '../../src/main/plugins/journal.ts';
 import { createPluginService } from '../../src/main/plugins/service.ts';
 import { createPluginState } from '../../src/main/plugins/state.ts';
@@ -57,10 +59,11 @@ function setup() {
       setTexts: () => {},
       translate: (k, vars) => `${k} ${JSON.stringify(vars ?? {})}`,
       locale: () => 'fr',
+      // Code sensible : dans ce processus, comme dans Mire ; code limité : pas d'hôte isolé ici.
       runners: () => ({
-        isolated: () => Promise.reject(new Error('pas de code ici')),
-        inProcess: () => Promise.reject(new Error('pas de code ici')),
-        base: () => '',
+        isolated: () => Promise.reject(new Error('pas d’hôte isolé ici')),
+        inProcess: (_p, endpoint, timeout) => Promise.resolve(startInProcess(endpoint, timeout, () => new MessageChannel())),
+        base: (p) => fileBase(p.dir),
         shutdown: () => {},
       }),
       onTaggersChange: () => {},
@@ -224,5 +227,44 @@ describe('désinstallation', () => {
     assert.ok(!existsSync(path.join(t.installed, 'org.exemple.garde')));
     await s.stop();
     assert.deepEqual(t.state().plugins, {});
+  });
+});
+
+describe('code sensible des plugins inclus', () => {
+  it('webExtensions et downloaders sont rendus par référence, seulement pour un plugin inclus actif', async () => {
+    const t = setup();
+    const dir = path.join(t.bundled, 'mire.exemple.sensible');
+    const files: Record<string, string> = {
+      'mire-plugin.json': JSON.stringify({
+        id: 'mire.exemple.sensible',
+        version: '1.0.0',
+        engines: { mire: '^1.0.0' },
+        level: 'privileged',
+        contributes: { webExtensions: [{ id: 'pubs', main: 'ext.mjs' }], downloaders: [{ id: 'ipfs', main: 'dl.mjs' }] },
+        i18n: 'i18n/',
+      }),
+      'ext.mjs': `export default () => ({ id: 'pubs', attach() {}, detach() {}, guardNavigation: (url) => url.includes('pub') });`,
+      'dl.mjs': `export default () => ({ id: 'ipfs', canHandle: (s) => s.startsWith('ipfs:'), add: () => ({ ok: true }), isLive: () => false, pause() {}, resume() {}, cancel: async () => {}, stop: async () => {} });`,
+      'i18n/en.json': catalog('en', 'Sensitive'),
+      'i18n/fr.json': catalog('fr', 'Sensible'),
+    };
+    for (const [rel, c] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      writeFileSync(path.join(dir, rel), c);
+    }
+    const s = t.make();
+    await s.start();
+    assert.equal(byId(s)['mire.exemple.sensible'].status, 'active');
+    const [ext] = s.local('webExtensions');
+    assert.equal(ext.pluginId, 'mire.exemple.sensible');
+    assert.equal((ext.instance as { guardNavigation(u: string): boolean }).guardNavigation('https://pub.test/'), true);
+    assert.deepEqual(
+      s.local('downloaders').map((c) => c.id),
+      ['ipfs'],
+    );
+    const off = await s.setEnabled('mire.exemple.sensible', false);
+    assert.equal(off?.restartRequired, true);
+    assert.deepEqual(s.local('webExtensions'), []);
+    await s.stop();
   });
 });

@@ -36,6 +36,15 @@ export const pluginTextPrefix = (id: string): string => `pluginTexts.${pluginTex
 export interface RunnerHandle {
   channel: Channel;
   stop(): void;
+  /** Processus principal : contributions `webExtensions` et `downloaders` par `<nature>/<id>` (voir `in-process.ts`). */
+  local?: ReadonlyMap<string, object>;
+}
+
+/** Contribution de code sensible d'un plugin inclus, branchée par référence au démarrage. */
+export interface LocalContribution {
+  pluginId: string;
+  id: string;
+  instance: object;
 }
 
 /** Ce qui fait tourner le code des plugins ; les pannes remontent par `events`. */
@@ -494,6 +503,20 @@ export function createPluginService(opts: PluginServiceOptions) {
       options: { timeout?: number } = {},
     ): Promise<unknown> {
       return call(pluginId, `${kind}/${contributionId}`, method, args, options);
+    },
+
+    /**
+     * `webExtensions` ou `downloaders` des plugins actifs, à brancher au démarrage (vues web, téléchargements). Code
+     * sensible : seulement un plugin `privileged` livré avec Mire (règle de P3-03), qui tourne dans ce processus.
+     */
+    local(kind: 'webExtensions' | 'downloaders'): LocalContribution[] {
+      return [...active.values()].flatMap(({ plugin: p, runner }) => {
+        if (p.manifest.level !== 'privileged' || known.get(p.id)?.origin !== 'bundled' || !runner?.local) return [];
+        return (p.manifest.contributes[kind] ?? []).flatMap((c) => {
+          const instance = runner.local!.get(`${kind}/${c.id}`);
+          return instance ? [{ pluginId: p.id, id: c.id, instance }] : [];
+        });
+      });
     },
 
     /** Niveau d'un plugin actif (`null` sinon) : les ponts appliquent ses règles aux résultats qu'il rend. */

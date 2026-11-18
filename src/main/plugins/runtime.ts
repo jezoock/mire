@@ -87,8 +87,12 @@ function createContext(
   });
 }
 
-/** Démarre le runtime d'un plugin sur `port`. */
-export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
+/**
+ * Démarre le runtime d'un plugin sur `port`. `local` (processus principal seulement) reçoit les contributions dont
+ * l'interface ne passe pas par des messages (`webExtensions`, `downloaders` : session des vues web, appels synchrones
+ * à chaque requête), par `<nature>/<id>`.
+ */
+export function startRuntime(port: PortLike, load: ModuleLoader, local?: Map<string, object>): Channel {
   const contributions = new Map<string, Record<string, unknown>>();
   const listeners = new Map<string, Set<(p: unknown) => void>>();
   const settingListeners = new Set<(key: string) => void>();
@@ -107,6 +111,7 @@ export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
       if (!instance || typeof instance !== 'object' || instance.id !== c.id)
         throw new ChannelError(CHANNEL_ERRORS.plugin, `${c.main}: the returned contribution must have the id "${c.id}".`);
       contributions.set(`${c.kind}/${c.id}`, instance);
+      if (local && LOCAL_KINDS.includes(c.kind)) local.set(`${c.kind}/${c.id}`, instance);
       loaded.push(`${c.kind}/${c.id}`);
     }
     return loaded;
@@ -174,6 +179,9 @@ export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
   channel.event('ready');
   return channel;
 }
+
+/** Natures branchées par référence directe, dans le processus principal (code sensible des plugins inclus). */
+export const LOCAL_KINDS: readonly string[] = ['webExtensions', 'downloaders'];
 
 // Position du contexte dans les méthodes des interfaces du SDK qui en reçoivent un.
 const CONTEXT_ARG: Readonly<Record<string, number>> = {
