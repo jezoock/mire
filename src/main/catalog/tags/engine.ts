@@ -206,6 +206,9 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
 
     nameOf,
 
+    /** Plusieurs modifications à la main (un regroupement, P4-22), recalculées et annoncées ensemble à la fin. */
+    batch: <T>(fn: () => T): T => overrides.batch(fn),
+
     /** Tags connus (`tags.list`) : ceux du cœur, puis de l'utilisateur, puis ceux posés sans être déclarés. */
     tagsList(): TagSummary[] {
       const core = registry.coreTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'core', count: index.tagCount(id) }));

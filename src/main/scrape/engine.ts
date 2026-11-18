@@ -232,6 +232,22 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     }
   }
 
+  /**
+   * Fiche choisie, récupérée sans être enregistrée (regroupements, P4-22) : ses infos, et ses images déjà copiées
+   * dans le dossier d'images (nommées d'après `key`). Le catalogue en fait des modifications à la main.
+   */
+  async function lookup({ kind, item, override, key }: OneJob): Promise<{ ok: true; facts: ScrapeFacts } | { ok: false; error?: string }> {
+    const provider = providerFor(kind);
+    if (!provider || !override?.pick || !key) return { ok: false };
+    try {
+      const found = await provider.byId(override.pick, item, { ...ctx, key });
+      return found ? { ok: true, facts: found } : { ok: false };
+    } catch (err) {
+      if (err instanceof ScrapeRefusal) return { ok: false, error: err.message };
+      throw err;
+    }
+  }
+
   // Toutes les fiches qui correspondent à une recherche, pour laisser choisir la bonne.
   async function candidates({ kind, item, query, year, artist }: CandidatesJob): Promise<CandidatesResult> {
     const q = String(query || '').trim();
@@ -253,6 +269,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     data: () => db.all(),
     run,
     one,
+    lookup,
     candidates,
     cancel: () => {
       state.cancel = true;

@@ -11,7 +11,7 @@
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
 import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from './element.ts';
-import type { PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
+import type { CatalogGroup, GroupEdit, GroupFetchResult, PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
@@ -324,6 +324,14 @@ export interface IpcMethods {
   catalogPickImage(key: string, field: keyof ElementImages): Element | null;
   catalogClearImages(key: string, fields: (keyof ElementImages)[]): Element | null;
   catalogReset(key: string): Element | null;
+  // Éditeurs des regroupements (P4-22) : un regroupement d'une page désigné par son chemin (`null` : page, chemin ou
+  // regroupement inconnus) ; une modification qui vaut pour tous ses éléments (rend le regroupement à son nouveau
+  // chemin, `null` s'il a disparu) ; une image choisie sur le disque ; une fiche choisie en ligne (`job` : demande
+  // de `scrapeCandidates` et fiche choisie), dont les images sont posées sur les éléments et les infos proposées.
+  catalogGroup(pageId: string, path: PagePath): CatalogGroup | null;
+  catalogEditGroup(pageId: string, path: PagePath, edit: GroupEdit): CatalogGroup | null;
+  catalogGroupPickImage(pageId: string, path: PagePath, field: keyof ElementImages): CatalogGroup | null;
+  catalogGroupFetch(pageId: string, path: PagePath, job: Record<string, unknown>): GroupFetchResult;
   // Pages et regroupements (P2-07) : `pages.*` et `catalog.page(pageId, path, cursor)` de l'architecture cible.
   pagesList(): PageDefinition[];
   pagesGet(id: string): PageDefinition | null;
@@ -481,6 +489,10 @@ export const IPC_METHODS = {
   catalogPickImage: 'catalog:pickImage',
   catalogClearImages: 'catalog:clearImages',
   catalogReset: 'catalog:reset',
+  catalogGroup: 'catalog:group',
+  catalogEditGroup: 'catalog:editGroup',
+  catalogGroupPickImage: 'catalog:groupPickImage',
+  catalogGroupFetch: 'catalog:groupFetch',
   tagsList: 'tags:list',
   pagesList: 'pages:list',
   pagesGet: 'pages:get',

@@ -4,7 +4,7 @@
  * niveau). Le calcul se fait dans le processus principal (`src/main/catalog/pages/`) ; l'interface demande un niveau à
  * la fois, par tranches (`catalog.page`).
  */
-import type { Element } from './element.ts';
+import type { Element, ElementImages, InfoChanges, TagChanges } from './element.ts';
 // Règle des identifiants de page : celle des cibles, publiée dans le SDK des plugins.
 import { PAGE_ID_RE } from '../../plugin-sdk/src/targets.ts';
 
@@ -81,6 +81,44 @@ export type PageLevel = {
   /** Curseur de la tranche suivante, ou `null` si c'est la dernière. */
   next: string | null;
 } & ({ kind: 'groups'; info: string; groups: PageGroup[] } | { kind: 'elements'; elements: PageElement[] });
+
+/**
+ * Regroupement d'une page ouvert dans un éditeur (P4-22) : un album, une série. `info` est l'info qui le forme
+ * (`album`, `series`) et `value` sa valeur (son nom) ; `elements` : tous ses éléments, quel que soit le nombre de
+ * niveaux en dessous (les épisodes de toutes les saisons d'une série).
+ */
+export interface CatalogGroup {
+  page: string;
+  path: PagePath;
+  info: string;
+  value: InfoScalar | null;
+  elements: Element[];
+}
+
+/** Modification d'un regroupement : elle vaut pour chacun de ses éléments. */
+export interface GroupEdit {
+  /** Nouveau nom : nouvelle valeur de l'info qui forme le regroupement (remplacée dans une liste, comme un genre). */
+  rename?: InfoScalar;
+  /** Autres infos (l'info qui forme le regroupement passe par `rename`). */
+  infos?: InfoChanges;
+  tags?: TagChanges;
+  /** Images qui reviennent à l'automatique. */
+  clearImages?: (keyof ElementImages)[];
+  /** Tags, infos et images de chaque élément reviennent à l'automatique. */
+  reset?: boolean;
+}
+
+/** Infos d'une fiche trouvée en ligne pour un regroupement, proposées dans l'éditeur avant d'être enregistrées. */
+export interface GroupFacts {
+  title: string;
+  year?: string;
+  genre?: string;
+  overview?: string;
+  artist?: string;
+}
+
+/** Réponse de `catalogGroupFetch` : la fiche (ses images sont déjà posées sur les éléments) et le regroupement. */
+export type GroupFetchResult = { ok: true; facts: GroupFacts; group: CatalogGroup | null } | { ok: false; error?: string };
 
 /** Réponse de `pages.save` : la page enregistrée, ou les endroits de la définition qui ne conviennent pas. */
 export type PageSaveResult = { ok: true; page: PageDefinition } | { ok: false; errors: string[] };
