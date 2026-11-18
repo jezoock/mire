@@ -256,8 +256,13 @@ function go(section, { focus = 'keep' } = {}) {
   renderRailSessions();
   render({ resetScroll: changed });
   updateScrapeButton();
-  if (section === SEARCH_VIEW) search.focusField();
-  if (focus === 'content') {
+  if (section === SEARCH_VIEW) {
+    search.focusField();
+    // Les chaînes entrent au catalogue quand leur liste est lue : comme l'ancienne recherche, on la lit en arrière-plan.
+    if (!S.channels && !S.tvLoading && !S.tvError) loadChannels();
+  }
+  // Le contenu de la Recherche est son champ (ci-dessus).
+  if (focus === 'content' && section !== SEARCH_VIEW) {
     focusFirst();
     // Vue encore en chargement (télé) : le focus ira au contenu dès qu'il arrive.
     // L'accueil rend ses rangées après avoir lu le catalogue : le focus ira à la première barre une fois rendues.
@@ -1402,6 +1407,7 @@ async function loadChannels() {
     if (S.pendingFocus || document.activeElement === document.body) focusFirst();
     S.pendingFocus = false;
   }
+  if (S.section === SEARCH_VIEW) search.refresh();
 }
 
 async function launchEntry(g) {

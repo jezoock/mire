@@ -1844,4 +1844,160 @@ describe('Test de fumée de Mire', () => {
       }
     });
   });
+
+  // Recherche (P4-13) : le catalogue groupé par page, « Où regarder » et les sites dans mire-search ; la frappe ne
+  // redessine pas les rangées ; un résultat s'ouvre dans sa page ; parcours à la manette.
+  describe('Recherche (P4-13)', () => {
+    const PAD = { a: 0, b: 1, lb: 4, rb: 5, down: 13 };
+    const VIEW = '#view mire-search mire-search-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const input = () => page.locator(`${VIEW} .mire-search-view__input`);
+    const openSearch = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), VIEW);
+    };
+    // Recherche tapée dans le champ, puis attente des groupes voulus, chaque carte rendue (classe hydrated).
+    const searchFor = async (query, group) => {
+      await input().fill(query);
+      await page.waitForFunction(
+        ([sel, g]) => {
+          const cards = [...document.querySelectorAll(`${sel} [data-group="${g}"] mire-card`)];
+          return cards.length && cards.every((c) => c.querySelector('ds-trigger.hydrated'));
+        },
+        [VIEW, group],
+      );
+    };
+    // Groupes affichés : identifiant et titres des cartes (ou des sites).
+    const shown = () =>
+      page.$$eval(`${VIEW} [data-group]`, (els) =>
+        els.map((e) => [e.dataset.group, [...e.querySelectorAll('.mire-card__title, .mire-search-view__site-name')].map((t) => t.textContent)]),
+      );
+    const imagesOpen = () => page.evaluate(() => !document.getElementById('image-layer').hidden);
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('une recherche : le catalogue groupé par page, « Où regarder » et les sites ; la frappe ne redessine pas les rangées', async () => {
+      await openSearch();
+      assert.equal(await page.locator('#title').textContent(), 'Rechercher');
+      await searchFor('démonstration', 'games');
+      assert.deepEqual(await shown(), [
+        ['games', ['Aventure de démonstration', 'Puzzle de démonstration']],
+        ['watch', []],
+        ['sites', ['Arte', 'Radio France']],
+      ]);
+      // Sans clé TMDB, « Où regarder » propose de l'ajouter.
+      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'Ajoutez une clé TMDB' }).waitFor();
+      // Les chaînes entrent au catalogue quand leur liste est lue : la Recherche les trouve.
+      await searchFor('chaîne', 'tv');
+      assert.deepEqual((await shown())[0], ['tv', ['Chaîne Deux', 'Chaîne Trois', 'Chaîne Une']]);
+      // Une frappe qui ne change pas les résultats : la vue reçoit les nouveaux groupes, la rangée garde ses cartes.
+      await page.evaluate((sel) => {
+        window.__searchRenders = 0;
+        window.__card = document.querySelector(`${sel} [data-group="tv"] mire-card`);
+        document.querySelector(sel).addEventListener('mireSearchRender', () => window.__searchRenders++);
+      }, VIEW);
+      await input().press('End');
+      await input().press('Space');
+      await page.waitForFunction(() => window.__searchRenders > 0);
+      assert.equal(await input().inputValue(), 'chaîne ');
+      assert.ok(
+        await page.evaluate((sel) => window.__card === document.querySelector(`${sel} [data-group="tv"] mire-card`) && window.__card.isConnected, VIEW),
+      );
+      // Entrée retient la recherche et va au premier résultat ; champ vidé, elle est dans les recherches récentes.
+      await input().press('Enter');
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} .mire-search-view__results`), VIEW);
+      await input().fill('');
+      await page.locator(`${VIEW} .mire-search-view__chip.hydrated`, { hasText: 'chaîne' }).first().waitFor();
+      // Une recherche récente relance la recherche.
+      await page.locator(`${VIEW} .mire-search-view__chip.hydrated`, { hasText: 'chaîne' }).first().click();
+      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="tv"]`), VIEW);
+      assert.equal(await input().inputValue(), 'chaîne');
+      assert.deepEqual(errors, []);
+    });
+
+    it('un résultat s’ouvre dans sa page ; le titre d’un groupe ouvre la page', async () => {
+      await openSearch();
+      await searchFor('vacances', 'images');
+      await page.locator(`${VIEW} [data-group="images"] mire-card ds-trigger.hydrated`).first().click();
+      // La page Images s'affiche, et l'image s'ouvre comme elle l'ouvrirait.
+      await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'images');
+      await page.waitForFunction(() => !document.getElementById('image-layer').hidden);
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => document.getElementById('image-layer').hidden);
+      assert.equal(await page.evaluate(() => document.body.dataset.section), 'page');
+      // Le titre d'un groupe ouvre sa page.
+      await openSearch();
+      await searchFor('vacances', 'images');
+      await page.locator(`${VIEW} [data-group="images"] .mire-search-view__heading-link.hydrated`).click();
+      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title').textContent === 'Images');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix va du champ aux résultats, A ouvre dans la page, B ferme, LB et RB changent d’écran', async () => {
+      await connectPad();
+      await openSearch();
+      await searchFor('plage', 'images');
+      await input().focus();
+      // Croix vers le bas : du champ aux résultats.
+      await padPress('down');
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} .mire-search-view__results`), VIEW);
+      // A sur la carte : la page Images, puis l'image ; B la ferme.
+      await page.locator(`${VIEW} [data-group="images"] mire-card ds-trigger.hydrated`).first().focus();
+      await padPress('a');
+      await page.waitForFunction(() => !document.getElementById('image-layer').hidden);
+      assert.equal(await page.evaluate(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key), 'images');
+      await padPress('b');
+      await page.waitForFunction(() => document.getElementById('image-layer').hidden);
+      assert.equal(await imagesOpen(), false);
+      // LB depuis la Recherche : le Centre (fin du cycle) ; RB depuis la Recherche : l'Accueil.
+      await openSearch();
+      await padPress('lb');
+      await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'screen:center');
+      await openSearch();
+      await padPress('rb');
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });

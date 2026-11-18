@@ -187,9 +187,13 @@ export function createSearch(opts: SearchOptions, doc: Document = document): Sea
       watch = { q: '', status: 'idle', results: [] };
     },
     focusField() {
-      const input = view.querySelector<HTMLInputElement>('.mire-search-view__input');
-      if (input) input.focus();
-      else requestAnimationFrame(() => view.querySelector<HTMLInputElement>('.mire-search-view__input')?.focus());
+      // Au premier affichage, la vue n'est pas encore rendue : le champ reçoit le focus dès qu'il existe.
+      const tryFocus = (left: number) => {
+        const field = view.querySelector<HTMLInputElement>('.mire-search-view__input');
+        if (field) field.focus();
+        else if (left > 0) requestAnimationFrame(() => tryFocus(left - 1));
+      };
+      tryFocus(30);
     },
     pageOf: (key) => pageOfResult(groups, key),
     watchResult: (key) => (watch.status === 'done' && watch.results.find((r) => r.key === key)) || null,
