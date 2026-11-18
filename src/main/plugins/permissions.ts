@@ -46,7 +46,16 @@ export function hostDeclared(hosts: readonly string[], hostname: string): boolea
   return hosts.some((d) => (d.startsWith('*.') ? h.endsWith(d.slice(1)) && h.length > d.length - 1 : h === d));
 }
 
-const PRIVATE_V4 = [/^10\./, /^127\./, /^169\.254\./, /^192\.168\./, /^172\.(1[6-9]|2\d|3[01])\./, /^0\./, /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./];
+const PRIVATE_V4 = [
+  /^10\./,
+  /^127\./,
+  /^169\.254\./,
+  /^192\.168\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^0\./,
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+  /^(22[4-9]|2[3-5]\d)\./,
+];
 
 /** Vrai si l'hôte désigne la machine ou le réseau local : nom local, adresse privée, de bouclage ou de lien. */
 export function isLocalHost(hostname: string): boolean {

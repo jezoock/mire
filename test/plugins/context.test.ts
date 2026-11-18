@@ -37,6 +37,8 @@ function fakeFetch(routes: Record<string, () => Response>) {
 function context(manifest: { level: 'code' | 'privileged' | 'data'; permissions?: Record<string, unknown> }, deps: Partial<ContextDeps> = {}) {
   const folders = new Map<string, string[]>();
   const all: ContextDeps = {
+    // Résolution simulée : tout nom mène à une adresse publique, sauf indication contraire.
+    lookup: async () => [{ address: '93.184.216.34' }],
     pickFolder: async () => null,
     folders: { list: (id) => folders.get(id) ?? [], add: (id, d) => folders.set(id, [...(folders.get(id) ?? []), d]) },
     storage: (id) => createPluginStorage(pluginDataDir(path.join(root, 'data'), id), 0),
@@ -121,6 +123,27 @@ describe('ctx.http', () => {
     const r = (await c.handle('http.request', ['https://api.exemple.org/v1'], signal())) as { headers: Record<string, string> };
     assert.equal(r.headers['set-cookie'], undefined);
     await assert.rejects(c.handle('http.request', ['https://api.exemple.org/gros'], signal()), (e) => code(e) === 'too-large');
+  });
+
+  it('hôte déclaré qui se résout vers le réseau local : refusé sans localNetwork', async () => {
+    const f = fakeFetch({ 'https://x.attaquant.com/': () => new Response('routeur'), 'https://api.exemple.org/v1': () => new Response('ok') });
+    const resolved: Record<string, string[]> = {
+      'x.attaquant.com': ['93.184.216.34', '10.0.0.1'],
+      'y.attaquant.com': ['::ffff:127.0.0.1'],
+      'api.exemple.org': ['93.184.216.34', '2606:2800:220:1::1'],
+    };
+    const lookup = async (h: string) => (resolved[h] ?? []).map((address) => ({ address }));
+    const hosts = ['x.attaquant.com', 'y.attaquant.com', 'api.exemple.org'];
+    const c = context({ level: 'code', permissions: { hosts } }, { fetch: f.fetch, lookup }).ctx();
+    await assert.rejects(c.handle('http.getText', ['https://x.attaquant.com/'], signal()), (e) => code(e) === 'refused');
+    await assert.rejects(c.handle('http.getText', ['https://y.attaquant.com/'], signal()), (e) => code(e) === 'refused');
+    assert.equal(await c.handle('http.getText', ['https://api.exemple.org/v1'], signal()), 'ok');
+    assert.deepEqual(f.asked, ['https://api.exemple.org/v1']);
+    // Et après une redirection vers un hôte déclaré qui mène au réseau local.
+    const r = fakeFetch({ 'https://api.exemple.org/r': () => new Response(null, { status: 302, headers: { location: 'https://x.attaquant.com/' } }) });
+    const c2 = context({ level: 'code', permissions: { hosts } }, { fetch: r.fetch, lookup }).ctx();
+    await assert.rejects(c2.handle('http.getText', ['https://api.exemple.org/r'], signal()), (e) => code(e) === 'refused');
+    assert.deepEqual(r.asked, ['https://api.exemple.org/r']);
   });
 
   it('réseau local : seulement pour le code sensible qui le déclare', async () => {

@@ -514,8 +514,11 @@ port est attribué. Aucune vérification n'est laissée à l'hôte.
   fichiers (50 000 au plus). Côté ponts (`BRIDGE_LIMITS`) : 50 000 éléments par analyse, résultat de recherche 1 Mio.
 - **Codes d'erreur** rendus au plugin : `refused`, `too-large`, `busy`, `http-error`, `io-error` (en plus de ceux du
   canal).
-- **Limite** : un hôte déclaré qui se résout vers une adresse locale n'est pas arrêté (la vérification porte sur le
-  nom) ; à reprendre avec la confiance des dépôts (P3-08).
+- **Résolution** : avant chaque requête et chaque redirection, le nom est résolu (`dns.lookup`, toutes les adresses) ;
+  sans `localNetwork`, la requête est refusée si l'une d'elles est locale (IPv4, IPv6 ou IPv4 dans IPv6), pour qu'un
+  hôte déclaré ne puisse pas pointer vers le routeur ou un service de la machine. **Risque qui reste** : un changement
+  d'adresse entre cette résolution et la connexion (nom à TTL nul) ; le fermer demanderait de fixer l'adresse résolue
+  pour la connexion, piste pour P3-08.
 
 ### Ce qu'il ne faut jamais affaiblir
 

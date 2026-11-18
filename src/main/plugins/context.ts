@@ -13,6 +13,7 @@
  * Bornes (ADR 0002) : `LIMITS`. Les erreurs rendues au plugin sont des diagnostics techniques en anglais, comme ceux du
  * canal ; aucune ne reprend un en-tête, un corps ou un réglage (rien de secret n'en sort).
  */
+import dns from 'node:dns';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -20,7 +21,7 @@ import type { FileEntry, HttpRequestOptions, HttpResponse, WalkOptions } from '@
 import { HttpError, request, type FetchLike } from '../net/http.ts';
 import { createAccessPolicy } from '../security/access-policy.ts';
 import { CHANNEL_ERRORS, ChannelError } from './channel.ts';
-import { grantedPermissions, urlRefusal, type Granted } from './permissions.ts';
+import { grantedPermissions, isLocalHost, urlRefusal, type Granted } from './permissions.ts';
 import type { PluginStorage } from './plugin-storage.ts';
 
 /** Bornes du contexte, par plugin. */
@@ -51,6 +52,8 @@ const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 export interface ContextDeps {
   /** fetch utilisé par le client HTTP (tests) ; par défaut le fetch global. */
   fetch?: FetchLike;
+  /** Résolution d'un nom (tests) ; par défaut `dns.lookup(host, { all: true })`. */
+  lookup?: (host: string) => Promise<{ address: string }[]>;
   /** Demande un dossier à l'utilisateur pour ce plugin ; `null` s'il refuse. */
   pickFolder(pluginId: string, purpose: string): Promise<string | null>;
   /** Dossiers accordés à chaque plugin, mémorisés. */
@@ -178,6 +181,22 @@ export function createContextHandler(deps: ContextDeps) {
     // -----------------------------------------------------------------------------------------------------------
     // http
 
+    /**
+     * Un hôte déclaré ne doit pas mener au réseau local : son nom est résolu et la requête refusée si l'une des
+     * adresses est locale (un nom public peut pointer vers 192.168.1.1 ou 127.0.0.1). Reste un changement d'adresse
+     * entre cette résolution et la connexion (TTL nul) : le fermer demanderait de fixer l'adresse résolue (P3-08).
+     */
+    async function checkResolved(host: string): Promise<void> {
+      let addresses: { address: string }[];
+      try {
+        addresses = await (deps.lookup ?? ((h: string) => dns.promises.lookup(h, { all: true })))(host);
+      } catch {
+        throw new ChannelError(CHANNEL_ERRORS.http, `${host} could not be resolved.`);
+      }
+      if (addresses.some((a) => isLocalHost(a.address)))
+        throw refused(`${host} leads to the local network: the "localNetwork" permission is needed (privileged plugins only).`);
+    }
+
     async function fetchChecked(url: string, raw: unknown, signal: AbortSignal): Promise<{ res: Response; url: string }> {
       let target: URL;
       try {
@@ -190,6 +209,7 @@ export function createContextHandler(deps: ContextDeps) {
       for (let hop = 0; ; hop++) {
         const why = urlRefusal(granted, target);
         if (why) throw refused(why);
+        if (!granted.localNetwork) await checkResolved(target.hostname);
         const res = await request(target.href, { method, headers: o.headers, body, timeout: o.timeout, signal, redirect: 'manual', fetch: deps.fetch }).catch(
           (err) => {
             throw httpFailure(err);
