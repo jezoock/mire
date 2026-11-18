@@ -1,4 +1,4 @@
-import { Component, Element } from '@stencil/core';
+import { Component, Element, Host, h } from '@stencil/core';
 
 /**
  * Hôte des boîtes de dialogue et des notifications (P4-06) : le service des boîtes (`src/renderer/ui/dialogs.ts`) y
@@ -12,5 +12,11 @@ export class MireDialogs {
 
   connectedCallback() {
     this.host.dispatchEvent(new CustomEvent('mireConnect', { bubbles: true, detail: { tag: 'mire-dialogs' } }));
+  }
+
+  // Un rendu (vide, sans état : il n'a jamais lieu qu'une fois) donne la classe `hydrated`, que la navigation attend
+  // des composants affichés (P4-03b) ; les boîtes placées ensuite par le service ne sont pas touchées.
+  render() {
+    return <Host class="mire-dialogs" />;
   }
 }

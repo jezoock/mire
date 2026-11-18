@@ -152,7 +152,9 @@ let legacy: DemoLegacy | null = null;
 function showResult(result: unknown): void {
   const el = document.querySelector('.mire-ui-demo__result');
   const text = result === null || (result as { action?: string })?.action === 'cancel' ? t('demo.dialogs.cancelled') : JSON.stringify(result);
-  if (el) el.textContent = t('demo.dialogs.result', { result: text });
+  if (!(el instanceof HTMLElement)) return;
+  el.textContent = t('demo.dialogs.result', { result: text });
+  el.dataset.result = JSON.stringify(result ?? null);
 }
 
 const d = (key: string) => t(`demo.dialogs.${key}`);
