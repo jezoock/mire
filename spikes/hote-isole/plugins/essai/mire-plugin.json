@@ -1,0 +1,12 @@
+{
+  "id": "org.exemple.essai",
+  "version": "0.1.0",
+  "engines": { "mire": "^1.0.0" },
+  "level": "code",
+  "contributes": {
+    "taggers": [{ "id": "essai-tags", "main": "tags.mjs", "tags": ["essai", "hd", "sd"], "infos": { "annee": { "type": "number" } } }],
+    "metadata": [{ "id": "essai-infos", "main": "infos.mjs", "kinds": ["video"] }]
+  },
+  "permissions": { "hosts": ["api.exemple.org"] },
+  "i18n": "i18n"
+}

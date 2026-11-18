@@ -1,0 +1,8 @@
+{
+  "meta": { "code": "en", "name": "English", "app": "1.0.0" },
+  "messages": {
+    "plugin": { "name": "Test plugin (isolated host prototype)" },
+    "tags": { "essai": "Test", "hd": "High definition", "sd": "Standard definition" },
+    "infos": { "annee": "Year" }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "meta": { "code": "fr", "name": "Français", "app": "1.0.0" },
+  "messages": {
+    "plugin": { "name": "Plugin d'essai (prototype de l'hôte isolé)" },
+    "tags": { "essai": "Essai", "hd": "Haute définition", "sd": "Définition standard" },
+    "infos": { "annee": "Année" }
+  }
+}
