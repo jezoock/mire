@@ -27,7 +27,7 @@ const SECTIONS = [
   ['streaming', 'Streaming'],
   ['tv', 'Télévision'],
   ['games', 'Jeux'],
-  ['downloads', 'Téléchargements'],
+  ['downloads', 'Centre'],
   ['settings', 'Réglages'],
 ];
 // Sections historiques des pages (P4-11) : le menu ouvre la vue de page, « Ancienne vue » la section historique.
@@ -1676,7 +1676,7 @@ describe('Test de fumée de Mire', () => {
 
     it('le Centre affiche les téléchargements ; une ligne qui avance ne redessine qu’elle', async () => {
       await openCentre();
-      assert.equal(await page.locator('#title').textContent(), 'Téléchargements');
+      assert.equal(await page.locator('#title').textContent(), 'Centre');
       assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:center');
       const rows = () => page.$$eval(`${VIEW} mire-download-row`, (els) => els.map((e) => [e.closest('[data-group]').dataset.group, e.dataset.key]));
       assert.deepEqual(await rows(), [

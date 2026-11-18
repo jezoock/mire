@@ -189,7 +189,7 @@ test('launchRom : jeu en ligne copié dans le cache par le gestionnaire de tél�
   assert.match((await launchRom(deps, 'snes', 'https://roms.test/snesxx/Jeu.sfc')).error!, /ne provient pas/);
 });
 
-test('launchRom : jeu sur disque en ligne (index et pistes) ; annulation dans Téléchargements', async () => {
+test('launchRom : jeu sur disque en ligne (index et pistes) ; annulation dans le Centre', async () => {
   const emu = { id: 'ps1', name: 'PS1', path: 'ps1', sources: ['https://roms.test/ps1/'] };
   const { deps, calls, cacheDir } = launchDeps(emu);
   write(path.join('cache', 'ps1', 'Jeu', 'Jeu (Piste 1).bin'));
