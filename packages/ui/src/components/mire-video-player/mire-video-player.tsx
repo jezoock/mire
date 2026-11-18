@@ -169,7 +169,7 @@ export class MireVideoPlayer {
               <span class="mire-video-player__time">{this.time}</span>
               <span class="mire-video-player__spacer" />
               {this.subtitles ? (
-                <ds-trigger class="mire-video-player__trigger" target="mire-video-player" action="cycleSubtitles">
+                <ds-trigger class="mire-video-player__trigger mire-video-player__subs" target="mire-video-player" action="cycleSubtitles">
                   {this.textButton(icons.subs, this.subtitles)}
                 </ds-trigger>
               ) : null}

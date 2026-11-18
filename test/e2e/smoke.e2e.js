@@ -2440,4 +2440,167 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Lecteur vidéo (P4-14)', () => {
+    // Vidéo de démonstration de six minutes, sans son, avec des sous-titres en anglais et en français à côté.
+    const PAD = { b: 1, lt: 6, rt: 7, up: 12, down: 13 };
+    const PLAYER = 'mire-video-player';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    let file;
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const isOpen = () => page.evaluate((sel) => !document.querySelector(sel).hidden, PLAYER);
+    const text = (part) => page.evaluate(([sel, p]) => document.querySelector(`${sel} .mire-video-player__${p}`)?.textContent ?? null, [PLAYER, part]);
+    const state = () =>
+      page.evaluate((sel) => {
+        const v = document.querySelector(`${sel} video`);
+        const [seek, volume] = [...document.querySelectorAll(`${sel} ds-range input`)];
+        return { time: v.currentTime, volume: v.volume, seek: Number(seek.value), volumeRange: Number(volume.value), paused: v.paused };
+      }, PLAYER);
+    // Le lecteur est rendu (hydrated) et la durée de la vidéo connue : les touches peuvent agir.
+    const ready = () =>
+      page.waitForFunction(
+        (sel) => {
+          const el = document.querySelector(sel);
+          return el?.classList.contains('hydrated') && !el.hidden && el.querySelector('video').readyState >= 1;
+        },
+        PLAYER,
+        { timeout: 15000 },
+      );
+    // Ouverture comme depuis le système (fichier passé à une seconde instance de Mire).
+    const openDemo = async () => {
+      await app.evaluate(({ app: a }, f) => a.emit('second-instance', {}, ['electron', '.', f]), file);
+      await ready();
+    };
+    const pause = async () => {
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} video`).paused, PLAYER);
+      await page.keyboard.press(' ');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} video`).paused, PLAYER);
+    };
+
+    before(() => {
+      file = path.join(tmp, 'fixtures', 'media', 'Démonstration.webm');
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      if (await isOpen()) await page.keyboard.press('Escape');
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('une vidéo de démonstration s’ouvre : titre, réglettes, sous-titres en français', async () => {
+      const from = await page.evaluateHandle(() => document.activeElement);
+      await openDemo();
+      assert.equal(await text('title'), 'Démonstration');
+      assert.equal(await text('sub'), 'media');
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} ds-range.hydrated`).length === 2, PLAYER);
+      // Les sous-titres français sont activés d'office.
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__subs`)?.textContent === 'Sous-titres : fr', PLAYER);
+      const showing = await page.evaluate((sel) => [...document.querySelector(`${sel} video`).textTracks].map((t) => `${t.label}:${t.mode}`), PLAYER);
+      assert.deepEqual(showing.sort(), ['en:disabled', 'fr:showing']);
+      // Pause (Espace) : l'affichage reste ; le message au centre s'efface avant la capture.
+      await pause();
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} .mire-video-player__osd`).classList.contains('is-shown'), PLAYER);
+      await page.evaluate((sel) => (document.querySelector(`${sel} video`).currentTime = 30), PLAYER);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__time`)?.textContent === '0:30 / 6:00', PLAYER);
+      await settle();
+      await shot('lecteur-video');
+      // Échap ferme et rend le focus là où il était.
+      await page.keyboard.press('Escape');
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      assert.ok(await page.evaluate((f) => document.activeElement === f, from));
+      assert.deepEqual(errors, []);
+    });
+
+    it('clavier : les flèches règlent la position et le volume, S change les sous-titres', async () => {
+      await openDemo();
+      // Position gardée en fermant (30 s) : la vidéo reprend là, avec un message.
+      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 30) < 2, PLAYER);
+      await page.locator('#toast').getByText('Reprise à 0:30').waitFor();
+      await pause();
+      const start = await state();
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(([sel, t]) => document.querySelector(`${sel} video`).currentTime > t + 9, [PLAYER, start.time]);
+      assert.match(await text('osd'), /^\+10 s {2}0:4\d$/);
+      const after = await state();
+      assert.ok(after.seek > start.seek, 'la réglette de position suit');
+      await page.keyboard.press('ArrowUp');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
+      const louder = await state();
+      assert.equal(louder.volumeRange, louder.volume, 'la réglette du volume suit');
+      assert.equal(await text('osd'), `Volume ${Math.round(louder.volume * 100)} %`);
+      await page.keyboard.press('ArrowDown');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
+      // S : sous-titres suivants (après le français, aucun).
+      await page.keyboard.press('s');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__subs`)?.textContent === 'Sous-titres : non', PLAYER);
+      assert.equal(await text('osd'), 'Sous-titres désactivés');
+      // La réglette de position, à la souris : la vidéo va au milieu.
+      await page.evaluate((sel) => {
+        const input = document.querySelector(`${sel} .mire-video-player__seek input`);
+        input.value = '500';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, PLAYER);
+      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 180) < 1, PLAYER);
+      assert.equal(await page.evaluate((sel) => document.activeElement === document.querySelector(sel), PLAYER), true);
+      // Le bouton de fermeture (ds-trigger vers le contrôleur).
+      await page.locator(`${PLAYER} ds-trigger[action="close"] button`).click();
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : RT et LT avancent et reculent d’une minute, la croix règle le volume, B ferme', async () => {
+      await connectPad();
+      await openDemo();
+      await pause();
+      await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('Sous-titres'));
+      const start = await state();
+      await padPress('rt');
+      await page.waitForFunction(([sel, t]) => document.querySelector(`${sel} video`).currentTime > t + 59, [PLAYER, start.time]);
+      await padPress('lt');
+      await page.waitForFunction(([sel, t]) => Math.abs(document.querySelector(`${sel} video`).currentTime - t) < 1, [PLAYER, start.time]);
+      await padPress('up');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
+      assert.equal((await state()).volumeRange, (await state()).volume);
+      await padPress('down');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
+      await padPress('b');
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });
