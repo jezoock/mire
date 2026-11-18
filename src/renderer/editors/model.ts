@@ -70,7 +70,14 @@ export function editorFields(el: CatalogElement, known: readonly TagSummary[], t
     if (f === 'genres') return { id: f, label, value: values[f], placeholder: t('editors.fields.genresHint'), full: true };
     return { id: f, label, value: values[f], full: f === 'title' };
   });
-  fields.push({ id: TAGS_FIELD, type: 'list', label: t('editors.fields.tags'), value: tagNames(el.tags, known), placeholder: t('editors.fields.tagsHint') });
+  fields.push({
+    id: TAGS_FIELD,
+    type: 'list',
+    label: t('editors.fields.tags'),
+    value: tagNames(el.tags, known),
+    placeholder: t('editors.fields.tagsHint'),
+    folders: false,
+  });
   for (const f of images) fields.push({ id: f, type: 'image', label: t(`editors.fields.${f}`), value: el.images[f] ?? '', wide: f === 'background' });
   return fields;
 }

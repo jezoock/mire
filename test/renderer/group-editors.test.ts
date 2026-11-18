@@ -99,6 +99,7 @@ describe('éditeurs des regroupements : champs et valeurs communes', () => {
     );
     assert.equal(fields[2].placeholder, 'Plusieurs valeurs');
     assert.deepEqual(fields[4].value, ['Sur l’ordinateur', 'Musique']);
+    assert.equal(fields[4].folders, false);
     const series = groupFields({ ...ALBUM, info: 'series', value: 'Friends' }, KNOWN, tEn);
     assert.deepEqual(
       series.map((f) => f.id),
@@ -142,13 +143,13 @@ describe('éditeurs des regroupements : modification à enregistrer', () => {
 
   it('regroupement désigné par l’action de sa carte : page affichée, ou accueil (page donnée)', () => {
     const route = { page: 'music', path: ['Orchestre'] };
-    assert.deepEqual(groupRefOfAction('openGroup:[{"value":"Premier album"}]', 'mire-page', route), { page: 'music', path: ['Orchestre', 'Premier album'] });
-    assert.deepEqual(groupRefOfAction('openGroup:[{"target":"movies","value":"Drame"}]', 'mire-home', null), { page: 'movies', path: ['Drame'] });
-    assert.deepEqual(groupRefOfAction('openGroup:[{"value":null}]', 'mire-page', route), { page: 'music', path: ['Orchestre', null] });
-    assert.equal(groupRefOfAction('openGroup:[{"value":"A"}]', 'mire-page', null), null);
-    assert.equal(groupRefOfAction('openElement:[{"key":"a"}]', 'mire-page', route), null);
-    assert.equal(groupRefOfAction('openGroup:pas du json', 'mire-page', route), null);
-    assert.equal(groupRefOfAction(null, null, route), null);
+    assert.deepEqual(groupRefOfAction('openGroup:[{"value":"Premier album"}]', true, route), { page: 'music', path: ['Orchestre', 'Premier album'] });
+    assert.deepEqual(groupRefOfAction('openGroup:[{"target":"movies","value":"Drame"}]', false, null), { page: 'movies', path: ['Drame'] });
+    assert.deepEqual(groupRefOfAction('openGroup:[{"value":null}]', true, route), { page: 'music', path: ['Orchestre', null] });
+    assert.equal(groupRefOfAction('openGroup:[{"value":"A"}]', true, null), null);
+    assert.equal(groupRefOfAction('openElement:[{"key":"a"}]', true, route), null);
+    assert.equal(groupRefOfAction('openGroup:pas du json', true, route), null);
+    assert.equal(groupRefOfAction(null, true, route), null);
   });
 });
 

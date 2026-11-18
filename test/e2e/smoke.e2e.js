@@ -2147,4 +2147,151 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Éditeurs des regroupements (P4-22)', () => {
+    const PAD = { a: 0, b: 1, x: 2, down: 13 };
+    const VIEW = '#view mire-page-view';
+    const FORM = 'mire-dialogs mire-form';
+    // Les morceaux de démonstration n'ont pas d'artiste : ils sont rangés sous « Autres » (`null`).
+    const ARTIST = null;
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // La carte de l'album, rendue avec ce nom.
+    const card = () => page.locator(`${VIEW} mire-group-card ds-trigger.hydrated`).first();
+    const albumShown = (name) =>
+      page.waitForFunction(
+        ([sel, n]) => {
+          const c = document.querySelector(`${sel} mire-group-card`);
+          return c?.querySelector('ds-trigger.hydrated') && c.querySelector('.mire-group-card__title')?.textContent === n;
+        },
+        [VIEW, name],
+      );
+    // Page Musique, au niveau des albums.
+    const openAlbums = async () => {
+      await page.evaluate((a) => document.querySelector('mire-app').open({ target: 'music', path: [a] }), ARTIST);
+      await page.waitForFunction((sel) => document.body.dataset.section === 'page' && document.querySelector(sel)?.classList.contains('hydrated'), VIEW);
+    };
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const group = (name) => page.evaluate(([a, n]) => window.api.catalogGroup('music', [a, n]), [ARTIST, name]);
+    const focusIn = (sel) => page.evaluate((s) => !!document.activeElement?.closest(s), sel);
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('clic droit sur un album : son nom et un tag pour tous ses morceaux, puis réinitialiser (touche E)', async () => {
+      await openAlbums();
+      await albumShown('Premier album');
+      const before = await group('Premier album');
+      assert.ok(before.elements.length > 0);
+      await card().click({ button: 'right' });
+      assert.equal(await formOpen(), 'Modifier l’album');
+      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), 'Premier album');
+      await page.locator(`${FORM} input`).first().fill('Premier album (réédition)');
+      await page.locator(`${FORM} .mire-form__list input`).fill('À écouter');
+      await page.locator(`${FORM} .mire-form__list ds-trigger`, { hasText: 'Ajouter' }).click();
+      await page.locator(`${FORM} .mire-form__entry .mire-form__value`, { hasText: 'À écouter' }).waitFor();
+      await shot('editor-album');
+      await button('Enregistrer').click();
+      await formClosed();
+      // La page se met à jour : l'album porte son nouveau nom ; chaque morceau a le tag de l'utilisateur.
+      await albumShown('Premier album (réédition)');
+      const edited = await group('Premier album (réédition)');
+      assert.equal(edited.elements.length, before.elements.length);
+      const mine = (await page.evaluate(() => window.api.tagsList())).find((t) => t.name === 'À écouter');
+      assert.equal(mine?.origin, 'user');
+      for (const e of edited.elements) assert.ok(e.tags.includes(mine.id));
+      assert.equal(await group('Premier album'), null);
+      // Touche E sur la carte, puis « Réinitialiser » : nom et tags d'origine.
+      await card().focus();
+      await page.keyboard.press('e');
+      assert.equal(await formOpen(), 'Modifier l’album');
+      await button('Réinitialiser').click();
+      await formClosed();
+      await albumShown('Premier album');
+      const reset = await group('Premier album');
+      assert.deepEqual(
+        reset.elements.map((e) => [...e.tags].sort()),
+        before.elements.map((e) => [...e.tags].sort()),
+      );
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : X ouvre l’éditeur de l’album, la croix parcourt les champs, A choisit Annuler, B ferme', async () => {
+      await connectPad();
+      await openAlbums();
+      await albumShown('Premier album');
+      const before = await group('Premier album');
+      await card().focus();
+      await padPress('x');
+      assert.equal(await formOpen(), 'Modifier l’album');
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      const first = await page.evaluateHandle(() => document.activeElement);
+      await padPress('down');
+      assert.ok(await page.evaluate((f) => document.activeElement !== f, first));
+      assert.ok(await focusIn(FORM));
+      await button('Annuler').focus();
+      await padPress('a');
+      await formClosed();
+      await card().focus();
+      await padPress('x');
+      await formOpen();
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      await padPress('b');
+      await formClosed();
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-group-card`), VIEW);
+      assert.deepEqual(await group('Premier album'), before);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });

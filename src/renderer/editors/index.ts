@@ -22,7 +22,7 @@ export function cardKeyOf(node: Element | null = document.activeElement): string
  */
 export function groupRefOf(node: Element | null, route: GroupRef | null): GroupRef | null {
   const trigger = node?.closest('ds-trigger') ?? null;
-  return trigger ? groupRefOfAction(trigger.getAttribute('action'), trigger.getAttribute('target'), route) : null;
+  return trigger ? groupRefOfAction(trigger.getAttribute('action'), !!trigger.closest('mire-page-view'), route) : null;
 }
 
 /** Place l'hôte `mire-editor` et ouvre l'éditeur d'une carte (élément ou regroupement) au clic droit. */

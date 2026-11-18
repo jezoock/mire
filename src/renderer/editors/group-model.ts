@@ -75,6 +75,7 @@ export function groupFields(g: CatalogGroup, known: readonly TagSummary[], t: Tr
     label: t('editors.fields.tags'),
     value: tagNames(commonTags(g.elements), known),
     placeholder: t('editors.fields.tagsHint'),
+    folders: false,
   });
   for (const f of images) fields.push({ id: f, type: 'image', label: t(`editors.fields.${f}`), value: commonImage(g.elements, f), wide: f === 'background' });
   return fields;
@@ -133,8 +134,11 @@ export function factValues(
 export const groupTitle = (kind: GroupKind, t: Translate): string => t(`editors.group.title.${kind}`);
 export const groupHelp = (g: CatalogGroup, t: Translate): string => t('editors.group.help', { count: g.elements.length });
 
-/** Regroupement désigné par l'action `openGroup` d'une carte : celle d'une page (`route`), ou de l'accueil (`target`). */
-export function groupRefOfAction(action: string | null, target: string | null, route: GroupRef | null): GroupRef | null {
+/**
+ * Regroupement désigné par l'action `openGroup` d'une carte : dans la vue de page (`inPage`), au chemin affiché
+ * (`route`) ; à l'accueil, la page est donnée par l'action (`target`).
+ */
+export function groupRefOfAction(action: string | null, inPage: boolean, route: GroupRef | null): GroupRef | null {
   const m = /^openGroup:(.*)$/s.exec(action ?? '');
   if (!m) return null;
   let args: unknown;
@@ -147,6 +151,6 @@ export function groupRefOfAction(action: string | null, target: string | null, r
   if (!a || !('value' in a)) return null;
   const value = a.value as PagePath[number];
   if (typeof a.target === 'string' && a.target) return { page: a.target, path: [value] };
-  if (target === 'mire-page' && route) return { page: route.page, path: [...route.path, value] };
+  if (inPage && route) return { page: route.page, path: [...route.path, value] };
   return null;
 }
