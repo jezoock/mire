@@ -19,7 +19,7 @@ import { initGamepad, startGamepad } from './nav/gamepad.ts';
 import { nextSection } from './nav/gamepad-data.ts';
 import { setVolume } from './players/volume.ts';
 import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
-import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
+import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey, videoUi } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
 import { createPaletteLoader } from '@mire/ui/palettes';
 import { DEMO_SECTION, demoTitle, initDemoDialogs, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
@@ -2580,7 +2580,7 @@ const legacyUi = {
   openFileDialog, scan, addSourceFolder, askSourceAddress, removeSource, startScrape, updateScrapeButton, reloadScrape,
   playInContext, playRecent, openVideo, playQueue, openImages,
   pauseAudio: () => audio.pause(),
-  toggleAudio, openExternal, addRecent,
+  toggleAudio, openExternal, addRecent, video: videoUi,
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,

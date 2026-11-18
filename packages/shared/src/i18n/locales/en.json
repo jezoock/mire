@@ -608,7 +608,13 @@
         "slideshow": "Slideshow",
         "image": "Picture",
         "confirm": "OK",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "detected": "{name} controller detected. The controls are shown at the bottom of the screen.",
+        "disconnected": "Controller disconnected",
+        "buttons": {
+          "view": "View",
+          "create": "Create"
+        }
       }
     },
     "themes": {
@@ -990,6 +996,42 @@
         "failed": "Couldn't add to this list."
       },
       "gone": "This item is no longer in the catalog."
+    },
+    "player": {
+      "video": {
+        "close": "Close the player",
+        "external": "External player",
+        "seek": "Position in the video",
+        "prev": "Previous video",
+        "next": "Next video",
+        "play": "Play or pause",
+        "volume": "Volume",
+        "fullscreen": "Full screen",
+        "position": "{folder}, {index} of {count}",
+        "subtitles": {
+          "on": "Subtitles: {label}",
+          "off": "Subtitles: off"
+        },
+        "osd": {
+          "play": "Play",
+          "pause": "Pause",
+          "forward": "+{seconds} s  {time}",
+          "back": "−{seconds} s  {time}",
+          "volume": "Volume {percent}%",
+          "muted": "Sound off",
+          "unmuted": "Sound on",
+          "subtitlesOff": "Subtitles off"
+        },
+        "resume": {
+          "at": "Resumed at {time}",
+          "restart": "Start over"
+        },
+        "silent": {
+          "message": "No sound? This file’s audio track probably can’t be played here.",
+          "action": "Open in the external player"
+        },
+        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
+      }
     }
   }
 }

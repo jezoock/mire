@@ -14,6 +14,7 @@ import { PlayerController } from './player.ts';
 import { registerController } from './registry.ts';
 import { SearchController } from './search.ts';
 import { SettingsController } from './settings.ts';
+import { VideoController } from './video.ts';
 import type { ControllerContext } from './types.ts';
 import { WebController } from './web.ts';
 
@@ -27,6 +28,7 @@ export const CONTROLLER_CLASSES = {
   'mire-centre': CentreController,
   'mire-settings': SettingsController,
   'mire-player': PlayerController,
+  'mire-video-player': VideoController,
   'mire-web': WebController,
   'mire-dialogs': DialogsController,
   'mire-editor': EditorController,
@@ -44,6 +46,7 @@ export interface Controllers {
   centre: CentreController;
   settings: SettingsController;
   player: PlayerController;
+  video: VideoController;
   web: WebController;
   dialogs: DialogsController;
   editor: EditorController;
@@ -60,6 +63,7 @@ export function createControllers(ctx: ControllerContext): Controllers {
     centre: new CentreController(ctx),
     settings: new SettingsController(ctx),
     player: new PlayerController(ctx),
+    video: new VideoController(ctx),
     web: new WebController(ctx),
     dialogs: new DialogsController(ctx),
     editor: new EditorController(ctx),
@@ -82,5 +86,6 @@ export {
   PlayerController,
   SearchController,
   SettingsController,
+  VideoController,
   WebController,
 };

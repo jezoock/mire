@@ -15,6 +15,7 @@ import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
@@ -25,6 +26,7 @@ export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+export { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -32,7 +34,8 @@ export namespace Components {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -906,6 +909,82 @@ export namespace Components {
          */
         "watch": WatchView | string | null;
     }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface MireVideoPlayer {
+        /**
+          * @default false
+         */
+        "hasNext": boolean;
+        /**
+          * Vidéos avant et après dans la liste.
+          * @default false
+         */
+        "hasPrev": boolean;
+        /**
+          * Titre et sous-titre de l'en-tête.
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "icons": VideoPlayerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment pendant la lecture : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle": boolean;
+        /**
+          * Textes (voir `VideoPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels": VideoPlayerLabels | string;
+        /**
+          * Message au centre de l'écran, et s'il est montré (il s'efface en fondu : le texte reste pendant ce temps).
+          * @default ''
+         */
+        "osd": string;
+        /**
+          * @default false
+         */
+        "osdShown": boolean;
+        /**
+          * La vidéo joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing": boolean;
+        /**
+          * @default 0
+         */
+        "position": number;
+        /**
+          * @default ''
+         */
+        "subheading": string;
+        /**
+          * Libellé du bouton des sous-titres ; vide : la vidéo n'en a pas, le bouton est caché.
+          * @default ''
+         */
+        "subtitles": string;
+        /**
+          * Position écrite (« 1:23 / 45:00 ») et proportion lue, de 0 à 1.
+          * @default ''
+         */
+        "time": string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume": number;
+    }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -931,6 +1010,10 @@ export interface MireSearchViewCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireSearchViewElement;
 }
+export interface MireVideoPlayerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireVideoPlayerElement;
+}
 declare global {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -938,7 +1021,8 @@ declare global {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
@@ -1344,6 +1428,33 @@ declare global {
         prototype: HTMLMireSearchViewElement;
         new (): HTMLMireSearchViewElement;
     };
+    interface HTMLMireVideoPlayerElementEventMap {
+        "mireVideoSeek": { ratio: number; commit: boolean };
+        "mireVideoVolume": { value: number; commit: boolean };
+    }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface HTMLMireVideoPlayerElement extends Components.MireVideoPlayer, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireVideoPlayerElementEventMap>(type: K, listener: (this: HTMLMireVideoPlayerElement, ev: MireVideoPlayerCustomEvent<HTMLMireVideoPlayerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireVideoPlayerElementEventMap>(type: K, listener: (this: HTMLMireVideoPlayerElement, ev: MireVideoPlayerCustomEvent<HTMLMireVideoPlayerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireVideoPlayerElement: {
+        prototype: HTMLMireVideoPlayerElement;
+        new (): HTMLMireVideoPlayerElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
@@ -1372,6 +1483,7 @@ declare global {
         "mire-row": HTMLMireRowElement;
         "mire-search": HTMLMireSearchElement;
         "mire-search-view": HTMLMireSearchViewElement;
+        "mire-video-player": HTMLMireVideoPlayerElement;
     }
 }
 declare namespace LocalJSX {
@@ -1381,7 +1493,8 @@ declare namespace LocalJSX {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -2257,6 +2370,90 @@ declare namespace LocalJSX {
          */
         "watch"?: WatchView | string | null;
     }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface MireVideoPlayer {
+        /**
+          * @default false
+         */
+        "hasNext"?: boolean;
+        /**
+          * Vidéos avant et après dans la liste.
+          * @default false
+         */
+        "hasPrev"?: boolean;
+        /**
+          * Titre et sous-titre de l'en-tête.
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "icons"?: VideoPlayerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment pendant la lecture : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle"?: boolean;
+        /**
+          * Textes (voir `VideoPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels"?: VideoPlayerLabels | string;
+        /**
+          * La réglette de position bouge (`commit` faux) ou est lâchée (`commit` vrai) : proportion de 0 à 1.
+         */
+        "onMireVideoSeek"?: (event: MireVideoPlayerCustomEvent<{ ratio: number; commit: boolean }>) => void;
+        /**
+          * La réglette du volume bouge ou est lâchée : volume de 0 à 1.
+         */
+        "onMireVideoVolume"?: (event: MireVideoPlayerCustomEvent<{ value: number; commit: boolean }>) => void;
+        /**
+          * Message au centre de l'écran, et s'il est montré (il s'efface en fondu : le texte reste pendant ce temps).
+          * @default ''
+         */
+        "osd"?: string;
+        /**
+          * @default false
+         */
+        "osdShown"?: boolean;
+        /**
+          * La vidéo joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing"?: boolean;
+        /**
+          * @default 0
+         */
+        "position"?: number;
+        /**
+          * @default ''
+         */
+        "subheading"?: string;
+        /**
+          * Libellé du bouton des sous-titres ; vide : la vidéo n'en a pas, le bouton est caché.
+          * @default ''
+         */
+        "subtitles"?: string;
+        /**
+          * Position écrite (« 1:23 / 45:00 ») et proportion lue, de 0 à 1.
+          * @default ''
+         */
+        "time"?: string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume"?: number;
+    }
 
     interface MireBackdropAttributes {
         "src": string;
@@ -2425,6 +2622,22 @@ declare namespace LocalJSX {
         "cardLabels": string;
         "scrollerLabels": string;
     }
+    interface MireVideoPlayerAttributes {
+        "heading": string;
+        "subheading": string;
+        "time": string;
+        "position": number;
+        "volume": number;
+        "playing": boolean;
+        "hasPrev": boolean;
+        "hasNext": boolean;
+        "subtitles": string;
+        "osd": string;
+        "osdShown": boolean;
+        "idle": boolean;
+        "labels": VideoPlayerLabels | string;
+        "icons": VideoPlayerIcons | string;
+    }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
@@ -2454,6 +2667,7 @@ declare namespace LocalJSX {
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
         "mire-search": MireSearch;
         "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
+        "mire-video-player": Omit<MireVideoPlayer, keyof MireVideoPlayerAttributes> & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes]?: MireVideoPlayer[K] } & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes as `attr:${K}`]?: MireVideoPlayerAttributes[K] } & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes as `prop:${K}`]?: MireVideoPlayer[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2466,7 +2680,8 @@ declare module "@stencil/core" {
              * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
              * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
              * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-             * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+             * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+             * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
              * ce que la page place dans ces hôtes n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
@@ -2665,6 +2880,16 @@ declare module "@stencil/core" {
              * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
              */
             "mire-search-view": LocalJSX.IntrinsicElements["mire-search-view"] & JSXBase.HTMLAttributes<HTMLMireSearchViewElement>;
+            /**
+             * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+             * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+             * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+             * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+             * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+             * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+             * tient : la position ne saute pas sous le pouce.
+             */
+            "mire-video-player": LocalJSX.IntrinsicElements["mire-video-player"] & JSXBase.HTMLAttributes<HTMLMireVideoPlayerElement>;
         }
     }
 }

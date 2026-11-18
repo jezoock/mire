@@ -1,0 +1,243 @@
+// Lecteur vidéo (P4-14) : plein écran sur fond noir, affichage par-dessus la vidéo. Habillage du cœur ; l'allure
+// reprend celle du lecteur historique (.layer, .vp-*, .osd, .text-btn, dans styles.css).
+.mire-video-player {
+  --accent: var(--bar-yellow);
+  --text: #f4f4f0;
+  --muted: #b8b8b2;
+  --bg: #000;
+  --ring-mix: 100%;
+  --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000);
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: block;
+  color-scheme: dark;
+  color: var(--text);
+  background: #000;
+  outline: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &__video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+
+    &::cue {
+      font-family: var(--font);
+      background: rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  &__ui {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  &[idle] {
+    cursor: none;
+  }
+
+  &[idle] &__ui {
+    opacity: 0;
+  }
+
+  &__top,
+  &__bottom {
+    padding: 24px 40px;
+    pointer-events: auto;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: linear-gradient(rgba(0, 0, 0, 0.78), transparent);
+  }
+
+  &__heading {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    overflow: hidden;
+    font-size: 26px;
+    font-weight: 700;
+    font-stretch: 112%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__sub {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 15px;
+  }
+
+  &__bottom {
+    padding-top: 70px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  &__time {
+    margin-left: 14px;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  // Réglettes : piste fine, remplie de la couleur du lecteur jusqu'à la valeur, pouce blanc.
+  ds-range {
+    --ds-range-thumb-size: 14px;
+    --ds-range-track-height: 4px;
+    --ds-range-track-color: color-mix(in srgb, var(--text) 22%, transparent);
+    --ds-range-fill-color: var(--ring);
+    --ds-range-thumb-color: var(--text);
+    --ds-range-thumb-border-color: var(--text);
+  }
+
+  &__seek {
+    display: block;
+    width: 100%;
+  }
+
+  &__volume {
+    width: 120px;
+  }
+
+  &__trigger {
+    display: contents;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: transparent;
+
+    &:hover {
+      background: color-mix(in srgb, var(--text) 12%, transparent);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+    }
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    &--big {
+      width: 52px;
+      height: 52px;
+      color: #000;
+      background: #fff;
+
+      &:hover {
+        background: color-mix(in srgb, var(--text) 85%, var(--bg));
+      }
+    }
+  }
+
+  &__text-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+  }
+
+  &__text-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  &__volume-icon {
+    display: inline-grid;
+    flex: none;
+    width: 22px;
+    height: 22px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__osd {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    padding: 14px 24px;
+    border-radius: var(--r-sm);
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+    font-size: 26px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s ease;
+
+    &.is-shown {
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    &__top,
+    &__bottom {
+      padding-right: 24px;
+      padding-left: 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ui,
+    &__osd {
+      transition: none;
+    }
+  }
+}

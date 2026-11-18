@@ -27,6 +27,7 @@
 @use '../components/mire-search-view/mire-search-view';
 @use '../components/mire-explorer-view/mire-explorer-view';
 @use '../components/mire-download-row/mire-download-row';
+@use '../components/mire-video-player/mire-video-player';
 @use './demo-page';
 
 // Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var(), et les icônes qu'ils

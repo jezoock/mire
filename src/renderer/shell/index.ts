@@ -33,6 +33,8 @@ async function whenRendered(el: Rendered): Promise<void> {
 export async function mountShell(doc: Document = document): Promise<void> {
   const app = doc.querySelector('mire-app') as Rendered;
   await whenRendered(app);
+  // Le lecteur vidéo (P4-14) contient l'élément <video> que les lecteurs prennent au démarrage.
+  await whenRendered(doc.querySelector('mire-video-player') as Rendered);
   (doc.getElementById('legacy-layers') as HTMLElement).innerHTML = LEGACY_LAYERS;
 }
 
