@@ -182,7 +182,7 @@
       "torrentName": "Torrent",
       "errors": {
         "torrentFileNotFound": "Fichier .torrent introuvable.",
-        "noTorrentApp": "Aucun logiciel de torrent ne s'est ouvert ({reason}). Installez-en un (qBittorrent, Transmission…) ou choisissez le client intégré dans les réglages de Téléchargements.",
+        "noTorrentApp": "Aucun logiciel de torrent ne s'est ouvert ({reason}). Installez-en un (qBittorrent, Transmission…) ou choisissez le client intégré dans les réglages du Centre.",
         "torrentClientFailed": "Le client torrent intégré n'a pas pu démarrer ({reason}).",
         "torrentUnreadable": "Torrent illisible ({reason}).",
         "torrentError": "Erreur du torrent : {reason}",
@@ -538,7 +538,7 @@
         "web": "Streaming",
         "tv": "Télévision",
         "games": "Jeux",
-        "downloads": "Téléchargements",
+        "downloads": "Centre",
         "settings": "Réglages"
       },
       "menu": {
@@ -744,7 +744,7 @@
           "addFailed": "Ce lien n’a pas pu être ajouté.",
           "external": "Lien confié à votre logiciel de torrent.",
           "added": "Téléchargement ajouté.",
-          "addedFollow": "Téléchargement ajouté : suivez-le dans Téléchargements.",
+          "addedFollow": "Téléchargement ajouté : suivez-le dans le Centre.",
           "startFailed": "Ce téléchargement n’a pas pu démarrer.",
           "torrentFailed": "Ce fichier .torrent n’a pas pu être ajouté.",
           "started": "Téléchargement lancé.",
@@ -754,7 +754,7 @@
           "cancelHelp": "Les fichiers déjà téléchargés pour lui seront supprimés.",
           "cancelYes": "Annuler le téléchargement",
           "installerFailed": "Le programme d’installation n’a pas pu être lancé.",
-          "installerLater": "{name} contient un programme d’installation : lancez-le depuis Téléchargements.",
+          "installerLater": "{name} contient un programme d’installation : lancez-le depuis le Centre.",
           "installerTitle": "Téléchargement terminé",
           "installerHelp": "« {name} » contient un programme d’installation : {file}. Voulez-vous le lancer maintenant ?",
           "installerRun": "Lancer l’installation",

@@ -1252,7 +1252,7 @@ async function downloadGameBookmark(id) {
   const r = await api.gameBookmarkDownload(id);
   if (!r?.ok) { toast(r?.error || 'Téléchargement impossible.', { duration: 7000 }); return; }
   await loadDownloads();
-  toast('Téléchargement lancé. Suivez-le dans Téléchargements.', { duration: 5000 });
+  toast('Téléchargement lancé. Suivez-le dans le Centre.', { duration: 5000 });
   render();
 }
 
@@ -1976,7 +1976,7 @@ const panelBody = $('#panel-body');
 const panelTabs = $('#panel-tabs');
 const P = { section: null, tab: null };
 
-const PANEL_TITLES = { home: 'Accueil', search: 'Rechercher', videos: 'Vidéos', music: 'Musique', images: 'Images', streaming: 'Streaming', web: 'Streaming', tv: 'Télévision', games: 'Jeux', downloads: 'Téléchargements' };
+const PANEL_TITLES = { home: 'Accueil', search: 'Rechercher', videos: 'Vidéos', music: 'Musique', images: 'Images', streaming: 'Streaming', web: 'Streaming', tv: 'Télévision', games: 'Jeux', downloads: 'Centre' };
 
 // Champ enregistré dès qu'il change (data-cfg="chemin.dans.la.config").
 const cfgInput = (path, label, value, placeholder = '', type = 'text') => `<div class="field"><label for="cfg-${path}">${esc(label)}</label><input class="input focusable" id="cfg-${path}" data-cfg="${path}" type="${type}" value="${esc(value || '')}" placeholder="${esc(placeholder)}"></div>`;

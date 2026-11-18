@@ -295,7 +295,7 @@ describe('Centre : annonces', () => {
     assert.equal(downloadAddedNotice({ ok: false, error: 'Adresse invalide.' }, fr.t), 'Adresse invalide.');
     assert.equal(downloadAddedNotice({ ok: false }, en.t), 'This download could not start.');
     assert.equal(downloadAddedNotice({ ok: true, external: true }, fr.t), 'Lien confié à votre logiciel de torrent.');
-    assert.equal(downloadAddedNotice({ ok: true }, en.t), 'Download added: follow it in Downloads.');
+    assert.equal(downloadAddedNotice({ ok: true }, en.t), 'Download added: follow it in the Centre.');
   });
 });
 

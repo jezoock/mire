@@ -258,8 +258,8 @@ export class PageController extends Controller {
     else
       toast(
         r.total > 1
-          ? `${plural(r.count, 'fichier', 'fichiers')} à télécharger pour ce jeu (l’index et ses pistes), dans un dossier à son nom. Suivez-les dans Téléchargements.`
-          : 'Téléchargement ajouté : il ira dans le dossier de la console. Suivez-le dans Téléchargements.',
+          ? `${plural(r.count, 'fichier', 'fichiers')} à télécharger pour ce jeu (l’index et ses pistes), dans un dossier à son nom. Suivez-les dans le Centre.`
+          : 'Téléchargement ajouté : il ira dans le dossier de la console. Suivez-le dans le Centre.',
         { duration: 7000 },
       );
   }
@@ -275,7 +275,7 @@ export class PageController extends Controller {
     if (!todo.length) return;
     const ok = await ui.confirm(
       `Télécharger ${plural(todo.length, 'jeu', 'jeux')} dans le dossier de ${ui.consoleName(S.romsOf) || 'la console'} ?`,
-      'Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans Téléchargements.',
+      'Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans le Centre.',
       'Tout télécharger',
     );
     if (!ok) return;
@@ -284,7 +284,7 @@ export class PageController extends Controller {
       const res = (await api.romDownload(S.romsOf as never, r.path)) as Data | null;
       if (res?.ok) n++;
     }
-    toast(`${plural(n, 'téléchargement ajouté', 'téléchargements ajoutés')}. Suivez-les dans Téléchargements.`, { duration: 6000 });
+    toast(`${plural(n, 'téléchargement ajouté', 'téléchargements ajoutés')}. Suivez-les dans le Centre.`, { duration: 6000 });
   }
 
   // ---------- Vidéos : séries, saisons, filtres ----------

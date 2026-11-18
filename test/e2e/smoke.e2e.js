@@ -27,7 +27,7 @@ const SECTIONS = [
   ['streaming', 'Streaming'],
   ['tv', 'Télévision'],
   ['games', 'Jeux'],
-  ['downloads', 'Téléchargements'],
+  ['downloads', 'Centre'],
   ['settings', 'Réglages'],
 ];
 // Sections historiques des pages (P4-11) : le menu ouvre la vue de page, « Ancienne vue » la section historique.
@@ -1676,7 +1676,7 @@ describe('Test de fumée de Mire', () => {
 
     it('le Centre affiche les téléchargements ; une ligne qui avance ne redessine qu’elle', async () => {
       await openCentre();
-      assert.equal(await page.locator('#title').textContent(), 'Téléchargements');
+      assert.equal(await page.locator('#title').textContent(), 'Centre');
       assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:center');
       const rows = () => page.$$eval(`${VIEW} mire-download-row`, (els) => els.map((e) => [e.closest('[data-group]').dataset.group, e.dataset.key]));
       assert.deepEqual(await rows(), [
@@ -1711,8 +1711,8 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
 
-    it('manette : la croix va aux onglets et aux boutons, A ouvre, B ferme, LB et RB changent d’écran', async () => {
-      await page.evaluate(() => {
+    const connectPad = () =>
+      page.evaluate(() => {
         window.__pad = {
           id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
           index: 0,
@@ -1723,6 +1723,9 @@ describe('Test de fumée de Mire', () => {
         };
         navigator.getGamepads = () => [window.__pad];
       });
+
+    it('manette : la croix va aux onglets et aux boutons, A ouvre, B ferme, LB et RB changent d’écran', async () => {
+      await connectPad();
       await openCentre();
       await page.locator(`${VIEW} .mire-centre-view__tab[data-tab="downloads"]`).focus();
       // Croix vers le bas : « Ajouter un lien » ; A ouvre le formulaire d'ajout (P4-06), B le ferme.
@@ -1743,12 +1746,25 @@ describe('Test de fumée de Mire', () => {
       await padPress('a');
       await centreReady('apps');
       await page.locator(`${VIEW} .mire-centre-view__card`).first().waitFor();
-      // LB : l'écran précédent du menu (le Centre, en bas du menu, compte comme le premier) ; RB : le suivant.
+      // Le Centre ferme le cycle de LB et RB : LB ouvre la dernière page du haut du menu, RB revient au début (Recherche).
       await padPress('lb');
       await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'games');
       await openCentre('apps');
       await padPress('rb');
-      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await page.waitForFunction(() => document.body.dataset.section === 'search');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : RB depuis la dernière page ouvre le Centre', async () => {
+      await connectPad();
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'games' }));
+      await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'games');
+      await page.locator('#view mire-page-view.hydrated').waitFor();
+      await padPress('rb');
+      await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'screen:center');
+      await page.locator(`${VIEW}.hydrated`).waitFor();
+      assert.equal(await page.locator('#title').textContent(), 'Centre');
       await disconnectPad();
       assert.deepEqual(errors, []);
     });

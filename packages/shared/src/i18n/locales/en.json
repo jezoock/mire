@@ -182,7 +182,7 @@
       "torrentName": "Torrent",
       "errors": {
         "torrentFileNotFound": ".torrent file not found.",
-        "noTorrentApp": "No torrent app opened ({reason}). Install one (qBittorrent, Transmission…) or choose the built-in client in the Downloads settings.",
+        "noTorrentApp": "No torrent app opened ({reason}). Install one (qBittorrent, Transmission…) or choose the built-in client in the Centre settings.",
         "torrentClientFailed": "The built-in torrent client couldn't start ({reason}).",
         "torrentUnreadable": "Can't read this torrent ({reason}).",
         "torrentError": "Torrent error: {reason}",
@@ -538,7 +538,7 @@
         "web": "Streaming",
         "tv": "TV",
         "games": "Games",
-        "downloads": "Downloads",
+        "downloads": "Centre",
         "settings": "Settings"
       },
       "menu": {
@@ -744,7 +744,7 @@
           "addFailed": "This link could not be added.",
           "external": "Link handed to your torrent app.",
           "added": "Download added.",
-          "addedFollow": "Download added: follow it in Downloads.",
+          "addedFollow": "Download added: follow it in the Centre.",
           "startFailed": "This download could not start.",
           "torrentFailed": "This .torrent file could not be added.",
           "started": "Download started.",
@@ -754,7 +754,7 @@
           "cancelHelp": "The files already downloaded for it will be deleted.",
           "cancelYes": "Cancel the download",
           "installerFailed": "The installer could not be started.",
-          "installerLater": "{name} contains an installer: run it from Downloads.",
+          "installerLater": "{name} contains an installer: run it from the Centre.",
           "installerTitle": "Download finished",
           "installerHelp": "“{name}” contains an installer: {file}. Do you want to run it now?",
           "installerRun": "Run the installer",

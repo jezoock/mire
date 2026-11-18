@@ -202,6 +202,9 @@ body.menu-top .rail-item[aria-current="page"] .chip, body.menu-bottom .rail-item
 body.menu-top .rail-item[aria-current="page"], body.menu-bottom .rail-item[aria-current="page"] { border-color: var(--line-strong); }
 body.menu-top .rail-sessions, body.menu-bottom .rail-sessions { flex-direction: row; gap: 8px; }
 body.menu-top .rail-sub, body.menu-bottom .rail-sub { width: auto; min-width: 120px; padding: 8px 16px; scroll-snap-align: center; }
+/* Entrées du bas (Centre, Réglages…) : en fin de carrousel, elles ne peuvent pas venir au centre ; accrochées au bord,
+   elles restent atteignables (sinon l'accrochage ramène le carrousel en arrière et coupe l'entrée choisie). */
+body.menu-top .rail-spacer ~ * .rail-item, body.menu-bottom .rail-spacer ~ * .rail-item { scroll-snap-align: end; }
 body.menu-top .rail-spacer, body.menu-bottom .rail-spacer { flex: 0 0 18px; min-height: 0; border-left: 1px solid var(--line); margin: 6px 0 6px 10px; }
 body.menu-top .rail.has-overflow .rail-arrow, body.menu-bottom .rail.has-overflow .rail-arrow {
   display: grid;
