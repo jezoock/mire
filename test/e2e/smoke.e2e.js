@@ -132,7 +132,7 @@ async function openLegacy(section) {
 async function expectSection(section, title) {
   await page.waitForFunction((s) => document.body.dataset.section === s, section);
   // Le titre est rendu par mire-header (P4-07), à l'image suivante : on l'attend un peu avant de le comparer.
-  await page.waitForFunction((t) => document.getElementById('title').textContent === t, title, { timeout: 2000 }).catch(() => {});
+  await page.waitForFunction((t) => document.getElementById('title')?.textContent === t, title, { timeout: 2000 }).catch(() => {});
   assert.equal(await page.locator('#title').textContent(), title);
   await page.locator('#view').getByText(FILLED[section]).first().waitFor({ timeout: 15000 });
 }
@@ -167,7 +167,8 @@ describe('Test de fumée de Mire', () => {
     });
     // Heure figée (celle des aperçus de thèmes) : l'horloge de l'accueil ne change plus d'une capture à l'autre.
     await page.clock.setFixedTime(new Date('2026-10-30T20:45:00+01:00'));
-    await page.waitForFunction(() => document.getElementById('clock').textContent === '20:45', null, { timeout: 10000 });
+    // L'horloge est rendue par mire-header : elle peut manquer aux premières images (?. : l'attente continue).
+    await page.waitForFunction(() => document.getElementById('clock')?.textContent === '20:45', null, { timeout: 10000 });
   });
 
   after(async () => {
@@ -1223,7 +1224,7 @@ describe('Test de fumée de Mire', () => {
       // A ouvre l'entrée choisie (la vue de page, P4-11) ; Affichage ramène au menu, sur l'entrée affichée.
       await page.locator('#rail [data-key="music"]').focus();
       await padPress('a');
-      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title').textContent === 'Musique');
+      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Musique');
       await page.locator('#view mire-group-card ds-trigger.hydrated').first().focus();
       await padPress('select');
       assert.equal(await focusedKey(), 'music');
@@ -1284,7 +1285,7 @@ describe('Test de fumée de Mire', () => {
     const activeKey = () => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') ?? null);
     async function openPage(target, title, path = []) {
       await page.evaluate(([t, p]) => document.querySelector('mire-app').open({ target: t, path: p }), [target, path]);
-      await page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title').textContent === t, title);
+      await page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === t, title);
       await viewReady();
     }
     // Thème des pages, choisi dans les réglages : appliqué sans redémarrage.
@@ -1455,7 +1456,7 @@ describe('Test de fumée de Mire', () => {
     };
     const focusedBar = () => page.evaluate(() => document.activeElement?.closest('.mire-home-view__bar')?.dataset.target ?? null);
     const pageShown = (title) =>
-      page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title').textContent === t, title);
+      page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === t, title);
     // Thème des pages et de l'accueil, choisi dans les réglages ; une rangée de l'accueil, montrée ou cachée.
     async function setTheme(id) {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
@@ -1682,7 +1683,7 @@ describe('Test de fumée de Mire', () => {
     it('le Centre affiche les téléchargements ; une ligne qui avance ne redessine qu’elle', async () => {
       await openCentre();
       // Le titre est rendu par mire-header à l'image suivante.
-      await page.waitForFunction(() => document.getElementById('title').textContent === 'Centre');
+      await page.waitForFunction(() => document.getElementById('title')?.textContent === 'Centre');
       assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:center');
       const rows = () => page.$$eval(`${VIEW} mire-download-row`, (els) => els.map((e) => [e.closest('[data-group]').dataset.group, e.dataset.key]));
       assert.deepEqual(await rows(), [
@@ -1770,7 +1771,7 @@ describe('Test de fumée de Mire', () => {
       await padPress('rb');
       await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'screen:center');
       await page.locator(`${VIEW}.hydrated`).waitFor();
-      await page.waitForFunction(() => document.getElementById('title').textContent === 'Centre');
+      await page.waitForFunction(() => document.getElementById('title')?.textContent === 'Centre');
       await disconnectPad();
       assert.deepEqual(errors, []);
     });
@@ -1925,7 +1926,7 @@ describe('Test de fumée de Mire', () => {
     it('une recherche : le catalogue groupé par page, « Où regarder » et les sites ; la frappe ne redessine pas les rangées', async () => {
       await openSearch();
       // Le titre est rendu par mire-header à l'image suivante.
-      await page.waitForFunction(() => document.getElementById('title').textContent === 'Rechercher');
+      await page.waitForFunction(() => document.getElementById('title')?.textContent === 'Rechercher');
       await searchFor('démonstration', 'games');
       assert.deepEqual(await shown(), [
         ['games', ['Aventure de démonstration', 'Puzzle de démonstration']],
@@ -1976,7 +1977,7 @@ describe('Test de fumée de Mire', () => {
       await openSearch();
       await searchFor('vacances', 'images');
       await page.locator(`${VIEW} [data-group="images"] .mire-search-view__heading-link.hydrated`).click();
-      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title').textContent === 'Images');
+      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Images');
       assert.deepEqual(errors, []);
     });
 
@@ -2224,7 +2225,7 @@ describe('Test de fumée de Mire', () => {
 
     it('trois colonnes à la souris (Pages › Images › un dossier), l’aperçu d’une image, puis « Lire »', async () => {
       await openExplorer();
-      await page.waitForFunction(() => document.getElementById('title').textContent === 'Explorateur');
+      await page.waitForFunction(() => document.getElementById('title')?.textContent === 'Explorateur');
       assert.equal(await page.evaluate(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key), 'screen:explorer');
       assert.deepEqual(await headings(), ['Explorateur']);
       await row(0, 'Pages').click();
@@ -2288,6 +2289,153 @@ describe('Test de fumée de Mire', () => {
       // Depuis la première colonne, B quitte l'explorateur pour l'accueil.
       await padPress('b');
       await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Éditeurs des regroupements (P4-22)', () => {
+    const PAD = { a: 0, b: 1, x: 2, down: 13 };
+    const VIEW = '#view mire-page-view';
+    const FORM = 'mire-dialogs mire-form';
+    // Les morceaux de démonstration n'ont pas d'artiste : ils sont rangés sous « Autres » (`null`).
+    const ARTIST = null;
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // La carte de l'album, rendue avec ce nom.
+    const card = () => page.locator(`${VIEW} mire-group-card ds-trigger.hydrated`).first();
+    const albumShown = (name) =>
+      page.waitForFunction(
+        ([sel, n]) => {
+          const c = document.querySelector(`${sel} mire-group-card`);
+          return c?.querySelector('ds-trigger.hydrated') && c.querySelector('.mire-group-card__title')?.textContent === n;
+        },
+        [VIEW, name],
+      );
+    // Page Musique, au niveau des albums.
+    const openAlbums = async () => {
+      await page.evaluate((a) => document.querySelector('mire-app').open({ target: 'music', path: [a] }), ARTIST);
+      await page.waitForFunction((sel) => document.body.dataset.section === 'page' && document.querySelector(sel)?.classList.contains('hydrated'), VIEW);
+    };
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const group = (name) => page.evaluate(([a, n]) => window.api.catalogGroup('music', [a, n]), [ARTIST, name]);
+    const focusIn = (sel) => page.evaluate((s) => !!document.activeElement?.closest(s), sel);
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('clic droit sur un album : son nom et un tag pour tous ses morceaux, puis réinitialiser (touche E)', async () => {
+      await openAlbums();
+      await albumShown('Premier album');
+      const before = await group('Premier album');
+      assert.ok(before.elements.length > 0);
+      await card().click({ button: 'right' });
+      assert.equal(await formOpen(), 'Modifier l’album');
+      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), 'Premier album');
+      await page.locator(`${FORM} input`).first().fill('Premier album (réédition)');
+      await page.locator(`${FORM} .mire-form__list input`).fill('À écouter');
+      await page.locator(`${FORM} .mire-form__list ds-trigger`, { hasText: 'Ajouter' }).click();
+      await page.locator(`${FORM} .mire-form__entry .mire-form__value`, { hasText: 'À écouter' }).waitFor();
+      await shot('editor-album');
+      await button('Enregistrer').click();
+      await formClosed();
+      // La page se met à jour : l'album porte son nouveau nom ; chaque morceau a le tag de l'utilisateur.
+      await albumShown('Premier album (réédition)');
+      const edited = await group('Premier album (réédition)');
+      assert.equal(edited.elements.length, before.elements.length);
+      const mine = (await page.evaluate(() => window.api.tagsList())).find((t) => t.name === 'À écouter');
+      assert.equal(mine?.origin, 'user');
+      for (const e of edited.elements) assert.ok(e.tags.includes(mine.id));
+      assert.equal(await group('Premier album'), null);
+      // Touche E sur la carte, puis « Réinitialiser » : nom et tags d'origine.
+      await card().focus();
+      await page.keyboard.press('e');
+      assert.equal(await formOpen(), 'Modifier l’album');
+      await button('Réinitialiser').click();
+      await formClosed();
+      await albumShown('Premier album');
+      const reset = await group('Premier album');
+      assert.deepEqual(
+        reset.elements.map((e) => [...e.tags].sort()),
+        before.elements.map((e) => [...e.tags].sort()),
+      );
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : X ouvre l’éditeur de l’album, la croix parcourt les champs, A choisit Annuler, B ferme', async () => {
+      await connectPad();
+      await openAlbums();
+      await albumShown('Premier album');
+      const before = await group('Premier album');
+      await card().focus();
+      await padPress('x');
+      assert.equal(await formOpen(), 'Modifier l’album');
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      const first = await page.evaluateHandle(() => document.activeElement);
+      await padPress('down');
+      assert.ok(await page.evaluate((f) => document.activeElement !== f, first));
+      assert.ok(await focusIn(FORM));
+      await button('Annuler').focus();
+      await padPress('a');
+      await formClosed();
+      await card().focus();
+      await padPress('x');
+      await formOpen();
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      await padPress('b');
+      await formClosed();
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-group-card`), VIEW);
+      assert.deepEqual(await group('Premier album'), before);
       await disconnectPad();
       assert.deepEqual(errors, []);
     });

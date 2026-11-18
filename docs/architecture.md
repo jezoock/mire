@@ -787,6 +787,14 @@ les règles par extension de la configuration.
   les données de Mire ; l'interface ne donne jamais de chemin), `catalogClearImages(clé, [images])` (retour à
   l'automatique) et `catalogReset(clé)` (tags, infos et images reviennent à l'automatique). Un titre saisi à la main
   (info `title` d'origine `user`) devient le nom affiché de l'élément (`nameOf`), et sert au tri par nom des pages.
+- **Éditeurs des regroupements** (P4-22, `catalog/groups.ts`) : un regroupement est désigné par sa page et son chemin
+  (`catalogGroup(page, chemin)` rend l'info qui le forme, sa valeur et tous ses éléments, quel que soit le nombre de
+  niveaux en dessous). `catalogEditGroup(page, chemin, { rename, infos, tags, clearImages, reset })` pose chaque
+  modification sur chaque élément en une seule écriture (`overrides.batch` : un seul changement annoncé) ; `rename`
+  change l'info qui sert à regrouper (une valeur d'une liste, comme un genre, est remplacée seule) et le regroupement
+  est rendu à son nouveau chemin. `catalogGroupPickImage` (image choisie sur le disque) et `catalogGroupFetch` (fiche
+  choisie en ligne, lue sans être enregistrée par le moteur de récupération, `lookup` ; ses images sont posées sur les
+  éléments, ses infos rendues pour être proposées dans le formulaire) : l'interface ne donne jamais de chemin d'image.
 - **Modifications à la main** (`overrides.ts`) : `userData/catalog/overrides.json`, écrit aussitôt. Il reprend
   l'ancien `meta/meta.json` au premier démarrage (`legacy-meta.ts`) :
 

@@ -903,6 +903,7 @@
       },
       "fields": {
         "title": "Name",
+        "artist": "Artist",
         "year": "Year",
         "genres": "Genres",
         "genresHint": "Several: separated by commas",
@@ -936,6 +937,20 @@
         "fetching": "Getting “{title}”…",
         "fetchFailed": "Couldn’t get this match.",
         "fetched": "“{title}” found: check the fields, then save."
+      },
+      "group": {
+        "title": {
+          "album": "Edit album",
+          "series": "Edit TV show",
+          "other": "Edit group"
+        },
+        "help": {
+          "one": "Changes apply to its item.",
+          "other": "Changes apply to its {count} items."
+        },
+        "mixed": "Several values",
+        "nameRequired": "Give this group a name.",
+        "gone": "This group is no longer in the library."
       }
     },
     "explorer": {

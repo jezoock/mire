@@ -1,5 +1,6 @@
 import { Controller } from './base.ts';
 import { openEditor } from '../editors/editor.ts';
+import { openGroupEditor } from '../editors/group-editor.ts';
 import type { PagePath } from '@mire/shared';
 import type { ItemRef } from './types.ts';
 
@@ -75,6 +76,11 @@ export class AppController extends Controller {
     const key = this.ctx.ui.selectedKey?.();
     if (key) {
       void openEditor(this.ctx, key);
+      return true;
+    }
+    const group = this.ctx.ui.selectedGroup?.();
+    if (group) {
+      void openGroupEditor(this.ctx, group);
       return true;
     }
     const ref = this.ctx.ui.selectedRef();

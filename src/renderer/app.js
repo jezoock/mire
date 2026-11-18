@@ -32,7 +32,7 @@ import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
 import { createSearch } from './search/index.ts';
 import { createExplorer } from './explorer/index.ts';
-import { cardKeyOf, initEditors } from './editors/index.ts';
+import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -2572,6 +2572,7 @@ const legacyUi = {
   },
   selectedRef: () => refFromEl(document.activeElement),
   selectedKey: () => cardKeyOf() ?? (S.section === EXPLORER_VIEW ? explorer.selectedKey() : null),
+  selectedGroup: () => groupRefOf(document.activeElement, pages.route()),
   afterEdit: () => { if (S.section === SEARCH_VIEW) search.refresh(); },
   firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
   editRef, editConsole, deletableGame, deleteGameRef,
@@ -2610,7 +2611,11 @@ dialogs.initDialogs({
 });
 initDemoDialogs({ openForm });
 const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
-initEditors(document, (key) => C.editor.edit({ key }));
+initEditors(document, (key) => C.editor.edit({ key }), (node) => {
+  const ref = groupRefOf(node, pages.route());
+  if (ref) C.editor.editGroup(ref);
+  return ref;
+});
 setActionErrorHandler((error, { tag, method }) => {
   console.error(`Action ${tag}.${method} :`, error);
   toast(t('app.errors.actionFailed'), { duration: 6000 });

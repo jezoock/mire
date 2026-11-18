@@ -246,6 +246,19 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
       return { ...base, kind: 'elements', elements };
     },
 
+    /**
+     * Regroupement désigné par son chemin (éditeurs, P4-22) : l'info qui le forme (celle du dernier niveau du chemin)
+     * et les clés de tous ses éléments, quel que soit le nombre de niveaux en dessous. `null` si la page, le chemin ou
+     * le regroupement n'existent pas.
+     */
+    group(pageId: unknown, path: unknown): { page: string; path: PagePath; info: string; keys: ElementKey[] } | null {
+      const page = definition(pageId);
+      const levels = page?.groupBy ?? [];
+      if (!page || !Array.isArray(path) || !path.length || path.length > levels.length || !path.every(isScalarOrNull)) return null;
+      const keys = followPath(members(page), levels, path as PagePath, engine.peek);
+      return keys.length ? { page: page.id, path: [...path] as PagePath, info: levels[path.length - 1], keys } : null;
+    },
+
     /** Abonnement aux pages dont le contenu a pu changer. */
     onChange(listener: (ids: string[]) => void): () => void {
       listeners.add(listener);

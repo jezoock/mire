@@ -145,6 +145,10 @@ const ADDED_METHODS: Record<string, string> = {
   catalogPickImage: 'catalog:pickImage',
   catalogClearImages: 'catalog:clearImages',
   catalogReset: 'catalog:reset',
+  catalogGroup: 'catalog:group',
+  catalogEditGroup: 'catalog:editGroup',
+  catalogGroupPickImage: 'catalog:groupPickImage',
+  catalogGroupFetch: 'catalog:groupFetch',
   // P2-07 : pages et regroupements
   pagesList: 'pages:list',
   pagesGet: 'pages:get',

@@ -59,6 +59,8 @@ export interface LegacyUi {
   editRef(ref: ItemRef | null): void;
   /** Clé de l'élément du catalogue dont la carte a le focus (vue de page, accueil, Recherche), ou `null`. */
   selectedKey?(): string | null;
+  /** Regroupement dont la carte a le focus (vue de page, accueil), désigné par sa page et son chemin, ou `null`. */
+  selectedGroup?(): { page: string; path: PagePath } | null;
   /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
   afterEdit?(): void;
   editConsole(consoleId: unknown): void;

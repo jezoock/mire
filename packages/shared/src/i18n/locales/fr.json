@@ -903,6 +903,7 @@
       },
       "fields": {
         "title": "Nom",
+        "artist": "Artiste",
         "year": "Année",
         "genres": "Genres",
         "genresHint": "Plusieurs : séparés par des virgules",
@@ -936,6 +937,20 @@
         "fetching": "Récupération de « {title} »…",
         "fetchFailed": "Impossible de récupérer cette fiche.",
         "fetched": "Fiche « {title} » récupérée : vérifiez les champs, puis enregistrez."
+      },
+      "group": {
+        "title": {
+          "album": "Modifier l’album",
+          "series": "Modifier la série",
+          "other": "Modifier le regroupement"
+        },
+        "help": {
+          "one": "Les modifications valent pour son élément.",
+          "other": "Les modifications valent pour ses {count} éléments."
+        },
+        "mixed": "Plusieurs valeurs",
+        "nameRequired": "Donnez un nom à ce regroupement.",
+        "gone": "Ce regroupement n’est plus dans la bibliothèque."
       }
     },
     "explorer": {

@@ -32,7 +32,14 @@ describe('description des champs', () => {
       full: false,
       browse: '',
       wide: false,
+      folders: false,
     });
+  });
+
+  it('liste : bouton « Choisir un dossier » par défaut, retiré avec folders: false (tags des éditeurs)', () => {
+    assert.equal(normalizeField({ id: 's', type: 'list' }).folders, true);
+    assert.equal(normalizeField({ id: 't', type: 'list', folders: false }).folders, false);
+    assert.equal(normalizeField({ id: 'x', folders: true }).folders, false);
   });
 
   it('liste : options en paires, valeur inconnue remplacée par la première option', () => {

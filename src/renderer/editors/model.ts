@@ -12,7 +12,7 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 export type EditorKind = 'video' | 'track' | 'image' | 'game' | 'program' | 'other';
 
 /** Infos que l'éditeur modifie, dans l'ordre du formulaire. */
-export type InfoField = 'title' | 'year' | 'genres' | 'overview';
+export type InfoField = 'title' | 'year' | 'genres' | 'overview' | 'artist';
 /** Images que l'éditeur modifie. */
 export type ImageField = Extract<keyof ElementImages, 'poster' | 'background'>;
 
@@ -70,7 +70,14 @@ export function editorFields(el: CatalogElement, known: readonly TagSummary[], t
     if (f === 'genres') return { id: f, label, value: values[f], placeholder: t('editors.fields.genresHint'), full: true };
     return { id: f, label, value: values[f], full: f === 'title' };
   });
-  fields.push({ id: TAGS_FIELD, type: 'list', label: t('editors.fields.tags'), value: tagNames(el.tags, known), placeholder: t('editors.fields.tagsHint') });
+  fields.push({
+    id: TAGS_FIELD,
+    type: 'list',
+    label: t('editors.fields.tags'),
+    value: tagNames(el.tags, known),
+    placeholder: t('editors.fields.tagsHint'),
+    folders: false,
+  });
   for (const f of images) fields.push({ id: f, type: 'image', label: t(`editors.fields.${f}`), value: el.images[f] ?? '', wide: f === 'background' });
   return fields;
 }
