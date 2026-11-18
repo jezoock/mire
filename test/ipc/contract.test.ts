@@ -141,6 +141,10 @@ const ADDED_METHODS: Record<string, string> = {
   catalogSetTags: 'catalog:setTags',
   catalogSetInfos: 'catalog:setInfos',
   tagsList: 'tags:list',
+  // P4-22 : éditeurs (image choisie sur le disque, images effacées, réinitialisation)
+  catalogPickImage: 'catalog:pickImage',
+  catalogClearImages: 'catalog:clearImages',
+  catalogReset: 'catalog:reset',
   // P2-07 : pages et regroupements
   pagesList: 'pages:list',
   pagesGet: 'pages:get',

@@ -31,7 +31,7 @@ export interface PagesFile {
 export interface PagesOptions {
   /** `userData/catalog/pages.json` */
   file: string;
-  engine: Pick<TagEngine, 'query' | 'peek' | 'keys' | 'element' | 'onChange'>;
+  engine: Pick<TagEngine, 'query' | 'peek' | 'keys' | 'element' | 'onChange'> & Partial<Pick<TagEngine, 'nameOf'>>;
   catalog: Pick<Catalog, 'get'>;
   /** Texte des catalogues (nom du groupe « Autres »). */
   translate: (key: string) => string;
@@ -134,7 +134,8 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
   function subject(key: ElementKey) {
     const eff = engine.peek(key);
     const e = catalog.get(key);
-    return eff && e ? { eff, name: e.name, added: e.added } : undefined;
+    // Tri par nom : le nom affiché (un titre saisi à la main l'emporte, P4-22).
+    return eff && e ? { eff, name: engine.nameOf?.(e) ?? e.name, added: e.added } : undefined;
   }
 
   const groupName = (g: RawGroup): PageGroup => ({

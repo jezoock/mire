@@ -890,6 +890,52 @@
         "romProgress": "Downloading {name}: {percent}%",
         "romProgressUnknown": "Downloading {name}…"
       }
+    },
+    "editors": {
+      "title": {
+        "video": "Edit video",
+        "track": "Edit track",
+        "image": "Edit picture",
+        "game": "Edit game",
+        "program": "Edit game",
+        "other": "Edit item"
+      },
+      "fields": {
+        "title": "Name",
+        "year": "Year",
+        "genres": "Genres",
+        "genresHint": "Several: separated by commas",
+        "overview": "Summary",
+        "tags": "Tags",
+        "tagsHint": "New tag",
+        "poster": "Picture",
+        "background": "Background"
+      },
+      "actions": {
+        "save": "Save",
+        "online": "Search online",
+        "reset": "Reset",
+        "cancel": "Cancel"
+      },
+      "noTags": "No tags.",
+      "saved": "Changes saved",
+      "resetDone": "Original info restored",
+      "invalidYear": "Write the year in digits, for example 1999.",
+      "gone": "This item is no longer in the library.",
+      "online": {
+        "searching": "Looking for matches…",
+        "failed": "The search didn’t work.",
+        "none": "Nothing found with this name. Try another spelling, then “Search online”.",
+        "choose": "Choose the right match",
+        "found": {
+          "one": "{count} match found for “{query}”. The closest names come first.",
+          "other": "{count} matches found for “{query}”. The closest names come first."
+        },
+        "noChoice": "No match chosen.",
+        "fetching": "Getting “{title}”…",
+        "fetchFailed": "Couldn’t get this match.",
+        "fetched": "“{title}” found: check the fields, then save."
+      }
     }
   }
 }

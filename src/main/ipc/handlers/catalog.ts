@@ -4,6 +4,9 @@
  */
 import { listIdOfPage } from '@mire/shared';
 import type { MainContext } from '../context.ts';
+import { IMAGE_FIELDS } from '../../catalog/tags/engine.ts';
+import { t } from '../../i18n/current.ts';
+import { pickImageFile } from './meta.ts';
 import type { IpcImplementations } from '../register.ts';
 
 export function catalogHandlers(ctx: MainContext) {
@@ -13,6 +16,14 @@ export function catalogHandlers(ctx: MainContext) {
     catalogSetTags: (key, changes) => ctx.tags.setTags(key, changes),
     catalogSetInfos: (key, changes) => ctx.tags.setInfos(key, changes),
     tagsList: () => ctx.tags.tagsList(),
+    // Éditeurs (P4-22) : image choisie sur le disque (copiée dans les données de Mire), images effacées, réinitialisation.
+    catalogPickImage: async (key, field) => {
+      if (!ctx.tags.element(key) || !IMAGE_FIELDS.includes(field)) return null;
+      const file = await pickImageFile(ctx, t('dialogs.chooseAnImage'));
+      return file ? ctx.tags.setImage(key, field, file) : null;
+    },
+    catalogClearImages: (key, fields) => ctx.tags.clearImages(key, fields),
+    catalogReset: (key) => ctx.tags.reset(key),
     // Pages et regroupements (P2-07).
     pagesList: () => ctx.pages.list(),
     pagesGet: (id) => ctx.pages.get(id),

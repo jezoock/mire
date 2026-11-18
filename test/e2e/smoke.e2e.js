@@ -2005,4 +2005,146 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Éditeurs (P4-22)', () => {
+    const PAD = { a: 0, b: 1, x: 2, down: 13 };
+    const VIEW = '#view mire-search mire-search-view';
+    const FORM = 'mire-dialogs mire-form';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Le film « Amélie » trouvé par la Recherche : sa carte rendue, et sa clé.
+    const card = () => page.locator(`${VIEW} [data-group="movies"] mire-card ds-trigger.hydrated`).first();
+    const findFilm = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), VIEW);
+      await page.locator(`${VIEW} .mire-search-view__input`).fill('Amélie');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="movies"] mire-card ds-trigger.hydrated`), VIEW);
+      return card().getAttribute('data-key');
+    };
+    const cardTitle = (name) =>
+      page.waitForFunction(([sel, n]) => document.querySelector(`${sel} [data-group="movies"] mire-card .mire-card__title`)?.textContent === n, [VIEW, name]);
+    // Boîte de l'éditeur ouverte et rendue (chaque bouton hydrated).
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const element = (key) => page.evaluate((k) => window.api.catalogElement(k), key);
+    const focusIn = (sel) => page.evaluate((s) => !!document.activeElement?.closest(s), sel);
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('clic droit : modifier le nom et ajouter un tag, puis réinitialiser (touche E)', async () => {
+      const key = await findFilm();
+      const before = await element(key);
+      await cardTitle(before.name);
+      await card().click({ button: 'right' });
+      assert.equal(await formOpen(), 'Modifier la vidéo');
+      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), before.name);
+      await page.locator(`${FORM} input`).first().fill('Amélie (version longue)');
+      await page.locator(`${FORM} .mire-form__list input`).fill('À revoir');
+      await page.locator(`${FORM} .mire-form__list ds-trigger`, { hasText: 'Ajouter' }).click();
+      await page.locator(`${FORM} .mire-form__entry .mire-form__value`, { hasText: 'À revoir' }).waitFor();
+      await shot('editor-video');
+      await button('Enregistrer').click();
+      await formClosed();
+      // La Recherche se met à jour : la carte porte le nouveau nom ; le tag est un tag de l'utilisateur.
+      await cardTitle('Amélie (version longue)');
+      const edited = await element(key);
+      assert.equal(edited.name, 'Amélie (version longue)');
+      const tags = await page.evaluate(() => window.api.tagsList());
+      const mine = tags.find((t) => t.name === 'À revoir');
+      assert.equal(mine?.origin, 'user');
+      assert.ok(edited.tags.includes(mine.id));
+      // Touche E sur la carte, puis « Réinitialiser » : nom et tags d'origine.
+      await card().focus();
+      await page.keyboard.press('e');
+      await formOpen();
+      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), 'Amélie (version longue)');
+      await button('Réinitialiser').click();
+      await formClosed();
+      const reset = await element(key);
+      assert.equal(reset.name, before.name);
+      assert.deepEqual([...reset.tags].sort(), [...before.tags].sort());
+      await cardTitle(before.name);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : X ouvre l’éditeur, la croix parcourt les champs, A choisit Annuler, B ferme', async () => {
+      await connectPad();
+      const key = await findFilm();
+      const before = await element(key);
+      await card().focus();
+      await padPress('x');
+      assert.equal(await formOpen(), 'Modifier la vidéo');
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      // Croix vers le bas : le focus passe au champ suivant, sans quitter la boîte.
+      const first = await page.evaluateHandle(() => document.activeElement);
+      await padPress('down');
+      assert.ok(await page.evaluate((f) => document.activeElement !== f, first));
+      assert.ok(await focusIn(FORM));
+      // A sur « Annuler » : la boîte se ferme, rien n'est changé.
+      await button('Annuler').focus();
+      await padPress('a');
+      await formClosed();
+      // X de nouveau, puis B : la boîte se ferme et le focus revient à la carte.
+      await card().focus();
+      await padPress('x');
+      await formOpen();
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      await padPress('b');
+      await formClosed();
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-card`), VIEW);
+      assert.deepEqual(await element(key), before);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });

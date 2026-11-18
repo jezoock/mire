@@ -10,7 +10,7 @@
  */
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
-import type { Element, InfoChanges, TagChanges, TagSummary } from './element.ts';
+import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from './element.ts';
 import type { PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
@@ -319,6 +319,11 @@ export interface IpcMethods {
   catalogSetTags(key: string, changes: TagChanges): Element | null;
   catalogSetInfos(key: string, changes: InfoChanges): Element | null;
   tagsList(): TagSummary[];
+  // Éditeurs (P4-22) : image d'un élément choisie sur le disque (`null` : abandon, élément ou image inconnus), images
+  // effacées (retour à l'automatique), réinitialisation (tags, infos et images reviennent à l'automatique).
+  catalogPickImage(key: string, field: keyof ElementImages): Element | null;
+  catalogClearImages(key: string, fields: (keyof ElementImages)[]): Element | null;
+  catalogReset(key: string): Element | null;
   // Pages et regroupements (P2-07) : `pages.*` et `catalog.page(pageId, path, cursor)` de l'architecture cible.
   pagesList(): PageDefinition[];
   pagesGet(id: string): PageDefinition | null;
@@ -473,6 +478,9 @@ export const IPC_METHODS = {
   catalogElement: 'catalog:element',
   catalogSetTags: 'catalog:setTags',
   catalogSetInfos: 'catalog:setInfos',
+  catalogPickImage: 'catalog:pickImage',
+  catalogClearImages: 'catalog:clearImages',
+  catalogReset: 'catalog:reset',
   tagsList: 'tags:list',
   pagesList: 'pages:list',
   pagesGet: 'pages:get',

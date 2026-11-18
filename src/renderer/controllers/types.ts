@@ -6,7 +6,7 @@
 import type { MireApi } from '../api/index.ts';
 import type { State } from '../state/index.ts';
 import type { InfoScalar, PagePath } from '@mire/shared';
-import type { FormResult } from '@mire/ui/utils';
+import type { CandidateSpec, FormResult } from '@mire/ui/utils';
 import type { FormOptions } from '../ui/dialogs.ts';
 import type { Search } from '../search/index.ts';
 
@@ -56,6 +56,10 @@ export interface LegacyUi {
   selectedRef(): ItemRef | null;
   firstItemRef(): ItemRef | null;
   editRef(ref: ItemRef | null): void;
+  /** Clé de l'élément du catalogue dont la carte a le focus (vue de page, accueil, Recherche), ou `null`. */
+  selectedKey?(): string | null;
+  /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
+  afterEdit?(): void;
   editConsole(consoleId: unknown): void;
   deletableGame(ref: ItemRef | null): boolean;
   deleteGameRef(ref: ItemRef): void;
@@ -133,5 +137,7 @@ export interface ControllerContext {
     act(args: Record<string, unknown>): Promise<void>;
     /** Formulaire sur `ds-modal` (`openForm` de `ui/dialogs.ts`). */
     form(opts: FormOptions): Promise<FormResult>;
+    /** Choisir la bonne fiche (`pickCandidate` de `ui/dialogs.ts`) : la fiche choisie, ou `null`. */
+    pick?<T extends CandidateSpec>(items: readonly T[], opts: { title: string; help?: string }): Promise<T | null>;
   };
 }

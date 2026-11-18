@@ -82,7 +82,8 @@ describe('catalog/search : infos texte et noms des tags', () => {
     const b = localFileKey('/bib/b.mkv', 'linux');
     engine.setInfos(b, { title: 'Titre officiel', genres: ['Comédie', 'Drame'], year: 2024 });
     assert.deepEqual(found(search.search('vacances')), ['a']);
-    assert.deepEqual(found(search.search('officiel comedie')), ['b']);
+    // Un titre saisi à la main devient le nom affiché (P4-22).
+    assert.deepEqual(found(search.search('officiel comedie')), ['Titre officiel']);
     assert.deepEqual(found(search.search('2024')), [], 'année : un nombre, pas un texte');
   });
 
@@ -178,7 +179,8 @@ describe('catalog/search : résultats groupés par page', () => {
     assert.equal(r.groups[0].total, 31);
     assert.equal(r.groups[0].elements.length, SEARCH_LIMIT);
     assert.equal(r.groups[0].elements[0].name, 'Note 00');
-    assert.equal(search.search('note', { limit: 40 }).groups[0].elements.at(-1)?.name, 'zzz', 'trouvé par son titre : après');
+    // Trouvé par son titre saisi à la main : après ; ce titre est son nom affiché (P4-22).
+    assert.equal(search.search('note', { limit: 40 }).groups[0].elements.at(-1)?.key, localFileKey('/bib/zzz.txt', 'linux'), 'trouvé par son titre : après');
     assert.equal(search.search('note', { limit: 1000 }).groups[0].elements.length, 31);
     assert.equal(search.search('note', { limit: -1 }).groups[0].elements.length, SEARCH_LIMIT);
   });
@@ -190,7 +192,8 @@ describe('catalog/search : suivi des changements', () => {
     const a = localFileKey('/bib/a.txt', 'linux');
     assert.deepEqual(found(search.search('pomme')), []);
     engine.setInfos(a, { title: 'Pomme' });
-    assert.deepEqual(found(search.search('pomme')), ['a']);
+    // Le titre saisi à la main est le nom affiché (P4-22).
+    assert.deepEqual(found(search.search('pomme')), ['Pomme']);
     catalog.setSource(LIB, [file('/bib/b.txt'), file('/bib/Pomme verte.txt')]);
     assert.deepEqual(found(search.search('pomme')), ['Pomme verte'], 'élément retiré, élément ajouté');
     // Beaucoup d'éléments d'un coup : les textes sont oubliés, puis recalculés.

@@ -3,7 +3,7 @@
  * fichier, source, tags automatiques, infos en ligne, modifications à la main), les garde dans un index en mémoire
  * et le tient à jour à chaque changement du catalogue, des modifications à la main ou des règles par extension.
  */
-import type { Element, ElementKey, InfoChanges, InfoValue, TagChanges, TagSummary } from '@mire/shared';
+import type { Element, ElementImages, ElementKey, InfoChanges, InfoValue, TagChanges, TagSummary } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { Overrides } from '../overrides.ts';
 import { keyGenre } from '../keys.ts';
@@ -22,6 +22,9 @@ export interface Contributor {
   origin: 'tagger' | 'metadata';
   compute(element: Readonly<Element>): Omit<Layer, 'origin'> | null;
 }
+
+/** Images qu'un élément peut avoir. */
+export const IMAGE_FIELDS: readonly string[] = ['poster', 'background', 'logo'];
 
 export interface TagEngineOptions {
   catalog: Pick<Catalog, 'keys' | 'get' | 'onChange'>;
@@ -105,7 +108,17 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
     const e = catalog.get(key);
     const eff = effective.get(key);
     if (!e || !eff) return null;
-    return structuredClone({ ...e, tags: eff.tags, infos: eff.infos, images: eff.images });
+    return structuredClone({ ...e, name: nameOf(e), tags: eff.tags, infos: eff.infos, images: eff.images });
+  }
+
+  /**
+   * Nom affiché d'un élément : le titre saisi à la main (éditeurs, P4-22) l'emporte sur le nom donné par la source,
+   * comme le titre modifié dans l'interface historique. Un titre venu d'ailleurs (fichier, infos en ligne) ne le change
+   * pas.
+   */
+  function nameOf(e: Readonly<Element>): string {
+    const title = overrides.get(e.key)?.infos?.title;
+    return typeof title === 'string' && title.trim() ? title.trim() : e.name;
   }
 
   /** Identifiant d'un tag nommé à la main : tag connu, ou nom simplifié (nouveau tag de l'utilisateur). */
@@ -165,6 +178,33 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
       if (Object.keys(next).length) overrides.setInfos(key, next);
       return element(key);
     },
+
+    /**
+     * Images modifiées à la main : `null` revient à l'automatique. Seul l'effacement passe par ici ; une image choisie
+     * sur le disque arrive par `pickImage` (copiée dans les données de Mire), jamais un chemin donné par l'interface.
+     */
+    clearImages(key: unknown, fields: unknown): Element | null {
+      if (!validKey(key) || !Array.isArray(fields)) return null;
+      const next: Partial<Record<keyof ElementImages, null>> = {};
+      for (const f of fields) if (IMAGE_FIELDS.includes(f)) next[f as keyof ElementImages] = null;
+      if (Object.keys(next).length) overrides.setImages(key, next);
+      return element(key);
+    },
+
+    /** Image choisie sur le disque et déjà copiée dans les données de Mire. */
+    setImage(key: ElementKey, field: keyof ElementImages, file: string): Element | null {
+      overrides.setImages(key, { [field]: file });
+      return element(key);
+    },
+
+    /** Réinitialise un élément : ses tags, infos et images reviennent à l'automatique. */
+    reset(key: unknown): Element | null {
+      if (!validKey(key)) return null;
+      overrides.reset(key);
+      return element(key);
+    },
+
+    nameOf,
 
     /** Tags connus (`tags.list`) : ceux du cœur, puis de l'utilisateur, puis ceux posés sans être déclarés. */
     tagsList(): TagSummary[] {

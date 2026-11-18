@@ -1,4 +1,5 @@
 import { Controller } from './base.ts';
+import { openEditor } from '../editors/editor.ts';
 import type { PagePath } from '@mire/shared';
 import type { ItemRef } from './types.ts';
 
@@ -66,8 +67,16 @@ export class AppController extends Controller {
     ui.editRef((S.focusRef as ItemRef | null) || ui.firstItemRef());
   }
 
-  /** Modifie les infos de l'élément sélectionné (touche ou bouton de la manette) ; faux s'il n'y en a pas. */
+  /**
+   * Modifie les infos de l'élément sélectionné (touche ou bouton de la manette) ; faux s'il n'y en a pas. Une carte du
+   * catalogue (vue de page, accueil, Recherche) ouvre l'éditeur de P4-22, un élément d'une vue historique l'ancien.
+   */
   editSelection(): boolean {
+    const key = this.ctx.ui.selectedKey?.();
+    if (key) {
+      void openEditor(this.ctx, key);
+      return true;
+    }
     const ref = this.ctx.ui.selectedRef();
     if (ref) this.ctx.ui.editRef(ref);
     return !!ref;

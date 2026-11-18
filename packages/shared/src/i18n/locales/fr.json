@@ -890,6 +890,52 @@
         "romProgress": "Téléchargement de {name} : {percent} %",
         "romProgressUnknown": "Téléchargement de {name}…"
       }
+    },
+    "editors": {
+      "title": {
+        "video": "Modifier la vidéo",
+        "track": "Modifier le morceau",
+        "image": "Modifier l’image",
+        "game": "Modifier le jeu",
+        "program": "Modifier le jeu",
+        "other": "Modifier l’élément"
+      },
+      "fields": {
+        "title": "Nom",
+        "year": "Année",
+        "genres": "Genres",
+        "genresHint": "Plusieurs : séparés par des virgules",
+        "overview": "Résumé",
+        "tags": "Tags",
+        "tagsHint": "Nouveau tag",
+        "poster": "Image",
+        "background": "Fond d’écran"
+      },
+      "actions": {
+        "save": "Enregistrer",
+        "online": "Rechercher en ligne",
+        "reset": "Réinitialiser",
+        "cancel": "Annuler"
+      },
+      "noTags": "Aucun tag.",
+      "saved": "Modifications enregistrées",
+      "resetDone": "Infos d’origine rétablies",
+      "invalidYear": "L’année s’écrit en chiffres, par exemple 1999.",
+      "gone": "Cet élément n’est plus dans la bibliothèque.",
+      "online": {
+        "searching": "Recherche des fiches…",
+        "failed": "La recherche n’a pas abouti.",
+        "none": "Aucune fiche trouvée avec ce nom. Essayez une autre orthographe, puis « Rechercher en ligne ».",
+        "choose": "Choisir la bonne fiche",
+        "found": {
+          "one": "{count} fiche trouvée pour « {query} ». Les plus proches du nom sont en premier.",
+          "other": "{count} fiches trouvées pour « {query} ». Les plus proches du nom sont en premier."
+        },
+        "noChoice": "Aucune fiche choisie.",
+        "fetching": "Récupération de « {title} »…",
+        "fetchFailed": "Impossible de récupérer cette fiche.",
+        "fetched": "Fiche « {title} » récupérée : vérifiez les champs, puis enregistrez."
+      }
     }
   }
 }

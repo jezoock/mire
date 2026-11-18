@@ -282,3 +282,60 @@ describe('index', () => {
     assert.equal(h.tagsList().find((t) => t.id === 'local')!.count, 0);
   });
 });
+
+describe('éditeurs (P4-22) : nom saisi, images, réinitialisation', () => {
+  it('un titre saisi à la main devient le nom affiché ; un titre automatique ne le change pas', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, [file('/films/Amélie.mkv', { infos: { title: 'Titre de la source' } })]);
+    assert.equal(engine.element(amelie)!.name, 'Amélie.mkv');
+    engine.setInfos(amelie, { title: '  Le Fabuleux Destin  ' });
+    assert.equal(engine.element(amelie)!.name, 'Le Fabuleux Destin');
+    assert.equal(engine.nameOf(catalog.get(amelie)!), 'Le Fabuleux Destin');
+    engine.setInfos(amelie, { title: null });
+    assert.equal(engine.element(amelie)!.name, 'Amélie.mkv');
+  });
+
+  it('images : choisie (setImage), effacée (clearImages) ; un champ inconnu est ignoré', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, [file('/films/Amélie.mkv', { images: { poster: '/src/affiche.jpg' } })]);
+    assert.equal(engine.setImage(amelie, 'poster', '/meta/img/a.jpg')!.images.poster, '/meta/img/a.jpg');
+    assert.equal(engine.setImage(amelie, 'background', '/meta/img/b.jpg')!.images.background, '/meta/img/b.jpg');
+    const cleared = engine.clearImages(amelie, ['poster', 'name', 42])!;
+    assert.deepEqual(cleared.images, { poster: '/src/affiche.jpg', background: '/meta/img/b.jpg' });
+    assert.equal(engine.clearImages(amelie, 'poster'), null);
+    assert.equal(engine.clearImages('pas une clé', ['poster']), null);
+  });
+
+  it('réinitialiser : tags, infos et images reviennent à l’automatique, le reste est gardé sur disque', () => {
+    const { dir, catalog, overrides, engine } = setup();
+    catalog.setSource(FILMS, [file('/films/Amélie.mkv')]);
+    engine.setTags(amelie, { local: false, 'Mes favoris': true });
+    engine.setInfos(amelie, { title: 'Amélie', year: 2001 });
+    engine.setImage(amelie, 'poster', '/meta/img/a.jpg');
+    const after = engine.reset(amelie)!;
+    assert.equal(after.name, 'Amélie.mkv');
+    assert.deepEqual(after.tags.sort(), ['local', 'video']);
+    assert.deepEqual(after.infos, { extension: 'mkv', folder: 'films' });
+    assert.deepEqual(after.images, {});
+    assert.equal(overrides.get(amelie), undefined);
+    // Le tag créé reste connu de Mire (seul l'élément revient à l'automatique).
+    assert.ok(overrides.userTags()['mes-favoris']);
+    const reread = createOverrides({ file: path.join(dir, 'overrides.json'), platform: 'linux' });
+    reread.load();
+    assert.equal(reread.get(amelie), undefined);
+    assert.equal(engine.reset('local:/inconnu')!, null);
+    assert.equal(engine.reset(42), null);
+  });
+
+  it('IPC : catalogClearImages, catalogReset ; catalogPickImage refuse un élément ou une image inconnus', async () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, [file('/films/Amélie.mkv')]);
+    const h = catalogHandlers({ catalog, tags: engine } as unknown as MainContext);
+    engine.setImage(amelie, 'poster', '/meta/img/a.jpg');
+    assert.deepEqual(h.catalogClearImages(amelie, ['poster'])!.images, {});
+    engine.setInfos(amelie, { year: 2001 });
+    assert.equal(h.catalogReset(amelie)!.infos.year, undefined);
+    assert.equal(await h.catalogPickImage('local:/inconnu', 'poster'), null);
+    assert.equal(await h.catalogPickImage(amelie, 'name' as never), null);
+  });
+});
