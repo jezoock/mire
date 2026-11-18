@@ -1,8 +1,8 @@
 // Moteur de thèmes (P4-11) : thèmes intégrés, palette, polices, images, sons et mise en page transmise.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { BUILTIN_THEMES, DEFAULT_PAGE_LAYOUT, activeTheme, createThemeEngine, readThemes } from '../../src/renderer/themes/index.ts';
-import type { ThemeEntry, ThemeHost } from '../../src/renderer/themes/index.ts';
+import { BUILTIN_THEMES, DEFAULT_PAGE_LAYOUT, activeTheme, createThemeEngine, readThemes, sharedScope } from '../../src/renderer/themes/index.ts';
+import type { ThemeEntry, ThemeHost, ThemeScope } from '../../src/renderer/themes/index.ts';
 
 function fakeHost(linked: string[] = ['ecran', 'jour']) {
   const props = new Map<string, string>();
@@ -64,6 +64,29 @@ describe('thèmes intégrés', () => {
 });
 
 describe('moteur', () => {
+  it('une portée commune habille les pages et l’accueil ensemble (P4-12)', () => {
+    const scope = (): ThemeScope & { props: Map<string, string> } => {
+      const props = new Map<string, string>();
+      return { dataset: {}, props, style: { setProperty: (k, v) => void props.set(k, v), removeProperty: (k) => void props.delete(k) } };
+    };
+    const [pages, home] = [scope(), scope()];
+    const host = { ...fakeHost(), scope: sharedScope([pages, home]) };
+    const engine = createThemeEngine(BUILTIN_THEMES, host);
+    engine.set('papier');
+    for (const s of [pages, home]) {
+      assert.equal(s.dataset.theme, 'papier');
+      assert.equal(s.dataset.palette, 'jour');
+      assert.match(s.props.get('--mire-font-heading') ?? '', /Palatino/);
+    }
+    assert.equal(host.scope.dataset.palette, 'jour');
+    engine.set('mire');
+    for (const s of [pages, home]) {
+      assert.equal(s.dataset.theme, 'mire');
+      assert.equal(s.dataset.palette, undefined);
+      assert.equal(s.props.has('--mire-font-heading'), false);
+    }
+  });
+
   it('sans thème, refuse de démarrer', () => {
     assert.throws(() => createThemeEngine([], fakeHost()));
   });

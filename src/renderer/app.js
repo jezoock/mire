@@ -222,7 +222,8 @@ function go(section, { focus = 'keep' } = {}) {
   if (focus === 'content') {
     focusFirst();
     // Vue encore en chargement (télé) : le focus ira au contenu dès qu'il arrive.
-    S.pendingFocus = !viewEl.contains(document.activeElement);
+    // L'accueil rend ses rangées après avoir lu le catalogue : le focus ira à la première barre une fois rendues.
+    S.pendingFocus = section === HOME_VIEW || !viewEl.contains(document.activeElement);
   }
   if (section === 'tv' && !S.channels && !S.tvLoading) loadChannels();
 }

@@ -104,7 +104,7 @@ const focusPlace = () =>
     if (a?.closest('#rail')) return 'menu';
     if (a?.matches('input[type="search"], input[type="text"]')) return 'champ';
     if (document.body.dataset.section !== 'home') return 'ailleurs';
-    return a?.closest('.mire-bar') ? 'barres' : 'accueil';
+    return a?.closest('.mire-home-view__bar') ? 'barres' : 'accueil';
   });
 // Champ : on en sort vers le bas ; ailleurs : Échap ramène à l'accueil ; accueil : on descend vers les barres
 // de la mire ; barres : la flèche gauche les parcourt jusqu'au menu.
@@ -177,14 +177,14 @@ describe('Test de fumée de Mire', () => {
   });
 
   it("l'accueil s'affiche", async () => {
-    await page.locator('.mire-bar').first().waitFor();
+    await page.locator('.mire-home-view__bar.hydrated').first().waitFor();
     assert.equal(await page.locator('#title').textContent(), 'Accueil');
     await settle();
     await shot('accueil-ecran');
   });
 
   it('chaque section s’affiche, atteinte au clavier', async () => {
-    await page.locator('.mire-bar').first().focus();
+    await page.locator('.mire-home-view__bar.hydrated').first().focus();
     await page.keyboard.press('ArrowLeft');
     for (const [section, title] of SECTIONS) {
       await goByKeyboard(section);

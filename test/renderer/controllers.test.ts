@@ -159,6 +159,55 @@ describe('contrôleurs', () => {
     );
     S.videos = [];
   });
+
+  it('accueil (P4-12) : barres et titres ouvrent des cibles, regroupements, éléments, sites et « Reprendre » par leur clé', async () => {
+    const elements: Record<string, unknown> = {
+      'web:arte': { key: 'web:arte', name: 'Arte', tags: ['stream'], open: { kind: 'site', url: 'https://arte.tv', site: 'arte' } },
+    };
+    const { calls: log, c: ctl } = fakeContext({ 'ui.open': () => true, 'api.catalogElement': async (k: string) => elements[k] ?? null });
+    assert.equal(ctl.home.open({ target: 'movies' }), true);
+    ctl.home.open({ target: 'screen:search' });
+    ctl.home.openGroup({ target: 'movies', value: 'Drame' });
+    ctl.home.openGroup({ target: 'movies', value: null });
+    await ctl.home.openElement({ key: 'web:arte' });
+    S.config = { web: [{ id: 'netflix', name: 'Netflix' }] };
+    ctl.home.openSite({ key: 'web:netflix' });
+    assert.throws(() => ctl.home.openSite({ key: 'web:retire' }), /introuvable/);
+    S.recent = [
+      { path: '/v/a.mkv', key: 'local:/v/a.mkv' },
+      { path: 'magnet:?xt=1', key: null },
+    ];
+    ctl.home.resume({ key: 'local:/v/a.mkv' });
+    ctl.home.resume({ key: 'magnet:?xt=1' });
+    assert.throws(() => ctl.home.resume({ key: 'local:/absent' }), /Reprendre/);
+    assert.deepEqual(
+      log.filter((c) => !c[0].startsWith('api.')),
+      [
+        ['ui.open', 'movies', { path: [], focus: 'content' }],
+        ['ui.open', 'screen:search', { path: [], focus: 'keep' }],
+        ['ui.open', 'movies', { path: ['Drame'], focus: 'content' }],
+        ['ui.open', 'movies', { path: [null], focus: 'content' }],
+        ['ui.openWeb', 'arte', 'https://arte.tv'],
+        ['ui.openWeb', 'netflix'],
+        ['ui.playRecent', { path: '/v/a.mkv', key: 'local:/v/a.mkv' }],
+        ['ui.playRecent', { path: 'magnet:?xt=1', key: null }],
+      ],
+    );
+    S.recent = [];
+  });
+
+  it('réglages de l’accueil (P4-12) : rangées, barres et sites, montrés ou cachés et déplacés par leur identifiant', async () => {
+    const ui: Data = { home: { clock: true, recent: true, bars: [], services: [], rows: [{ kind: 'bars', targets: ['movies'] }, { kind: 'recent' }] } };
+    const { c: ctl } = fakeContext({ 'ui.saveUi': async (mutate: (u: Data) => void) => mutate(ui) });
+    await ctl.settings.toggleHomeItem({ kind: 'bars', id: 'screen:search', on: true });
+    await ctl.settings.moveHomeItem({ kind: 'bars', id: 'screen:search', dir: -1 });
+    await ctl.settings.moveHomeItem({ kind: 'rows', id: 'recent', dir: -1 });
+    await ctl.settings.toggleHomeItem({ kind: 'sites', id: 'web:arte', on: true });
+    await ctl.settings.setHomeClock({ on: false });
+    assert.deepEqual(ui.home.rows, [{ kind: 'recent' }, { kind: 'bars', targets: ['screen:search', 'movies'] }, { kind: 'sites', keys: ['web:arte'] }]);
+    assert.equal(ui.home.clock, false);
+    await assert.rejects(ctl.settings.moveHomeItem({ kind: 'services', id: 'x', dir: 1 }), /inconnue/);
+  });
 });
 
 describe('registre : appel des actions', () => {
@@ -223,7 +272,8 @@ describe('pont des data-action historiques', () => {
   it('npm run check:actions ne trouve aucun problème, et relie les ~100 actions historiques', () => {
     const { errors, legacy, triggers } = checkActions();
     assert.deepEqual(errors, []);
-    assert.ok(legacy >= 100, `${legacy} actions`);
+    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux).
+    assert.ok(legacy >= 95, `${legacy} actions`);
     assert.ok(triggers >= 1);
   });
 

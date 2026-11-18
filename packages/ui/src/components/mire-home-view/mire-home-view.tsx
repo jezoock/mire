@@ -65,11 +65,10 @@ export class MireHomeView {
 
   private renderSites(sites: HomeSite[], labels: HomeLabels) {
     return (
-      <div class="mire-home-view__sites" role="list">
+      <div class="mire-home-view__sites">
         {sites.map((s) => (
           <ds-trigger
             key={s.key}
-            role="listitem"
             class="mire-home-view__site"
             style={{ '--mire-home-site': s.color, '--mire-home-site-ink': s.ink }}
             data-key={s.key}
@@ -123,7 +122,6 @@ export class MireHomeView {
       const cards = s.groups.map((g) => (
         <mire-group-card
           key={JSON.stringify(g.value)}
-          role="listitem"
           class="mire-home-view__group"
           group={g}
           variant={s.variant}
@@ -133,13 +131,7 @@ export class MireHomeView {
           countLabels={this.countLabels}
         />
       ));
-      if (grid)
-        return [
-          heading,
-          <div class="mire-home-view__groups" role="list">
-            {cards}
-          </div>,
-        ];
+      if (grid) return [heading, <div class="mire-home-view__groups">{cards}</div>];
       return [
         heading,
         // Une autre liste de regroupements recrée le ds-scroller (il déplace ses enfants, voir mire-row).
@@ -189,7 +181,7 @@ export class MireHomeView {
         ))}
         {empty && labels.empty && <p class="mire-home-view__empty">{labels.empty}</p>}
         <div class="mire-home-view__foot">
-          <ds-trigger class="mire-home-view__customize" mods="stl-3" data-focus-last target="mire-app" action='openSettings:[{"part":"home"}]'>
+          <ds-trigger class="mire-home-view__customize" mods="stl-2" data-focus-last target="mire-app" action='openSettings:[{"part":"home"}]'>
             {labels.customize}
           </ds-trigger>
         </div>

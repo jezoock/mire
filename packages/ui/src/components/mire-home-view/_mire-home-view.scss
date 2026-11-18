@@ -34,7 +34,7 @@ body.has-mini .mire-home {
   --mire-home-line: 22rem;
 
   display: grid;
-  gap: ds-spacing(7);
+  gap: ds-spacing(6);
   min-width: 0;
   padding-top: 4px;
 
@@ -133,12 +133,14 @@ body.has-mini .mire-home {
       flex-grow 0.22s ease,
       filter 0.15s ease;
 
-    &:hover {
+    // Comme sur la mire historique : la souris fait grandir la barre survolée, le clavier et la manette celle qui a le
+    // focus.
+    body.mouse &:hover {
       flex-grow: 1.8;
       filter: brightness(1.05);
     }
 
-    &:focus-within {
+    body:not(.mouse) &:focus-within {
       flex-grow: 1.8;
       box-shadow:
         inset 0 0 0 5px var(--ink),
@@ -146,7 +148,7 @@ body.has-mini .mire-home {
     }
 
     // L'anneau est dessiné par la barre elle-même (ci-dessus), comme sur la mire historique.
-    :focus-visible {
+    &:focus-visible {
       outline: none;
     }
 
@@ -226,7 +228,9 @@ body.has-mini .mire-home {
       filter: brightness(1.06);
     }
 
-    &:focus-within {
+    body:not(.mouse) &:focus-within {
+      outline: var(--ring-w, 3px) solid var(--text);
+      outline-offset: 3px;
       transform: translateY(-3px);
     }
 
