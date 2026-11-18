@@ -4,8 +4,29 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { CORE_SCREENS } from '@mire/shared';
 import type { PageDefinition } from '@mire/shared';
-import { HOME_TARGET, LEGACY_VIEWS, createRouter, legacyViewOf, routeOf, sameRoute, targetOfLegacyView } from '../../src/renderer/shell/router.ts';
-import { DEFAULT_PINNED, activeDownloads, currentEntry, pinnedPages, railEntries, railSessions } from '../../src/renderer/shell/menu.ts';
+import {
+  HOME_TARGET,
+  LEGACY_PAGE_SECTIONS,
+  LEGACY_VIEWS,
+  PAGE_VIEW,
+  createRouter,
+  legacySectionOf,
+  legacyViewOf,
+  routeOf,
+  sameRoute,
+  targetOfLegacyView,
+  viewOf,
+} from '../../src/renderer/shell/router.ts';
+import {
+  DEFAULT_PINNED,
+  activeDownloads,
+  currentEntry,
+  cycleTargets,
+  nextTarget,
+  pinnedPages,
+  railEntries,
+  railSessions,
+} from '../../src/renderer/shell/menu.ts';
 
 const t = (key: string) => `«${key}»`;
 const page = (id: string, order?: number, pinned = true): PageDefinition => ({
@@ -26,16 +47,21 @@ describe('routeur de la coquille', () => {
     assert.equal(sameRoute({ target: 'series', path: ['A', 1] }, { target: 'series', path: ['A'] }), false);
   });
 
-  it('chaque écran du cœur sauf l’explorateur, et chaque page prête à l’emploi, a une vue historique', () => {
-    for (const s of CORE_SCREENS) assert.equal(legacyViewOf(`screen:${s}`) === null, s === 'explorer', s);
-    for (const id of DEFAULT_PINNED) assert.ok(legacyViewOf(id), id);
-    assert.equal(legacyViewOf('films-annees-90'), null);
+  it('chaque page s’affiche dans la vue de page ; chaque écran du cœur sauf l’explorateur, dans une vue historique', () => {
+    for (const s of CORE_SCREENS) assert.equal(viewOf(`screen:${s}`) === null, s === 'explorer', s);
+    for (const id of [...DEFAULT_PINNED, 'films-annees-90']) assert.equal(viewOf(id), PAGE_VIEW, id);
+    assert.equal(viewOf('list:favoris'), null);
+    assert.equal(viewOf('pas une cible'), null);
+    assert.equal(legacyViewOf('movies'), null);
+    // Ancienne vue des pages prêtes à l'emploi ; une page de l'utilisateur n'en a pas.
+    for (const id of DEFAULT_PINNED) assert.ok(legacySectionOf(id), id);
+    assert.equal(legacySectionOf('films-annees-90'), null);
     // Une section historique revient à sa première cible ; un site ouvert ou la démonstration n'en ont pas.
     assert.equal(targetOfLegacyView('videos'), 'movies');
     assert.equal(targetOfLegacyView('downloads'), 'screen:center');
     assert.equal(targetOfLegacyView('web'), null);
     assert.equal(targetOfLegacyView('demo'), null);
-    for (const [target] of LEGACY_VIEWS) assert.ok(routeOf(target), target);
+    for (const [target] of [...LEGACY_VIEWS, ...LEGACY_PAGE_SECTIONS]) assert.ok(routeOf(target), target);
   });
 
   it('ouvre une cible dans sa vue, garde le chemin, refuse ce qu’aucune vue n’affiche', () => {
@@ -46,22 +72,26 @@ describe('routeur de la coquille', () => {
     assert.equal(router.current().target, HOME_TARGET);
     assert.equal(router.open('series', { path: ['Friends'] }), true);
     assert.deepEqual(router.current(), { target: 'series', path: ['Friends'] });
+    assert.equal(router.open('films-annees-90'), true);
     assert.equal(router.open('screen:explorer'), false);
+    assert.equal(router.open('list:favoris'), false);
     assert.equal(router.open('pas une cible'), false);
     assert.equal(router.open('screen:settings', { focus: 'keep' }), true);
     assert.deepEqual(shown, [
-      ['videos', 'content'],
+      ['page', 'content'],
+      ['page', 'content'],
       ['settings', 'keep'],
     ]);
-    assert.deepEqual(changes, ['series/Friends', 'screen:settings/']);
+    assert.deepEqual(changes, ['series/Friends', 'films-annees-90/', 'screen:settings/']);
   });
 
   it('suit les changements de section de l’interface historique', () => {
     const router = createRouter({ show: () => {} });
-    router.open('series');
-    // Déjà dans la vue des vidéos : Séries reste la route.
+    router.open('series', { path: ['Friends'] });
+    // Vue de page, puis ancienne vue de la page : Séries reste la route.
+    router.follow('page');
     router.follow('videos');
-    assert.equal(router.current().target, 'series');
+    assert.deepEqual(router.current(), { target: 'series', path: ['Friends'] });
     router.follow('music');
     assert.equal(router.current().target, 'music');
     // Un site ouvert reste rattaché à la page d'où il vient.
@@ -81,6 +111,7 @@ describe('entrées du menu', () => {
         ['screen:search', 'search', false],
         ['screen:home', 'home', false],
         ['movies', 'videos', false],
+        ['series', 'videos', false],
         ['music', 'music', false],
         ['images', 'images', false],
         ['streaming', 'streaming', false],
@@ -92,23 +123,30 @@ describe('entrées du menu', () => {
         ['quit', '', true],
       ],
     );
-    // Libellés tirés des catalogues : ceux des vues historiques qui les affichent.
-    assert.equal(entries[2]?.label, '«shell.views.videos»');
-    assert.equal(entries[9]?.label, '«shell.menu.openFile»');
+    assert.equal(entries[10]?.label, '«shell.menu.openFile»');
     assert.deepEqual(
       entries.filter((e) => e.sessions).map((e) => e.key),
       ['streaming', 'tv', 'games'],
     );
   });
 
-  it('Films et Séries, affichés par la même vue, n’ont qu’une entrée ; une page sans vue n’en a pas encore', () => {
-    const pages = [page('games', 1), page('series', 2), page('mes-films', 3), page('movies', 4), page('music', 5, false)];
+  it('une entrée par page épinglée, avec le nom de la page ; Films et Séries ont chacune la leur', () => {
+    const pages = [page('games', 1), page('series', 2), { ...page('mes-films', 3), name: 'Mes films' }, page('movies', 4), page('music', 5, false)];
+    pages[1] = { ...pages[1]!, name: { key: 'pages.series' } };
     assert.deepEqual(
       pinnedPages(pages).map((p) => p.id),
       ['games', 'series', 'mes-films', 'movies'],
     );
-    const keys = railEntries(pages, t).map((e) => e.key);
-    assert.deepEqual(keys.slice(2, -4), ['games', 'series']);
+    const entries = railEntries(pages, t).slice(2, -4);
+    assert.deepEqual(
+      entries.map((e) => [e.key, e.label, e.view, e.color]),
+      [
+        ['games', 'games', 'games', 'var(--bar-blue)'],
+        ['series', '«pages.series»', 'videos', 'var(--bar-yellow)'],
+        ['mes-films', 'Mes films', 'page', 'var(--muted)'],
+        ['movies', 'movies', 'videos', 'var(--bar-yellow)'],
+      ],
+    );
     // Sans ordre, une page épinglée vient après les autres, dans l'ordre de la liste.
     assert.deepEqual(
       pinnedPages([page('b'), page('a', 2), page('c')]).map((p) => p.id),
@@ -116,18 +154,33 @@ describe('entrées du menu', () => {
     );
   });
 
-  it('sans la liste des pages, les pages prêtes à l’emploi sont épinglées', () => {
+  it('sans la liste des pages, les pages prêtes à l’emploi sont épinglées, avec leur nom', () => {
+    const entries = railEntries(null, t);
     assert.deepEqual(
-      railEntries(null, t).map((e) => e.key),
+      entries.map((e) => e.key),
       railEntries(BUILTIN, t).map((e) => e.key),
     );
+    assert.equal(entries[2]?.label, '«pages.movies»');
   });
 
-  it('entrée affichée : celle de la vue, ou de la page d’où vient un site ouvert', () => {
+  it('entrée affichée : la page de la route (vue de page ou ancienne vue), sinon celle de la section', () => {
     const entries = railEntries(BUILTIN, t);
-    assert.equal(currentEntry(entries, 'videos'), 'movies');
-    assert.equal(currentEntry(entries, 'downloads'), 'screen:center');
+    assert.equal(currentEntry(entries, 'page', 'series'), 'series');
+    assert.equal(currentEntry(entries, 'videos', 'series'), 'series');
+    assert.equal(currentEntry(entries, 'videos', 'screen:home'), 'movies');
+    assert.equal(currentEntry(entries, 'page', 'pas-epinglee'), '');
+    assert.equal(currentEntry(entries, 'downloads', 'series'), 'screen:center');
     assert.equal(currentEntry(entries, 'demo'), '');
+  });
+
+  it('LB et RB parcourent les écrans et pages du haut du menu, en boucle', () => {
+    const targets = cycleTargets(railEntries(BUILTIN, t));
+    assert.deepEqual(targets, ['screen:search', 'screen:home', ...DEFAULT_PINNED]);
+    assert.equal(nextTarget(targets, 'screen:home', 1), 'movies');
+    assert.equal(nextTarget(targets, 'games', 1), 'screen:search');
+    assert.equal(nextTarget(targets, 'screen:search', -1), 'games');
+    assert.equal(nextTarget(targets, 'screen:settings', 1), 'screen:home');
+    assert.equal(nextTarget([], 'x', 1), null);
   });
 
   it('les sites ouverts vont sous leur page, avec une couleur filtrée', () => {

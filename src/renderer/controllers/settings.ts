@@ -13,6 +13,13 @@ export class SettingsController extends Controller {
     });
   }
 
+  /** Thème des pages (P4-11, `theme.json`) : appliqué tout de suite, sans redémarrage. */
+  async setPageTheme({ id }: { id: string }): Promise<void> {
+    await this.ctx.ui.saveUi((ui) => {
+      ui.pageTheme = id;
+    });
+  }
+
   /** Position du menu : `left`, `right`, `top`, `bottom`. */
   async setMenuPosition({ id }: { id: string }): Promise<void> {
     await this.ctx.ui.saveUi((ui) => {

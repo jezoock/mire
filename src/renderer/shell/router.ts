@@ -3,8 +3,10 @@
  * chemin dans les regroupements d'une page (`PagePath`). Une cible s'écrit `movies` (une page), `list:<id>` (une
  * liste) ou `screen:<nom>` (un écran du cœur, `CORE_SCREENS`).
  *
- * Tant qu'un écran ou une page n'a pas de vue à lui (explorateur P4-08, vue de page P4-11…), il s'affiche dans la vue
- * historique qui en tient lieu (`LEGACY_VIEWS`) : la section de `app.js` (`videos` pour Films et Séries). Sans DOM.
+ * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), dessinée par le thème. Tant qu'un
+ * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
+ * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
+ * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
  */
 import { formatTarget, parseTarget } from '@mire/shared';
 import type { PagePath } from '@mire/shared';
@@ -18,16 +20,25 @@ export interface Route {
 
 export const HOME_TARGET = formatTarget({ kind: 'screen', screen: 'home' });
 
+/** Vue qui affiche les pages (P4-11) : la section `page` de l'interface, qui contient `mire-page-view`. */
+export const PAGE_VIEW = 'page';
+
 /**
- * Vue historique qui tient lieu de chaque écran et de chaque page prête à l'emploi, jusqu'à son remplacement.
- * L'ordre compte : la première cible d'une vue est celle que l'on retient quand l'interface historique l'ouvre.
- * L'explorateur n'en a pas (P4-08) ; une page créée par l'utilisateur non plus, jusqu'à la vue de page (P4-11).
+ * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
  */
 export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   ['screen:home', 'home'],
   ['screen:search', 'search'],
   ['screen:center', 'downloads'],
   ['screen:settings', 'settings'],
+];
+
+/**
+ * Section historique de chaque page prête à l'emploi (« Ancienne vue ») : elle garde ce que la vue de page ne fait pas
+ * encore (choix de la box, consoles, ajout de sites…). L'ordre compte : la première page d'une section est celle que
+ * l'on retient quand l'interface historique l'ouvre (Films pour les vidéos).
+ */
+export const LEGACY_PAGE_SECTIONS: ReadonlyArray<readonly [page: string, section: string]> = [
   ['movies', 'videos'],
   ['series', 'videos'],
   ['music', 'music'],
@@ -37,14 +48,30 @@ export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: stri
   ['games', 'games'],
 ];
 
-/** Section historique qui affiche une cible ; `null` si aucune vue ne l'affiche encore. */
+/** Section historique qui affiche un écran du cœur ; `null` pour une page, une liste ou l'explorateur. */
 export function legacyViewOf(target: string): string | null {
   return LEGACY_VIEWS.find(([t]) => t === target)?.[1] ?? null;
 }
 
-/** Première cible affichée par une section historique ; `null` pour une vue sans cible (site ouvert, démonstration). */
+/** Section historique d'une page prête à l'emploi (« Ancienne vue ») ; `null` pour une autre page. */
+export function legacySectionOf(page: string): string | null {
+  return LEGACY_PAGE_SECTIONS.find(([p]) => p === page)?.[1] ?? null;
+}
+
+/** Vue qui affiche une cible : la vue de page pour une page, la vue historique d'un écran ; `null` sinon. */
+export function viewOf(target: string): string | null {
+  const t = parseTarget(target);
+  if (!t) return null;
+  if (t.kind === 'page') return PAGE_VIEW;
+  return t.kind === 'screen' ? legacyViewOf(target) : null;
+}
+
+/**
+ * Cible affichée par une section historique : un écran du cœur, ou la première page dont c'est l'ancienne vue ;
+ * `null` pour une vue sans cible (site ouvert, démonstration).
+ */
 export function targetOfLegacyView(section: string): string | null {
-  return LEGACY_VIEWS.find(([, s]) => s === section)?.[0] ?? null;
+  return LEGACY_VIEWS.find(([, s]) => s === section)?.[0] ?? LEGACY_PAGE_SECTIONS.find(([, s]) => s === section)?.[0] ?? null;
 }
 
 /** Route d'une cible ; `null` si le texte n'est pas une cible. Le chemin ne vaut que pour une page ou une liste. */
@@ -71,7 +98,8 @@ export interface Router {
   open(target: unknown, opts?: { path?: PagePath; focus?: string }): boolean;
   /**
    * L'interface historique a changé de section par elle-même (`go`) : la route suit, sauf pour une vue sans cible
-   * (un site ouvert reste rattaché à la page d'où il vient) ou si la route affichée est déjà dans cette section.
+   * (un site ouvert reste rattaché à la page d'où il vient) ou si la route affichée est déjà dans cette section (ou
+   * dans l'ancienne vue de sa page).
    */
   follow(section: string): void;
   /** Prévient à chaque changement de route. */
@@ -90,14 +118,14 @@ export function createRouter(host: RouterHost): Router {
     current: () => route,
     open(target, { path = [], focus = 'content' } = {}) {
       const next = routeOf(target, path);
-      const section = next && legacyViewOf(next.target);
+      const section = next && viewOf(next.target);
       if (!next || !section) return false;
       set(next);
       host.show(section, { focus });
       return true;
     },
     follow(section) {
-      if (legacyViewOf(route.target) === section) return;
+      if (viewOf(route.target) === section || legacySectionOf(route.target) === section) return;
       const target = targetOfLegacyView(section);
       if (target) set({ target, path: [] });
     },

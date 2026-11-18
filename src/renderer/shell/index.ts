@@ -9,12 +9,12 @@ import { menuPosition } from '@mire/ui/utils';
 import type { MenuPosition, PadHint, RailEntry, RailLabels, RailSession } from '@mire/ui/utils';
 import { ICON } from '../core/icons.ts';
 import { LEGACY_LAYERS } from './legacy-markup.ts';
-import { currentEntry, railEntries, railSessions } from './menu.ts';
+import { currentEntry, cycleTargets, nextTarget, railEntries, railSessions } from './menu.ts';
 import type { WebSession } from './menu.ts';
 import { createRouter } from './router.ts';
 import type { Router, RouterHost } from './router.ts';
 
-export { legacyViewOf, routeOf, targetOfLegacyView } from './router.ts';
+export { PAGE_VIEW, legacySectionOf, legacyViewOf, routeOf, targetOfLegacyView, viewOf } from './router.ts';
 export type { Route, Router } from './router.ts';
 
 type Rendered = HTMLElement & { componentOnReady?: () => Promise<unknown> };
@@ -84,6 +84,10 @@ export interface Shell {
   setPadHints(hints: PadHint[] | null): void;
   /** Ouvre une cible (`screen:home`, `movies`, `list:<id>`) ; faux si aucune vue ne l'affiche encore. */
   open(target: unknown, opts?: { path?: PagePath; focus?: string }): boolean;
+  /** Écran ou page suivant (`step` 1) ou précédent (-1) du menu (LB et RB de la manette). */
+  cycle(step: number): void;
+  /** Pages connues (`pages.list`), ou `null`. */
+  pages(): readonly PageDefinition[] | null;
 }
 
 type RailEl = HTMLElement & {
@@ -128,11 +132,13 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
   rail.icons = ICON as Record<string, string>;
   header.gearIcon = ICON.gear;
 
+  const current = () => currentEntry(entries, section === 'web' ? webHome : section, router.current().target);
+  router.onChange(() => (rail.current = current()));
   const centerKey = () => entries.find((e) => e.target === 'screen:center')?.key ?? '';
   function renderRail() {
     entries = railEntries(pages, t);
     rail.entries = entries;
-    rail.current = currentEntry(entries, section === 'web' ? webHome : section);
+    rail.current = current();
     rail.sessions = railSessions(entries, sessions.list, sessions.home, sessions.safeColor);
     rail.badges = { [centerKey()]: downloads };
     const sessionLabels: Record<string, string> = {};
@@ -194,7 +200,7 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
       section = next;
       webHome = home;
       router.follow(next);
-      rail.current = currentEntry(entries, section === 'web' ? webHome : section);
+      rail.current = current();
     },
     setSessions(list, active, home, safeColor) {
       sessions = { list, home, safeColor };
@@ -219,5 +225,11 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
       padbar.hints = hints ?? [];
     },
     open: (target, opts) => router.open(target, opts),
+    cycle(step) {
+      const from = section === 'web' ? (entries.find((e) => e.view === webHome)?.target ?? '') : router.current().target;
+      const next = nextTarget(cycleTargets(entries), from, step);
+      if (next) router.open(next, { focus: next === 'screen:search' ? 'keep' : 'content' });
+    },
+    pages: () => pages,
   };
 }

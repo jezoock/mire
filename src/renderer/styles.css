@@ -28,12 +28,13 @@
 body { --accent: var(--bar-white); }
 body, .mini, .layer, body [data-palette] { --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000); }
 
-body[data-section="videos"] { --accent: var(--bar-yellow); }
-body[data-section="music"] { --accent: var(--bar-cyan); }
-body[data-section="images"] { --accent: var(--bar-green); }
-body[data-section="streaming"], body[data-section="web"] { --accent: var(--bar-magenta); }
-body[data-section="tv"] { --accent: var(--bar-red); }
-body[data-section="games"] { --accent: var(--bar-blue); }
+/* data-accent : la section, ou, dans la vue de page (P4-11), l'ancienne section de la page (Films → videos). */
+body[data-accent="videos"] { --accent: var(--bar-yellow); }
+body[data-accent="music"] { --accent: var(--bar-cyan); }
+body[data-accent="images"] { --accent: var(--bar-green); }
+body[data-accent="streaming"], body[data-accent="web"] { --accent: var(--bar-magenta); }
+body[data-accent="tv"] { --accent: var(--bar-red); }
+body[data-accent="games"] { --accent: var(--bar-blue); }
 
 .bars7 > :nth-child(1) { --c: var(--bar-white); }
 .bars7 > :nth-child(2) { --c: var(--bar-yellow); }

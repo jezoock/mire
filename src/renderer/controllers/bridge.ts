@@ -153,6 +153,7 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
   'bios-open': { tag: 'mire-centre', method: 'openBios', args: byId },
   // Réglages
   theme: { tag: 'mire-settings', method: 'setTheme', args: byId, after: (_v, d, view) => pressed($$('.theme-card', view.root), d.id) },
+  'page-theme': { tag: 'mire-settings', method: 'setPageTheme', args: byId, after: (_v, d) => pressed($$('[data-action="page-theme"]'), d.id) },
   'menu-pos': { tag: 'mire-settings', method: 'setMenuPosition', args: byId, after: (_v, d) => pressed($$('[data-action="menu-pos"]'), d.id) },
   'order-move': {
     tag: 'mire-settings',

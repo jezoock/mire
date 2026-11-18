@@ -27,7 +27,9 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { createShell, targetOfLegacyView } from './shell/index.ts';
+import { PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { createPages } from './pages/index.ts';
+import { BUILTIN_THEMES } from './themes/index.ts';
 import { activeDownloads } from './shell/menu.ts';
 
 /* ------------------------------------------------------------------ */
@@ -70,6 +72,10 @@ const HOME_BARS = {
 const palette = createPaletteLoader();
 function applyTheme() {
   palette.set(S.config?.ui?.theme);
+  // Thème des pages (P4-11) : sa palette, ses polices et sa mise en page, sans redémarrage ; il peut placer le menu.
+  const before = pages.engine.current();
+  const after = pages.engine.set(S.config?.ui?.pageTheme);
+  if (after.menu !== before.menu) applyMenu();
 }
 
 /* ---------- Coquille (P4-07) : menu, en-tête et aide de la manette, dans <mire-app> (shell/) ---------- */
@@ -85,8 +91,23 @@ const shell = createShell({
   onLayout: () => { if (S.section === 'web') syncWeb(); },
 });
 
+// Pages de la coquille (P4-11) : la vue de page, remplie d'après la route et le thème choisi.
+const pages = createPages({
+  router: shell.router,
+  pages: () => shell.pages(),
+  level: (id, path, cursor) => api.catalogPage(id, path, cursor),
+  onPagesChange: (listener) => api.onPagesChange(listener),
+  t,
+  raw: (key) => i18n.raw(key),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  themes: BUILTIN_THEMES,
+  onTitle: () => { if (S.section === PAGE_VIEW) render(); },
+});
+
 function applyMenu() {
-  shell.setMenu(menuSettings());
+  // La place du menu voulue par le thème des pages l'emporte sur celle des réglages.
+  const themed = pages.engine.current().menu;
+  shell.setMenu(themed ? { ...menuSettings(), position: themed } : menuSettings());
   if (S.section === 'web') setTimeout(syncWeb, 300);
 }
 
@@ -183,6 +204,7 @@ addEventListener('hashchange', openDemoFromHash);
 
 function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
+  if (S.section === PAGE_VIEW && pages.back()) return;
   if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
   if (S.section !== 'home') {
     go('home');
@@ -278,13 +300,16 @@ function render({ resetScroll = false } = {}) {
   const selector = hadFocus ? focusSelectorOf(active) : null;
 
   const sec = S.section;
-  const title = sec === 'games' && S.romsOf != null ? consoleOf(S.romsOf)?.name : sec === DEMO_SECTION ? demoTitle() : undefined;
+  document.body.dataset.accent = sec === PAGE_VIEW ? (legacySectionOf(shell.router.current().target) ?? '') : sec;
+  const title = sec === 'games' && S.romsOf != null ? consoleOf(S.romsOf)?.name : sec === DEMO_SECTION ? demoTitle() : sec === PAGE_VIEW ? pages.title() : undefined;
   shell.setHeader({ view: sec, title, searchable: SEARCHABLE.has(sec), search: sec === 'tv' ? 'channel' : 'section' });
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
   const views = { home: viewHome, search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings, [DEMO_SECTION]: viewDemo };
-  viewEl.innerHTML = views[sec]();
+  // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
+  if (sec === PAGE_VIEW) { if (viewEl.firstElementChild !== pages.host || viewEl.childElementCount !== 1) viewEl.replaceChildren(pages.host); }
+  else viewEl.innerHTML = views[sec]();
   if (resetScroll) viewEl.scrollTop = 0;
 
   if (hadFocus) {
@@ -1064,6 +1089,7 @@ function viewSettings() {
       <h2>Apparence</h2>
       <p class="set-help">Le thème s’applique tout de suite.</p>
       <div class="theme-grid" id="theme-grid">${themeCards()}</div>
+      ${pageThemeBlock()}
       ${menuBlock()}
     </section>
 
@@ -2037,6 +2063,16 @@ function scrapeBlock(kind, help) {
     <p class="set-help">Pour corriger un élément mal reconnu : « Modifier » (ou clic droit, touche E, bouton X), puis « Rechercher en ligne » et choisissez la bonne fiche.</p></section>`;
 }
 
+// Thème des pages (P4-11) : textes tirés des catalogues, dans la langue de l'interface (la vue reste en français).
+function pageThemeBlock() {
+  const cur = pages.engine.current().id;
+  const text = (n) => (typeof n === 'string' ? n : t(n.key));
+  const lang = esc(document.documentElement.lang || 'fr');
+  return `<section class="pset" lang="${lang}"><h3 class="pset-h">${esc(t('themes.setting.title'))}</h3>
+    <p class="set-help">${esc(t('themes.setting.help'))}</p>
+    <div class="seg" role="group" aria-label="${esc(t('themes.setting.title'))}">${pages.engine.list().map((th) => `<button type="button" class="seg-btn focusable" data-action="page-theme" data-id="${esc(th.id)}" aria-pressed="${th.id === cur}" title="${esc(th.description ? text(th.description) : '')}">${esc(text(th.name))}</button>`).join('')}</div></section>`;
+}
+
 function menuBlock() {
   const m = S.config.ui.menu;
   const pos = [['left', 'À gauche'], ['right', 'À droite'], ['top', 'En haut'], ['bottom', 'En bas']];
@@ -2817,6 +2853,11 @@ const legacyUi = {
   },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),
+  cycle: (step) => shell.cycle(step),
+  openPageGroup: (value) => pages.openGroup(value),
+  openPagePath: (path) => pages.openPath(path),
+  loadMorePage: () => pages.loadMore(),
+  pageLegacySection: () => pages.legacySection(),
   // Site ouvert, choisi dans le menu : un portail de télévision, les sites d'une console, un marque-page ou un service.
   openSite(id) {
     if (id.startsWith('tv:')) callAction('mire-web', 'openPortal', { id: id.slice(3) });
@@ -3031,6 +3072,6 @@ function tick() {
   const start = S.config.ui.start || 'home';
   if (!pending?.length) {
     if (start.startsWith('web:')) openWeb(start.slice(4));
-    else if (start !== 'home' && targetOfLegacyView(start)) go(start, { focus: 'content' });
+    else if (start !== 'home' && targetOfLegacyView(start)) shell.open(targetOfLegacyView(start), { focus: 'content' });
   }
 })();

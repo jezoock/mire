@@ -1,7 +1,8 @@
 import { searchUrlFor } from '../domain/index.ts';
 import { plural } from '../core/format.ts';
 import { Controller, findBy, indexBy } from './base.ts';
-import type { Data, ItemRef } from './types.ts';
+import type { ControllerContext, Data, ItemRef } from './types.ts';
+import type { Element as CatalogElement, InfoScalar, PagePath } from '@mire/shared';
 
 /**
  * `mire-page` : pages de contenus (vidéos, musique, images, télévision, jeux et consoles) : lecture, filtres et tris,
@@ -352,4 +353,55 @@ export class PageController extends Controller {
     ui.startScrape([kind], { force });
     ui.updateScrapeButton();
   }
+
+  // ---------- Vue de page (P4-11) ----------
+
+  /** Ouvre un regroupement du niveau affiché (Friends, Saison 1, « Autres » : `null`), désigné par sa valeur. */
+  openGroup({ value }: { value: InfoScalar | null }): boolean {
+    return this.ctx.ui.openPageGroup(value);
+  }
+
+  /** Revient à une étape du chemin parcouru (`[]` : la page elle-même). */
+  openPath({ path }: { path: PagePath }): boolean {
+    return this.ctx.ui.openPagePath(Array.isArray(path) ? path : []);
+  }
+
+  /** Tranche suivante du niveau affiché. */
+  async loadMore(): Promise<void> {
+    await this.ctx.ui.loadMorePage();
+  }
+
+  /** Ancienne vue de la page affichée (section historique), tant que la vue de page n'en reprend pas tout. */
+  openLegacy(): void {
+    const section = this.ctx.ui.pageLegacySection();
+    if (section) this.ctx.ui.go(section, { focus: 'content' });
+  }
+
+  /** Ouvre, lit ou lance un élément du catalogue, désigné par sa clé, selon sa façon de s'ouvrir. */
+  async openElement({ key }: { key: string }): Promise<void> {
+    const { S, api, ui } = this.ctx;
+    const el = (await api.catalogElement(key)) as CatalogElement | null;
+    if (!el) throw new Error(`Élément introuvable : ${key}`);
+    const o = el.open;
+    if (o.kind === 'file') ui.playInContext(mediaItemOf(S, el, o.path));
+    else if (o.kind === 'site') {
+      if (!o.site) throw new Error(`Site sans service : ${key}`);
+      ui.openWeb(o.site, o.url);
+    } else if (o.kind === 'game') ui.launchRom({ path: o.path, displayName: el.name }, o.console);
+    else if (o.kind === 'program') {
+      const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
+      ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
+    } else {
+      const known = (S.channels ?? []).find((c) => (c.variants as Data[] | undefined)?.some((v) => v.url === o.url));
+      ui.playChannel(known ?? { name: el.name, variants: [{ q: 'hd', url: o.url }] });
+    }
+  }
+}
+
+/** Élément de l'interface historique pour un fichier du catalogue (sa liste de lecture vient de son dossier). */
+function mediaItemOf(S: ControllerContext['S'], el: CatalogElement, path: string): Data {
+  const known = [...S.videos, ...S.tracks, ...S.images].find((x) => x.path === path);
+  if (known) return known as Data;
+  const kind = el.tags.includes('video') ? 'video' : el.tags.includes('audio') ? 'audio' : 'image';
+  return { path, name: el.name, kind };
 }

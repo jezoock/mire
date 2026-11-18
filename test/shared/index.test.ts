@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les pages, les listes et les cibles', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les thèmes, les pages, les listes et les cibles', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
@@ -12,6 +12,7 @@ describe('@mire/shared', () => {
       'CORE_SCREENS',
       'COVER_RE',
       'DEFAULT_PALETTE',
+      'DEFAULT_THEME',
       'DISC_INDEX_EXT',
       'EXT',
       'FANART_RE',
@@ -30,6 +31,14 @@ describe('@mire/shared', () => {
       'PALETTE_TOKENS',
       'SCREEN_PREFIX',
       'SYSTEMS',
+      'THEME_BACKGROUNDS',
+      'THEME_CARDS',
+      'THEME_FILE_TYPES',
+      'THEME_FORMAT',
+      'THEME_LAYOUTS',
+      'THEME_MENU_POSITIONS',
+      'THEME_SCHEMA',
+      'THEME_SIZES',
       'bigramDice',
       'cleanRomName',
       'cleanTitle',
@@ -44,6 +53,8 @@ describe('@mire/shared', () => {
       'isListName',
       'isPaletteId',
       'isTarget',
+      'isThemeId',
+      'isThemePath',
       'isUrlTarget',
       'listIdOfPage',
       'listPageId',
@@ -51,8 +62,10 @@ describe('@mire/shared', () => {
       'parseEpisode',
       'parsePaletteMeta',
       'parseTarget',
+      'parseTheme',
       'rankByTitle',
       'resolvePalette',
+      'resolveTheme',
       'safeDecode',
       'safeFileName',
       'similarity',
@@ -61,10 +74,12 @@ describe('@mire/shared', () => {
       'splitAlbumFolder',
       'stripTags',
       'systemById',
+      'themeAssetUrl',
       'titleKey',
       'trackNumber',
       'validateList',
       'validatePage',
+      'validateTheme',
     ]);
   });
 
