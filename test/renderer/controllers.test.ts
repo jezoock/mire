@@ -176,9 +176,18 @@ describe('pont des data-action historiques', () => {
     assert.ok(triggers >= 1);
   });
 
+  it('boîtes de dialogue (P4-06) : un gabarit dont le nom de l’action est écrit tel quel est vérifié par ce nom', () => {
+    const boxes = findTriggers().filter((tr: { file: string }) => /packages\/ui\/src\/components\/mire-(form|pick)\//.test(tr.file));
+    assert.ok(boxes.length >= 3);
+    assert.ok(boxes.every((tr: { target: unknown; action: unknown }) => tr.target === 'mire-dialogs' && tr.action === 'act:…'));
+    assert.deepEqual(checkTriggers(boxes, targetMethods()), []);
+    assert.equal(checkTriggers([{ file: 'a.tsx', line: 1, target: 'mire-dialogs', action: 'vole:…' }], targetMethods()).length, 1);
+  });
+
   it('vérifie aussi la cible et l’action passées aux composants d’éléments, pas celles qu’ils transmettent (P4-05)', () => {
     const triggers = findTriggers();
-    const demo = triggers.filter((tr: { file: string }) => tr.file === 'src/renderer/demo/index.ts');
+    // Les boutons de la démonstration des boîtes (P4-06) appellent openDialog ; les composants d'éléments, pick.
+    const demo = triggers.filter((tr: { file: string; action: string }) => tr.file === 'src/renderer/demo/index.ts' && !tr.action.startsWith('openDialog:'));
     assert.ok(demo.length >= 4, `${demo.length} composants d'éléments dans la démonstration`);
     assert.ok(demo.every((tr: { target: unknown; action: unknown }) => tr.target === 'mire-demo' && tr.action === 'pick'));
     assert.ok(!triggers.some((tr: { file: string }) => /packages\/ui\/src\/components\/mire-(card|grid|row|group-card)\//.test(tr.file)));
