@@ -1,16 +1,24 @@
 @use '../../theme/tokens' as *;
 
 // Hôte des pages : il porte le thème des pages (palette par data-palette, polices, fond) et occupe toute la zone de
-// l'écran, sous les marges de .view (styles.css), pour que la palette du thème la couvre entièrement.
+// l'écran, marges de .view comprises (styles.css : 12px en haut, 56px en bas, 140px sous le mini-lecteur), pour que
+// la palette du thème la couvre entièrement.
 .mire-page {
+  --mire-page-top: 12px;
+  --mire-page-bottom: 56px;
+
   display: block;
   box-sizing: border-box;
-  min-height: 100%;
-  margin: -12px calc(-1 * var(--pad-x, 0px)) -56px;
-  padding: 12px var(--pad-x, 0px) 56px;
+  min-height: calc(100% + var(--mire-page-top) + var(--mire-page-bottom));
+  margin: calc(-1 * var(--mire-page-top)) calc(-1 * var(--pad-x, 0px)) calc(-1 * var(--mire-page-bottom));
+  padding: var(--mire-page-top) var(--pad-x, 0px) var(--mire-page-bottom);
   color: var(--text);
   font-family: var(--mire-font-body, inherit);
   background: var(--bg);
+}
+
+body.has-mini .mire-page {
+  --mire-page-bottom: 140px;
 }
 
 // Vue de page : chemin parcouru, puis regroupements ou éléments. La mise en page vient du thème (classes --layout-*,

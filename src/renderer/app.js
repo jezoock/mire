@@ -2213,7 +2213,8 @@ function renderPanel(keepFocus = true) {
 }
 
 function openPageSettings(tab) {
-  const section = S.section === 'games' && S.romsOf != null ? 'games' : S.section;
+  // Vue de page (P4-11) : les réglages de l'ancienne vue de la page (sources, infos, filtres).
+  const section = S.section === 'games' && S.romsOf != null ? 'games' : S.section === PAGE_VIEW ? (pages.legacySection() ?? S.section) : S.section;
   if (!panelSpec(section)) { go('settings'); return; }
   P.section = section;
   P.tab = tab || (section === P.lastSection ? P.tab : null);

@@ -413,9 +413,9 @@ export namespace Components {
     /**
      * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
      * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
-     * contient la vue de page (`mire-page-view`) et porte le thème des pages (palette, polices, fond : moteur de thèmes,
-     * `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se
-     * rend qu'une fois.
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
      */
     interface MirePage {
     }
@@ -845,9 +845,9 @@ declare global {
     /**
      * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
      * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
-     * contient la vue de page (`mire-page-view`) et porte le thème des pages (palette, polices, fond : moteur de thèmes,
-     * `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se
-     * rend qu'une fois.
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
      */
     interface HTMLMirePageElement extends Components.MirePage, HTMLStencilElement {
     }
@@ -1337,9 +1337,9 @@ declare namespace LocalJSX {
     /**
      * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
      * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
-     * contient la vue de page (`mire-page-view`) et porte le thème des pages (palette, polices, fond : moteur de thèmes,
-     * `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se
-     * rend qu'une fois.
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
      */
     interface MirePage {
     }
@@ -1819,9 +1819,9 @@ declare module "@stencil/core" {
             /**
              * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
              * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
-             * contient la vue de page (`mire-page-view`) et porte le thème des pages (palette, polices, fond : moteur de thèmes,
-             * `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se
-             * rend qu'une fois.
+             * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+             * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+             * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
              */
             "mire-page": LocalJSX.IntrinsicElements["mire-page"] & JSXBase.HTMLAttributes<HTMLMirePageElement>;
             /**

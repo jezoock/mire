@@ -44,6 +44,7 @@ export function documentThemeHost(scope: HTMLElement, doc: Document = document):
         return false;
       }
     },
+    absolute: (url) => new URL(url, doc.baseURI).href,
     playSound(url) {
       const audio = new Audio(url);
       audio.volume = 0.4;

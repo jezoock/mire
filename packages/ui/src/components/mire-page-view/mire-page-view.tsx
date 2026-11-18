@@ -104,8 +104,9 @@ export class MirePageView {
 
   private renderPath(crumbs: PageCrumb[], labels: PageViewLabels) {
     return (
-      <nav class="mire-page-view__path" aria-label={labels.path || undefined}>
-        <ol class="mire-page-view__crumbs">
+      <nav class="mire-page-view__path" aria-label={labels.path || undefined} data-focus-last>
+        {/* À la racine de la page, le chemin se réduit à son nom, déjà dans l'en-tête. */}
+        <ol class="mire-page-view__crumbs" hidden={crumbs.length < 2}>
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;
             return (

@@ -45,6 +45,11 @@ export interface ThemeHost {
   loadFont(family: string, url: string): Promise<boolean>;
   /** Joue un son (sans erreur s'il ne peut pas l'être). */
   playSound(url: string): void;
+  /**
+   * Adresse complète d'un fichier, pour une propriété CSS : une adresse relative y serait lue depuis la feuille qui
+   * l'emploie, et non depuis la page.
+   */
+  absolute?(url: string): string;
 }
 
 export interface ThemeEngine {
@@ -131,7 +136,8 @@ export function createThemeEngine(entries: readonly ThemeEntry[], host: ThemeHos
     scope.dataset.theme = entry.theme.id;
     applyPalette(entry.theme, gen);
     applyFonts(entry, gen);
-    if (active.images.background) scope.style.setProperty('--mire-theme-background', `url("${active.images.background}")`);
+    const bg = active.images.background;
+    if (bg) scope.style.setProperty('--mire-theme-background', `url("${host.absolute ? host.absolute(bg) : bg}")`);
     else scope.style.removeProperty('--mire-theme-background');
     for (const l of listeners) l(active);
   }
