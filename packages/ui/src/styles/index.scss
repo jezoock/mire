@@ -18,6 +18,8 @@
 @use '../components/mire-row/mire-row';
 @use '../components/mire-focus-info/mire-focus-info';
 @use '../components/mire-backdrop/mire-backdrop';
+@use '../components/mire-form/mire-form';
+@use '../components/mire-pick/mire-pick';
 @use './demo-page';
 
 // Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var(), et les icônes qu'ils

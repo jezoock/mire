@@ -1,0 +1,142 @@
+@use '../../theme/tokens' as *;
+
+// Formulaire dans un ds-modal (P4-06) : champs sur deux colonnes (une seule pour les champs larges), boutons à droite.
+.mire-form .ds-modal {
+  width: min(40rem, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.mire-form.--wide .ds-modal {
+  width: min(56rem, 94vw);
+}
+
+.mire-form__title,
+.mire-pick__title {
+  margin: 0 0 ds-spacing(2);
+  font-size: ds-token(font-size, 400);
+}
+
+.mire-form__help,
+.mire-pick__help {
+  margin: 0 0 ds-spacing(4);
+  color: ds-color(gray, dark);
+}
+
+.mire-form__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: ds-spacing(3) ds-spacing(4);
+}
+
+.mire-form__field {
+  display: grid;
+  gap: ds-spacing(1);
+  min-width: 0;
+
+  &.--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.mire-form__label {
+  font-weight: 600;
+}
+
+.mire-form__row {
+  display: flex;
+  gap: ds-spacing(2);
+  align-items: flex-end;
+
+  > ds-field,
+  > input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.mire-form__toggle {
+  display: flex;
+  gap: ds-spacing(2);
+  align-items: center;
+}
+
+.mire-form__image {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+
+  .mire-form__label {
+    grid-column: 1 / -1;
+  }
+}
+
+.mire-form__preview {
+  display: grid;
+  place-items: center;
+  width: calc(1.5 * #{ds-spacing(8)});
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: ds-radius(md);
+  background: ds-color(gray, lighter);
+
+  &.--wide {
+    width: calc(2.5 * #{ds-spacing(8)});
+    aspect-ratio: 16 / 9;
+  }
+
+  ds-thumb {
+    width: 100%;
+  }
+}
+
+.mire-form__none {
+  color: ds-color(gray, dark);
+}
+
+.mire-form__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: ds-spacing(2);
+}
+
+.mire-form__entries {
+  display: grid;
+  gap: ds-spacing(1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mire-form__entry {
+  display: flex;
+  gap: ds-spacing(2);
+  align-items: center;
+
+  &.--none {
+    color: ds-color(gray, dark);
+  }
+}
+
+.mire-form__kind {
+  font-weight: 600;
+}
+
+.mire-form__value {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mire-form__tabs {
+  display: block;
+  margin-top: ds-spacing(3);
+}
+
+.mire-form__actions,
+.mire-pick__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: ds-spacing(2);
+  justify-content: flex-end;
+  margin-top: ds-spacing(4);
+}

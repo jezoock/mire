@@ -3,3 +3,4 @@ export { parsePluralLabels, pluralLabel } from './plural.ts';
 export type { PluralLabels } from './plural.ts';
 export { mediaUrl } from './media.ts';
 export * from './elements.ts';
+export * from './forms.ts';

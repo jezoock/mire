@@ -6,8 +6,12 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
+import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
+import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
+export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
+export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
 export namespace Components {
     /**
@@ -112,6 +116,10 @@ export namespace Components {
          */
         "increment": (step?: number) => Promise<number>;
         /**
+          * Action des boutons de la démonstration des boîtes de dialogue (P4-06) : `openDialog:[{"kind":"form"}]`. La page ouvre la boîte demandée (service des boîtes) ; le composant n'importe rien de l'interface.
+         */
+        "openDialog": (arg?: { kind?: string; }) => Promise<void>;
+        /**
           * Action des cartes de la démonstration (P4-05) : `pick:[{"key":"…"}]` pour un élément, `pick:[{"value":…}]` pour un regroupement. Montre ce qui a été reçu, pour vérifier à la main qu'une carte désigne l'élément par sa clé.
          */
         "pick": (arg?: { key?: string; value?: unknown; }) => Promise<void>;
@@ -120,6 +128,14 @@ export namespace Components {
           * @default ''
          */
         "pickedLabel": string;
+    }
+    /**
+     * Hôte des boîtes de dialogue et des notifications (P4-06) : le service des boîtes (`src/renderer/ui/dialogs.ts`) y
+     * place les `mire-form` et `mire-pick` ouverts et le `ds-toaster`. Ses méthodes sont les actions du contrôleur
+     * `mire-dialogs` (boutons des boîtes, `act`), qui vit avec le service ; une seule balise dans la page, pour que les
+     * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
+     */
+    interface MireDialogs {
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -147,6 +163,76 @@ export namespace Components {
           * @default 'summary'
          */
         "summaryInfo": string;
+    }
+    /**
+     * Formulaire dans une fenêtre de dialogue (P4-06), équivalent d'`openForm` de l'interface historique : champs texte
+     * (avec propositions et bouton « Parcourir »), liste, zone de texte, image, interrupteur, liste de sources, panneau à
+     * onglets (`ds-panel-group`) et boutons d'action. Elle n'agit pas elle-même : chaque bouton appelle l'action `act` du
+     * contrôleur `mire-dialogs` avec la clé de la boîte, et chaque saisie est signalée (`mireDialogInput`) au service des
+     * boîtes, qui tient les valeurs. Elle s'ouvre une fois rendue (`modalOpen` de `ds-modal`) ; fermée par Échap, B ou un
+     * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
+     */
+    interface MireForm {
+        /**
+          * @default []
+         */
+        "actions": ActionSpec[] | string;
+        /**
+          * Ferme la boîte (comme Échap) ; le service la retire du document quand `mireDialogClose` est émis.
+         */
+        "close": () => Promise<void>;
+        /**
+          * Clé de la boîte, donnée par le service (`d1`, `d2`…).
+          * @default ''
+         */
+        "dialog": string;
+        /**
+          * Brouillon de chaque liste de sources (champ « nouvelle source »).
+          * @default {}
+         */
+        "drafts": Record<string, string> | string;
+        /**
+          * Libellé affiché devant chaque entrée d'une liste de sources (« Dossier », « Réseau »…), par valeur.
+          * @default {}
+         */
+        "entryLabels": Record<string, string> | string;
+        /**
+          * Champs complétés (`normalizeField`), hors onglets.
+          * @default []
+         */
+        "fields": Field[] | string;
+        /**
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "help": string;
+        /**
+          * Textes tirés des catalogues (voir `FormLabels`).
+          * @default {}
+         */
+        "labels": FormLabels | string;
+        /**
+          * Montre l'erreur d'un champ obligatoire (message de `ds-field`) et lui donne le focus.
+         */
+        "showInvalid": (field: string) => Promise<void>;
+        /**
+          * Onglets du panneau (`ds-panel-group`), chacun avec ses champs.
+          * @default []
+         */
+        "tabs": Tab[] | string;
+        /**
+          * Valeurs des champs, tenues par le service (images comprises, pour l'aperçu).
+          * @default {}
+         */
+        "values": FormValues | string;
+        /**
+          * Fenêtre large.
+          * @default false
+         */
+        "wide": boolean;
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -242,6 +328,37 @@ export namespace Components {
         "variant": string;
     }
     /**
+     * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
+     * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
+     * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
+     * de la fiche ; fermée sans choix (Échap, B, « Annuler »), la boîte émet `mireDialogClose`.
+     */
+    interface MirePick {
+        /**
+          * Fiches complétées (`normalizeCandidates`).
+          * @default []
+         */
+        "candidates": Candidate[] | string;
+        "close": () => Promise<void>;
+        /**
+          * @default ''
+         */
+        "dialog": string;
+        /**
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "help": string;
+        /**
+          * Textes tirés des catalogues : `cancel`.
+          * @default {}
+         */
+        "labels": FormLabels | string;
+    }
+    /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
      * focus. Cartes et actions comme `mire-card` (clé de l'élément).
@@ -300,6 +417,14 @@ export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireDemoElement;
 }
+export interface MireFormCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireFormElement;
+}
+export interface MirePickCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMirePickElement;
+}
 declare global {
     /**
      * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
@@ -337,6 +462,7 @@ declare global {
     interface HTMLMireDemoElementEventMap {
         "mireDemoChange": { count: number };
         "mireDemoPick": { key?: string; value?: unknown };
+        "mireDemoDialog": { kind: string };
     }
     /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -358,6 +484,18 @@ declare global {
         new (): HTMLMireDemoElement;
     };
     /**
+     * Hôte des boîtes de dialogue et des notifications (P4-06) : le service des boîtes (`src/renderer/ui/dialogs.ts`) y
+     * place les `mire-form` et `mire-pick` ouverts et le `ds-toaster`. Ses méthodes sont les actions du contrôleur
+     * `mire-dialogs` (boutons des boîtes, `act`), qui vit avec le service ; une seule balise dans la page, pour que les
+     * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
+     */
+    interface HTMLMireDialogsElement extends Components.MireDialogs, HTMLStencilElement {
+    }
+    var HTMLMireDialogsElement: {
+        prototype: HTMLMireDialogsElement;
+        new (): HTMLMireDialogsElement;
+    };
+    /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
      * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
      * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
@@ -367,6 +505,33 @@ declare global {
     var HTMLMireFocusInfoElement: {
         prototype: HTMLMireFocusInfoElement;
         new (): HTMLMireFocusInfoElement;
+    };
+    interface HTMLMireFormElementEventMap {
+        "mireDialogOpen": DialogEventDetail;
+        "mireDialogClose": DialogEventDetail;
+        "mireDialogInput": DialogEventDetail;
+    }
+    /**
+     * Formulaire dans une fenêtre de dialogue (P4-06), équivalent d'`openForm` de l'interface historique : champs texte
+     * (avec propositions et bouton « Parcourir »), liste, zone de texte, image, interrupteur, liste de sources, panneau à
+     * onglets (`ds-panel-group`) et boutons d'action. Elle n'agit pas elle-même : chaque bouton appelle l'action `act` du
+     * contrôleur `mire-dialogs` avec la clé de la boîte, et chaque saisie est signalée (`mireDialogInput`) au service des
+     * boîtes, qui tient les valeurs. Elle s'ouvre une fois rendue (`modalOpen` de `ds-modal`) ; fermée par Échap, B ou un
+     * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
+     */
+    interface HTMLMireFormElement extends Components.MireForm, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireFormElementEventMap>(type: K, listener: (this: HTMLMireFormElement, ev: MireFormCustomEvent<HTMLMireFormElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireFormElementEventMap>(type: K, listener: (this: HTMLMireFormElement, ev: MireFormCustomEvent<HTMLMireFormElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireFormElement: {
+        prototype: HTMLMireFormElement;
+        new (): HTMLMireFormElement;
     };
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -392,6 +557,30 @@ declare global {
         prototype: HTMLMireGroupCardElement;
         new (): HTMLMireGroupCardElement;
     };
+    interface HTMLMirePickElementEventMap {
+        "mireDialogOpen": DialogEventDetail;
+        "mireDialogClose": DialogEventDetail;
+    }
+    /**
+     * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
+     * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
+     * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
+     * de la fiche ; fermée sans choix (Échap, B, « Annuler »), la boîte émet `mireDialogClose`.
+     */
+    interface HTMLMirePickElement extends Components.MirePick, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMirePickElementEventMap>(type: K, listener: (this: HTMLMirePickElement, ev: MirePickCustomEvent<HTMLMirePickElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMirePickElementEventMap>(type: K, listener: (this: HTMLMirePickElement, ev: MirePickCustomEvent<HTMLMirePickElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMirePickElement: {
+        prototype: HTMLMirePickElement;
+        new (): HTMLMirePickElement;
+    };
     /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
@@ -408,9 +597,12 @@ declare global {
         "mire-backdrop": HTMLMireBackdropElement;
         "mire-card": HTMLMireCardElement;
         "mire-demo": HTMLMireDemoElement;
+        "mire-dialogs": HTMLMireDialogsElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
+        "mire-form": HTMLMireFormElement;
         "mire-grid": HTMLMireGridElement;
         "mire-group-card": HTMLMireGroupCardElement;
+        "mire-pick": HTMLMirePickElement;
         "mire-row": HTMLMireRowElement;
     }
 }
@@ -517,6 +709,10 @@ declare namespace LocalJSX {
          */
         "onMireDemoChange"?: (event: MireDemoCustomEvent<{ count: number }>) => void;
         /**
+          * Émis quand un bouton de la démonstration des boîtes (P4-06) demande une boîte : `form`, `confirm`, `pick`…
+         */
+        "onMireDemoDialog"?: (event: MireDemoCustomEvent<{ kind: string }>) => void;
+        /**
           * Émis quand une carte de la démonstration appelle `pick`, avec ce qui la désigne (clé ou valeur).
          */
         "onMireDemoPick"?: (event: MireDemoCustomEvent<{ key?: string; value?: unknown }>) => void;
@@ -525,6 +721,14 @@ declare namespace LocalJSX {
           * @default ''
          */
         "pickedLabel"?: string;
+    }
+    /**
+     * Hôte des boîtes de dialogue et des notifications (P4-06) : le service des boîtes (`src/renderer/ui/dialogs.ts`) y
+     * place les `mire-form` et `mire-pick` ouverts et le `ds-toaster`. Ses méthodes sont les actions du contrôleur
+     * `mire-dialogs` (boutons des boîtes, `act`), qui vit avec le service ; une seule balise dans la page, pour que les
+     * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
+     */
+    interface MireDialogs {
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -552,6 +756,71 @@ declare namespace LocalJSX {
           * @default 'summary'
          */
         "summaryInfo"?: string;
+    }
+    /**
+     * Formulaire dans une fenêtre de dialogue (P4-06), équivalent d'`openForm` de l'interface historique : champs texte
+     * (avec propositions et bouton « Parcourir »), liste, zone de texte, image, interrupteur, liste de sources, panneau à
+     * onglets (`ds-panel-group`) et boutons d'action. Elle n'agit pas elle-même : chaque bouton appelle l'action `act` du
+     * contrôleur `mire-dialogs` avec la clé de la boîte, et chaque saisie est signalée (`mireDialogInput`) au service des
+     * boîtes, qui tient les valeurs. Elle s'ouvre une fois rendue (`modalOpen` de `ds-modal`) ; fermée par Échap, B ou un
+     * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
+     */
+    interface MireForm {
+        /**
+          * @default []
+         */
+        "actions"?: ActionSpec[] | string;
+        /**
+          * Clé de la boîte, donnée par le service (`d1`, `d2`…).
+          * @default ''
+         */
+        "dialog"?: string;
+        /**
+          * Brouillon de chaque liste de sources (champ « nouvelle source »).
+          * @default {}
+         */
+        "drafts"?: Record<string, string> | string;
+        /**
+          * Libellé affiché devant chaque entrée d'une liste de sources (« Dossier », « Réseau »…), par valeur.
+          * @default {}
+         */
+        "entryLabels"?: Record<string, string> | string;
+        /**
+          * Champs complétés (`normalizeField`), hors onglets.
+          * @default []
+         */
+        "fields"?: Field[] | string;
+        /**
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "help"?: string;
+        /**
+          * Textes tirés des catalogues (voir `FormLabels`).
+          * @default {}
+         */
+        "labels"?: FormLabels | string;
+        "onMireDialogClose"?: (event: MireFormCustomEvent<DialogEventDetail>) => void;
+        "onMireDialogInput"?: (event: MireFormCustomEvent<DialogEventDetail>) => void;
+        "onMireDialogOpen"?: (event: MireFormCustomEvent<DialogEventDetail>) => void;
+        /**
+          * Onglets du panneau (`ds-panel-group`), chacun avec ses champs.
+          * @default []
+         */
+        "tabs"?: Tab[] | string;
+        /**
+          * Valeurs des champs, tenues par le service (images comprises, pour l'aperçu).
+          * @default {}
+         */
+        "values"?: FormValues | string;
+        /**
+          * Fenêtre large.
+          * @default false
+         */
+        "wide"?: boolean;
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -643,6 +912,38 @@ declare namespace LocalJSX {
         "variant"?: string;
     }
     /**
+     * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
+     * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
+     * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
+     * de la fiche ; fermée sans choix (Échap, B, « Annuler »), la boîte émet `mireDialogClose`.
+     */
+    interface MirePick {
+        /**
+          * Fiches complétées (`normalizeCandidates`).
+          * @default []
+         */
+        "candidates"?: Candidate[] | string;
+        /**
+          * @default ''
+         */
+        "dialog"?: string;
+        /**
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "help"?: string;
+        /**
+          * Textes tirés des catalogues : `cancel`.
+          * @default {}
+         */
+        "labels"?: FormLabels | string;
+        "onMireDialogClose"?: (event: MirePickCustomEvent<DialogEventDetail>) => void;
+        "onMireDialogOpen"?: (event: MirePickCustomEvent<DialogEventDetail>) => void;
+    }
+    /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
      * focus. Cartes et actions comme `mire-card` (clé de l'élément).
@@ -724,6 +1025,19 @@ declare namespace LocalJSX {
         "summaryInfo": string;
         "labels": CardLabels | string;
     }
+    interface MireFormAttributes {
+        "dialog": string;
+        "heading": string;
+        "help": string;
+        "fields": Field[] | string;
+        "tabs": Tab[] | string;
+        "actions": ActionSpec[] | string;
+        "values": FormValues | string;
+        "drafts": Record<string, string> | string;
+        "entryLabels": Record<string, string> | string;
+        "labels": FormLabels | string;
+        "wide": boolean;
+    }
     interface MireGridAttributes {
         "elements": CardElement[] | string;
         "groups": GridGroup[] | string;
@@ -743,6 +1057,13 @@ declare namespace LocalJSX {
         "action": string;
         "countLabels": string;
     }
+    interface MirePickAttributes {
+        "dialog": string;
+        "heading": string;
+        "help": string;
+        "candidates": Candidate[] | string;
+        "labels": FormLabels | string;
+    }
     interface MireRowAttributes {
         "heading": string;
         "elements": CardElement[] | string;
@@ -761,9 +1082,12 @@ declare namespace LocalJSX {
         "mire-backdrop": Omit<MireBackdrop, keyof MireBackdropAttributes> & { [K in keyof MireBackdrop & keyof MireBackdropAttributes]?: MireBackdrop[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `attr:${K}`]?: MireBackdropAttributes[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `prop:${K}`]?: MireBackdrop[K] };
         "mire-card": Omit<MireCard, keyof MireCardAttributes> & { [K in keyof MireCard & keyof MireCardAttributes]?: MireCard[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `attr:${K}`]?: MireCardAttributes[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `prop:${K}`]?: MireCard[K] };
         "mire-demo": Omit<MireDemo, keyof MireDemoAttributes> & { [K in keyof MireDemo & keyof MireDemoAttributes]?: MireDemo[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `attr:${K}`]?: MireDemoAttributes[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `prop:${K}`]?: MireDemo[K] };
+        "mire-dialogs": MireDialogs;
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
+        "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
         "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
+        "mire-pick": Omit<MirePick, keyof MirePickAttributes> & { [K in keyof MirePick & keyof MirePickAttributes]?: MirePick[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `attr:${K}`]?: MirePickAttributes[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `prop:${K}`]?: MirePick[K] };
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
     }
 }
@@ -796,11 +1120,27 @@ declare module "@stencil/core" {
              */
             "mire-demo": LocalJSX.IntrinsicElements["mire-demo"] & JSXBase.HTMLAttributes<HTMLMireDemoElement>;
             /**
+             * Hôte des boîtes de dialogue et des notifications (P4-06) : le service des boîtes (`src/renderer/ui/dialogs.ts`) y
+             * place les `mire-form` et `mire-pick` ouverts et le `ds-toaster`. Ses méthodes sont les actions du contrôleur
+             * `mire-dialogs` (boutons des boîtes, `act`), qui vit avec le service ; une seule balise dans la page, pour que les
+             * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
+             */
+            "mire-dialogs": LocalJSX.IntrinsicElements["mire-dialogs"] & JSXBase.HTMLAttributes<HTMLMireDialogsElement>;
+            /**
              * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
              * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
              * viennent de l'attribut `infos` ; aucun texte n'est écrit dans le composant.
              */
             "mire-focus-info": LocalJSX.IntrinsicElements["mire-focus-info"] & JSXBase.HTMLAttributes<HTMLMireFocusInfoElement>;
+            /**
+             * Formulaire dans une fenêtre de dialogue (P4-06), équivalent d'`openForm` de l'interface historique : champs texte
+             * (avec propositions et bouton « Parcourir »), liste, zone de texte, image, interrupteur, liste de sources, panneau à
+             * onglets (`ds-panel-group`) et boutons d'action. Elle n'agit pas elle-même : chaque bouton appelle l'action `act` du
+             * contrôleur `mire-dialogs` avec la clé de la boîte, et chaque saisie est signalée (`mireDialogInput`) au service des
+             * boîtes, qui tient les valeurs. Elle s'ouvre une fois rendue (`modalOpen` de `ds-modal`) ; fermée par Échap, B ou un
+             * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
+             */
+            "mire-form": LocalJSX.IntrinsicElements["mire-form"] & JSXBase.HTMLAttributes<HTMLMireFormElement>;
             /**
              * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
              * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
@@ -815,6 +1155,13 @@ declare module "@stencil/core" {
              * (`openGroup:[{"value":"Friends"}]`, `null` pour « Autres »), jamais par son rang.
              */
             "mire-group-card": LocalJSX.IntrinsicElements["mire-group-card"] & JSXBase.HTMLAttributes<HTMLMireGroupCardElement>;
+            /**
+             * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
+             * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
+             * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
+             * de la fiche ; fermée sans choix (Échap, B, « Annuler »), la boîte émet `mireDialogClose`.
+             */
+            "mire-pick": LocalJSX.IntrinsicElements["mire-pick"] & JSXBase.HTMLAttributes<HTMLMirePickElement>;
             /**
              * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
              * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le

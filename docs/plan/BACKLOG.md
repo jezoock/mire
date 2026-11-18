@@ -128,7 +128,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-04 | Contrôleurs, actions et traduction | M | P4-01, P1-22, P1-23 |  | faite | [#53](https://github.com/jezoock/mire/pull/53) |
 | **G5** | **Point d'étape : intégration, palettes, navigation, contrôleurs** | | P4-01…P4-04 | | | |
 | P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | faite | [#66](https://github.com/jezoock/mire/pull/66) |
-| P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | à faire | |
+| P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | faite | [#68](https://github.com/jezoock/mire/pull/68) |
 | P4-07 | Coquille de l'application | L | P4-05, P4-06, P2-07 |  | à faire | |
 | P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | à faire | |
 | P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |

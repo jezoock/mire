@@ -1,0 +1,31 @@
+@use '../../theme/tokens' as *;
+
+// Choisir la bonne fiche (P4-06) : une grille de cartes (image, titre, année).
+.mire-pick .ds-modal {
+  width: min(56rem, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.mire-pick__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: ds-spacing(4);
+}
+
+.mire-pick__card {
+  display: grid;
+  gap: ds-spacing(1);
+  align-content: start;
+  padding: ds-spacing(1);
+  border-radius: ds-radius(md);
+  cursor: pointer;
+}
+
+.mire-pick__name {
+  font-weight: 600;
+}
+
+.mire-pick__sub {
+  color: ds-color(gray, dark);
+}

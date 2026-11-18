@@ -110,4 +110,6 @@ export interface ControllerContext {
   ui: LegacyUi;
   /** Nombre d'éléments ajoutés à chaque « Afficher plus ». */
   page: number;
+  /** Service des boîtes de dialogue sur les composants (P4-06) : action des boutons des boîtes. */
+  dialogs: { act(args: Record<string, unknown>): Promise<void> };
 }

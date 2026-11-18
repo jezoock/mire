@@ -790,6 +790,250 @@ describe('Test de fumée de Mire', () => {
     });
   });
 
+  // Boîtes de dialogue sur les composants (P4-06) : ouvertes depuis la démonstration (#demo), au clavier et à la
+  // manette, empilées, depuis une boîte historique ; la vue web native est masquée tant qu'une boîte est ouverte.
+  describe('boîtes de dialogue (P4-06)', () => {
+    const PAD = { a: 0, b: 1, up: 12, down: 13, left: 14, right: 15 };
+    const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await frames();
+    };
+    const press = async (key) => {
+      await page.keyboard.press(key);
+      await frames();
+    };
+    // Boîtes rendues et ouvertes : chaque composant et ses ds-* ont la classe hydrated, chaque ds-modal est affiché, et
+    // le focus est entré dans la dernière.
+    const boxOpen = (tag, count = 1) =>
+      page.waitForFunction(
+        ({ tag, count }) => {
+          const boxes = [...document.querySelectorAll(tag)];
+          const ready = (b) =>
+            b.classList.contains('hydrated') && [...b.querySelectorAll('ds-modal, ds-trigger')].every((d) => d.classList.contains('hydrated'));
+          const focusIn = document.activeElement?.closest(tag) === boxes.at(-1);
+          return boxes.length === count && boxes.every(ready) && boxes.every((b) => b.querySelector('ds-modal').shown) && focusIn;
+        },
+        { tag, count },
+      );
+    const boxCount = () => page.evaluate(() => document.querySelectorAll('mire-form, mire-pick').length);
+    const inBox = () => page.evaluate(() => document.activeElement?.closest('mire-form, mire-pick')?.dialog ?? null);
+    const result = () => page.evaluate(() => JSON.parse(document.querySelector('.mire-ui-demo__result')?.dataset.result ?? '"rien"'));
+    const demoButton = async (kind) => {
+      await page.locator(`[data-demo-dialog="${kind}"].hydrated`).waitFor();
+      await page.evaluate((k) => document.querySelector(`[data-demo-dialog="${k}"]`).focus(), kind);
+    };
+    const errors = [];
+    // L'image introuvable de la démonstration du choix d'une fiche (remplacée par la vignette de secours).
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text());
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+      await page.evaluate(() => (location.hash = 'demo'));
+      await page.waitForFunction(() => document.body.dataset.section === 'demo');
+      await page.locator('#view mire-demo.hydrated').waitFor();
+      await page.evaluate(() => {
+        window.__dialogsChanges = [];
+        document.addEventListener('mireDialogsChange', (e) => window.__dialogsChanges.push(e.detail.open));
+      });
+    });
+
+    after(async () => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+        location.hash = '';
+      });
+    });
+
+    it('formulaire au clavier : flèches dans la boîte, champ obligatoire, résultat par promesse, Échap rend le focus', async () => {
+      await demoButton('form');
+      await press('Enter');
+      await boxOpen('mire-form');
+      const key = await inBox();
+      assert.ok(key, 'le focus est entré dans la boîte');
+      assert.equal(await page.evaluate(() => document.activeElement.name), 'name', 'premier champ');
+      for (let i = 0; i < 12; i++) await press('ArrowDown');
+      assert.equal(await inBox(), key, 'les flèches restent dans la boîte');
+      // Champ obligatoire vidé : « Enregistrer » laisse la boîte ouverte et y ramène le focus.
+      const save = page.locator('mire-form ds-trigger', { hasText: /Enregistrer|Save/ });
+      await page.locator('mire-form input[name="name"]').fill('');
+      await save.focus();
+      await press('Enter');
+      await page.waitForFunction(() => document.activeElement?.name === 'name');
+      assert.equal(await boxCount(), 1);
+      await page.locator('mire-form input[name="name"]').fill('  Le Voyage  ');
+      await save.focus();
+      await press('Enter');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      assert.deepEqual(await result(), {
+        action: 'save',
+        values: { name: 'Le Voyage', year: '1902', kind: 'film', summary: '', program: '', subtitles: true, sources: ['/films'] },
+      });
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.demoDialog), 'form', 'le focus revient au bouton');
+
+      // Liste de sources : ajout et retrait par valeur ; Échap ferme (cancel) et rend le focus.
+      await press('Enter');
+      await boxOpen('mire-form');
+      await page.locator('mire-form input[name="sources-new"]').fill('/series');
+      await page.locator('mire-form .mire-form__list ds-trigger', { hasText: /^(Ajouter|Add)$/ }).click();
+      await page.waitForFunction(() => document.querySelectorAll('mire-form .mire-form__entry .mire-form__value').length === 2);
+      await page.locator('mire-form .mire-form__entry', { hasText: '/films' }).locator('ds-trigger').click();
+      await page.waitForFunction(() => [...document.querySelectorAll('mire-form .mire-form__value')].map((e) => e.textContent).join() === '/series');
+      await page.locator('mire-form input[name="name"]').focus();
+      await press('Escape');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      const res = await result();
+      assert.equal(res.action, 'cancel');
+      assert.deepEqual(res.values.sources, ['/series']);
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.demoDialog), 'form');
+      assert.deepEqual(errors, []);
+    });
+
+    it('deux boîtes empilées : la dernière reçoit le clavier, Échap ne ferme qu’elle ; la vue web est masquée puis réaffichée', async () => {
+      await page.evaluate(() => (window.__dialogsChanges = []));
+      await demoButton('form');
+      await press('Enter');
+      await boxOpen('mire-form');
+      const below = await inBox();
+      await page.locator('mire-form ds-trigger', { hasText: /autre fenêtre|another window/ }).focus();
+      await press('Enter');
+      await boxOpen('mire-form', 2);
+      const top = await inBox();
+      assert.notEqual(top, below, 'la confirmation est au premier plan');
+      for (const k of ['ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown']) await press(k);
+      assert.equal(await inBox(), top, 'les flèches restent dans la boîte du dessus');
+      await press('Escape');
+      await page.waitForFunction(() => document.querySelectorAll('mire-form').length === 1);
+      assert.equal(await inBox(), below, 'le focus revient dans la boîte du dessous');
+      assert.deepEqual(await result(), { nested: false });
+      assert.deepEqual(await page.evaluate(() => window.__dialogsChanges), [true], 'la vue web reste masquée');
+      await press('Escape');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      assert.deepEqual(await page.evaluate(() => window.__dialogsChanges), [true, false], 'masquée une fois, réaffichée une fois');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : A ouvre, la croix parcourt la boîte, A choisit ; B ferme celle du dessus seulement', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
+      // Confirmation : A sur « Supprimer » rend oui.
+      await demoButton('confirm');
+      await padPress('a');
+      await boxOpen('mire-form');
+      assert.ok(await inBox());
+      await padPress('a');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      assert.equal(await result(), true);
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.demoDialog), 'confirm');
+      // Deux boîtes : B ferme la confirmation, puis le formulaire.
+      await demoButton('form');
+      await padPress('a');
+      await boxOpen('mire-form');
+      await page.locator('mire-form ds-trigger', { hasText: /autre fenêtre|another window/ }).focus();
+      await padPress('a');
+      await boxOpen('mire-form', 2);
+      await padPress('right');
+      await padPress('b');
+      await page.waitForFunction(() => document.querySelectorAll('mire-form').length === 1);
+      assert.ok(await inBox(), 'le focus est dans le formulaire');
+      await padPress('b');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      assert.equal((await result()).action, 'cancel', 'formulaire fermé sans choix');
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.demoDialog), 'form');
+      assert.deepEqual(errors, []);
+    });
+
+    it('choisir la bonne fiche : image de secours, puis l’initiale ; la fiche choisie est rendue', async () => {
+      await demoButton('pick');
+      await press('Enter');
+      await boxOpen('mire-pick');
+      // La première image est introuvable : la vignette de secours (une image de la bibliothèque, s'il y en a) la remplace.
+      await page.waitForFunction(() => !(document.querySelector('mire-pick ds-thumb').src ?? '').includes('introuvable'));
+      assert.equal(await inBox(), await page.evaluate(() => document.querySelector('mire-pick').dialog));
+      await press('ArrowRight');
+      assert.equal(await page.evaluate(() => document.activeElement.closest('[data-key]')?.dataset.key), 'tmdb:2');
+      await press('Enter');
+      await page.waitForFunction(() => !document.querySelector('mire-pick'));
+      assert.deepEqual(await result(), {
+        id: 'tmdb:2',
+        title: await page.evaluate(() => JSON.parse(document.querySelector('.mire-ui-demo__result').dataset.result).title),
+        year: 1903,
+      });
+      assert.deepEqual(errors, []);
+    });
+
+    it('panneau à onglets : les flèches changent d’onglet, les valeurs de tous les onglets sont rendues', async () => {
+      await demoButton('tabs');
+      await press('Enter');
+      await boxOpen('mire-form');
+      await page.locator('mire-form [role="tab"]').first().focus();
+      await press('ArrowRight');
+      assert.equal(await page.evaluate(() => document.activeElement.getAttribute('aria-selected')), 'true');
+      await page.locator('mire-form ds-toggle[name="subtitles"]').click();
+      await page.locator('mire-form ds-trigger', { hasText: /Enregistrer|Save/ }).click();
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      const res = await result();
+      assert.equal(res.action, 'save');
+      assert.deepEqual(Object.keys(res.values).sort(), ['name', 'quality', 'subtitles']);
+      assert.equal(res.values.subtitles, true);
+      assert.equal(res.values.quality, 'auto');
+      assert.deepEqual(errors, []);
+    });
+
+    it('cohabitation : une boîte historique ouvre une boîte sur les composants, qui se ferme seule', async () => {
+      await demoButton('legacy');
+      await press('Enter');
+      await page.locator('#dlg[open]').waitFor();
+      await page.locator('#dlg [data-dlg="ask"]').click();
+      await boxOpen('mire-form');
+      assert.equal(await page.evaluate(() => !!document.querySelector('#dlg mire-form')), true, 'placée dans la boîte historique');
+      assert.ok(await inBox(), 'le focus est dans la boîte sur les composants');
+      await press('Escape');
+      await page.waitForFunction(() => !document.querySelector('mire-form'));
+      assert.equal(await page.evaluate(() => document.getElementById('dlg').open), true, 'la boîte historique reste ouverte');
+      assert.deepEqual(await result(), { legacy: false });
+      assert.equal(await page.evaluate(() => document.activeElement?.dataset.dlg), 'ask');
+      await press('Escape');
+      await page.waitForFunction(() => !document.getElementById('dlg').open);
+      assert.deepEqual(errors, []);
+    });
+
+    it('notification : ds-toaster, durée de toast', async () => {
+      await demoButton('notify');
+      await press('Enter');
+      await page.locator('ds-toaster .ds-toaster.--shown').waitFor();
+      const toaster = await page.evaluate(() => {
+        const t = document.querySelector('mire-dialogs ds-toaster');
+        return { delay: t.closingDelay, text: t.querySelector('.ds-toaster__live')?.textContent ?? '' };
+      });
+      assert.equal(toaster.delay, 3800);
+      assert.ok(toaster.text.length > 0);
+      assert.deepEqual(errors, []);
+    });
+  });
+
   it('aucune requête réseau sortante, hors Widevine', () => {
     const log = fs
       .readFileSync(path.join(tmp, 'reseau.log'), 'utf8')
