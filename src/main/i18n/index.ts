@@ -2,7 +2,7 @@
  * Langue de l'interface côté processus principal : suit le réglage `ui.language` (et, en `auto`, les langues
  * du système), tient le moteur de traduction de cette langue et prévient quand elle change (bascule à chaud).
  */
-import { BUILTIN_CATALOGS, DEFAULT_FALLBACK, createI18n, resolveLanguage, type Catalog, type I18n, type Vars } from '@mire/shared/i18n';
+import { BUILTIN_CATALOGS, DEFAULT_FALLBACK, createI18n, resolveLanguage, type Catalog, type I18n, type Messages, type Vars } from '@mire/shared/i18n';
 import type { Config } from '@mire/shared';
 import type { LanguageInfo } from '@mire/shared/ipc';
 
@@ -31,7 +31,15 @@ export interface LanguageService {
   snapshot(): LanguageSnapshot;
   /** Abonnement aux changements de langue ; rend la fonction de désabonnement. */
   onChange(listener: LanguageListener): () => void;
+  /**
+   * Textes d'un plugin actif (P3-03), par langue de Mire, rangés sous `pluginTexts.<clé>` ; `null` les retire. Les
+   * abonnés reçoivent les catalogues à jour.
+   */
+  setPluginTexts(key: string, texts: Readonly<Record<string, Messages>> | null): void;
 }
+
+/** Racine des textes des plugins dans les catalogues. */
+export const PLUGIN_TEXTS = 'pluginTexts';
 
 export function createLanguageService({
   config,
@@ -46,8 +54,22 @@ export function createLanguageService({
   // Calculée à la première demande : les langues du système ne se lisent qu'une fois l'application prête.
   let engine: I18n | null = null;
 
+  // Textes des plugins actifs : clé → messages par langue. Sans plugin, les catalogues sont ceux d'origine.
+  const pluginTexts = new Map<string, Readonly<Record<string, Messages>>>();
+  let merged: Readonly<Record<string, Catalog>> = catalogs;
+  const mergeCatalogs = (): Readonly<Record<string, Catalog>> => {
+    if (!pluginTexts.size) return catalogs;
+    return Object.fromEntries(
+      available.map((code) => {
+        const texts: Messages = {};
+        for (const [key, perLang] of pluginTexts) if (perLang[code]) texts[key] = perLang[code];
+        return [code, { ...catalogs[code], messages: { ...catalogs[code].messages, [PLUGIN_TEXTS]: texts } }];
+      }),
+    );
+  };
+
   const resolve = (cfg: Config) => resolveLanguage(cfg.ui.language, systemLanguages(), available);
-  const build = (language: string) => createI18n({ locale: language, catalogs: { ...catalogs }, fallback: [...DEFAULT_FALLBACK], onMissing });
+  const build = (language: string) => createI18n({ locale: language, catalogs: { ...merged }, fallback: [...DEFAULT_FALLBACK], onMissing });
   const current = () => (engine ??= build(resolve(config.get())));
 
   function snapshot(): LanguageSnapshot {
@@ -56,15 +78,11 @@ export function createLanguageService({
       setting: config.get().ui.language,
       language: i18n.locale,
       available: available.map((code) => ({ code, name: catalogs[code].meta.name })),
-      catalogs: Object.fromEntries(i18n.chain.map((code) => [code, catalogs[code]])),
+      catalogs: Object.fromEntries(i18n.chain.map((code) => [code, merged[code]])),
     };
   }
 
-  config.onChange((next) => {
-    if (!engine) return;
-    const language = resolve(next);
-    if (language === engine.locale) return;
-    engine = build(language);
+  function notify(): void {
     const snap = snapshot();
     for (const listener of listeners) {
       try {
@@ -73,6 +91,14 @@ export function createLanguageService({
         log(`Abonné à la langue en échec : ${(err as Error).message}`);
       }
     }
+  }
+
+  config.onChange((next) => {
+    if (!engine) return;
+    const language = resolve(next);
+    if (language === engine.locale) return;
+    engine = build(language);
+    notify();
   });
 
   return {
@@ -83,6 +109,14 @@ export function createLanguageService({
     onChange(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    setPluginTexts(key, texts) {
+      if (texts) pluginTexts.set(key, texts);
+      else if (!pluginTexts.delete(key)) return;
+      merged = mergeCatalogs();
+      if (!engine) return;
+      engine = build(engine.locale);
+      notify();
     },
   };
 }

@@ -7,11 +7,13 @@ import path from 'node:path';
 import { app, BrowserWindow, WebContentsView, components, dialog, ipcMain, Menu, nativeTheme, protocol, session, shell, webContents } from 'electron';
 import { path7za } from '7zip-bin';
 import { MIME, type SystemHint } from '@mire/shared';
+import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
+import type { Contributor } from './catalog/tags/engine.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
 import { createPages } from './catalog/pages/index.ts';
@@ -38,6 +40,7 @@ import { managedRoots } from './files/roots.ts';
 import { createFilesService } from './files/service.ts';
 import { registerMediaProtocol, registerMediaScheme } from './media-protocol/index.ts';
 import { createUserMeta } from './meta/user-meta.ts';
+import { createJournal, createPluginService, createPluginState, electronRunners, PLUGIN_SCHEME_PRIVILEGES } from './plugins/index.ts';
 import * as http from './net/http.ts';
 import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers } from './platform/index.ts';
@@ -66,8 +69,10 @@ if (process.env.MIRE_USER_DATA) app.setPath('userData', process.env.MIRE_USER_DA
 const NATIVE_UA = nativeUserAgent(app.userAgentFallback, app.getName());
 app.userAgentFallback = chromeLikeUserAgent(app.userAgentFallback, app.getName());
 
-// Le schéma media:// sert les fichiers locaux à l'interface, avec gestion des plages (avance rapide).
-registerMediaScheme(protocol);
+// Le schéma media:// sert les fichiers locaux à l'interface, avec gestion des plages (avance rapide). Le schéma
+// mire-plugin:// (P3-03, ADR 0002) n'est servi que sur les sessions de l'hôte isolé des plugins, jamais sur celle de
+// la fenêtre ni des vues web : il est enregistré ici parce qu'Electron n'accepte qu'un appel avant `ready`.
+registerMediaScheme(protocol, [PLUGIN_SCHEME_PRIVILEGES]);
 
 /** Crée les services dans l'ordre, les relie, enregistre l'IPC et ouvre la fenêtre (application prête). */
 function start(pending: PendingFiles): Running {
@@ -169,8 +174,11 @@ function start(pending: PendingFiles): Running {
   // Tags et infos effectifs, index ; les règles par extension, les consoles et l'ordre des fournisseurs suivent la
   // configuration. Tags automatiques internes (séries, films, musique, consoles, photos), puis infos en ligne : le
   // moteur fait passer les infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
+  // Tags automatiques des plugins actifs (P3-03) : branchés une fois l'hôte de plugins créé, plus bas.
+  let pluginTaggers: () => Contributor[] = () => [];
   const contributors = () => [
     ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
+    ...pluginTaggers(),
     ...metadataContributors(metadata, metadataOrder(config.get().catalog)),
   ];
   const registry = createRegistry(t);
@@ -209,6 +217,28 @@ function start(pending: PendingFiles): Running {
   });
   // Recherche : textes préparés à la première recherche, puis suivis par le moteur de tags.
   const search = createSearch({ engine: tags, catalog, pages: catalogPages, registry, translate: t });
+  // Hôte de plugins (P3-03) : plugins inclus (resources/plugins/) et installés (userData/plugins/). Leurs tags et
+  // infos vont au registre, leurs textes au moteur de traduction, leurs tags automatiques au moteur de tags. Sans
+  // plugin, rien n'est créé ni démarré.
+  const plugins = createPluginService({
+    roots: {
+      bundled: app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(__dirname, '..', '..', 'resources', 'plugins'),
+      installed: files.plugins,
+    },
+    appVersion: app.getVersion(),
+    languages: Object.keys(BUILTIN_CATALOGS),
+    state: createPluginState(files.pluginState),
+    journal: createJournal({ dir: files.pluginLogs }),
+    tagRegistry: registry,
+    setTexts: (key, texts) => i18n.setPluginTexts(key, texts),
+    translate: t,
+    locale: () => i18n.language(),
+    runners: electronRunners(dist('plugin-host')),
+    onTaggersChange: () => tags.setContributors(contributors()),
+    refresh: (keys) => tags.refresh(keys),
+  });
+  pluginTaggers = plugins.taggerContributors;
+  i18n.onChange((info) => plugins.emit('language', { language: info.language }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
   catalog.onChange(({ added }) => {
@@ -276,6 +306,7 @@ function start(pending: PendingFiles): Running {
     lists,
     search,
     fileManager,
+    plugins,
     access,
     window,
     pending,
@@ -292,6 +323,8 @@ function start(pending: PendingFiles): Running {
   const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
   window.open();
+  // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
+  plugins.start().catch((err: Error) => console.error('Plugins :', err.message));
 
   return {
     async onSecondInstance(paths) {
@@ -305,6 +338,7 @@ function start(pending: PendingFiles): Running {
     beforeQuit() {
       downloads.stop().catch(() => {});
       const flushes = [scraper, downloads, usage, catalog, overrides, metadata].map((m) => () => m.flush());
+      flushes.push(() => plugins.stop());
       return flushWithin(flushes, 2000);
     },
   };

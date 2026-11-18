@@ -499,6 +499,25 @@
         "crossDevice": "Mire can't move a file to another drive yet.",
         "failed": "This couldn't be done: {reason}"
       }
+    },
+    "plugins": {
+      "faults": {
+        "exception": "“{name}” ran into an error and was turned off: {details}",
+        "load": "“{name}” could not start and was turned off: {details}",
+        "timeout": "“{name}” stopped responding and was turned off.",
+        "crashed": "“{name}” stopped abruptly and was turned off."
+      },
+      "refused": {
+        "invalid": "“{name}” is not a valid plugin: {details}",
+        "mismatch": "The folder of “{name}” does not match its contents ({details}).",
+        "engine": "“{name}” is made for another version of Mire ({range}); you have {version}.",
+        "level": "“{name}” does not contain what its security level says.",
+        "privileged": "“{name}” asks for extended access to your computer: for now, only plugins that come with Mire may have it.",
+        "outside": "“{name}” contains a link to a file outside its folder.",
+        "data": "A file of “{name}” is unreadable or too large: {details}",
+        "texts": "The texts of “{name}” are unreadable: {details}",
+        "too-big": "“{name}” contains too many files."
+      }
     }
   }
 }

@@ -95,9 +95,15 @@ interface ProtocolApi {
   handle(scheme: string, handler: (request: any) => Promise<Response>): void;
 }
 
-/** À appeler avant `app.whenReady()` : media:// se comporte comme une origine sûre, lisible en flux. */
-export function registerMediaScheme(protocol: ProtocolApi): void {
-  protocol.registerSchemesAsPrivileged([{ scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
+/** Privilèges de media:// : une origine sûre, lisible en flux. */
+export const MEDIA_SCHEME_PRIVILEGES = { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } };
+
+/**
+ * À appeler avant `app.whenReady()`. Electron n'accepte qu'un appel à `registerSchemesAsPrivileged` : les autres
+ * schémas privilégiés (`mire-plugin`, hôte de plugins) passent par `extra`.
+ */
+export function registerMediaScheme(protocol: ProtocolApi, extra: { scheme: string; privileges: Record<string, boolean> }[] = []): void {
+  protocol.registerSchemesAsPrivileged([MEDIA_SCHEME_PRIVILEGES, ...extra]);
 }
 
 export function registerMediaProtocol(protocol: ProtocolApi, options: MediaHandlerOptions): void {
