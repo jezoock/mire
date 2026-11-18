@@ -23,6 +23,9 @@ import { fakeCatalog } from '../catalog/fake-catalog.ts';
 const N = 20_000;
 // Le tri par nom d'un niveau de 12 400 éléments (première ouverture, avant le cache) prend à lui seul ~70 ms.
 const LIMIT = 100;
+const RUNS = 5;
+
+const median = (values: number[]): number => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] as number;
 
 async function time(fn: () => Promise<unknown>): Promise<number> {
   const start = performance.now();
@@ -45,76 +48,73 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
       contributors: builtinTaggers(() => []).map(taggerContributor),
     });
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
-    const pages = createPages({ file: path.join(dir, 'pages.json'), engine, catalog, translate: tr });
-    pages.load();
-
-    let state: ExplorerState = { columns: [], preview: null };
-    // Comme l'IPC, chaque réponse est copiée (structuredClone) avant d'arriver à l'interface.
-    const model = createExplorerModel(
-      {
-        t: tr,
-        plural: (_key, count) => String(count),
-        pages: () => pages.list(),
-        lists: async () => [],
-        tags: async () => structuredClone(engine.tagsList()),
-        level: async (id, p, cursor) => structuredClone(pages.page(id, p, cursor)),
-        element: async (key) => structuredClone(engine.element(key)),
-      },
-      (s) => (state = s),
-    );
-    model.reset();
-
-    const steps: [string, () => Promise<unknown>][] = [
-      ['Pages', () => model.open('pages')],
-      ['Séries (97 séries)', () => model.open(levelNode('series', []))],
-      ['Séries › Série 5 (saisons)', () => model.open(levelNode('series', ['Série 5']))],
-      ['Séries › Série 5 › Saison 3 (épisodes)', () => model.open(levelNode('series', ['Série 5', 3]))],
-      ['Films (groupés par genre : Autres)', () => model.open(levelNode('movies', []))],
-      ['Films › Autres, 1re tranche sur 4 000', () => model.open(levelNode('movies', [null]))],
-      ['Tags', () => model.open('tags')],
-      ['Tags › Vidéo, 1re tranche', () => model.open(levelNode('tag:video', []))],
-    ];
-    let worst = 0;
-    for (const [label, step] of steps) {
-      const ms = await time(step);
-      worst = Math.max(worst, ms);
-      t.diagnostic(`${label} : ${ms.toFixed(1)} ms`);
+    // Un parcours complet à froid (service des pages neuf, rien en cache) ; rend le temps de chaque étape.
+    async function route(): Promise<{ times: Map<string, number>; state: () => ExplorerState }> {
+      const pages = createPages({ file: path.join(dir, 'pages.json'), engine, catalog, translate: tr });
+      pages.load();
+      let state: ExplorerState = { columns: [], preview: null };
+      // Comme l'IPC, chaque réponse est copiée (structuredClone) avant d'arriver à l'interface.
+      const model = createExplorerModel(
+        {
+          t: tr,
+          plural: (_key, count) => String(count),
+          pages: () => pages.list(),
+          lists: async () => [],
+          tags: async () => structuredClone(engine.tagsList()),
+          level: async (id, p, cursor) => structuredClone(pages.page(id, p, cursor)),
+          element: async (key) => structuredClone(engine.element(key)),
+        },
+        (s) => (state = s),
+      );
+      model.reset();
+      const times = new Map<string, number>();
+      const step = async (label: string, fn: () => Promise<unknown>) => times.set(label, await time(fn));
+      await step('Pages', () => model.open('pages'));
+      await step('Séries (97 séries)', () => model.open(levelNode('series', [])));
+      await step('Séries › Série 5 (saisons)', () => model.open(levelNode('series', ['Série 5'])));
+      await step('Séries › Série 5 › Saison 3 (épisodes)', () => model.open(levelNode('series', ['Série 5', 3])));
+      await step('Films (groupés par genre : Autres)', () => model.open(levelNode('movies', [])));
+      await step('Films › Autres, 1re tranche sur 4 000', () => model.open(levelNode('movies', [null])));
+      await step('Tags', () => model.open('tags'));
+      await step('Tags › Vidéo, 1re tranche', () => model.open(levelNode('tag:video', [])));
+      const tagColumn = state.columns[2];
+      assert.ok((tagColumn?.total ?? 0) > N / 2, String(tagColumn?.total));
+      assert.equal(tagColumn?.rows.length, 100);
+      const key = tagColumn?.rows[50]?.key as string;
+      await step('aperçu d’un élément', () => model.show(key));
+      assert.equal(state.preview?.key, key);
+      // Le même tag ouvert de nouveau : le niveau est en cache dans le service des pages.
+      await model.open('pages');
+      await model.open('tags');
+      await step('Tags › Vidéo de nouveau (en cache)', () => model.open(levelNode('tag:video', [])));
+      // Toutes les tranches de Films › Autres (4 000 éléments, 39 tranches suivantes).
+      await model.open('pages');
+      await model.open(levelNode('movies', []));
+      const films = levelNode('movies', [null]);
+      await model.open(films);
+      const slices: number[] = [];
+      while (state.columns[3]?.remaining) slices.push(await time(() => model.more(films)));
+      assert.equal(state.columns[3]?.rows.length, (N * 2) / 10);
+      times.set('Films › Autres, tranche suivante la plus lente', Math.max(...slices));
+      times.set(
+        'Films › Autres, 39 tranches suivantes en tout',
+        slices.reduce((a, b) => a + b, 0),
+      );
+      // Relecture de toutes les colonnes ouvertes (catalogue changé), 4 000 lignes chargées comprises.
+      await step('relecture des colonnes ouvertes (4 000 lignes chargées)', () => model.refresh());
+      assert.equal(state.columns[3]?.rows.length, (N * 2) / 10);
+      return { times, state: () => state };
     }
-    const tagColumn = state.columns[2];
-    assert.ok((tagColumn?.total ?? 0) > N / 2, String(tagColumn?.total));
-    t.diagnostic(`(tag Vidéo : ${tagColumn?.total} éléments)`);
-    assert.equal(tagColumn?.rows.length, 100);
 
-    // Le même tag ouvert de nouveau : le niveau est en cache dans le service des pages.
-    await model.open('pages');
-    await model.open('tags');
-    const warm = await time(() => model.open(levelNode('tag:video', [])));
-    t.diagnostic(`Tags › Vidéo de nouveau (en cache) : ${warm.toFixed(1)} ms`);
-
-    // Aperçu d'un élément de la colonne affichée.
-    const key = tagColumn?.rows[50]?.key as string;
-    const preview = await time(() => model.show(key));
-    t.diagnostic(`aperçu d'un élément : ${preview.toFixed(1)} ms`);
-    assert.equal(state.preview?.key, key);
-    worst = Math.max(worst, preview);
-
-    // Toutes les tranches de Films › Autres (4 000 éléments, 39 tranches suivantes).
-    await model.open('pages');
-    await model.open(levelNode('movies', []));
-    const films = levelNode('movies', [null]);
-    await model.open(films);
-    const slices: number[] = [];
-    while (state.columns[3]?.remaining) slices.push(await time(() => model.more(films)));
-    const total = slices.reduce((a, b) => a + b, 0);
-    t.diagnostic(`Films › Autres, ${slices.length} tranches suivantes : ${total.toFixed(0)} ms en tout, la plus lente ${Math.max(...slices).toFixed(1)} ms`);
-    assert.equal(state.columns[3]?.rows.length, (N * 2) / 10);
-    worst = Math.max(worst, ...slices);
-
-    // Relecture de toutes les colonnes ouvertes (catalogue changé), 4 000 lignes chargées comprises.
-    const refresh = await time(() => model.refresh());
-    t.diagnostic(`relecture des colonnes ouvertes (4 000 lignes chargées) : ${refresh.toFixed(1)} ms`);
-    assert.equal(state.columns[3]?.rows.length, (N * 2) / 10);
-
+    const runs = [];
+    for (let i = 0; i < RUNS; i++) runs.push((await route()).times);
+    let worst = 0;
+    for (const label of runs[0]?.keys() ?? []) {
+      const ms = median(runs.map((r) => r.get(label) as number));
+      t.diagnostic(`${label} : ${ms.toFixed(1)} ms (médiane de ${RUNS} parcours à froid)`);
+      // Le total des 39 tranches n'est pas une étape : il n'entre pas dans le seuil.
+      if (!label.includes('en tout')) worst = Math.max(worst, ms);
+    }
     assert.ok(worst < LIMIT, `étape trop lente : ${worst.toFixed(1)} ms`);
     fs.rmSync(dir, { recursive: true, force: true });
   });
