@@ -8,3 +8,4 @@ export * from './shell.ts';
 export * from './page-view.ts';
 export * from './home.ts';
 export * from './centre.ts';
+export * from './search.ts';
