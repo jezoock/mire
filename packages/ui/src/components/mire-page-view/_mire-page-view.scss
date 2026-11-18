@@ -1,0 +1,183 @@
+@use '../../theme/tokens' as *;
+
+// Hôte des pages : il porte le thème des pages (palette par data-palette, polices, fond) et occupe toute la zone de
+// l'écran, sous les marges de .view (styles.css), pour que la palette du thème la couvre entièrement.
+.mire-page {
+  display: block;
+  box-sizing: border-box;
+  min-height: 100%;
+  margin: -12px calc(-1 * var(--pad-x, 0px)) -56px;
+  padding: 12px var(--pad-x, 0px) 56px;
+  color: var(--text);
+  font-family: var(--mire-font-body, inherit);
+  background: var(--bg);
+}
+
+// Vue de page : chemin parcouru, puis regroupements ou éléments. La mise en page vient du thème (classes --layout-*,
+// --size-*, --bg-*) ; les couleurs, de la palette de la portée.
+.mire-page-view {
+  position: relative;
+  display: grid;
+  gap: ds-spacing(5);
+  min-width: 0;
+
+  // Tailles des cartes : celles des composants (taille m), réduites ou agrandies par le thème.
+  &.--size-s {
+    --mire-page-card: 8.5rem;
+    --mire-page-wide: 14rem;
+    --mire-page-line: 18rem;
+  }
+
+  &.--size-l {
+    --mire-page-card: 14rem;
+    --mire-page-wide: 24rem;
+    --mire-page-line: 28rem;
+  }
+
+  &.--size-s,
+  &.--size-l {
+    .mire-grid.--poster {
+      --mire-grid-card: var(--mire-page-card);
+    }
+
+    .mire-grid.--thumbnail {
+      --mire-grid-card: var(--mire-page-wide);
+    }
+
+    .mire-grid.--line {
+      --mire-grid-card: var(--mire-page-line);
+    }
+
+    .mire-row[variant='poster'] {
+      --mire-row-card: var(--mire-page-card);
+    }
+
+    .mire-row[variant='thumbnail'] {
+      --mire-row-card: var(--mire-page-wide);
+    }
+
+    .mire-row[variant='line'] {
+      --mire-row-card: var(--mire-page-line);
+    }
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+  }
+
+  &__path {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(3);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    font-family: var(--mire-font-heading, var(--mire-font-body, inherit));
+    font-size: ds-token(font-size, 300);
+    list-style: none;
+  }
+
+  &__crumb {
+    display: flex;
+    gap: ds-spacing(2);
+    align-items: center;
+
+    // Séparateur entre deux étapes (décoratif, non lu).
+    & + &::before {
+      content: '›' / '';
+      color: var(--muted);
+    }
+  }
+
+  &__title {
+    font-weight: 700;
+  }
+
+  &__groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--mire-page-group, 11rem), 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &.--thumbnail &__groups {
+    --mire-page-group: 18rem;
+  }
+
+  &.--line &__groups {
+    --mire-page-group: 22rem;
+  }
+
+  &.--size-s &__groups {
+    --mire-page-group: var(--mire-page-card);
+  }
+
+  &.--size-l &__groups {
+    --mire-page-group: var(--mire-page-card);
+  }
+
+  &.--size-l.--thumbnail &__groups,
+  &.--size-s.--thumbnail &__groups {
+    --mire-page-group: var(--mire-page-wide);
+  }
+
+  &__rows {
+    display: grid;
+    gap: ds-spacing(6);
+  }
+
+  &__row {
+    display: grid;
+    gap: ds-spacing(2);
+    min-width: 0;
+  }
+
+  &__row-title {
+    justify-self: start;
+    font-family: var(--mire-font-heading, var(--mire-font-body, inherit));
+  }
+
+  &__row-name {
+    font-size: ds-token(font-size, 300);
+    font-weight: 700;
+  }
+
+  &__row-count {
+    margin-inline-start: ds-spacing(3);
+    color: var(--muted);
+  }
+
+  // La rangée a son propre titre (le déclencheur du regroupement) : celui de mire-row n'est pas utilisé.
+  &__row .mire-row__heading {
+    display: none;
+  }
+
+  .mire-grid__heading {
+    font-family: var(--mire-font-heading, var(--mire-font-body, inherit));
+  }
+
+  &__status {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  &__end {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+// Fond « image » du thème : l'image se répète sous toute la zone de la page.
+.mire-page:has(> .mire-page-view.--bg-image) {
+  background-image: var(--mire-theme-background);
+  background-attachment: local;
+}
