@@ -132,9 +132,14 @@ L'interface historique (`styles.css`) lit directement les jetons des palettes.
 
 ## Thèmes des pages (`theme.json`)
 
-Un thème sans code (D-17) dessine les pages : la vue de page (`mire-page-view`) avec ses cartes, ses rangées et ses
-grilles. Les écrans du cœur (Centre, Réglages, explorateur, lecteurs) et le menu gardent l'habillage du cœur et la
-palette des réglages. L'accueil suivra avec P4-12 ; les thèmes avec leur propre code, avec P4-27 (D-23).
+Un thème sans code (D-17) dessine les pages et l'accueil : la vue de page (`mire-page-view`) avec ses cartes, ses
+rangées et ses grilles, et l'accueil (`mire-home-view`, P4-12) avec son horloge, ses barres et ses rangées. Les écrans
+du cœur (Centre, Réglages, explorateur, lecteurs) et le menu gardent l'habillage du cœur et la palette des réglages.
+Les thèmes avec leur propre code viendront avec P4-27 (D-23).
+
+**Portée du thème** : le moteur habille deux hôtes, `<mire-page>` et `<mire-home>`, avec les mêmes valeurs (une portée
+commune, `sharedScope` de `src/renderer/themes/engine.ts`) : palette (`data-palette`), polices, fond (`data-theme`,
+propriétés CSS). Rien n'est posé sur `<mire-app>` ni sur la vue des écrans, qui affiche aussi les écrans du cœur.
 
 Un thème est un dossier `<id>/` : son `theme.json`, et ses fichiers (polices, images, sons), désignés par des chemins
 relatifs à ce dossier. Le schéma (`THEME_SCHEMA`) et la lecture (`validateTheme`, `parseTheme`) sont dans
@@ -166,7 +171,7 @@ relatifs à ce dossier. Le schéma (`THEME_SCHEMA`) et la lecture (`validateThem
 | `images.background`, `images.logo` | Images du thème (`svg`, `png`, `jpg`, `webp`, `avif`, `gif`). |
 | `sounds.move`, `sounds.select`, `sounds.back` | Sons (`ogg`, `opus`, `wav`, `mp3`, `m4a`) : `move` quand le focus passe d'une carte à l'autre, `select` à l'ouverture d'un regroupement, `back` au retour d'un niveau. |
 | `menu.position` | Place du menu (`left`, `right`, `top`, `bottom`) ; elle l'emporte sur celle des réglages tant que le thème est choisi. |
-| `home.layout` | Mise en page de l'accueil (`rows` ou `grid`), lue par l'accueil de P4-12. |
+| `home.layout` | Mise en page de l'accueil : `rows` (la mire en bandes, les rangées défilantes) ou `grid` (la mire en tuiles, les rangées en grilles). L'accueil suit aussi `page.card` (carte de « Reprendre » et des rangées), `page.size` et le fond `image`. |
 | `page.layout` | `grid` : grilles de cartes ; `rows` : chaque regroupement du dernier niveau devient une rangée de ses premiers éléments. Une page dont le `display` vaut `rows` est toujours en rangées. |
 | `page.card` | `auto` (la carte qu'indique le `display` de la page : affiches, vignettes, lignes), ou `poster`, `thumbnail`, `line`. |
 | `page.size` | Taille des cartes : `s`, `m`, `l`. |
