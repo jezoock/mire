@@ -6,6 +6,8 @@
  * - les composants d'éléments (`mire-card`, `mire-grid`, `mire-row`, `mire-group-card`, P4-05) passent à leur
  *   `ds-trigger` la cible et la méthode qu'ils reçoivent (l'argument, la clé de l'élément, est ajouté par le
  *   composant) : leurs attributs `target` et `action` sont vérifiés de la même façon là où ils sont écrits ;
+ * - les boîtes de dialogue (`mire-form`, `mire-pick`, P4-06) écrivent le nom de leur action tel quel suivi d'arguments
+ *   calculés (`action={`act:${…}`}`) : seul ce nom est vérifié ;
  * - chaque `data-action` des vues historiques a une entrée dans le pont (controllers/bridge.ts), et chaque entrée du
  *   pont désigne une méthode existante d'un contrôleur.
  * Usage : node scripts/check-actions.mjs — sort en erreur après avoir listé tous les problèmes.
