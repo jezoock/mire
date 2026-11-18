@@ -42,7 +42,7 @@ export const recentKey = (it: RecentItem): string => it.key || it.path;
 /** Site de la configuration (`web`). */
 export interface SiteSource {
   id: string;
-  name: string;
+  name?: string;
   color?: string;
 }
 
@@ -112,7 +112,7 @@ export function homeSites(keys: readonly string[], src: HomeSources): HomeSite[]
     const site = key.startsWith('web:') ? src.sites().find((w) => w.id === key.slice(4)) : undefined;
     if (!site) continue;
     const color = src.color(site.color);
-    out.push({ key, name: site.name, color, ink: src.ink(color), open: open.has(site.id) });
+    out.push({ key, name: site.name || site.id, color, ink: src.ink(color), open: open.has(site.id) });
   }
   return out;
 }

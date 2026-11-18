@@ -102,7 +102,7 @@ const pagesOf = (src: OptionSources) => src.pages ?? [];
 /** Toutes les valeurs proposées par une liste, avec leur nom et leur couleur. */
 function candidates(list: HomeList, src: OptionSources): Omit<HomeOption, 'on'>[] {
   const { t } = src;
-  if (list === 'sites') return src.sites.map((w) => ({ id: `web:${w.id}`, label: w.name, color: src.color(w.color) }));
+  if (list === 'sites') return src.sites.map((w) => ({ id: `web:${w.id}`, label: w.name || w.id, color: src.color(w.color) }));
   const pages = pagesOf(src).map((p) => ({ id: p.id, label: pageName(p, t), color: barColor(p.id) }));
   if (list === 'bars') return [...BAR_SCREENS.map(([id, view]) => ({ id, label: t(`shell.views.${view}`), color: barColor(id) })), ...pages];
   return [

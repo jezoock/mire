@@ -170,7 +170,7 @@ describe('contrôleurs', () => {
     ctl.home.openGroup({ target: 'movies', value: 'Drame' });
     ctl.home.openGroup({ target: 'movies', value: null });
     await ctl.home.openElement({ key: 'web:arte' });
-    S.config = { web: [{ id: 'netflix', name: 'Netflix' }] };
+    S.config = { web: [{ id: 'netflix', name: 'Netflix' }] } as unknown as typeof S.config;
     ctl.home.openSite({ key: 'web:netflix' });
     assert.throws(() => ctl.home.openSite({ key: 'web:retire' }), /introuvable/);
     S.recent = [
