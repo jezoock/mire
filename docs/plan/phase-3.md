@@ -95,6 +95,8 @@ chaîne de publication.
     `secret` chiffrés par `safeStorage` quand le système le permet, jamais exportés en clair ;
   - permissions sensibles (réseau local, programmes, vues web, suppression) refusées à un plugin qui n'a pas le
     niveau code sensible.
+  - brancher au registre les contributions `sources` (catalogue), `metadata` (infos en ligne) et `search`
+    (recherche), qui ont besoin du contexte (reporté de P3-03, PR #69).
 - **Critères d'acceptation** : tests : hôte non déclaré refusé, dossier non accordé refusé, réglage secret absent de
   l'export, permission sensible refusée au code limité.
 
@@ -110,6 +112,10 @@ chaîne de publication.
   - résolution des dépendances (plages de versions semver) : installation dans l'ordre, refus d'une dépendance
     circulaire ou introuvable, refus de désinstaller un plugin dont un autre a besoin (en disant lequel) ;
   - à la désinstallation, choix de garder ou non `userData/plugin-data/<id>/`.
+  - brancher `webExtensions` (vues web) et `downloaders` (téléchargements), contributions de code sensible des
+    plugins inclus (reporté de P3-03, PR #69) ;
+  - copier `resources/plugins/` dans l'installateur (`extraResources` d'electron-builder) : sinon
+    `process.resourcesPath/plugins`, que l'hôte de plugins lit une fois Mire installé, sera vide.
 - **Critères d'acceptation** : tests de la résolution (versions compatibles, conflits, cycles) ; un plugin d'exemple
   inclus présent après un `npm run dist` (vérifié dans le test de fumée).
 
