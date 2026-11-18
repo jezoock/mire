@@ -8,6 +8,7 @@
  * dans l'hôte isolé (`host.ts`), un Worker par plugin ; le code sensible, réservé aux plugins inclus, dans le
  * processus principal (`in-process.ts`), derrière la même API par messages.
  */
+import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
@@ -18,6 +19,7 @@ import type { Registry } from '../catalog/tags/registry.ts';
 import { CHANNEL_ERRORS, ChannelError, type Channel, type RequestHandler } from './channel.ts';
 import { checkPlugin, declaredKinds, discoverPlugins, type CheckedPlugin, type DiscoveryRoots, type PluginOrigin, type Refusal } from './discovery.ts';
 import type { createContextHandler } from './context.ts';
+import { checkPresent, dependentsOf, type DependencyNode, type DependencyProblem } from './dependencies.ts';
 import type { PluginEndpoint } from './host.ts';
 import type { Journal } from './journal.ts';
 import { contributionEntries, createContributionRegistry, declaredTagsAndInfos, RESTART_KINDS, type ContributionEntry } from './registry.ts';
@@ -83,11 +85,19 @@ export interface PluginServiceOptions {
   settings?: PluginSettingsStore;
   /** Fermeture de Mire : écrire ce qui attend (stockage des plugins). */
   flush?: () => Promise<void>;
+  /** Désinstallation sans garder les données : effacer `userData/plugin-data/<id>/` (stockage fermé d'abord). */
+  dropData?: (id: string) => Promise<void>;
   /** Délai d'une requête à un plugin (ms). */
   requestTimeout?: number;
   /** Chien de garde : intervalle des pings et délai de réponse (ms). 0 : pas de chien de garde. */
   watchdog?: { interval: number; timeout: number };
 }
+
+/** Résultat d'une désinstallation (`uninstall`) ; un refus porte son message, dans la langue de l'interface. */
+export type UninstallResult =
+  | { ok: true; keptData: boolean; restored: PluginInfo | null }
+  | { ok: false; code: 'needed'; by: string[]; message: string }
+  | { ok: false; code: 'bundled'; message: string };
 
 interface Known {
   id: string;
@@ -148,6 +158,16 @@ export function createPluginService(opts: PluginServiceOptions) {
     return typeof n === 'string' && n ? n : id;
   };
   const log = (id: string, level: 'info' | 'warn' | 'error', message: string) => journal.write(id, level, message);
+  const nodeOf = (p: CheckedPlugin): DependencyNode => ({ id: p.id, version: p.version, dependencies: p.manifest.dependencies ?? {} });
+  const dependenciesOf = (id: string): string[] => Object.keys(known.get(id)?.plugin?.manifest.dependencies ?? {});
+  /** Première dépendance d'un plugin qui n'est pas active (il l'attend), ou `null`. */
+  const waitingFor = (id: string): string | null => dependenciesOf(id).find((d) => !active.has(d)) ?? null;
+  /** Plugins présents qui déclarent une dépendance à `id`. */
+  const dependents = (id: string): string[] =>
+    dependentsOf(
+      id,
+      [...known.values()].flatMap((k) => (k.plugin ? [nodeOf(k.plugin)] : [])),
+    );
 
   // -------------------------------------------------------------------------------------------------------------
   // Erreurs
@@ -247,7 +267,7 @@ export function createPluginService(opts: PluginServiceOptions) {
   async function activate(id: string): Promise<void> {
     const k = known.get(id);
     const p = k?.plugin;
-    if (!p || active.has(id) || stopped) return;
+    if (!p || k.refusal || active.has(id) || stopped || waitingFor(id)) return;
     const a: Active = { plugin: p, runner: null, busy: 0 };
     active.set(id, a);
     opts.setTexts(pluginTextKey(id), p.texts);
@@ -283,12 +303,16 @@ export function createPluginService(opts: PluginServiceOptions) {
     if (tagEntries.length) opts.onTaggersChange();
     if (a.runner) ensureWatchdog();
     log(id, 'info', `Activé : ${entries.map((e) => `${e.kind}/${e.id}`).join(', ') || 'aucune contribution'}.`);
+    // Ceux qui attendaient ce plugin (voulus actifs) démarrent à leur tour.
+    for (const d of dependents(id)) if (state.get(d).enabled && !active.has(d)) await activate(d);
   }
 
   function deactivate(id: string): void {
     const a = active.get(id);
     if (!a) return;
     active.delete(id);
+    // Ceux qui en ont besoin s'arrêtent aussi ; ils restent voulus actifs et reviendront avec lui.
+    for (const d of dependents(id)) deactivate(d);
     const hadTaggers = registry.ofPlugin(id).some((e) => e.kind === 'taggers');
     taggers.remove(id);
     registry.remove(id);
@@ -337,6 +361,34 @@ export function createPluginService(opts: PluginServiceOptions) {
     return translate(`plugins.refused.${r.code}`, { name: id, details: '', ...r.vars });
   }
 
+  /** Plugin voulu actif qui attend une dépendance désactivée ou en panne. */
+  function waitingMessage(k: Known): string | null {
+    if (!k.plugin || active.has(k.id) || !state.get(k.id).enabled) return null;
+    const d = waitingFor(k.id);
+    return d ? translate('plugins.waiting', { name: nameOf(k.id), dependency: nameOf(d) }) : null;
+  }
+
+  /** Refus pour une dépendance (`plugins.refused.dependency`, `dependency-refused`, `cycle`). */
+  function dependencyRefusal(problem: DependencyProblem): Refusal {
+    if (problem.code === 'cycle') return { code: 'cycle', vars: { details: problem.cycle.map(nameOf).join(' → ') } };
+    if (problem.code === 'refused') return { code: 'dependency-refused', vars: { dependency: nameOf(problem.dependency) } };
+    if (problem.code === 'missing') return { code: 'dependency', vars: { dependency: nameOf(problem.dependency), range: problem.range } };
+    return { code: 'dependency', vars: { dependency: nameOf(problem.dependency), range: problem.requirements.map((r) => r.range).join(', ') } };
+  }
+
+  /** Vérifie un plugin trouvé et le note ; un plugin inclus nouveau (ou d'une nouvelle version) est installé. */
+  async function examine(c: ReturnType<typeof discoverPlugins>['candidates'][number]): Promise<Known> {
+    const r = await checkPlugin(c, { appVersion: opts.appVersion, languages: opts.languages });
+    const k: Known = { id: c.id, origin: c.origin, version: c.version, plugin: r.ok ? r.plugin : null, refusal: r.ok ? null : r.refusal };
+    known.set(c.id, k);
+    if (k.refusal) log(c.id, 'warn', `Refusé : ${refusalMessage(c.id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
+    else if (c.origin === 'bundled' && state.get(c.id).bundled !== k.plugin!.version) {
+      state.installBundled(c.id, k.plugin!.version);
+      log(c.id, 'info', `Installé (livré avec Mire) : version ${k.plugin!.version}.`);
+    }
+    return k;
+  }
+
   function info(k: Known): PluginInfo {
     const s = state.get(k.id);
     const p = k.plugin;
@@ -349,7 +401,7 @@ export function createPluginService(opts: PluginServiceOptions) {
       name: nameOf(k.id),
       enabled: s.enabled,
       status,
-      message: k.refusal ? refusalMessage(k.id, k.refusal) : (s.fault?.message ?? null),
+      message: k.refusal ? refusalMessage(k.id, k.refusal) : (s.fault?.message ?? waitingMessage(k)),
       contributions: p
         ? declaredKinds(p.manifest).flatMap((kind) => ((p.manifest.contributes[kind] ?? []) as { id: string }[]).map((c) => ({ kind, id: c.id })))
         : [],
@@ -363,16 +415,17 @@ export function createPluginService(opts: PluginServiceOptions) {
       state.load();
       const found = discoverPlugins(opts.roots);
       for (const s of found.skipped) console.error(`Plugins : ${s.where} écarté (${s.refusal.code}).`);
-      for (const c of found.candidates) {
-        const r = await checkPlugin(c, { appVersion: opts.appVersion, languages: opts.languages });
-        const k: Known = { id: c.id, origin: c.origin, version: c.version, plugin: r.ok ? r.plugin : null, refusal: r.ok ? null : r.refusal };
-        known.set(c.id, k);
-        if (k.refusal) {
-          log(c.id, 'warn', `Refusé : ${refusalMessage(c.id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
-          continue;
-        }
-        if (state.get(c.id).enabled) await activate(c.id);
+      for (const c of found.candidates) await examine(c);
+      // Dépendances (D-19) : refus de ce qui manque, ne convient pas ou tourne en rond ; activation dans l'ordre.
+      const present = [...known.values()].flatMap((k) => (k.plugin ? [nodeOf(k.plugin)] : []));
+      const refused = new Set([...known.values()].filter((k) => k.refusal).map((k) => k.id));
+      const { order, problems } = checkPresent(present, refused);
+      for (const [id, problem] of problems) {
+        const k = known.get(id)!;
+        k.refusal = dependencyRefusal(problem);
+        log(id, 'warn', `Refusé : ${refusalMessage(id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
       }
+      for (const id of order) if (state.get(id).enabled) await activate(id);
     },
 
     /** Tous les plugins trouvés, avec leur état (pour le futur Centre). */
@@ -388,6 +441,40 @@ export function createPluginService(opts: PluginServiceOptions) {
       if (enabled) await activate(k.id);
       else deactivate(k.id);
       return info(k);
+    },
+
+    /**
+     * Désinstalle un plugin installé (`userData/plugins/<id>/`), sans écran (le Centre viendra avec P4-18). Refusé si un
+     * autre plugin présent en a besoin (en disant lequel), ou si le plugin est livré avec Mire (il se désactive). Ses
+     * données (`userData/plugin-data/<id>/`) sont gardées si `keepData`. Un plugin inclus que la version installée
+     * remplaçait (mise à jour par le dépôt, P3-07) reprend sa place, actif ou non comme avant.
+     */
+    async uninstall(id: string, { keepData }: { keepData: boolean }): Promise<UninstallResult | null> {
+      const k = known.get(id);
+      if (!k) return null;
+      const by = dependents(id);
+      if (by.length)
+        return { ok: false, code: 'needed', by, message: translate('plugins.uninstall.needed', { name: nameOf(id), by: by.map(nameOf).join(', ') }) };
+      if (k.origin === 'bundled') return { ok: false, code: 'bundled', message: translate('plugins.uninstall.bundled', { name: nameOf(id) }) };
+      deactivate(id);
+      known.delete(id);
+      restartPending.delete(id);
+      await fsp.rm(path.join(opts.roots.installed, id), { recursive: true, force: true });
+      if (!keepData) await opts.dropData?.(id);
+      log(id, 'info', `Désinstallé${keepData ? ' (données gardées)' : ''}.`);
+      // Le dossier installé n'est plus là : ce qui reste sous cet identifiant est la version incluse, s'il y en a une.
+      const bundled = discoverPlugins(opts.roots).candidates.find((c) => c.id === id);
+      if (!bundled) {
+        state.forget(id);
+        return { ok: true, keptData: keepData, restored: null };
+      }
+      // La version incluse garde l'état voulu (actif ou non) ; l'erreur éventuelle de la version retirée est oubliée.
+      state.setEnabled(id, state.get(id).enabled);
+      const back = await examine(bundled);
+      const problem = back.plugin && checkPresent([...known.values()].flatMap((x) => (x.plugin && !x.refusal ? [nodeOf(x.plugin)] : []))).problems.get(id);
+      if (problem) back.refusal = dependencyRefusal(problem);
+      if (!back.refusal && state.get(id).enabled) await activate(id);
+      return { ok: true, keptData: keepData, restored: info(back) };
     },
 
     /** Contributions actives d'une nature (registre). */

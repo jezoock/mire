@@ -27,6 +27,8 @@ export interface PluginStateEntry {
   fault?: PluginFault;
   /** Dossiers accordés par l'utilisateur (chemins absolus). */
   folders?: string[];
+  /** Plugin inclus : version installée à son premier lancement (P3-05). */
+  bundled?: string;
 }
 
 export interface PluginStateFile {
@@ -46,6 +48,8 @@ export function normalizeState(raw: unknown): PluginStateFile {
     const entry: PluginStateEntry = { enabled: (v as PluginStateEntry).enabled };
     const f = (v as PluginStateEntry).fault;
     if (f && FAULT_CODES.has(f.code) && typeof f.message === 'string' && Number.isFinite(f.at)) entry.fault = { code: f.code, message: f.message, at: f.at };
+    const bundled = (v as PluginStateEntry).bundled;
+    if (typeof bundled === 'string' && bundled) entry.bundled = bundled;
     const folders = (v as PluginStateEntry).folders;
     if (Array.isArray(folders)) {
       const kept = folders.filter((d): d is string => typeof d === 'string' && path.isAbsolute(d));
@@ -64,7 +68,11 @@ export function createPluginState(file: string) {
     onCorrupt: (err, f, kept) => console.error(`Plugins : ${f} illisible (${err.message})${kept ? `, mis de côté dans ${kept}` : ''}.`),
   });
   let state: PluginStateFile = store.get();
-  const folders = (id: string) => (state.plugins[id]?.folders?.length ? { folders: [...state.plugins[id].folders!] } : {});
+  // Ce qui suit un plugin quel que soit son état : dossiers accordés, version incluse installée.
+  const folders = (id: string) => ({
+    ...(state.plugins[id]?.folders?.length ? { folders: [...state.plugins[id].folders!] } : {}),
+    ...(state.plugins[id]?.bundled ? { bundled: state.plugins[id].bundled } : {}),
+  });
 
   return {
     load(): void {
@@ -97,7 +105,28 @@ export function createPluginState(file: string) {
       const entry = state.plugins[id];
       if (!entry?.folders?.includes(dir)) return;
       const list = entry.folders.filter((d) => d !== dir);
-      state.plugins[id] = { enabled: entry.enabled, ...(entry.fault ? { fault: entry.fault } : {}), ...(list.length ? { folders: list } : {}) };
+      state.plugins[id] = {
+        enabled: entry.enabled,
+        ...(entry.fault ? { fault: entry.fault } : {}),
+        ...(list.length ? { folders: list } : {}),
+        ...(entry.bundled ? { bundled: entry.bundled } : {}),
+      };
+      store.set(state);
+    },
+    /** Le plugin a-t-il une entrée (activé, désactivé, inclus déjà installé…) ? */
+    has: (id: string): boolean => Object.hasOwn(state.plugins, id),
+    /**
+     * Plugin inclus installé (premier lancement, ou nouvelle version livrée avec Mire) : actif, sauf si l'utilisateur
+     * l'avait désactivé ; son état et ses dossiers sont gardés.
+     */
+    installBundled(id: string, version: string): void {
+      state.plugins[id] = { ...(state.plugins[id] ?? { enabled: true }), bundled: version };
+      store.set(state);
+    },
+    /** Plugin désinstallé : son entrée est oubliée (état, erreur, dossiers accordés). */
+    forget(id: string): void {
+      if (!Object.hasOwn(state.plugins, id)) return;
+      delete state.plugins[id];
       store.set(state);
     },
     flush: () => store.flush(),

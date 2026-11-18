@@ -270,6 +270,7 @@ function start(pending: PendingFiles): Running {
       box: safeStorageBox(safeStorage),
     }),
     flush: storages.flush,
+    dropData: storages.drop,
     tagRegistry: registry,
     setTexts: (key, texts) => i18n.setPluginTexts(key, texts),
     translate: t,

@@ -520,7 +520,15 @@
         "outside": "« {name} » contient un lien vers un fichier hors de son dossier.",
         "data": "Un fichier de « {name} » est illisible ou trop gros : {details}",
         "texts": "Les textes de « {name} » sont illisibles : {details}",
-        "too-big": "« {name} » contient trop de fichiers."
+        "too-big": "« {name} » contient trop de fichiers.",
+        "dependency": "« {name} » a besoin de « {dependency} » ({range}), qui n’est pas installé ou pas dans une version qui convient.",
+        "dependency-refused": "« {name} » a besoin de « {dependency} », qui n’a pas pu être chargé.",
+        "cycle": "« {name} » dépend de lui-même par d’autres plugins : {details}."
+      },
+      "waiting": "« {name} » démarrera quand « {dependency} » sera activé.",
+      "uninstall": {
+        "needed": "« {name} » ne peut pas être désinstallé : « {by} » en a besoin.",
+        "bundled": "« {name} » est livré avec Mire : on peut le désactiver, pas le désinstaller."
       }
     },
     "shell": {
