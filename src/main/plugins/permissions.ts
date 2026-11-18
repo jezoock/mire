@@ -50,7 +50,10 @@ const PRIVATE_V4 = [/^10\./, /^127\./, /^169\.254\./, /^192\.168\./, /^172\.(1[6
 
 /** Vrai si l'hôte désigne la machine ou le réseau local : nom local, adresse privée, de bouclage ou de lien. */
 export function isLocalHost(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  const h = hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.$/, '');
   if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.lan') || h.endsWith('.home.arpa') || !h.includes('.')) {
     return !net.isIPv6(h) || isLocalV6(h);
   }

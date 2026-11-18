@@ -398,7 +398,14 @@ export function createPluginService(opts: PluginServiceOptions) {
      * Appelle une méthode d'une contribution de code active (« même API par messages ») : sources, infos en ligne,
      * recherche… Une erreur du plugin le désactive.
      */
-    call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args: unknown[] = [], options: { timeout?: number } = {}): Promise<unknown> {
+    call(
+      pluginId: string,
+      kind: ContributionKind,
+      contributionId: string,
+      method: string,
+      args: unknown[] = [],
+      options: { timeout?: number } = {},
+    ): Promise<unknown> {
       return call(pluginId, `${kind}/${contributionId}`, method, args, options);
     },
 

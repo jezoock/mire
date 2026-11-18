@@ -69,14 +69,18 @@ function openSpec(raw: unknown, level: PluginLevel, granted: string[]): OpenSpec
     case 'stream': {
       if (!isWebUrl(raw.url)) return null;
       const variants = Array.isArray(raw.variants)
-        ? raw.variants.filter((v): v is { label: string; url: string } => isObject(v) && text(v.label) && isWebUrl(v.url)).map((v) => ({ label: v.label, url: v.url }))
+        ? raw.variants
+            .filter((v): v is { label: string; url: string } => isObject(v) && text(v.label) && isWebUrl(v.url))
+            .map((v) => ({ label: v.label, url: v.url }))
         : [];
       return { kind: 'stream', url: raw.url, ...(variants.length ? { variants } : {}) };
     }
     case 'file':
       if (isWebUrl(raw.path)) return { kind: 'file', path: raw.path };
       if (!text(raw.path) || !path.isAbsolute(raw.path)) return null;
-      return sensitive || granted.some((g) => path.resolve(raw.path as string) === path.resolve(g) || isInside(raw.path, [g])) ? { kind: 'file', path: raw.path } : null;
+      return sensitive || granted.some((g) => path.resolve(raw.path as string) === path.resolve(g) || isInside(raw.path, [g]))
+        ? { kind: 'file', path: raw.path }
+        : null;
     case 'game':
     case 'program':
       // Lancer un programme ou un émulateur : permission sensible, code sensible seulement.
@@ -125,13 +129,22 @@ export function checkFacts(source: string, raw: unknown): MetadataFacts | null |
   if (raw === null) return null;
   if (!isObject(raw) || !text(raw.title)) return undefined;
   const out: MetadataFacts = { title: raw.title, image: isWebUrl(raw.image) ? raw.image : null, source };
-  for (const k of ['year', 'overview', 'genre', 'artist'] as const) if (typeof raw[k] === 'string') out[k] = (raw[k] as string).slice(0, BRIDGE_LIMITS.text * 4);
+  for (const k of ['year', 'overview', 'genre', 'artist'] as const)
+    if (typeof raw[k] === 'string') out[k] = (raw[k] as string).slice(0, BRIDGE_LIMITS.text * 4);
   if (isWebUrl(raw.backdrop)) out.backdrop = raw.backdrop;
   if (typeof raw.series === 'boolean') out.series = raw.series;
   return out;
 }
 
-export function createPluginBridges({ service, catalog, log = (m) => console.error(m) }: { service: BridgeService; catalog: BridgeCatalog; log?: (m: string) => void }) {
+export function createPluginBridges({
+  service,
+  catalog,
+  log = (m) => console.error(m),
+}: {
+  service: BridgeService;
+  catalog: BridgeCatalog;
+  log?: (m: string) => void;
+}) {
   const scanned = new Map<string, ElementSourceRef>();
   const refKey = (e: ContributionEntry) => `${e.pluginId}\u0000${e.id}`;
 
@@ -211,7 +224,9 @@ export function createPluginBridges({ service, catalog, log = (m) => console.err
 
     /** Interroge les fournisseurs de recherche actifs ; un fournisseur en échec est omis. */
     async search(query: string): Promise<{ pluginId: string; id: string; result: unknown }[]> {
-      const q = String(query ?? '').trim().slice(0, BRIDGE_LIMITS.text);
+      const q = String(query ?? '')
+        .trim()
+        .slice(0, BRIDGE_LIMITS.text);
       if (!q) return [];
       const runs = service.contributions('search').map(async (e) => {
         const result = await service.call(e.pluginId, 'search', e.id, 'search', [q], { timeout: BRIDGE_LIMITS.searchTimeout });

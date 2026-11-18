@@ -71,7 +71,8 @@ export function createPluginStorage(dir: string, debounceMs = 500): PluginStorag
     set(key, value) {
       const k = checkKey(key);
       const current = open();
-      if (!current.has(k) && current.size >= STORAGE_LIMITS.keys) throw new ChannelError(CHANNEL_ERRORS.tooLarge, `At most ${STORAGE_LIMITS.keys} storage keys.`);
+      if (!current.has(k) && current.size >= STORAGE_LIMITS.keys)
+        throw new ChannelError(CHANNEL_ERRORS.tooLarge, `At most ${STORAGE_LIMITS.keys} storage keys.`);
       // Seulement des données JSON : ce qui ne s'y écrit pas est refusé ; `undefined` vaut suppression.
       let copy: unknown;
       try {

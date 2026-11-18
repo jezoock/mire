@@ -4,7 +4,21 @@
  * l'IPC et ouvre la fenêtre. La logique vit dans les modules ; ici, seulement le câblage.
  */
 import path from 'node:path';
-import { app, BrowserWindow, WebContentsView, components, dialog, ipcMain, Menu, nativeTheme, protocol, safeStorage, session, shell, webContents } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  WebContentsView,
+  components,
+  dialog,
+  ipcMain,
+  Menu,
+  nativeTheme,
+  protocol,
+  safeStorage,
+  session,
+  shell,
+  webContents,
+} from 'electron';
 import { path7za } from '7zip-bin';
 import { MIME, type SystemHint } from '@mire/shared';
 import { BUILTIN_CATALOGS } from '@mire/shared/i18n';

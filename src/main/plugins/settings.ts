@@ -85,7 +85,8 @@ const invalid = (key: string, why: string) => new ChannelError(CHANNEL_ERRORS.pl
 /** Valeur d'un réglage vérifiée d'après sa déclaration ; lève une erreur qui ne cite jamais la valeur. */
 export function checkSettingValue(decl: PluginSetting, value: unknown): SettingValue {
   const text = () => {
-    if (typeof value !== 'string' || value.length > SETTING_LIMITS.text) throw invalid(decl.key, `a text of at most ${SETTING_LIMITS.text} characters is expected.`);
+    if (typeof value !== 'string' || value.length > SETTING_LIMITS.text)
+      throw invalid(decl.key, `a text of at most ${SETTING_LIMITS.text} characters is expected.`);
     return value;
   };
   switch (decl.type) {

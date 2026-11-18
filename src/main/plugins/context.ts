@@ -157,7 +157,11 @@ const responseHeaders = (res: Response): Record<string, string> => {
 };
 
 const httpFailure = (err: unknown): unknown =>
-  err instanceof HttpError ? new ChannelError(CHANNEL_ERRORS.http, err.message) : err instanceof ChannelError ? err : new ChannelError(CHANNEL_ERRORS.http, 'HTTP request failed.');
+  err instanceof HttpError
+    ? new ChannelError(CHANNEL_ERRORS.http, err.message)
+    : err instanceof ChannelError
+      ? err
+      : new ChannelError(CHANNEL_ERRORS.http, 'HTTP request failed.');
 
 /** Contexte d'un plugin : permissions, dossiers, stockage et file d'attente à lui. */
 export function createContextHandler(deps: ContextDeps) {
@@ -186,9 +190,11 @@ export function createContextHandler(deps: ContextDeps) {
       for (let hop = 0; ; hop++) {
         const why = urlRefusal(granted, target);
         if (why) throw refused(why);
-        const res = await request(target.href, { method, headers: o.headers, body, timeout: o.timeout, signal, redirect: 'manual', fetch: deps.fetch }).catch((err) => {
-          throw httpFailure(err);
-        });
+        const res = await request(target.href, { method, headers: o.headers, body, timeout: o.timeout, signal, redirect: 'manual', fetch: deps.fetch }).catch(
+          (err) => {
+            throw httpFailure(err);
+          },
+        );
         const location = res.headers.get('location');
         if (!REDIRECTS.has(res.status) || !location) return { res, url: target.href };
         await res.body?.cancel().catch(() => {});
