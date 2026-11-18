@@ -301,6 +301,11 @@ ni dossier, ni fichier, ni hôte.
   leur tâche.
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
+- **Réglages des plugins** (P4-20) : `pluginsSettings()` (`plugins:settings`) rend, pour chaque plugin qui en déclare,
+  ses réglages (manifeste) et leurs valeurs, sans celles des secrets (seulement la liste des secrets saisis) ;
+  `pluginsSetSetting(id, key, value)` (`plugins:setSetting`) en change un (`null` : valeur par défaut) et rend les
+  réglages du plugin, ou le message d'un refus, qui ne cite jamais la valeur. L'écran Réglages en tire un panneau par
+  plugin, avec ses textes (`pluginTexts.<id>.settings.<clé>.label`).
 
 ## Contrat IPC
 
