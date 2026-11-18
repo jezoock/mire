@@ -6,6 +6,8 @@
 import type { MireApi } from '../api/index.ts';
 import type { State } from '../state/index.ts';
 import type { InfoScalar, PagePath } from '@mire/shared';
+import type { FormResult } from '@mire/ui/utils';
+import type { FormOptions } from '../ui/dialogs.ts';
 
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
@@ -107,6 +109,8 @@ export interface LegacyUi {
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;
   loadCatalog(): Promise<void>;
+  /** Centre (P4-18) : affiche l'onglet `downloads` ou `apps`. */
+  showCentreTab(tab: string): void;
   afterStoreChange(result: unknown, message: string): Promise<void>;
   afterAdblockChange(state: unknown): Promise<void>;
   setCfg(path: string, value: unknown): Promise<void>;
@@ -124,5 +128,9 @@ export interface ControllerContext {
   /** Nombre d'éléments ajoutés à chaque « Afficher plus ». */
   page: number;
   /** Service des boîtes de dialogue sur les composants (P4-06) : action des boutons des boîtes. */
-  dialogs: { act(args: Record<string, unknown>): Promise<void> };
+  dialogs: {
+    act(args: Record<string, unknown>): Promise<void>;
+    /** Formulaire sur `ds-modal` (`openForm` de `ui/dialogs.ts`). */
+    form(opts: FormOptions): Promise<FormResult>;
+  };
 }

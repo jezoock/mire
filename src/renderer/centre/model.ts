@@ -20,6 +20,8 @@ type Item = Record<string, any>;
 /** États d'un téléchargement en cours (pas en pause, ni terminé). */
 export const ACTIVE_STATES: ReadonlySet<string> = new Set(['waiting', 'downloading', 'extracting']);
 const STOPPED = new Set(['error', 'interrupted', 'cancelled']);
+/** États connus (textes `centre.downloads.state.*`) ; un autre est affiché tel quel. */
+const STATES = new Set(['pending', 'waiting', 'downloading', 'paused', 'extracting', 'done', 'error', 'cancelled', 'interrupted', 'external']);
 const UNITS = ['b', 'kb', 'mb', 'gb', 'tb'];
 
 /** Taille en multiples de 1024 : « 1,5 Mo », « 1.5 MB ». */
@@ -43,8 +45,13 @@ export function formatEta(ms: number, w: Writer): string {
 export function downloadMeta(d: Item, w: Writer): string {
   const { t } = w;
   const state = String(d.state ?? '');
-  const parts = [t(`centre.downloads.state.${state}`)];
-  if (d.total) parts.push(state === 'done' ? formatBytes(d.total, w) : t('centre.downloads.meta.progress', { received: formatBytes(d.received || 0, w), total: formatBytes(d.total, w) }));
+  const parts = [STATES.has(state) ? t(`centre.downloads.state.${state}`) : state];
+  if (d.total)
+    parts.push(
+      state === 'done'
+        ? formatBytes(d.total, w)
+        : t('centre.downloads.meta.progress', { received: formatBytes(d.received || 0, w), total: formatBytes(d.total, w) }),
+    );
   else if (d.received) parts.push(formatBytes(d.received, w));
   if (state === 'downloading' && d.speed) parts.push(t('centre.downloads.meta.speed', { speed: formatBytes(d.speed, w) }));
   if (d.kind === 'torrent' && ACTIVE_STATES.has(state)) parts.push(t('centre.downloads.meta.peers', { count: Number(d.peers) || 0 }));
@@ -88,7 +95,9 @@ export function downloadRow(d: Item, w: Writer): DownloadRow {
       reveal: done,
       start: state === 'pending',
     },
-    installers: done ? ((d.installers as string[]) || []).slice(0, 2).map((file) => ({ file, label: w.t('centre.downloads.actions.install', { file: fileName(file) }) })) : [],
+    installers: done
+      ? ((d.installers as string[]) || []).slice(0, 2).map((file) => ({ file, label: w.t('centre.downloads.actions.install', { file: fileName(file) }) }))
+      : [],
   };
 }
 
@@ -149,7 +158,10 @@ export function progressText(p: StoreProgress | undefined, w: Writer): AppProgre
   })();
   const { received = 0, total = 0 } = p!;
   if (p!.phase === 'download' && total) {
-    return { text: t('centre.progress.amount', { step, received: formatBytes(received, w), total: formatBytes(total, w) }), percent: Math.min(100, Math.round((received / total) * 100)) };
+    return {
+      text: t('centre.progress.amount', { step, received: formatBytes(received, w), total: formatBytes(total, w) }),
+      percent: Math.min(100, Math.round((received / total) * 100)),
+    };
   }
   return { text: step, percent: null };
 }
@@ -179,7 +191,11 @@ function emulatorCard(e: Item, s: AppsState, w: Writer): AppEmulator {
       : t('centre.apps.status.notInstalled');
   const picked = (e.systems as Item[]).filter((sy) => s.picks.has(sy.id)).length;
   const install = e.retroarch
-    ? { label: picked ? t('centre.apps.addConsoles', { count: picked }) : t('centre.apps.chooseConsoles'), disabled: busy || !e.available || !picked, primary: true }
+    ? {
+        label: picked ? t('centre.apps.addConsoles', { count: picked }) : t('centre.apps.chooseConsoles'),
+        disabled: busy || !e.available || !picked,
+        primary: true,
+      }
     : { label: t(e.installed ? 'centre.apps.update' : 'centre.apps.install'), disabled: busy || !e.available, primary: !e.installed };
   const bios = e.bios
     ? {

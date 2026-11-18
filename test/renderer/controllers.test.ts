@@ -108,7 +108,7 @@ describe('contrôleurs', () => {
     assert.equal(named(calls, 'api.downloadsAddUrl').length, 0);
     assert.equal(await c.centre.addDownload({ url: 'https://exemple.fr/a.zip', console: '3' }), true);
     assert.deepEqual(named(calls, 'api.downloadsAddUrl')[0], ['api.downloadsAddUrl', 'https://exemple.fr/a.zip', { console: '3' }]);
-    assert.deepEqual(toasts, ['Collez d’abord un lien (https://… ou magnet:?…).', 'Téléchargement ajouté.']);
+    assert.deepEqual(toasts, ['centre.downloads.messages.needUrl', 'centre.downloads.messages.added']);
   });
 
   it('la manette passe à l’écran ou à la page suivante du menu (P4-11 : la coquille choisit)', () => {
@@ -269,11 +269,11 @@ describe('pont des data-action historiques', () => {
     assert.deepEqual(args('go', { go: 'settings' }), { section: 'settings' });
   });
 
-  it('npm run check:actions ne trouve aucun problème, et relie les ~100 actions historiques', () => {
+  it('npm run check:actions ne trouve aucun problème, et relie les ~80 actions historiques', () => {
     const { errors, legacy, triggers } = checkActions();
     assert.deepEqual(errors, []);
-    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux).
-    assert.ok(legacy >= 95, `${legacy} actions`);
+    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le Centre en retire dix-huit).
+    assert.ok(legacy >= 80, `${legacy} actions`);
     assert.ok(triggers >= 1);
   });
 
