@@ -1681,7 +1681,8 @@ describe('Test de fumée de Mire', () => {
 
     it('le Centre affiche les téléchargements ; une ligne qui avance ne redessine qu’elle', async () => {
       await openCentre();
-      assert.equal(await page.locator('#title').textContent(), 'Centre');
+      // Le titre est rendu par mire-header à l'image suivante.
+      await page.waitForFunction(() => document.getElementById('title').textContent === 'Centre');
       assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:center');
       const rows = () => page.$$eval(`${VIEW} mire-download-row`, (els) => els.map((e) => [e.closest('[data-group]').dataset.group, e.dataset.key]));
       assert.deepEqual(await rows(), [
@@ -1769,7 +1770,7 @@ describe('Test de fumée de Mire', () => {
       await padPress('rb');
       await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'screen:center');
       await page.locator(`${VIEW}.hydrated`).waitFor();
-      assert.equal(await page.locator('#title').textContent(), 'Centre');
+      await page.waitForFunction(() => document.getElementById('title').textContent === 'Centre');
       await disconnectPad();
       assert.deepEqual(errors, []);
     });

@@ -54,6 +54,11 @@
     cursor: pointer;
     user-select: none;
 
+    // L'habillage de ds-control donne son fond aux enfants : il n'est peint qu'une fois, sur la ligne.
+    > * {
+      background: none;
+    }
+
     &:hover {
       background: color-mix(in srgb, var(--text) 8%, transparent);
     }
