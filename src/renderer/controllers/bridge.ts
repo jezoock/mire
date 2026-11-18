@@ -57,10 +57,8 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
   more: { tag: 'mire-app', method: 'showMore', after: (first, _d, view) => focusIn(view, `[data-index="${first}"]`) },
   'open-store': { tag: 'mire-app', method: 'openPageSettings', args: () => ({ tab: 'store' }) },
   'manage-sources': { tag: 'mire-app', method: 'openSettings', args: () => ({ part: 'sources' }) },
-  personalize: { tag: 'mire-app', method: 'openSettings', args: () => ({ part: 'home' }) },
   'edit-focused': { tag: 'mire-app', method: 'editInfo' },
   // Accueil
-  'play-recent': { tag: 'mire-home', method: 'playRecent', args: (d) => ({ path: keyAt(S.recent, d, 'path') }) },
   // Pages : lecture, filtres, regroupements
   'play-video': { tag: 'mire-page', method: 'playVideo', args: (d) => ({ path: keyAt(S.list, d, 'path') }) },
   'play-track': { tag: 'mire-page', method: 'playTrack', args: (d) => ({ path: keyAt(S.list, d, 'path') }) },

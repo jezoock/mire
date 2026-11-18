@@ -1,0 +1,289 @@
+@use '../../theme/tokens' as *;
+
+// Hôte de l'accueil : comme celui des pages (mire-page), il porte le thème (palette par data-palette, polices, fond)
+// et couvre toute la zone de l'écran, marges de .view comprises (styles.css).
+.mire-home {
+  --mire-home-top: 12px;
+  --mire-home-bottom: 56px;
+
+  display: block;
+  box-sizing: border-box;
+  min-height: calc(100% + var(--mire-home-top) + var(--mire-home-bottom));
+  margin: calc(-1 * var(--mire-home-top)) calc(-1 * var(--pad-x, 0px)) calc(-1 * var(--mire-home-bottom));
+  padding: var(--mire-home-top) var(--pad-x, 0px) var(--mire-home-bottom);
+  color: var(--text);
+  font-family: var(--mire-font-body, inherit);
+  background: var(--bg);
+}
+
+body.has-mini .mire-home {
+  --mire-home-bottom: 140px;
+}
+
+// Fond « image » du thème : comme sur les pages, il se répète sous tout l'accueil.
+.mire-home[data-background='image'] {
+  background-image: var(--mire-theme-background);
+  background-attachment: local;
+}
+
+// Vue de l'accueil : l'horloge, puis les rangées dans l'ordre choisi. La mise en page vient du thème (--layout-*,
+// --size-*) ; les couleurs, de la palette de la portée (barres : --bar-* des palettes).
+.mire-home-view {
+  --mire-home-card: 11rem;
+  --mire-home-wide: 18rem;
+  --mire-home-line: 22rem;
+
+  display: grid;
+  gap: ds-spacing(6);
+  min-width: 0;
+  padding-top: 4px;
+
+  &.--size-s {
+    --mire-home-card: 8.5rem;
+    --mire-home-wide: 14rem;
+    --mire-home-line: 18rem;
+  }
+
+  &.--size-l {
+    --mire-home-card: 14rem;
+    --mire-home-wide: 24rem;
+    --mire-home-line: 28rem;
+  }
+
+  .mire-row[variant='poster'],
+  .mire-grid.--poster {
+    --mire-row-card: var(--mire-home-card);
+    --mire-grid-card: var(--mire-home-card);
+  }
+
+  .mire-row[variant='thumbnail'],
+  .mire-grid.--thumbnail {
+    --mire-row-card: var(--mire-home-wide);
+    --mire-grid-card: var(--mire-home-wide);
+  }
+
+  .mire-row[variant='line'],
+  .mire-grid.--line {
+    --mire-row-card: var(--mire-home-line);
+    --mire-grid-card: var(--mire-home-line);
+  }
+
+  // Le titre de la rangée est celui de l'accueil : ceux de mire-row et mire-grid ne sont pas utilisés.
+  .mire-row__heading,
+  .mire-grid__heading {
+    display: none;
+  }
+
+  &__clock {
+    display: grid;
+    gap: ds-spacing(3);
+  }
+
+  &__time {
+    display: block;
+    font-family: var(--mire-font-heading, var(--mire-font-body, inherit));
+    font-size: clamp(80px, 11vw, 176px);
+    font-weight: 800;
+    font-stretch: 125%;
+    font-variant-numeric: tabular-nums;
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+  }
+
+  &__date {
+    margin: 0;
+    color: var(--muted);
+    font-size: 24px;
+    font-weight: 500;
+
+    &::first-letter {
+      text-transform: uppercase;
+    }
+  }
+
+  &__section {
+    display: grid;
+    gap: ds-spacing(4);
+    min-width: 0;
+  }
+
+  // Barres de la mire : chacune grandit quand elle a le focus.
+  &__bars {
+    display: flex;
+    height: clamp(230px, 40vh, 460px);
+    overflow: hidden;
+    border-radius: var(--r-md, #{ds-radius(md)});
+    box-shadow: 0 0 0 var(--mire-edge, 0) var(--line);
+  }
+
+  &__bar {
+    container-type: inline-size;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+    padding: 22px 18px;
+    color: var(--ink);
+    text-align: start;
+    background: var(--mire-home-bar);
+    cursor: pointer;
+    transition:
+      flex-grow 0.22s ease,
+      filter 0.15s ease;
+
+    // Comme sur la mire historique : la souris fait grandir la barre survolée, le clavier et la manette celle qui a le
+    // focus.
+    body.mouse &:hover {
+      flex-grow: 1.8;
+      filter: brightness(1.05);
+    }
+
+    body:not(.mouse) &:focus-within {
+      flex-grow: 1.8;
+      box-shadow:
+        inset 0 0 0 5px var(--ink),
+        inset 0 0 0 9px var(--mire-home-bar);
+    }
+
+    // L'anneau est dessiné par la barre elle-même (ci-dessus), comme sur la mire historique.
+    &:focus-visible {
+      outline: none;
+    }
+
+    @include ds-reduced-motion() {
+      transition: none;
+    }
+  }
+
+  &__bar-label {
+    font-size: clamp(15px, 12.5cqi, 34px);
+    font-weight: 800;
+    font-stretch: 112%;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  &__bar-meta {
+    font-size: clamp(13px, 7.5cqi, 16px);
+    font-weight: 500;
+    line-height: 1.3;
+    opacity: 0.78;
+  }
+
+  // Mise en page en grille (thème Papier…) : les barres deviennent des tuiles sur plusieurs lignes.
+  &.--layout-grid &__bars {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: ds-spacing(3);
+    height: auto;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  &.--layout-grid &__bar {
+    min-height: 8rem;
+    border-radius: var(--r-md, #{ds-radius(md)});
+  }
+
+  // Titre d'une rangée, lien vers sa page quand elle en a une.
+  &__heading {
+    margin: 0;
+    font-family: var(--mire-font-heading, var(--mire-font-body, inherit));
+    font-size: ds-token(font-size, 300);
+    font-weight: 700;
+  }
+
+  &__heading-link {
+    justify-self: start;
+  }
+
+  &__see-all {
+    margin-inline-start: ds-spacing(3);
+    color: var(--muted);
+  }
+
+  // Sites épinglés (anciennement « Vos services ») : tuiles aux couleurs du site.
+  &__sites {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(max(180px, calc(20% - 13px)), 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &__site {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    min-height: 112px;
+    padding: 16px 18px;
+    color: var(--mire-home-site-ink);
+    text-align: start;
+    background: var(--mire-home-site);
+    border-radius: var(--r-md, #{ds-radius(md)});
+    cursor: pointer;
+    transition: transform 0.14s ease;
+
+    &:hover {
+      filter: brightness(1.06);
+    }
+
+    body:not(.mouse) &:focus-within {
+      outline: var(--ring-w, 3px) solid var(--text);
+      outline-offset: 3px;
+      transform: translateY(-3px);
+    }
+
+    @include ds-reduced-motion() {
+      transition: none;
+    }
+  }
+
+  &__site-name {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 22px;
+    font-weight: 800;
+    font-stretch: 112%;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  &__site-open {
+    position: absolute;
+    top: 12px;
+    inset-inline-end: 14px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--mire-home-site-ink) 18%, transparent);
+    border-radius: 3px;
+  }
+
+  &__scroller {
+    --ds-scroller-gap: #{ds-spacing(4)};
+    --ds-scroller-padding: #{ds-spacing(2)};
+    --ds-scroller-focus-margin: #{ds-spacing(5)};
+  }
+
+  &__scroller &__group {
+    width: var(--mire-home-card);
+  }
+
+  &__groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--mire-home-card), 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  &__foot {
+    display: flex;
+  }
+}

@@ -1,5 +1,5 @@
 import { Component, Element, Host, Prop, h } from '@stencil/core';
-import { CARD_RATIOS, cardVariant, groupAction, readJson } from '../../utils/elements.ts';
+import { CARD_RATIOS, cardVariant, groupAction, readJson, readRecord } from '../../utils/elements.ts';
 import { mediaUrl } from '../../utils/media.ts';
 import { parsePluralLabels, pluralLabel } from '../../utils/plural.ts';
 import type { PageGroup } from '@mire/shared';
@@ -25,6 +25,12 @@ export class MireGroupCard {
   /** Méthode du contrôleur appelée avec la valeur du regroupement. */
   @Prop() action = '';
 
+  /**
+   * Arguments ajoutés à la valeur (JSON), pour un regroupement montré hors de sa page : l'accueil passe la page
+   * (`{"target":"movies"}` donne `openGroup:[{"target":"movies","value":"Drame"}]`).
+   */
+  @Prop() args = '';
+
   /** Formes du nombre d'éléments (JSON : `{"one": "{count} élément", "other": "{count} éléments"}`). */
   @Prop() countLabels = '';
 
@@ -39,7 +45,7 @@ export class MireGroupCard {
     if (!g || typeof g.name !== 'string') return <Host class="mire-group-card" />;
     const variant = cardVariant(this.variant);
     const count = this.countText(Number(g.count) || 0);
-    const act = this.target && this.action ? { target: this.target, action: groupAction(this.action, g.value ?? null) } : {};
+    const act = this.target && this.action ? { target: this.target, action: groupAction(this.action, g.value ?? null, readRecord<unknown>(this.args)) } : {};
     return (
       <Host class={{ 'mire-group-card': true, [`--${variant}`]: true }}>
         <ds-trigger class="mire-group-card__trigger" label={[g.name, count].filter(Boolean).join(', ')} {...act}>

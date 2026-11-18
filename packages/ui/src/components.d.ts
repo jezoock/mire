@@ -9,12 +9,14 @@ import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
+import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
+export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export namespace Components {
@@ -315,6 +317,11 @@ export namespace Components {
          */
         "action": string;
         /**
+          * Arguments ajoutés à la valeur (JSON), pour un regroupement montré hors de sa page : l'accueil passe la page (`{"target":"movies"}` donne `openGroup:[{"target":"movies","value":"Drame"}]`).
+          * @default ''
+         */
+        "args": string;
+        /**
           * Formes du nombre d'éléments (JSON : `{"one": "{count} élément", "other": "{count} éléments"}`).
           * @default ''
          */
@@ -387,6 +394,79 @@ export namespace Components {
         "searchable": boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
+          * @default ''
+         */
+        "time": string;
+    }
+    /**
+     * Hôte de l'accueil (P4-12) : ses méthodes sont les actions du contrôleur `mire-home` (ouvrir une cible, un
+     * regroupement, un élément, un site épinglé ; reprendre), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`). Il contient la vue de l'accueil (`mire-home-view`, placée par la page) et porte le
+     * thème, comme `mire-page` (palette, polices, fond : moteur de thèmes, `src/renderer/themes/`). Une seule balise dans
+     * la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireHome {
+    }
+    /**
+     * Vue de l'accueil (P4-12), dessinée selon le thème choisi : l'horloge, puis les rangées choisies dans les réglages,
+     * dans leur ordre : barres de la mire, sites épinglés, « Reprendre », premiers éléments ou regroupements d'une page ou
+     * d'une liste. Les rangées d'éléments sont des `mire-row` (ou des `mire-grid` en mise en page en grille).
+     * Elle n'a ni état ni accès au catalogue : la page (`src/renderer/home/`) lui donne les rangées, l'heure, ses textes
+     * et la mise en page du thème. Les actions vont au contrôleur `mire-home` (`open`, `openGroup`, `openElement`,
+     * `openSite`, `resume`) et à `mire-app` (`openSettings`) ; les cibles sont écrites en texte (`movies`,
+     * `screen:search`), les éléments désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface MireHomeView {
+        /**
+          * @default ''
+         */
+        "cardLabels": string;
+        /**
+          * Horloge : affichée ou non, heure et date déjà mises en forme, et l'instant (`datetime`).
+          * @default true
+         */
+        "clock": boolean;
+        /**
+          * @default ''
+         */
+        "countLabels": string;
+        /**
+          * @default ''
+         */
+        "date": string;
+        /**
+          * @default ''
+         */
+        "datetime": string;
+        /**
+          * Textes (JSON, voir `HomeLabels`) et ceux des cartes et des regroupements (JSON, voir `mire-card`, `mire-group-card`).
+          * @default ''
+         */
+        "labels": HomeLabels | string;
+        /**
+          * Mise en page du thème (`rows` ou `grid`) et taille des cartes (`s`, `m`, `l`).
+          * @default 'rows'
+         */
+        "layout": string;
+        /**
+          * Rangées lues : avant, seule l'horloge est rendue, pour que le premier focus attende les barres au lieu de tomber sur « Personnaliser l'accueil ».
+          * @default false
+         */
+        "ready": boolean;
+        /**
+          * @default ''
+         */
+        "scrollerLabels": string;
+        /**
+          * Rangées, dans l'ordre (JSON ou propriété, voir `HomeSection`).
+          * @default []
+         */
+        "sections": HomeSection[] | string;
+        /**
+          * @default 'm'
+         */
+        "size": string;
+        /**
           * @default ''
          */
         "time": string;
@@ -821,6 +901,34 @@ declare global {
         new (): HTMLMireHeaderElement;
     };
     /**
+     * Hôte de l'accueil (P4-12) : ses méthodes sont les actions du contrôleur `mire-home` (ouvrir une cible, un
+     * regroupement, un élément, un site épinglé ; reprendre), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`). Il contient la vue de l'accueil (`mire-home-view`, placée par la page) et porte le
+     * thème, comme `mire-page` (palette, polices, fond : moteur de thèmes, `src/renderer/themes/`). Une seule balise dans
+     * la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireHomeElement extends Components.MireHome, HTMLStencilElement {
+    }
+    var HTMLMireHomeElement: {
+        prototype: HTMLMireHomeElement;
+        new (): HTMLMireHomeElement;
+    };
+    /**
+     * Vue de l'accueil (P4-12), dessinée selon le thème choisi : l'horloge, puis les rangées choisies dans les réglages,
+     * dans leur ordre : barres de la mire, sites épinglés, « Reprendre », premiers éléments ou regroupements d'une page ou
+     * d'une liste. Les rangées d'éléments sont des `mire-row` (ou des `mire-grid` en mise en page en grille).
+     * Elle n'a ni état ni accès au catalogue : la page (`src/renderer/home/`) lui donne les rangées, l'heure, ses textes
+     * et la mise en page du thème. Les actions vont au contrôleur `mire-home` (`open`, `openGroup`, `openElement`,
+     * `openSite`, `resume`) et à `mire-app` (`openSettings`) ; les cibles sont écrites en texte (`movies`,
+     * `screen:search`), les éléments désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface HTMLMireHomeViewElement extends Components.MireHomeView, HTMLStencilElement {
+    }
+    var HTMLMireHomeViewElement: {
+        prototype: HTMLMireHomeViewElement;
+        new (): HTMLMireHomeViewElement;
+    };
+    /**
      * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
      * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
      * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
@@ -941,6 +1049,8 @@ declare global {
         "mire-grid": HTMLMireGridElement;
         "mire-group-card": HTMLMireGroupCardElement;
         "mire-header": HTMLMireHeaderElement;
+        "mire-home": HTMLMireHomeElement;
+        "mire-home-view": HTMLMireHomeViewElement;
         "mire-legacy-view": HTMLMireLegacyViewElement;
         "mire-padbar": HTMLMirePadbarElement;
         "mire-page": HTMLMirePageElement;
@@ -1239,6 +1349,11 @@ declare namespace LocalJSX {
          */
         "action"?: string;
         /**
+          * Arguments ajoutés à la valeur (JSON), pour un regroupement montré hors de sa page : l'accueil passe la page (`{"target":"movies"}` donne `openGroup:[{"target":"movies","value":"Drame"}]`).
+          * @default ''
+         */
+        "args"?: string;
+        /**
           * Formes du nombre d'éléments (JSON : `{"one": "{count} élément", "other": "{count} éléments"}`).
           * @default ''
          */
@@ -1311,6 +1426,79 @@ declare namespace LocalJSX {
         "searchable"?: boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
+          * @default ''
+         */
+        "time"?: string;
+    }
+    /**
+     * Hôte de l'accueil (P4-12) : ses méthodes sont les actions du contrôleur `mire-home` (ouvrir une cible, un
+     * regroupement, un élément, un site épinglé ; reprendre), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`). Il contient la vue de l'accueil (`mire-home-view`, placée par la page) et porte le
+     * thème, comme `mire-page` (palette, polices, fond : moteur de thèmes, `src/renderer/themes/`). Une seule balise dans
+     * la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireHome {
+    }
+    /**
+     * Vue de l'accueil (P4-12), dessinée selon le thème choisi : l'horloge, puis les rangées choisies dans les réglages,
+     * dans leur ordre : barres de la mire, sites épinglés, « Reprendre », premiers éléments ou regroupements d'une page ou
+     * d'une liste. Les rangées d'éléments sont des `mire-row` (ou des `mire-grid` en mise en page en grille).
+     * Elle n'a ni état ni accès au catalogue : la page (`src/renderer/home/`) lui donne les rangées, l'heure, ses textes
+     * et la mise en page du thème. Les actions vont au contrôleur `mire-home` (`open`, `openGroup`, `openElement`,
+     * `openSite`, `resume`) et à `mire-app` (`openSettings`) ; les cibles sont écrites en texte (`movies`,
+     * `screen:search`), les éléments désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface MireHomeView {
+        /**
+          * @default ''
+         */
+        "cardLabels"?: string;
+        /**
+          * Horloge : affichée ou non, heure et date déjà mises en forme, et l'instant (`datetime`).
+          * @default true
+         */
+        "clock"?: boolean;
+        /**
+          * @default ''
+         */
+        "countLabels"?: string;
+        /**
+          * @default ''
+         */
+        "date"?: string;
+        /**
+          * @default ''
+         */
+        "datetime"?: string;
+        /**
+          * Textes (JSON, voir `HomeLabels`) et ceux des cartes et des regroupements (JSON, voir `mire-card`, `mire-group-card`).
+          * @default ''
+         */
+        "labels"?: HomeLabels | string;
+        /**
+          * Mise en page du thème (`rows` ou `grid`) et taille des cartes (`s`, `m`, `l`).
+          * @default 'rows'
+         */
+        "layout"?: string;
+        /**
+          * Rangées lues : avant, seule l'horloge est rendue, pour que le premier focus attende les barres au lieu de tomber sur « Personnaliser l'accueil ».
+          * @default false
+         */
+        "ready"?: boolean;
+        /**
+          * @default ''
+         */
+        "scrollerLabels"?: string;
+        /**
+          * Rangées, dans l'ordre (JSON ou propriété, voir `HomeSection`).
+          * @default []
+         */
+        "sections"?: HomeSection[] | string;
+        /**
+          * @default 'm'
+         */
+        "size"?: string;
+        /**
           * @default ''
          */
         "time"?: string;
@@ -1640,6 +1828,7 @@ declare namespace LocalJSX {
         "variant": string;
         "target": string;
         "action": string;
+        "args": string;
         "countLabels": string;
     }
     interface MireHeaderAttributes {
@@ -1654,6 +1843,20 @@ declare namespace LocalJSX {
         "gearIcon": string;
         "time": string;
         "datetime": string;
+    }
+    interface MireHomeViewAttributes {
+        "sections": HomeSection[] | string;
+        "ready": boolean;
+        "clock": boolean;
+        "time": string;
+        "date": string;
+        "datetime": string;
+        "layout": string;
+        "size": string;
+        "labels": HomeLabels | string;
+        "cardLabels": string;
+        "countLabels": string;
+        "scrollerLabels": string;
     }
     interface MirePadbarAttributes {
         "hints": PadHint[] | string;
@@ -1721,6 +1924,8 @@ declare namespace LocalJSX {
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
         "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
         "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
+        "mire-home": MireHome;
+        "mire-home-view": Omit<MireHomeView, keyof MireHomeViewAttributes> & { [K in keyof MireHomeView & keyof MireHomeViewAttributes]?: MireHomeView[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `attr:${K}`]?: MireHomeViewAttributes[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `prop:${K}`]?: MireHomeView[K] };
         "mire-legacy-view": MireLegacyView;
         "mire-padbar": Omit<MirePadbar, keyof MirePadbarAttributes> & { [K in keyof MirePadbar & keyof MirePadbarAttributes]?: MirePadbar[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `attr:${K}`]?: MirePadbarAttributes[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `prop:${K}`]?: MirePadbar[K] };
         "mire-page": MirePage;
@@ -1804,6 +2009,24 @@ declare module "@stencil/core" {
              * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
              */
             "mire-header": LocalJSX.IntrinsicElements["mire-header"] & JSXBase.HTMLAttributes<HTMLMireHeaderElement>;
+            /**
+             * Hôte de l'accueil (P4-12) : ses méthodes sont les actions du contrôleur `mire-home` (ouvrir une cible, un
+             * regroupement, un élément, un site épinglé ; reprendre), qui vit avec l'état de l'interface
+             * (`src/renderer/controllers/`). Il contient la vue de l'accueil (`mire-home-view`, placée par la page) et porte le
+             * thème, comme `mire-page` (palette, polices, fond : moteur de thèmes, `src/renderer/themes/`). Une seule balise dans
+             * la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-home": LocalJSX.IntrinsicElements["mire-home"] & JSXBase.HTMLAttributes<HTMLMireHomeElement>;
+            /**
+             * Vue de l'accueil (P4-12), dessinée selon le thème choisi : l'horloge, puis les rangées choisies dans les réglages,
+             * dans leur ordre : barres de la mire, sites épinglés, « Reprendre », premiers éléments ou regroupements d'une page ou
+             * d'une liste. Les rangées d'éléments sont des `mire-row` (ou des `mire-grid` en mise en page en grille).
+             * Elle n'a ni état ni accès au catalogue : la page (`src/renderer/home/`) lui donne les rangées, l'heure, ses textes
+             * et la mise en page du thème. Les actions vont au contrôleur `mire-home` (`open`, `openGroup`, `openElement`,
+             * `openSite`, `resume`) et à `mire-app` (`openSettings`) ; les cibles sont écrites en texte (`movies`,
+             * `screen:search`), les éléments désignés par leur clé, les regroupements par leur valeur.
+             */
+            "mire-home-view": LocalJSX.IntrinsicElements["mire-home-view"] & JSXBase.HTMLAttributes<HTMLMireHomeViewElement>;
             /**
              * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
              * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend

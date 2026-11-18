@@ -6,3 +6,4 @@ export * from './elements.ts';
 export * from './forms.ts';
 export * from './shell.ts';
 export * from './page-view.ts';
+export * from './home.ts';

@@ -3,7 +3,8 @@
  * chemin dans les regroupements d'une page (`PagePath`). Une cible s'écrit `movies` (une page), `list:<id>` (une
  * liste) ou `screen:<nom>` (un écran du cœur, `CORE_SCREENS`).
  *
- * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), dessinée par le thème. Tant qu'un
+ * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
+ * `mire-home`, P4-12), toutes deux dessinées par le thème. Tant qu'un
  * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
  * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
@@ -24,10 +25,18 @@ export const HOME_TARGET = formatTarget({ kind: 'screen', screen: 'home' });
 export const PAGE_VIEW = 'page';
 
 /**
+ * Vue qui affiche l'accueil (P4-12) : la section `home` de l'interface, qui contient `<mire-home>`. Elle garde le nom
+ * de l'ancienne section, que l'interface historique emploie encore (retour, rouage, page de démarrage).
+ */
+export const HOME_VIEW = 'home';
+
+/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil). */
+export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [[HOME_TARGET, HOME_VIEW]];
+
+/**
  * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
  */
 export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
-  ['screen:home', 'home'],
   ['screen:search', 'search'],
   ['screen:center', 'downloads'],
   ['screen:settings', 'settings'],
@@ -63,15 +72,21 @@ export function viewOf(target: string): string | null {
   const t = parseTarget(target);
   if (!t) return null;
   if (t.kind === 'page') return PAGE_VIEW;
-  return t.kind === 'screen' ? legacyViewOf(target) : null;
+  if (t.kind !== 'screen') return null;
+  return SCREEN_VIEWS.find(([s]) => s === target)?.[1] ?? legacyViewOf(target);
 }
 
 /**
- * Cible affichée par une section historique : un écran du cœur, ou la première page dont c'est l'ancienne vue ;
+ * Cible affichée par une section : un écran du cœur (l'accueil compris), ou la première page dont c'est l'ancienne vue ;
  * `null` pour une vue sans cible (site ouvert, démonstration).
  */
 export function targetOfLegacyView(section: string): string | null {
-  return LEGACY_VIEWS.find(([, s]) => s === section)?.[0] ?? LEGACY_PAGE_SECTIONS.find(([, s]) => s === section)?.[0] ?? null;
+  return (
+    SCREEN_VIEWS.find(([, s]) => s === section)?.[0] ??
+    LEGACY_VIEWS.find(([, s]) => s === section)?.[0] ??
+    LEGACY_PAGE_SECTIONS.find(([, s]) => s === section)?.[0] ??
+    null
+  );
 }
 
 /** Route d'une cible ; `null` si le texte n'est pas une cible. Le chemin ne vaut que pour une page ou une liste. */

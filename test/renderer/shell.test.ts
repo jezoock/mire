@@ -6,6 +6,7 @@ import { CORE_SCREENS } from '@mire/shared';
 import type { PageDefinition } from '@mire/shared';
 import {
   HOME_TARGET,
+  HOME_VIEW,
   LEGACY_PAGE_SECTIONS,
   LEGACY_VIEWS,
   PAGE_VIEW,
@@ -47,8 +48,12 @@ describe('routeur de la coquille', () => {
     assert.equal(sameRoute({ target: 'series', path: ['A', 1] }, { target: 'series', path: ['A'] }), false);
   });
 
-  it('chaque page s’affiche dans la vue de page ; chaque écran du cœur sauf l’explorateur, dans une vue historique', () => {
+  it('chaque page s’affiche dans la vue de page ; l’accueil dans la sienne ; les autres écrans du cœur sauf l’explorateur, dans une vue historique', () => {
     for (const s of CORE_SCREENS) assert.equal(viewOf(`screen:${s}`) === null, s === 'explorer', s);
+    // L'accueil (P4-12) a quitté les vues historiques : sa vue est mire-home, dans la section qui garde son nom.
+    assert.equal(viewOf('screen:home'), HOME_VIEW);
+    assert.equal(legacyViewOf('screen:home'), null);
+    assert.equal(targetOfLegacyView(HOME_VIEW), 'screen:home');
     for (const id of [...DEFAULT_PINNED, 'films-annees-90']) assert.equal(viewOf(id), PAGE_VIEW, id);
     assert.equal(viewOf('list:favoris'), null);
     assert.equal(viewOf('pas une cible'), null);

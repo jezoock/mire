@@ -379,22 +379,30 @@ export class PageController extends Controller {
 
   /** Ouvre, lit ou lance un élément du catalogue, désigné par sa clé, selon sa façon de s'ouvrir. */
   async openElement({ key }: { key: string }): Promise<void> {
-    const { S, api, ui } = this.ctx;
-    const el = (await api.catalogElement(key)) as CatalogElement | null;
-    if (!el) throw new Error(`Élément introuvable : ${key}`);
-    const o = el.open;
-    if (o.kind === 'file') ui.playInContext(mediaItemOf(S, el, o.path));
-    else if (o.kind === 'site') {
-      if (!o.site) throw new Error(`Site sans service : ${key}`);
-      ui.openWeb(o.site, o.url);
-    } else if (o.kind === 'game') ui.launchRom({ path: o.path, displayName: el.name }, o.console);
-    else if (o.kind === 'program') {
-      const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
-      ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
-    } else {
-      const known = (S.channels ?? []).find((c) => (c.variants as Data[] | undefined)?.some((v) => v.url === o.url));
-      ui.playChannel(known ?? { name: el.name, variants: [{ q: 'hd', url: o.url }] });
-    }
+    await openCatalogElement(this.ctx, key);
+  }
+}
+
+/**
+ * Ouvre, lit ou lance un élément du catalogue selon sa façon de s'ouvrir (`open`) : fichier, site, jeu de console,
+ * programme ou flux. Partagé par la vue de page et l'accueil (P4-12).
+ */
+export async function openCatalogElement(ctx: ControllerContext, key: string): Promise<void> {
+  const { S, api, ui } = ctx;
+  const el = (await api.catalogElement(key)) as CatalogElement | null;
+  if (!el) throw new Error(`Élément introuvable : ${key}`);
+  const o = el.open;
+  if (o.kind === 'file') ui.playInContext(mediaItemOf(S, el, o.path));
+  else if (o.kind === 'site') {
+    if (!o.site) throw new Error(`Site sans service : ${key}`);
+    ui.openWeb(o.site, o.url);
+  } else if (o.kind === 'game') ui.launchRom({ path: o.path, displayName: el.name }, o.console);
+  else if (o.kind === 'program') {
+    const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
+    ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
+  } else {
+    const known = (S.channels ?? []).find((c) => (c.variants as Data[] | undefined)?.some((v) => v.url === o.url));
+    ui.playChannel(known ?? { name: el.name, variants: [{ q: 'hd', url: o.url }] });
   }
 }
 
