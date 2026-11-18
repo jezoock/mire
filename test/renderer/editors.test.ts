@@ -4,6 +4,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Element, OpenSpec, TagSummary } from '@mire/shared';
 import { normalizeField } from '@mire/ui/utils';
+import { EditorController } from '../../src/renderer/controllers/editor.ts';
+import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
+import type { FormOptions } from '../../src/renderer/ui/dialogs.ts';
+import type { Candidate } from '../../src/renderer/editors/model.ts';
 import {
   editorFields,
   editorHelp,
@@ -21,7 +25,9 @@ import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'js
 type Messages = Record<string, unknown>;
 function translator(messages: Messages) {
   return (key: string, vars: Record<string, string | number> = {}) => {
-    const v = key.split('.').reduce<unknown>((o, k) => (o as Messages | undefined)?.[k], messages);
+    let v = key.split('.').reduce<unknown>((o, k) => (o as Messages | undefined)?.[k], messages);
+    // Pluriel : forme `one` ou `other` selon `count`.
+    if (v && typeof v === 'object' && 'count' in vars) v = (v as Messages)[vars.count === 1 ? 'one' : 'other'];
     assert.equal(typeof v, 'string', key);
     return (v as string).replace(/\{(\w+)\}/g, (_, n: string) => String(vars[n]));
   };
@@ -158,5 +164,114 @@ describe('éditeurs : recherche en ligne', () => {
     });
     assert.equal(scrapeJob(el({ kind: 'file', path: '/m/a.flac' }, { tags: ['audio'] })), null);
     assert.equal(scrapeJob(el({ kind: 'site', url: 'https://a' })), null);
+  });
+});
+
+describe('éditeurs : contrôleur mire-editor', () => {
+  // Contexte factice : le formulaire « clique » sur les boutons donnés, dans l'ordre, avec les valeurs saisies.
+  function harness(clicks: { action: string; values?: Record<string, unknown> }[], api: Record<string, unknown> = {}) {
+    const calls: [string, ...unknown[]][] = [];
+    const toasts: string[] = [];
+    const helps: string[] = [];
+    let current: Element | null = film;
+    const fakeApi = {
+      catalogElement: async () => current,
+      tagsList: async () => KNOWN,
+      catalogSetInfos: async (...a: unknown[]) => (calls.push(['setInfos', ...a]), current),
+      catalogSetTags: async (...a: unknown[]) => (calls.push(['setTags', ...a]), current),
+      catalogReset: async (...a: unknown[]) => (calls.push(['reset', ...a]), current),
+      catalogPickImage: async (...a: unknown[]) => (calls.push(['pickImage', ...a]), { ...film, images: { poster: '/meta/img/n.jpg' } }),
+      catalogClearImages: async (...a: unknown[]) => (calls.push(['clearImages', ...a]), { ...film, images: {} }),
+      ...api,
+    };
+    let opened: FormOptions | null = null;
+    const ctx = {
+      api: fakeApi,
+      t: tFr,
+      toast: (m: string) => toasts.push(m),
+      ui: { afterEdit: () => calls.push(['afterEdit']) },
+      dialogs: {
+        async form(opts: FormOptions) {
+          opened = opts;
+          let values: Record<string, unknown> = Object.fromEntries((opts.fields ?? []).map((f) => [f.id, normalizeField(f).value]));
+          const form = {
+            values: () => values,
+            set: (id: string, v: unknown) => (values = { ...values, [id]: v }),
+            setImage: (id: string, v: unknown) => (values = { ...values, [id]: v }),
+            help: (h: string) => helps.push(h),
+          };
+          for (const c of clicks) {
+            values = { ...values, ...c.values };
+            const keep = await opts.onAction!(c.action, form as never);
+            if (!keep) return { action: c.action, values };
+          }
+          return { action: 'cancel', values };
+        },
+        pick: async (items: Candidate[]) => items[0],
+      },
+    } as unknown as ControllerContext;
+    return { ctrl: new EditorController(ctx), calls, toasts, helps, opened: () => opened, gone: () => (current = null) };
+  }
+
+  it('enregistrer : seulement les infos et les tags changés, puis un message', async () => {
+    const h = harness([{ action: 'save', values: { title: 'Le Fabuleux Destin', tags: ['Vidéo', 'Films', 'Mes favoris'] } }]);
+    assert.equal(await h.ctrl.edit({ key: film.key }), 'save');
+    assert.deepEqual(h.calls, [
+      ['setInfos', film.key, { title: 'Le Fabuleux Destin' }],
+      ['setTags', film.key, { local: false, 'mes-favoris': true }],
+      ['afterEdit'],
+    ]);
+    assert.deepEqual(h.toasts, ['Modifications enregistrées']);
+    assert.deepEqual(
+      h.opened()!.actions.map((a) => a.id),
+      ['save', 'online', 'reset', 'cancel'],
+    );
+  });
+
+  it('année invalide : la boîte reste ouverte avec un message', async () => {
+    const h = harness([{ action: 'save', values: { year: 'deux mille' } }]);
+    assert.equal(await h.ctrl.edit({ key: film.key }), 'cancel');
+    assert.deepEqual(h.helps, ['L’année s’écrit en chiffres, par exemple 1999.']);
+    assert.deepEqual(h.calls, []);
+  });
+
+  it('images (choisir, retirer) sans fermer, puis réinitialiser', async () => {
+    const h = harness([{ action: 'pick:poster' }, { action: 'clear:background' }, { action: 'reset' }]);
+    assert.equal(await h.ctrl.edit({ key: film.key }), 'reset');
+    assert.deepEqual(h.calls, [['pickImage', film.key, 'poster'], ['clearImages', film.key, ['background']], ['reset', film.key], ['afterEdit']]);
+    assert.deepEqual(h.toasts, ['Infos d’origine rétablies']);
+  });
+
+  it('rechercher en ligne : fiche choisie, infos saisies retirées, champs remplis', async () => {
+    const scraped = { ...film, infos: { ...film.infos, title: 'Le Fabuleux Destin d’Amélie Poulain', year: 2001 } };
+    const h = harness([{ action: 'online' }, { action: 'save' }], {
+      scrapeCandidates: async (job: unknown) => (h.calls.push(['candidates', job]), { ok: true, items: [{ title: 'Amélie', id: 194 }] }),
+      scrapeOne: async (job: unknown) => (h.calls.push(['one', job]), { ok: true }),
+      catalogSetInfos: async (...a: unknown[]) => (h.calls.push(['setInfos', ...a]), scraped),
+    });
+    await h.ctrl.edit({ key: film.key });
+    assert.deepEqual(h.calls[0], ['candidates', { ...scrapeJob(film), query: 'Amélie', year: '2001' }]);
+    assert.deepEqual(h.calls[1], ['one', { ...scrapeJob(film), override: { pick: { title: 'Amélie', id: 194 } } }]);
+    assert.deepEqual(h.calls[2], ['setInfos', film.key, { title: null, year: null, genres: null, overview: null }]);
+    // Le titre de la fiche est proposé comme nom, et s'enregistre.
+    assert.deepEqual(h.calls[3], ['setInfos', film.key, { title: 'Le Fabuleux Destin d’Amélie Poulain' }]);
+    assert.equal(h.helps.at(-1), 'Fiche « Amélie » récupérée : vérifiez les champs, puis enregistrez.');
+  });
+
+  it('rechercher en ligne : rien trouvé, erreur du fournisseur', async () => {
+    const none = harness([{ action: 'online' }], { scrapeCandidates: async () => ({ ok: true, items: [] }) });
+    await none.ctrl.edit({ key: film.key });
+    assert.match(none.helps.at(-1)!, /^Aucune fiche trouvée/);
+    const err = harness([{ action: 'online' }], { scrapeCandidates: async () => ({ ok: false, error: 'Clé TMDB refusée.' }) });
+    await err.ctrl.edit({ key: film.key });
+    assert.equal(err.helps.at(-1), 'Clé TMDB refusée.');
+  });
+
+  it('élément disparu : un message, pas de boîte', async () => {
+    const h = harness([]);
+    h.gone();
+    assert.equal(await h.ctrl.edit({ key: film.key }), null);
+    assert.deepEqual(h.toasts, ['Cet élément n’est plus dans la bibliothèque.']);
+    assert.equal(h.opened(), null);
   });
 });
