@@ -501,6 +501,23 @@ export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
 /* Événements                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Avancement d'une installation de la boutique (émulateur, ou jeu libre `game:<id>`) : des données, que l'interface
+ * rédige (P4-18). `step` dit ce qui se fait : chercher la dernière version, télécharger le programme, un module de
+ * RetroArch ou un jeu, extraire ; `message` est l'erreur, déjà rédigée par le processus principal.
+ */
+export interface StoreProgress {
+  id: string;
+  phase: 'resolve' | 'download' | 'extract' | 'done' | 'error';
+  step?: 'latestVersion' | 'program' | 'core' | 'game' | 'extracting';
+  name?: string;
+  version?: string;
+  core?: string;
+  received?: number;
+  total?: number;
+  message?: string;
+}
+
 /** Contenu de chaque événement envoyé par le processus principal. */
 export interface IpcEvents {
   onTvDetected: { id: string; name: string };
@@ -512,7 +529,7 @@ export interface IpcEvents {
   onWebAdblocked: { host: string };
   onRomProgress: Record<string, unknown>;
   onScrapeProgress: Record<string, unknown>;
-  onStoreProgress: Record<string, unknown>;
+  onStoreProgress: StoreProgress;
   onOpenFiles: MediaItem[];
   onWebState: WebState;
   onWebSessions: WebSession[];

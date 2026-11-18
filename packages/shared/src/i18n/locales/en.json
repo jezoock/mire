@@ -381,12 +381,6 @@
         "pageChanged": "The {name} download page has changed. Install it from {site}.",
         "noRelease": "No published version for {repo}.",
         "unknownConsole": "Unknown console."
-      },
-      "progress": {
-        "latestVersion": "Looking for the latest version",
-        "extracting": "Extracting",
-        "extractingRetroarch": "Extracting RetroArch",
-        "core": "Core {core}"
       }
     },
     "dialogs": {
@@ -670,6 +664,199 @@
         "sites": "Pinned sites",
         "up": "Move {name} up",
         "down": "Move {name} down"
+      }
+    },
+    "centre": {
+      "tabs": {
+        "label": "Centre sections",
+        "downloads": "Downloads",
+        "apps": "Apps"
+      },
+      "downloads": {
+        "add": "Add a link",
+        "torrent": "Open a .torrent file",
+        "hint": {
+          "mire": "Magnet links and .torrent files are downloaded by Mire’s built-in client (change it with the gear). Downloads from sites opened in Mire also arrive here; from “Add games”, they go to the console’s folder.",
+          "system": "Magnet links and .torrent files are handed to your torrent app (change it with the gear). Downloads from sites opened in Mire also arrive here; from “Add games”, they go to the console’s folder."
+        },
+        "running": "In progress",
+        "others": "Finished and others",
+        "noneRunning": "No downloads in progress.",
+        "noneOthers": "Nothing yet.",
+        "clear": "Clear the list",
+        "kind": {
+          "torrent": "Torrent",
+          "http": "HTTP"
+        },
+        "untitled": "Download",
+        "state": {
+          "pending": "Waiting to download",
+          "waiting": "Waiting",
+          "downloading": "Downloading",
+          "paused": "Paused",
+          "extracting": "Extracting",
+          "done": "Done",
+          "error": "Error",
+          "cancelled": "Cancelled",
+          "interrupted": "Interrupted",
+          "external": "Handed to your torrent app"
+        },
+        "meta": {
+          "progress": "{received} of {total}",
+          "speed": "{speed}/s",
+          "peers": {
+            "one": "{count} peer",
+            "other": "{count} peers"
+          },
+          "eta": "{eta} left",
+          "toConsole": "to {console}",
+          "toDownloads": "to Downloads",
+          "group": "part of “{group}”",
+          "companions": {
+            "one": "{count} game file added",
+            "other": "{count} game files added"
+          },
+          "extracted": "archive extracted"
+        },
+        "actions": {
+          "pause": "Pause",
+          "resume": "Resume",
+          "retry": "Retry",
+          "cancel": "Cancel",
+          "remove": "Remove",
+          "reveal": "Open folder",
+          "start": "Download",
+          "install": "Run {file}"
+        },
+        "form": {
+          "title": "Add a download",
+          "help": "Paste a link (https://… or magnet:?…), or open a .torrent file saved on this computer.",
+          "url": "Link",
+          "urlPlaceholder": "https://… or magnet:?…",
+          "dest": "Destination",
+          "destDownloads": "Downloads folder",
+          "destConsole": "Console: {name}",
+          "add": "Download",
+          "torrent": "Open a .torrent file"
+        },
+        "messages": {
+          "needUrl": "Paste a link first (https://… or magnet:?…).",
+          "addFailed": "This link could not be added.",
+          "external": "Link handed to your torrent app.",
+          "added": "Download added.",
+          "addedFollow": "Download added: follow it in Downloads.",
+          "startFailed": "This download could not start.",
+          "torrentFailed": "This .torrent file could not be added.",
+          "started": "Download started.",
+          "finished": "{name} is downloaded.",
+          "cancelTitle": "Cancel “{name}”?",
+          "cancelUntitled": "this download",
+          "cancelHelp": "The files already downloaded for it will be deleted.",
+          "cancelYes": "Cancel the download",
+          "installerFailed": "The installer could not be started.",
+          "installerLater": "{name} contains an installer: run it from Downloads.",
+          "installerTitle": "Download finished",
+          "installerHelp": "“{name}” contains an installer: {file}. Do you want to run it now?",
+          "installerRun": "Run the installer",
+          "installerNotNow": "Later"
+        }
+      },
+      "size": {
+        "b": "{value} B",
+        "kb": "{value} KB",
+        "mb": "{value} MB",
+        "gb": "{value} GB",
+        "tb": "{value} TB"
+      },
+      "eta": {
+        "soon": "less than a minute",
+        "minutes": "{minutes} min",
+        "hours": "{hours} h {minutes}"
+      },
+      "apps": {
+        "loading": "Loading apps…",
+        "root": "Games folder",
+        "changeRoot": "Change",
+        "unavailable": "On this system, install emulators from their official site, then add them in Settings.",
+        "emulators": "Emulators",
+        "emulatorsHelp": "Downloaded from their official sites. Each installed console appears in “My library”, with its games folder.",
+        "status": {
+          "unavailable": "Not available on this system",
+          "installed": "Installed",
+          "installedVersion": "Installed, version {version}",
+          "notInstalled": "Not installed"
+        },
+        "systems": "{name} consoles",
+        "systemAdded": "added",
+        "install": "Install",
+        "update": "Update",
+        "uninstall": "Uninstall",
+        "addConsoles": {
+          "one": "Add {count} console",
+          "other": "Add {count} consoles"
+        },
+        "chooseConsoles": "Choose consoles",
+        "bios": {
+          "title": "BIOS",
+          "files": "Present: {files}",
+          "none": "No files yet.",
+          "dir": "Folder: {dir}",
+          "add": "Load a BIOS…",
+          "open": "Open folder"
+        },
+        "games": "Free games",
+        "gamesHelp": "Recent games made for these old consoles, given away for free by their authors.",
+        "gameMeta": "{system}, by {author}",
+        "download": "Download",
+        "inLibrary": "In your library",
+        "needConsole": "Add the {system} console first",
+        "own": "Your own games",
+        "ownHelp": "Copy your personal backups of cartridges and discs to the right console. Mire does not provide commercial games.",
+        "import": "Choose files",
+        "noConsole": "Add a console above first.",
+        "importForm": {
+          "title": "Import your games",
+          "help": "Choose the console, then the files to copy to its games folder.",
+          "console": "Console",
+          "choose": "Choose files"
+        },
+        "messages": {
+          "installed": "Installed. The consoles are ready in “My library”.",
+          "uninstalled": "Emulator uninstalled. Your games are kept.",
+          "gameAdded": "Game added to your library.",
+          "installFailed": "Installation failed.",
+          "imported": {
+            "one": "{count} game copied to {console}.",
+            "other": "{count} games copied to {console}."
+          },
+          "rootChanged": "New consoles will use this folder.",
+          "biosCopied": {
+            "one": "{count} file copied to the BIOS folder.",
+            "other": "{count} files copied to the BIOS folder."
+          },
+          "biosFailed": "Could not copy."
+        }
+      },
+      "progress": {
+        "preparing": "Preparing…",
+        "latestVersion": "Looking for the latest version",
+        "program": "{name} {version}",
+        "core": "{core} core",
+        "game": "{name}",
+        "extracting": "Extracting {name}",
+        "amount": "{step}, {received} of {total}"
+      },
+      "notices": {
+        "romAdded": "{name} added to {console}. It appears in the console’s game list.",
+        "romAddedDetail": "{name} added to {console} ({detail}). It appears in the console’s game list.",
+        "romFiles": {
+          "one": "{count} file",
+          "other": "{count} files"
+        },
+        "romExtracted": "archive extracted",
+        "romReady": "{name} is ready, starting…",
+        "romProgress": "Downloading {name}: {percent}%",
+        "romProgressUnknown": "Downloading {name}…"
       }
     }
   }

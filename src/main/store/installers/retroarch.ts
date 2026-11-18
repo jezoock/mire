@@ -27,10 +27,10 @@ async function installProgram(ctx: InstallContext, emu: StoreEmulator, dir: stri
   const { tag } = await githubLatest('libretro/RetroArch');
   const version = tag.replace(/^v/, '');
   const file = path.join(ctx.tmpRoot, `RetroArch-${version}.7z`);
-  const label = `RetroArch ${version}`;
-  ctx.progress(emu.id, 'download', { label });
-  await download(retroarchUrl(version, ctx.platform), file, (received, total) => ctx.progress(emu.id, 'download', { label, received, total }));
-  ctx.progress(emu.id, 'extract', { label: t('store.progress.extractingRetroarch') });
+  const step = { step: 'program', name: emu.name, version };
+  ctx.progress(emu.id, 'download', step);
+  await download(retroarchUrl(version, ctx.platform), file, (received, total) => ctx.progress(emu.id, 'download', { ...step, received, total }));
+  ctx.progress(emu.id, 'extract', { step: 'extracting', name: emu.name });
   await ctx.extract(file, dir);
   await fsp.unlink(file).catch(() => {});
   const pattern = emu.exe[ctx.platform];
@@ -52,9 +52,9 @@ export async function installRetroArch(ctx: InstallContext, emu: StoreEmulator, 
     const coreFile = path.join(coresDir, `${core}_libretro.${ext}`);
     if (fs.existsSync(coreFile)) continue;
     const zip = path.join(ctx.tmpRoot, `${core}.zip`);
-    const label = t('store.progress.core', { core: String(core) });
-    ctx.progress(emu.id, 'download', { label });
-    await download(coreUrl(String(core), ctx.platform), zip, (received, total) => ctx.progress(emu.id, 'download', { label, received, total }));
+    const step = { step: 'core', core: String(core) };
+    ctx.progress(emu.id, 'download', step);
+    await download(coreUrl(String(core), ctx.platform), zip, (received, total) => ctx.progress(emu.id, 'download', { ...step, received, total }));
     await ctx.extract(zip, coresDir);
     await fsp.unlink(zip).catch(() => {});
   }

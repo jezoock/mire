@@ -23,16 +23,16 @@ export async function resolveSource(emu: StoreEmulator, platform: InstallPlatfor
 
 export async function installStandalone(ctx: InstallContext, emu: StoreEmulator): Promise<void> {
   const dir = path.join(ctx.emuRoot, emu.id);
-  ctx.progress(emu.id, 'resolve', { label: t('store.progress.latestVersion') });
+  ctx.progress(emu.id, 'resolve', { step: 'latestVersion' });
   const src = await resolveSource(emu, ctx.platform);
   const file = path.join(ctx.tmpRoot, src.name);
-  const label = `${emu.name} ${src.version}`;
-  ctx.progress(emu.id, 'download', { label });
-  await download(src.url, file, (received, total) => ctx.progress(emu.id, 'download', { label, received, total }));
+  const step = { step: 'program', name: emu.name, version: src.version };
+  ctx.progress(emu.id, 'download', step);
+  await download(src.url, file, (received, total) => ctx.progress(emu.id, 'download', { ...step, received, total }));
   await fsp.rm(dir, { recursive: true, force: true });
   await fsp.mkdir(dir, { recursive: true });
   if (/\.(zip|7z)$/i.test(src.name)) {
-    ctx.progress(emu.id, 'extract', { label: t('store.progress.extracting') });
+    ctx.progress(emu.id, 'extract', { step: 'extracting', name: emu.name });
     await ctx.extract(file, dir);
     await fsp.unlink(file).catch(() => {});
   } else {

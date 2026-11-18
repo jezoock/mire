@@ -174,9 +174,9 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
     const target = consoleFor(g.system);
     if (!target) return { ok: false, error: t('store.errors.installConsoleFirst') };
     const pid = `game:${id}`;
-    progress(pid, 'download', { label: g.name });
+    progress(pid, 'download', { step: 'game', name: g.name });
     try {
-      await download(g.url, path.join(target.romsDir, g.file), (received, total) => progress(pid, 'download', { label: g.name, received, total }));
+      await download(g.url, path.join(target.romsDir, g.file), (received, total) => progress(pid, 'download', { step: 'game', name: g.name, received, total }));
       progress(pid, 'done');
       return { ok: true };
     } catch (err) {
