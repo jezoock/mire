@@ -165,9 +165,14 @@ C'est une **liste de retrait**, donc à revérifier à chaque montée de version
 | Événement | `{ t: 'evt', nom, donnees }`, sans réponse (`pret`, journal du plugin) |
 
 - **Cibles** : `hote` (`ping`, `charger`, `calculerLot`) ; `<idPlugin>:<nature>/<idContribution>` pour une
-  méthode d'une contribution ; dans l'autre sens, `ctx:<idPlugin>` pour un appel du contexte (`http.getJson`…),
-  que le principal traite **avec les permissions du plugin qu'il connaît par la cible**, jamais d'après ce que dit
-  le message.
+  méthode d'une contribution ; dans l'autre sens, `ctx:<idPlugin>` pour un appel du contexte (`http.getJson`…).
+- **Identité du plugin** : le principal reconnaît le plugin **par le port d'où vient la requête**, jamais par un
+  champ du message. Dans le prototype, tous les plugins d'un hôte partagent un Worker et un seul canal : la cible
+  `ctx:<idPlugin>` y est une chaîne que le code de l'hôte écrit, donc qu'un plugin peut forger (ou faire écrire en
+  réécrivant `MessagePort.prototype.postMessage` ou `Map.prototype.get`) pour appeler le contexte au nom d'un autre
+  plugin du même hôte, ou ses contributions. Les permissions par plugin deviendraient l'union de celles de l'hôte.
+  D'où **un Worker (un contexte JavaScript à lui) et un port par plugin** ; la cible ne sert plus qu'à désigner la
+  contribution à l'intérieur du plugin.
 - **Méthodes appelables** : une fonction de l'objet rendu par la fabrique ; refusées : nom commençant par `_`,
   `constructor`, noms d'`Object.prototype`.
 - **Codes d'erreur stables** : `timeout`, `cancelled`, `not-found`, `plugin-error`, `host-gone` (hôte arrêté : toutes
@@ -206,15 +211,19 @@ fois avec le `PluginContext`, synchrone ou asynchrone), avec trois précisions :
 - Chien de garde, arrêt et redémarrage de l'hôte sans le plugin fautif ; le plugin est désactivé avec un message
   clair (critères de P3-03).
 - **Nombre d'hôtes** : ~40 Mo chacun. Démarrer un hôte à la première demande, l'arrêter s'il n'a rien fait depuis un
-  moment, et regrouper les dépôts tiers si leur nombre grandit. Un Worker par plugin dans un même hôte permettrait
-  d'arrêter un seul plugin (`worker.terminate()`) sans redémarrer les autres : à mesurer dans P3-03.
+  moment, et regrouper les dépôts tiers si leur nombre grandit.
+- **Un Worker et un port par plugin** dans un même hôte : c'est une **exigence** (voir « Identité du plugin »), plus
+  une option. Le principal attribue chaque port à un plugin à sa création et ne lit jamais l'identité dans les
+  messages. Bénéfice en plus : arrêter un seul plugin (`worker.terminate()`) sans redémarrer les autres. Le coût
+  (mémoire et démarrage d'un Worker de plus par plugin) reste à mesurer dans P3-03.
 - Rejouer `spikes/hote-isole/main.mjs` à chaque montée de version d'Electron ; une piste est d'en faire un job de CI.
 
 ### Pour P3-04 (contexte et permissions)
 
-- Le plugin ne peut **rien** faire lui-même : tout passe par `ctx`, donc par la cible `ctx:<id>` du canal. C'est là,
-  dans le processus principal, que s'appliquent `permissions.hosts` (client HTTP du cœur), les dossiers accordés,
-  `storage` et `settings`. Aucune vérification ne peut être laissée à l'hôte.
+- Le plugin ne peut **rien** faire lui-même : tout passe par `ctx`, relayé par **son** port. C'est dans le processus
+  principal, d'après le plugin auquel ce port est attribué (jamais d'après un identifiant porté par le message), que
+  s'appliquent `permissions.hosts` (client HTTP du cœur), les dossiers accordés, `storage` et `settings`. Aucune
+  vérification ne peut être laissée à l'hôte.
 - Borner la taille des messages et des réponses relayées (un plugin peut demander un corps énorme) et le nombre de
   requêtes simultanées par plugin.
 
@@ -225,5 +234,7 @@ fois avec le `PluginContext`, synchrone ou asynchrone), avec trois précisions :
   dépend pas de la sandbox du système ; mais un plugin qui exploiterait une faille du moteur ne serait plus
   contenu. 🧑 Relancer le script sur une vraie machine Windows ou macOS, sans `--no-sandbox`, au point G4.
 - Mémoire mesurée sous Linux (PSS) ; Windows et macOS comptent autrement.
+- Le prototype charge plusieurs plugins dans un même Worker, avec un seul canal, et **ne vérifie pas l'isolement entre
+  plugins d'un même hôte** (voir « Identité du plugin ») : à faire dans P3-03, avec un port par plugin.
 - Au démarrage, castLabs écrit « No component available » (composant Widevine absent hors ligne) : sans lien avec le
   prototype.
