@@ -24,6 +24,8 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   method?: string;
+  /** Corps de la requête (plugins : texte ou JSON, P3-04). */
+  body?: string;
   redirect?: RequestRedirect;
   /** Identité envoyée ; `null` laisse celle du fetch utilisé (session Electron). */
   userAgent?: string | null;
@@ -87,6 +89,7 @@ async function send(call: Call, opts: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = { ...(userAgent ? { 'user-agent': userAgent } : {}), ...(opts.headers || {}) };
   const init: RequestInit = { headers, signal: call.signal };
   if (opts.method) init.method = opts.method;
+  if (opts.body !== undefined) init.body = opts.body;
   if (opts.redirect) init.redirect = opts.redirect;
   try {
     return await (opts.fetch || fetch)(call.url, init);

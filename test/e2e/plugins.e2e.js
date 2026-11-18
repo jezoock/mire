@@ -2,7 +2,9 @@
 /**
  * Hôte de plugins (P3-03), de bout en bout : des plugins posés à la main dans userData/plugins (MIRE_USER_DATA) sont
  * découverts, vérifiés, activés, utilisés et désactivés ; un plugin qui boucle et un plugin qui lève une exception
- * sont désactivés, et Mire continue. Plugins d'essai : test/e2e/plugins/.
+ * sont désactivés, et Mire continue. Contexte (P3-04) : un plugin de code limité lit le dossier accordé, se voit refuser
+ * un hôte non déclaré et un fichier hors du dossier, reçoit son réglage secret, qui ne sort pas vers l'interface.
+ * Plugins d'essai : test/e2e/plugins/.
  * Lancement : npm run test:e2e (après le test de fumée), ou seul : node --test test/e2e/plugins.e2e.js après
  * npm run build (sous Linux sans écran : xvfb-run -a -s "-screen 0 1920x1080x24" …).
  */
@@ -25,6 +27,7 @@ let page;
 let proxy;
 const chromiumRequests = [];
 let started;
+let granted;
 
 // Proxy de Chromium : note chaque requête et la refuse, pour qu'aucune ne sorte réellement.
 function startProxy() {
@@ -46,7 +49,19 @@ function prepareData() {
   fs.cpSync(FIXTURES, fixtures, { recursive: true });
   fs.mkdirSync(data, { recursive: true });
   const prefix = JSON.stringify(fixtures).slice(1, -1);
-  fs.writeFileSync(path.join(data, 'config.json'), fs.readFileSync(path.join(FIXTURES, 'config.json'), 'utf8').replaceAll('@FIXTURES@', prefix));
+  const config = JSON.parse(fs.readFileSync(path.join(FIXTURES, 'config.json'), 'utf8').replaceAll('@FIXTURES@', prefix));
+  // Dossier accordé à org.exemple.dossier (mémorisé dans l'état des plugins) ; un fichier hors de lui ; réglages, dont
+  // un secret gardé en clair (pas de trousseau du système sous xvfb).
+  granted = path.join(tmp, 'accorde');
+  fs.mkdirSync(granted);
+  fs.writeFileSync(path.join(granted, 'note.txt'), 'bonjour du dossier\n');
+  fs.writeFileSync(path.join(granted, 'film.mkv'), '');
+  fs.writeFileSync(path.join(tmp, 'hors.txt'), 'interdit');
+  config.plugins = { 'org.exemple.dossier': { dossier: granted, cle: { $secret: 'CLE-E2E', encrypted: false } } };
+  fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify(config, null, 2));
+  fs.mkdirSync(path.join(data, 'plugins'), { recursive: true });
+  const state = { version: 1, plugins: { 'org.exemple.dossier': { enabled: true, folders: [granted] } } };
+  fs.writeFileSync(path.join(data, 'plugins', 'state.json'), JSON.stringify(state));
   // Plugins posés à la main : userData/plugins/<id>/<version>/.
   for (const id of fs.readdirSync(PLUGINS)) {
     const { version } = JSON.parse(fs.readFileSync(path.join(PLUGINS, id, 'mire-plugin.json'), 'utf8'));
@@ -168,5 +183,31 @@ describe('Hôte de plugins', () => {
     assert.equal(dataOff.status, 'disabled');
     const info = await page.evaluate(() => window.api.i18nGet());
     assert.equal(info.catalogs.fr.messages.pluginTexts.org_exemple_palette, undefined);
+  });
+
+  it('contexte : un plugin de code limité lit son dossier accordé, se voit refuser le reste', async () => {
+    const log = await until('dossier analysé', async () => {
+      const j = journal('org.exemple.dossier');
+      return /hôte déclaré :/.test(j) ? j : null;
+    });
+    assert.match(log, /secret reçu/);
+    assert.match(log, /lu : bonjour du dossier/);
+    assert.match(log, /hors du dossier : refused/);
+    assert.match(log, /hôte non déclaré : refused/);
+    // Hôte déclaré : la permission passe (le nom en .invalid ne se résout pas, d'où une erreur réseau, pas un refus).
+    assert.match(log, /hôte déclaré : http-error/);
+    assert.ok(!log.includes('CLE-E2E'));
+    // Ses éléments sont au catalogue, sous des clés à lui.
+    const found = await until('éléments du plugin', async () => {
+      const r = await search('dossierplugin');
+      return r.total > 0 ? r : null;
+    });
+    assert.ok(found.groups[0].elements[0].key.startsWith('plugin:org.exemple.dossier|'));
+    // Stockage : userData/plugin-data/<id>/.
+    await until('stockage écrit', async () => fs.existsSync(path.join(data, 'plugin-data', 'org.exemple.dossier', 'storage.json')));
+    // Le secret ne sort pas vers l'interface ; les autres réglages, si.
+    const { config } = await page.evaluate(() => window.api.getConfig());
+    assert.deepEqual(config.plugins['org.exemple.dossier'], { dossier: granted });
+    assert.ok(!JSON.stringify(config).includes('CLE-E2E'));
   });
 });

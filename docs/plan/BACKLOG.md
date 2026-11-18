@@ -108,7 +108,7 @@ Fiches dans `phase-3.md`.
 | P3-01 | `@mire/plugin-sdk` et manifeste | M | G3 |  | faite | [#65](https://github.com/jezoock/mire/pull/65) |
 | P3-02 | Prototype de l'hôte isolé | M | P3-01 |  | faite | [#67](https://github.com/jezoock/mire/pull/67) |
 | P3-03 | Hôte de plugins | L | P3-02 |  | faite | [#69](https://github.com/jezoock/mire/pull/69) |
-| P3-04 | Contexte et permissions des plugins | M | P3-03 |  | à faire | |
+| P3-04 | Contexte et permissions des plugins | M | P3-03 |  | faite | |
 | P3-05 | Plugins inclus et dépendances | M | P3-03 |  | à faire | |
 | P3-06 | Dépôt `mire-addons` : structure et publication | M | P3-01 | 🧑 | à faire | |
 | P3-07 | Client des dépôts | L | P3-05, P3-06 |  | à faire | |

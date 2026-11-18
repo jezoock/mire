@@ -14,6 +14,7 @@ import { normalizeTv } from './tv.ts';
 import { normalizeUi } from './ui.ts';
 import { normalizeWeb } from './web.ts';
 import { normalizeCatalogSettings } from '../../catalog/tags/file-rules.ts';
+import { normalizePluginSettings } from '../../plugins/settings.ts';
 
 export function normalizeConfig(raw: unknown): Config {
   const src: Loose = isObjectLike(raw) ? raw : {};
@@ -36,6 +37,9 @@ export function normalizeConfig(raw: unknown): Config {
   c.tv = normalizeTv(src.tv);
   // Absente tant que rien n'y a été changé : la configuration écrite reste la même qu'avant.
   if (src.catalog !== undefined) c.catalog = normalizeCatalogSettings(src.catalog);
+  // Réglages des plugins (P3-04) : de même, absents tant qu'aucun n'a été changé.
+  if (src.plugins !== undefined) c.plugins = normalizePluginSettings(src.plugins);
+  else delete c.plugins;
   // Ancien réglage de la télévision (avant la v5), repris par la migration.
   delete c.freebox;
   return c as Config;

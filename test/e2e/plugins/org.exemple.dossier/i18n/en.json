@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "en",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Granted folder"
+    },
+    "settings": {
+      "dossier": {
+        "label": "Folder"
+      },
+      "cle": {
+        "label": "Key"
+      }
+    }
+  }
+}

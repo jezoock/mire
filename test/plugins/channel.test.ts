@@ -115,8 +115,8 @@ describe('runtime d’un plugin', () => {
     await assert.rejects(main.request('taggers/annee', '_cache'), (e) => code(e) === 'not-found');
     await assert.rejects(main.request('taggers/annee', 'constructor'), (e) => code(e) === 'not-found');
     await assert.rejects(main.request('taggers/autre', 'compute'), (e) => code(e) === 'not-found');
-    // Contexte pas encore disponible (P3-04) : erreur claire.
-    await assert.rejects(main.request('taggers/annee', 'ask'), (e) => code(e) === 'not-available' && /P3-04/.test((e as Error).message));
+    // Le contexte est relayé au processus principal (P3-04), qui n'a pas de traitant ici.
+    await assert.rejects(main.request('taggers/annee', 'ask'), (e) => code(e) === 'not-found');
     // Une exception du plugin remonte en plugin-error.
     await assert.rejects(main.request('runtime', 'computeBatch', ['taggers/annee', [{ name: 'boom' }]]), (e) => code(e) === 'plugin-error');
   });

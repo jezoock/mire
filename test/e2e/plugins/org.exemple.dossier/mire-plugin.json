@@ -1,0 +1,25 @@
+{
+  "id": "org.exemple.dossier",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "sources": [
+      {
+        "id": "fichiers",
+        "main": "fichiers.mjs"
+      }
+    ]
+  },
+  "permissions": {
+    "folders": true,
+    "hosts": ["api.exemple.invalid"]
+  },
+  "settings": [
+    { "key": "dossier", "type": "path" },
+    { "key": "cle", "type": "secret" }
+  ],
+  "i18n": "i18n/"
+}
