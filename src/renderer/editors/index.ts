@@ -8,7 +8,8 @@ export * from './model.ts';
 
 /** Clé de l'élément du catalogue dont la carte contient `node` (ou l'élément qui a le focus), sinon `null`. */
 export function cardKeyOf(node: Element | null = document.activeElement): string | null {
-  const trigger = node?.closest('mire-card [data-key]') as HTMLElement | null;
+  // Une carte, ou une ligne d'élément de l'explorateur (P4-08) qui n'a pas disparu du catalogue.
+  const trigger = node?.closest('mire-card [data-key], .mire-explorer-view__row[data-key]:not([data-unavailable])') as HTMLElement | null;
   return trigger?.dataset.key || null;
 }
 

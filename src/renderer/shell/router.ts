@@ -5,8 +5,8 @@
  *
  * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
  * `mire-home`, P4-12), toutes deux dessinées par le thème ; la Recherche (`SEARCH_VIEW`, `mire-search`, P4-13) et le
- * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) dans les leurs, avec l'habillage du cœur. Tant qu'un
- * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
+ * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) et l'explorateur (`EXPLORER_VIEW`, `mire-explorer`, P4-08) dans les leurs,
+ * avec l'habillage du cœur. Tant qu'un écran du cœur n'a pas de vue à lui (Réglages P4-20), il s'affiche dans la vue historique qui en tient lieu
  * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
  */
@@ -44,16 +44,23 @@ export const SEARCH_TARGET = formatTarget({ kind: 'screen', screen: 'search' });
 /** Vue qui affiche la Recherche (P4-13) : la section `search` de l'interface, qui contient `<mire-search>`. */
 export const SEARCH_VIEW = 'search';
 
-/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre). */
+export const EXPLORER_TARGET = formatTarget({ kind: 'screen', screen: 'explorer' });
+
+/** Vue qui affiche l'explorateur (P4-08) : la section `explorer` de l'interface, qui contient `<mire-explorer>`. */
+export const EXPLORER_VIEW = 'explorer';
+
+/**
+ * Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre ;
+ * P4-08 : l'explorateur).
+ */
 export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   [HOME_TARGET, HOME_VIEW],
   [SEARCH_TARGET, SEARCH_VIEW],
   [CENTRE_TARGET, CENTRE_VIEW],
+  [EXPLORER_TARGET, EXPLORER_VIEW],
 ];
 
-/**
- * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
- */
+/** Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. */
 export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [['screen:settings', 'settings']];
 
 /**
@@ -71,7 +78,7 @@ export const LEGACY_PAGE_SECTIONS: ReadonlyArray<readonly [page: string, section
   ['games', 'games'],
 ];
 
-/** Section historique qui affiche un écran du cœur ; `null` pour une page, une liste ou l'explorateur. */
+/** Section historique qui affiche un écran du cœur ; `null` pour une page, une liste ou un écran qui a sa vue. */
 export function legacyViewOf(target: string): string | null {
   return LEGACY_VIEWS.find(([t]) => t === target)?.[1] ?? null;
 }

@@ -7,6 +7,7 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+import { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
@@ -16,6 +17,7 @@ import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
@@ -224,6 +226,39 @@ export namespace Components {
      * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
      */
     interface MireEditor {
+    }
+    /**
+     * Hôte de l’explorateur (P4-08) : ses méthodes sont les actions du contrôleur `mire-explorer` (ouvrir une branche,
+     * montrer un élément, lire, modifier, ajouter à une liste), qui vit avec l’état de l’interface
+     * (`src/renderer/controllers/explorer.ts`). Il contient la vue de l’explorateur (`mire-explorer-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireExplorer {
+    }
+    /**
+     * Vue de l'explorateur (P4-08) : des colonnes côte à côte, comme le Finder du Mac, puis l'aperçu de l'élément choisi.
+     * Navigation par colonnes (P4-03, `data-nav="columns"`) : haut et bas changent de ligne, gauche et droite de colonne.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/explorer/`) lui donne les colonnes et les
+     * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
+     * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
+     * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     */
+    interface MireExplorerView {
+        /**
+          * Colonnes, de gauche à droite.
+          * @default []
+         */
+        "columns": ExplorerColumn[] | string;
+        /**
+          * Textes (voir `ExplorerLabels`), en JSON.
+          * @default ''
+         */
+        "labels": ExplorerLabels | string;
+        /**
+          * Aperçu de l'élément choisi ; `null` s'il n'y en a pas.
+          * @default null
+         */
+        "preview": ExplorerPreview | string | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -876,6 +911,10 @@ export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireDemoElement;
 }
+export interface MireExplorerViewCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireExplorerViewElement;
+}
 export interface MireFormCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireFormElement;
@@ -1017,6 +1056,43 @@ declare global {
     var HTMLMireEditorElement: {
         prototype: HTMLMireEditorElement;
         new (): HTMLMireEditorElement;
+    };
+    /**
+     * Hôte de l’explorateur (P4-08) : ses méthodes sont les actions du contrôleur `mire-explorer` (ouvrir une branche,
+     * montrer un élément, lire, modifier, ajouter à une liste), qui vit avec l’état de l’interface
+     * (`src/renderer/controllers/explorer.ts`). Il contient la vue de l’explorateur (`mire-explorer-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireExplorerElement extends Components.MireExplorer, HTMLStencilElement {
+    }
+    var HTMLMireExplorerElement: {
+        prototype: HTMLMireExplorerElement;
+        new (): HTMLMireExplorerElement;
+    };
+    interface HTMLMireExplorerViewElementEventMap {
+        "mireExplorerFocus": { node?: string; key?: string };
+    }
+    /**
+     * Vue de l'explorateur (P4-08) : des colonnes côte à côte, comme le Finder du Mac, puis l'aperçu de l'élément choisi.
+     * Navigation par colonnes (P4-03, `data-nav="columns"`) : haut et bas changent de ligne, gauche et droite de colonne.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/explorer/`) lui donne les colonnes et les
+     * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
+     * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
+     * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     */
+    interface HTMLMireExplorerViewElement extends Components.MireExplorerView, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireExplorerViewElementEventMap>(type: K, listener: (this: HTMLMireExplorerViewElement, ev: MireExplorerViewCustomEvent<HTMLMireExplorerViewElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireExplorerViewElementEventMap>(type: K, listener: (this: HTMLMireExplorerViewElement, ev: MireExplorerViewCustomEvent<HTMLMireExplorerViewElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireExplorerViewElement: {
+        prototype: HTMLMireExplorerViewElement;
+        new (): HTMLMireExplorerViewElement;
     };
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -1278,6 +1354,8 @@ declare global {
         "mire-dialogs": HTMLMireDialogsElement;
         "mire-download-row": HTMLMireDownloadRowElement;
         "mire-editor": HTMLMireEditorElement;
+        "mire-explorer": HTMLMireExplorerElement;
+        "mire-explorer-view": HTMLMireExplorerViewElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
         "mire-form": HTMLMireFormElement;
         "mire-grid": HTMLMireGridElement;
@@ -1497,6 +1575,43 @@ declare namespace LocalJSX {
      * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
      */
     interface MireEditor {
+    }
+    /**
+     * Hôte de l’explorateur (P4-08) : ses méthodes sont les actions du contrôleur `mire-explorer` (ouvrir une branche,
+     * montrer un élément, lire, modifier, ajouter à une liste), qui vit avec l’état de l’interface
+     * (`src/renderer/controllers/explorer.ts`). Il contient la vue de l’explorateur (`mire-explorer-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireExplorer {
+    }
+    /**
+     * Vue de l'explorateur (P4-08) : des colonnes côte à côte, comme le Finder du Mac, puis l'aperçu de l'élément choisi.
+     * Navigation par colonnes (P4-03, `data-nav="columns"`) : haut et bas changent de ligne, gauche et droite de colonne.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/explorer/`) lui donne les colonnes et les
+     * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
+     * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
+     * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     */
+    interface MireExplorerView {
+        /**
+          * Colonnes, de gauche à droite.
+          * @default []
+         */
+        "columns"?: ExplorerColumn[] | string;
+        /**
+          * Textes (voir `ExplorerLabels`), en JSON.
+          * @default ''
+         */
+        "labels"?: ExplorerLabels | string;
+        /**
+          * Une ligne a reçu le focus : son nœud (branche) ou sa clé (élément).
+         */
+        "onMireExplorerFocus"?: (event: MireExplorerViewCustomEvent<{ node?: string; key?: string }>) => void;
+        /**
+          * Aperçu de l'élément choisi ; `null` s'il n'y en a pas.
+          * @default null
+         */
+        "preview"?: ExplorerPreview | string | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -2175,6 +2290,11 @@ declare namespace LocalJSX {
     interface MireDownloadRowAttributes {
         "labels": DownloadRowLabels | string;
     }
+    interface MireExplorerViewAttributes {
+        "columns": ExplorerColumn[] | string;
+        "preview": ExplorerPreview | string | null;
+        "labels": ExplorerLabels | string;
+    }
     interface MireFocusInfoAttributes {
         "element": CardElement | string | null;
         "infos": string;
@@ -2316,6 +2436,8 @@ declare namespace LocalJSX {
         "mire-dialogs": MireDialogs;
         "mire-download-row": Omit<MireDownloadRow, keyof MireDownloadRowAttributes> & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes]?: MireDownloadRow[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `attr:${K}`]?: MireDownloadRowAttributes[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `prop:${K}`]?: MireDownloadRow[K] };
         "mire-editor": MireEditor;
+        "mire-explorer": MireExplorer;
+        "mire-explorer-view": Omit<MireExplorerView, keyof MireExplorerViewAttributes> & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes]?: MireExplorerView[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `attr:${K}`]?: MireExplorerViewAttributes[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `prop:${K}`]?: MireExplorerView[K] };
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
@@ -2405,6 +2527,22 @@ declare module "@stencil/core" {
              * dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
              */
             "mire-editor": LocalJSX.IntrinsicElements["mire-editor"] & JSXBase.HTMLAttributes<HTMLMireEditorElement>;
+            /**
+             * Hôte de l’explorateur (P4-08) : ses méthodes sont les actions du contrôleur `mire-explorer` (ouvrir une branche,
+             * montrer un élément, lire, modifier, ajouter à une liste), qui vit avec l’état de l’interface
+             * (`src/renderer/controllers/explorer.ts`). Il contient la vue de l’explorateur (`mire-explorer-view`, placée par la page).
+             * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-explorer": LocalJSX.IntrinsicElements["mire-explorer"] & JSXBase.HTMLAttributes<HTMLMireExplorerElement>;
+            /**
+             * Vue de l'explorateur (P4-08) : des colonnes côte à côte, comme le Finder du Mac, puis l'aperçu de l'élément choisi.
+             * Navigation par colonnes (P4-03, `data-nav="columns"`) : haut et bas changent de ligne, gauche et droite de colonne.
+             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/explorer/`) lui donne les colonnes et les
+             * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
+             * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
+             * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+             */
+            "mire-explorer-view": LocalJSX.IntrinsicElements["mire-explorer-view"] & JSXBase.HTMLAttributes<HTMLMireExplorerViewElement>;
             /**
              * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
              * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre
