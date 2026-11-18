@@ -120,6 +120,8 @@ async function goByKeyboard(section) {
 
 async function expectSection(section, title) {
   await page.waitForFunction((s) => document.body.dataset.section === s, section);
+  // Le titre est rendu par mire-header (P4-07), à l'image suivante : on l'attend un peu avant de le comparer.
+  await page.waitForFunction((t) => document.getElementById('title').textContent === t, title, { timeout: 2000 }).catch(() => {});
   assert.equal(await page.locator('#title').textContent(), title);
   await page.locator('#view').getByText(FILLED[section]).first().waitFor({ timeout: 15000 });
 }
@@ -271,7 +273,7 @@ describe('Test de fumée de Mire', () => {
   });
 
   // Contrôleurs et traduction (P4-04) : un ds-trigger appelle une action de mire-app ; le document porte la langue de
-  // l'interface, les vues historiques restent marquées en français.
+  // l'interface, les vues historiques restent marquées en français (sur leurs hôtes dans la coquille depuis P4-07).
   it('un ds-trigger appelle les actions des contrôleurs, et le document porte la langue de l’interface', async () => {
     const errors = [];
     const onError = (e) => errors.push(e.message);
@@ -281,7 +283,7 @@ describe('Test de fumée de Mire', () => {
     try {
       const lang = await page.evaluate(async () => (await window.api.i18nGet()).language);
       await page.waitForFunction((l) => document.documentElement.lang === l, lang);
-      assert.equal(await page.evaluate(() => document.body.lang), 'fr');
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('mire-legacy-view')].map((v) => v.lang)), ['fr', 'fr']);
 
       await page.evaluate(() => {
         const t = document.createElement('ds-trigger');
