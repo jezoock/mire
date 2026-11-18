@@ -1763,7 +1763,11 @@ describe('Test de fumée de Mire', () => {
         const file = '/stenzek/duckstation/releases/download/v0.1-e2e/DuckStation-x64.AppImage';
         globalThis.fetch = async (url, init) => {
           const u = String(url);
-          if (u === `${repo}/releases/latest`) return new Response(null, { status: 302, headers: { location: `${repo}/releases/tag/v0.1-e2e` } });
+          if (u === `${repo}/releases/latest`) {
+            // Un court délai, comme le vrai site : l'étape « Recherche de la dernière version » reste visible.
+            await new Promise((r) => setTimeout(r, 300));
+            return new Response(null, { status: 302, headers: { location: `${repo}/releases/tag/v0.1-e2e` } });
+          }
           if (u === `${repo}/releases/expanded_assets/v0.1-e2e`)
             return new Response(`<a href="${file}">DuckStation</a>`, { headers: { 'content-type': 'text/html' } });
           if (u === `https://github.com${file}`) {
