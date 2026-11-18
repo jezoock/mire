@@ -2045,19 +2045,15 @@ describe('Test de fumée de Mire', () => {
       });
     // Le film « Amélie » trouvé par la Recherche : sa carte rendue, et sa clé.
     const card = () => page.locator(`${VIEW} [data-group="movies"] mire-card ds-trigger.hydrated`).first();
-    const findFilm = async (name) => {
+    const findFilm = async () => {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
       await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), VIEW);
       await page.locator(`${VIEW} .mire-search-view__input`).fill('Amélie');
-      await page.waitForFunction(
-        ([sel, n]) =>
-          [...document.querySelectorAll(`${sel} [data-group="movies"] mire-card`)].some(
-            (c) => c.querySelector('ds-trigger.hydrated') && c.querySelector('.mire-card__title')?.textContent === n,
-          ),
-        [VIEW, name],
-      );
+      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="movies"] mire-card ds-trigger.hydrated`), VIEW);
       return card().getAttribute('data-key');
     };
+    const cardTitle = (name) =>
+      page.waitForFunction(([sel, n]) => document.querySelector(`${sel} [data-group="movies"] mire-card .mire-card__title`)?.textContent === n, [VIEW, name]);
     // Boîte de l'éditeur ouverte et rendue (chaque bouton hydrated).
     const formOpen = async () => {
       await page.waitForFunction((sel) => {
@@ -2086,22 +2082,21 @@ describe('Test de fumée de Mire', () => {
     });
 
     it('clic droit : modifier le nom et ajouter un tag, puis réinitialiser (touche E)', async () => {
-      const key = await findFilm('Amélie');
+      const key = await findFilm();
       const before = await element(key);
+      await cardTitle(before.name);
       await card().click({ button: 'right' });
       assert.equal(await formOpen(), 'Modifier la vidéo');
-      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), 'Amélie');
+      assert.equal(await page.locator(`${FORM} input`).first().inputValue(), before.name);
       await page.locator(`${FORM} input`).first().fill('Amélie (version longue)');
       await page.locator(`${FORM} .mire-form__list input`).fill('À revoir');
       await page.locator(`${FORM} .mire-form__list ds-trigger`, { hasText: 'Ajouter' }).click();
       await page.locator(`${FORM} .mire-form__entry .mire-form__value`, { hasText: 'À revoir' }).waitFor();
+      await shot('editor-video');
       await button('Enregistrer').click();
       await formClosed();
       // La Recherche se met à jour : la carte porte le nouveau nom ; le tag est un tag de l'utilisateur.
-      await page.waitForFunction(
-        (sel) => document.querySelector(`${sel} [data-group="movies"] mire-card .mire-card__title`)?.textContent === 'Amélie (version longue)',
-        VIEW,
-      );
+      await cardTitle('Amélie (version longue)');
       const edited = await element(key);
       assert.equal(edited.name, 'Amélie (version longue)');
       const tags = await page.evaluate(() => window.api.tagsList());
@@ -2118,13 +2113,13 @@ describe('Test de fumée de Mire', () => {
       const reset = await element(key);
       assert.equal(reset.name, before.name);
       assert.deepEqual([...reset.tags].sort(), [...before.tags].sort());
-      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="movies"] mire-card .mire-card__title`)?.textContent === 'Amélie', VIEW);
+      await cardTitle(before.name);
       assert.deepEqual(errors, []);
     });
 
     it('manette : X ouvre l’éditeur, la croix parcourt les champs, A choisit Annuler, B ferme', async () => {
       await connectPad();
-      const key = await findFilm('Amélie');
+      const key = await findFilm();
       const before = await element(key);
       await card().focus();
       await padPress('x');

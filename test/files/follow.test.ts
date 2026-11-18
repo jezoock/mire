@@ -99,7 +99,8 @@ describe('gestion des fichiers : le catalogue suit', () => {
       [
         ['d.mkv', true],
         ['c.mkv', true],
-        ['a.mkv', true],
+        // Titre saisi à la main (repris de meta.json) : le nom affiché (P4-22).
+        ['Mon A', true],
       ],
     );
   });
