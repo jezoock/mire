@@ -132,9 +132,189 @@
       "contraste": "High contrast"
     },
     "settings": {
+      "appearance": {
+        "title": "Appearance",
+        "help": "The palette and the theme apply right away.",
+        "theme": {
+          "label": "Palette and theme"
+        },
+        "menuPosition": {
+          "label": "Main menu",
+          "help": "On the left or on the right, the menu is a side bar; at the top or at the bottom, it is a carousel you scroll.",
+          "options": {
+            "left": "On the left",
+            "right": "On the right",
+            "top": "At the top",
+            "bottom": "At the bottom"
+          }
+        },
+        "menuAutohide": {
+          "label": "Retractable menu: it hides and comes back when you get near the edge or go back to it with the arrows"
+        }
+      },
       "language": {
-        "label": "Language",
-        "auto": "System language"
+        "title": "Language",
+        "interface": {
+          "label": "Interface language",
+          "options": {
+            "auto": "Automatic (system language)"
+          }
+        },
+        "metadata": {
+          "label": "Language of the details",
+          "help": "Language of the summaries and titles found online.",
+          "options": {
+            "empty": "Same as the interface",
+            "fr-FR": "French",
+            "en-US": "English"
+          }
+        }
+      },
+      "home": {
+        "title": "Home page",
+        "help": "Changes apply right away.",
+        "start": {
+          "label": "On start, open",
+          "options": {
+            "home": "Home",
+            "search": "Search",
+            "videos": "Videos",
+            "music": "Music",
+            "images": "Pictures",
+            "streaming": "Streaming",
+            "tv": "TV",
+            "games": "Games"
+          }
+        },
+        "clock": {
+          "label": "Show the time and date"
+        },
+        "rows": {
+          "label": "Rows, test card bars and pinned sites"
+        }
+      },
+      "sources": {
+        "title": "Sources",
+        "help": "Folders on the disk, network shares (\\\\NAS\\Movies, smb://nas/movies) or web servers. Changes apply right away.",
+        "sources": {
+          "label": "Sources"
+        }
+      },
+      "display": {
+        "title": "Display",
+        "fullscreen": {
+          "label": "Show Mire full screen"
+        },
+        "backdrop": {
+          "label": "Show the backdrop of the selected item in the lists"
+        }
+      },
+      "programs": {
+        "title": "External programs",
+        "player": {
+          "label": "External player",
+          "help": "Used for TV and for the files the built-in player cannot read (AVI, WMV, AC3 or DTS audio tracks…). Leave empty to find mpv or VLC automatically.",
+          "placeholder": "Automatic detection"
+        },
+        "browser": {
+          "label": "Fallback browser",
+          "help": "Only used for the sites whose \"mode\" is \"browser\". Leave empty to use Edge or Chrome automatically.",
+          "placeholder": "Automatic detection"
+        }
+      },
+      "tv": {
+        "title": "TV",
+        "help": "On first start, Mire finds your box on the network. You can also choose the service yourself.",
+        "service": {
+          "label": "TV service"
+        }
+      },
+      "search": {
+        "title": "Search in the streaming catalogues",
+        "help": "With a free TMDB key, Search shows the matching movies and series and tells you on which service to watch them.",
+        "tmdbToken": {
+          "label": "TMDB key or token",
+          "help": "Create an account on themoviedb.org, then copy the “API read access token” from Settings, API section.",
+          "placeholder": "Optional"
+        },
+        "region": {
+          "label": "Country of availability",
+          "options": {
+            "FR": "France",
+            "BE": "Belgium",
+            "CH": "Switzerland",
+            "LU": "Luxembourg",
+            "CA": "Canada"
+          }
+        }
+      },
+      "scrape": {
+        "title": "Details and posters",
+        "help": "Mire looks online for a picture and some details for your files. The pictures stay in Mire’s data; nothing is written in your folders.",
+        "auto": {
+          "label": "Fetch automatically after each scan of the library"
+        },
+        "providers": {
+          "label": "Order of the detail providers",
+          "help": "For the same detail, the first one in the list wins."
+        }
+      },
+      "adblock": {
+        "title": "Ad blocker",
+        "help": "Blocks ads, tracking, pop-ups and redirections to ad pages in the sites opened in Mire.",
+        "enabled": {
+          "label": "Block ads in the sites"
+        },
+        "allowlist": {
+          "label": "Sites where the blocker is off",
+          "placeholder": "Site name (example.com)"
+        },
+        "customLists": {
+          "label": "Extra filter lists",
+          "placeholder": "Address of a list in Adblock Plus or uBlock format (https://…)"
+        }
+      },
+      "streaming": {
+        "title": "Streaming sites",
+        "sites": {
+          "label": "Sites"
+        }
+      },
+      "games": {
+        "title": "Games",
+        "consoles": {
+          "label": "Consoles"
+        },
+        "store": {
+          "label": "Store"
+        },
+        "pcGames": {
+          "label": "PC games added by hand"
+        },
+        "pcSites": {
+          "label": "Sites to download PC games"
+        },
+        "autoOnline": {
+          "label": "Show the online games right away when opening a console (without clicking “Show”)"
+        }
+      },
+      "downloads": {
+        "title": "Downloads",
+        "torrentClient": {
+          "label": "Torrent client",
+          "help": "With an installed program, Mire hands it the link or the file: you then follow the download in that program.",
+          "options": {
+            "mire": "Built into Mire (progress shown here)",
+            "system": "Program installed on the computer (qBittorrent, Transmission…)"
+          }
+        },
+        "seed": {
+          "label": "Keep sharing a torrent once downloaded (while Mire is open)"
+        },
+        "dir": {
+          "label": "Downloads folder",
+          "placeholder": "Downloads/Mire"
+        }
       }
     },
     "library": {

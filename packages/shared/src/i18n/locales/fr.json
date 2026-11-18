@@ -132,9 +132,189 @@
       "contraste": "Contraste élevé"
     },
     "settings": {
+      "appearance": {
+        "title": "Apparence",
+        "help": "La palette et le thème s’appliquent tout de suite.",
+        "theme": {
+          "label": "Palette et thème"
+        },
+        "menuPosition": {
+          "label": "Menu principal",
+          "help": "À gauche ou à droite, le menu est une barre latérale ; en haut ou en bas, c’est un carrousel qu’on fait défiler.",
+          "options": {
+            "left": "À gauche",
+            "right": "À droite",
+            "top": "En haut",
+            "bottom": "En bas"
+          }
+        },
+        "menuAutohide": {
+          "label": "Menu rétractable : il se cache et réapparaît quand on approche du bord ou qu’on y revient avec les flèches"
+        }
+      },
       "language": {
-        "label": "Langue",
-        "auto": "Langue du système"
+        "title": "Langue",
+        "interface": {
+          "label": "Langue de l’interface",
+          "options": {
+            "auto": "Automatique (langue du système)"
+          }
+        },
+        "metadata": {
+          "label": "Langue des fiches",
+          "help": "Langue des résumés et des titres récupérés en ligne.",
+          "options": {
+            "empty": "Comme l’interface",
+            "fr-FR": "Français",
+            "en-US": "Anglais"
+          }
+        }
+      },
+      "home": {
+        "title": "Page d’accueil",
+        "help": "Les changements s’appliquent tout de suite.",
+        "start": {
+          "label": "Au démarrage, ouvrir",
+          "options": {
+            "home": "Accueil",
+            "search": "Rechercher",
+            "videos": "Vidéos",
+            "music": "Musique",
+            "images": "Images",
+            "streaming": "Streaming",
+            "tv": "Télévision",
+            "games": "Jeux"
+          }
+        },
+        "clock": {
+          "label": "Afficher l’heure et la date"
+        },
+        "rows": {
+          "label": "Rangées, barres de la mire et sites épinglés"
+        }
+      },
+      "sources": {
+        "title": "Sources",
+        "help": "Dossiers du disque, partages réseau (\\\\NAS\\Films, smb://nas/films) ou serveurs web. Les changements s’appliquent tout de suite.",
+        "sources": {
+          "label": "Sources"
+        }
+      },
+      "display": {
+        "title": "Affichage",
+        "fullscreen": {
+          "label": "Afficher Mire en plein écran"
+        },
+        "backdrop": {
+          "label": "Afficher le fond d’écran de l’élément sélectionné dans les listes"
+        }
+      },
+      "programs": {
+        "title": "Programmes externes",
+        "player": {
+          "label": "Lecteur externe",
+          "help": "Sert pour la télévision et pour les fichiers que le lecteur intégré ne lit pas (AVI, WMV, pistes audio AC3 ou DTS…). Laissez vide pour détecter mpv ou VLC automatiquement.",
+          "placeholder": "Détection automatique"
+        },
+        "browser": {
+          "label": "Navigateur de secours",
+          "help": "Ne sert qu’aux sites dont le « mode » vaut \"browser\". Laissez vide pour utiliser Edge ou Chrome automatiquement.",
+          "placeholder": "Détection automatique"
+        }
+      },
+      "tv": {
+        "title": "Télévision",
+        "help": "Au premier lancement, Mire reconnaît votre box sur le réseau. Vous pouvez aussi choisir le service à la main.",
+        "service": {
+          "label": "Service de télévision"
+        }
+      },
+      "search": {
+        "title": "Recherche dans les catalogues de streaming",
+        "help": "Avec une clé gratuite de TMDB, Rechercher affiche les films et séries correspondants et indique sur quel service les regarder.",
+        "tmdbToken": {
+          "label": "Clé ou jeton TMDB",
+          "help": "Créez un compte sur themoviedb.org, puis copiez le « jeton d’accès en lecture à l’API » depuis Paramètres, rubrique API.",
+          "placeholder": "Facultatif"
+        },
+        "region": {
+          "label": "Pays des disponibilités",
+          "options": {
+            "FR": "France",
+            "BE": "Belgique",
+            "CH": "Suisse",
+            "LU": "Luxembourg",
+            "CA": "Canada"
+          }
+        }
+      },
+      "scrape": {
+        "title": "Infos et affiches",
+        "help": "Mire cherche en ligne une image et quelques infos pour vos fichiers. Les images restent dans les données de Mire ; rien n’est écrit dans vos dossiers.",
+        "auto": {
+          "label": "Récupérer automatiquement après chaque analyse de la bibliothèque"
+        },
+        "providers": {
+          "label": "Ordre des fournisseurs d’infos",
+          "help": "Pour une même info, le premier de la liste l’emporte."
+        }
+      },
+      "adblock": {
+        "title": "Bloqueur de publicités",
+        "help": "Bloque les publicités, le pistage, les fenêtres surgissantes et les redirections vers des pages de pub dans les sites ouverts dans Mire.",
+        "enabled": {
+          "label": "Bloquer les publicités dans les sites"
+        },
+        "allowlist": {
+          "label": "Sites où le bloqueur est désactivé",
+          "placeholder": "Nom du site (exemple.com)"
+        },
+        "customLists": {
+          "label": "Listes de filtres supplémentaires",
+          "placeholder": "Adresse d’une liste au format Adblock Plus ou uBlock (https://…)"
+        }
+      },
+      "streaming": {
+        "title": "Sites de streaming",
+        "sites": {
+          "label": "Sites"
+        }
+      },
+      "games": {
+        "title": "Jeux",
+        "consoles": {
+          "label": "Consoles"
+        },
+        "store": {
+          "label": "Boutique"
+        },
+        "pcGames": {
+          "label": "Jeux PC ajoutés à la main"
+        },
+        "pcSites": {
+          "label": "Sites pour télécharger des jeux PC"
+        },
+        "autoOnline": {
+          "label": "Afficher d’emblée les jeux en ligne en ouvrant une console (sans cliquer sur « Afficher »)"
+        }
+      },
+      "downloads": {
+        "title": "Téléchargements",
+        "torrentClient": {
+          "label": "Client torrent",
+          "help": "Avec un logiciel installé, Mire lui confie le lien ou le fichier : le téléchargement se suit alors dans ce logiciel.",
+          "options": {
+            "mire": "Intégré à Mire (progression suivie ici)",
+            "system": "Logiciel installé sur l’ordinateur (qBittorrent, Transmission…)"
+          }
+        },
+        "seed": {
+          "label": "Continuer à partager un torrent une fois téléchargé (tant que Mire est ouvert)"
+        },
+        "dir": {
+          "label": "Dossier des téléchargements",
+          "placeholder": "Téléchargements/Mire"
+        }
       }
     },
     "library": {
