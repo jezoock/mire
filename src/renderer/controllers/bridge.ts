@@ -35,7 +35,6 @@ export interface BridgeEntry {
 // Position dans une liste de l'état (`data-index`) → clé stable de l'élément.
 const index = (d: Dataset) => (d.index != null ? Number(d.index) : -1);
 const keyAt = (list: unknown, d: Dataset, key: string) => (list as Record<string, unknown>[] | null | undefined)?.[index(d)]?.[key];
-const gs = (kind: string) => (S.gs as Record<string, unknown>)[kind];
 const field = (sel: string) => $<HTMLInputElement>(sel)?.value ?? '';
 const clear = (...sels: string[]) => {
   for (const sel of sels) {
@@ -110,15 +109,6 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
   'rom-dl': { tag: 'mire-page', method: 'downloadRom', args: (d) => ({ path: d.path }) },
   'rom-dl-all': { tag: 'mire-page', method: 'downloadAllRoms' },
   // Recherche
-  'gs-recent': { tag: 'mire-search', method: 'useRecentQuery', args: (d) => ({ query: S.usage.queries[index(d)] }) },
-  'gs-video': { tag: 'mire-search', method: 'playVideo', args: (d) => ({ path: keyAt(gs('videos'), d, 'path') }) },
-  'gs-track': { tag: 'mire-search', method: 'playTrack', args: (d) => ({ path: keyAt(gs('tracks'), d, 'path') }) },
-  'gs-image': { tag: 'mire-search', method: 'showImage', args: (d) => ({ path: keyAt(gs('images'), d, 'path') }) },
-  'gs-channel': { tag: 'mire-search', method: 'playChannel', args: (d) => ({ name: keyAt(gs('channels'), d, 'name') }) },
-  'gs-game': { tag: 'mire-search', method: 'launchGame', args: (d) => ({ path: keyAt(gs('games'), d, 'path') }) },
-  'gs-rom': { tag: 'mire-search', method: 'launchRom', args: (d) => ({ path: keyAt(gs('roms'), d, 'path'), consoleId: keyAt(gs('roms'), d, 'emu') }) },
-  'gs-tmdb': { tag: 'mire-search', method: 'openTmdb', args: (d) => ({ key: keyAt(S.tmdb.results, d, 'key') }) },
-  'gs-site': { tag: 'mire-search', method: 'searchSite', args: byId },
   'clear-queries': { tag: 'mire-search', method: 'clearQueries' },
   // Sources
   'src-add-folder': { tag: 'mire-explorer', method: 'addFolder', args: (d) => ({ kind: d.kind }) },

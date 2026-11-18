@@ -13,6 +13,7 @@ import { PageGroup } from "@mire/shared";
 import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
+import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
@@ -21,6 +22,7 @@ export { PageGroup } from "@mire/shared";
 export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
+export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -804,6 +806,63 @@ export namespace Components {
          */
         "variant": string;
     }
+    /**
+     * Hôte de la Recherche (P4-13) : ses méthodes sont les actions du contrôleur `mire-search` (recherches récentes,
+     * ouvrir un résultat, sa page, un titre de « Où regarder », chercher sur un site), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/search.ts`). Il contient la vue de la Recherche (`mire-search-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireSearch {
+    }
+    /**
+     * Vue de la Recherche (P4-13) : le champ, puis, sans recherche, les recherches récentes ; avec une recherche, les
+     * éléments du catalogue groupés par page (une rangée `mire-row` par page), les films et séries des fournisseurs
+     * `search` (« Où regarder ») et les sites où chercher.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/search/`) lui donne les groupes et les
+     * textes déjà rédigés, et reçoit ce qui est tapé (`mireSearchInput`, `mireSearchSubmit`). Le champ n'est réécrit que
+     * si la page change la recherche (recherche récente) : la frappe n'est jamais interrompue. Les actions vont au
+     * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
+     */
+    interface MireSearchView {
+        /**
+          * @default ''
+         */
+        "cardLabels": string;
+        /**
+          * Groupes du catalogue ; `null` sans recherche (les recherches récentes sont montrées).
+          * @default null
+         */
+        "groups": SearchGroupView[] | string | null;
+        /**
+          * Textes (voir `SearchLabels`), ceux des cartes (`mire-card`) et ceux des rangées (`ds-scroller`), en JSON.
+          * @default ''
+         */
+        "labels": SearchLabels | string;
+        /**
+          * Recherche affichée dans le champ.
+          * @default ''
+         */
+        "query": string;
+        /**
+          * Recherches récentes, de la plus récente à la plus ancienne.
+          * @default []
+         */
+        "recent": string[] | string;
+        /**
+          * @default ''
+         */
+        "scrollerLabels": string;
+        /**
+          * Sites où chercher la recherche en cours.
+          * @default []
+         */
+        "sites": SearchSiteView[] | string;
+        /**
+          * « Où regarder » ; `null` sans recherche.
+          * @default null
+         */
+        "watch": WatchView | string | null;
+    }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -820,6 +879,10 @@ export interface MirePickCustomEvent<T> extends CustomEvent<T> {
 export interface MireRailCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireRailElement;
+}
+export interface MireSearchViewCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireSearchViewElement;
 }
 declare global {
     /**
@@ -1146,6 +1209,45 @@ declare global {
         prototype: HTMLMireRowElement;
         new (): HTMLMireRowElement;
     };
+    /**
+     * Hôte de la Recherche (P4-13) : ses méthodes sont les actions du contrôleur `mire-search` (recherches récentes,
+     * ouvrir un résultat, sa page, un titre de « Où regarder », chercher sur un site), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/search.ts`). Il contient la vue de la Recherche (`mire-search-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireSearchElement extends Components.MireSearch, HTMLStencilElement {
+    }
+    var HTMLMireSearchElement: {
+        prototype: HTMLMireSearchElement;
+        new (): HTMLMireSearchElement;
+    };
+    interface HTMLMireSearchViewElementEventMap {
+        "mireSearchInput": { query: string };
+        "mireSearchSubmit": { query: string };
+    }
+    /**
+     * Vue de la Recherche (P4-13) : le champ, puis, sans recherche, les recherches récentes ; avec une recherche, les
+     * éléments du catalogue groupés par page (une rangée `mire-row` par page), les films et séries des fournisseurs
+     * `search` (« Où regarder ») et les sites où chercher.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/search/`) lui donne les groupes et les
+     * textes déjà rédigés, et reçoit ce qui est tapé (`mireSearchInput`, `mireSearchSubmit`). Le champ n'est réécrit que
+     * si la page change la recherche (recherche récente) : la frappe n'est jamais interrompue. Les actions vont au
+     * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
+     */
+    interface HTMLMireSearchViewElement extends Components.MireSearchView, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireSearchViewElementEventMap>(type: K, listener: (this: HTMLMireSearchViewElement, ev: MireSearchViewCustomEvent<HTMLMireSearchViewElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireSearchViewElementEventMap>(type: K, listener: (this: HTMLMireSearchViewElement, ev: MireSearchViewCustomEvent<HTMLMireSearchViewElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireSearchViewElement: {
+        prototype: HTMLMireSearchViewElement;
+        new (): HTMLMireSearchViewElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
@@ -1169,6 +1271,8 @@ declare global {
         "mire-pick": HTMLMirePickElement;
         "mire-rail": HTMLMireRailElement;
         "mire-row": HTMLMireRowElement;
+        "mire-search": HTMLMireSearchElement;
+        "mire-search-view": HTMLMireSearchViewElement;
     }
 }
 declare namespace LocalJSX {
@@ -1947,6 +2051,68 @@ declare namespace LocalJSX {
          */
         "variant"?: string;
     }
+    /**
+     * Hôte de la Recherche (P4-13) : ses méthodes sont les actions du contrôleur `mire-search` (recherches récentes,
+     * ouvrir un résultat, sa page, un titre de « Où regarder », chercher sur un site), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/search.ts`). Il contient la vue de la Recherche (`mire-search-view`, placée par la page).
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireSearch {
+    }
+    /**
+     * Vue de la Recherche (P4-13) : le champ, puis, sans recherche, les recherches récentes ; avec une recherche, les
+     * éléments du catalogue groupés par page (une rangée `mire-row` par page), les films et séries des fournisseurs
+     * `search` (« Où regarder ») et les sites où chercher.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/search/`) lui donne les groupes et les
+     * textes déjà rédigés, et reçoit ce qui est tapé (`mireSearchInput`, `mireSearchSubmit`). Le champ n'est réécrit que
+     * si la page change la recherche (recherche récente) : la frappe n'est jamais interrompue. Les actions vont au
+     * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
+     */
+    interface MireSearchView {
+        /**
+          * @default ''
+         */
+        "cardLabels"?: string;
+        /**
+          * Groupes du catalogue ; `null` sans recherche (les recherches récentes sont montrées).
+          * @default null
+         */
+        "groups"?: SearchGroupView[] | string | null;
+        /**
+          * Textes (voir `SearchLabels`), ceux des cartes (`mire-card`) et ceux des rangées (`ds-scroller`), en JSON.
+          * @default ''
+         */
+        "labels"?: SearchLabels | string;
+        /**
+          * Texte tapé (à chaque frappe) et recherche validée (Entrée).
+         */
+        "onMireSearchInput"?: (event: MireSearchViewCustomEvent<{ query: string }>) => void;
+        "onMireSearchSubmit"?: (event: MireSearchViewCustomEvent<{ query: string }>) => void;
+        /**
+          * Recherche affichée dans le champ.
+          * @default ''
+         */
+        "query"?: string;
+        /**
+          * Recherches récentes, de la plus récente à la plus ancienne.
+          * @default []
+         */
+        "recent"?: string[] | string;
+        /**
+          * @default ''
+         */
+        "scrollerLabels"?: string;
+        /**
+          * Sites où chercher la recherche en cours.
+          * @default []
+         */
+        "sites"?: SearchSiteView[] | string;
+        /**
+          * « Où regarder » ; `null` sans recherche.
+          * @default null
+         */
+        "watch"?: WatchView | string | null;
+    }
 
     interface MireBackdropAttributes {
         "src": string;
@@ -2100,6 +2266,16 @@ declare namespace LocalJSX {
         "controls": boolean;
         "scrollerLabels": string;
     }
+    interface MireSearchViewAttributes {
+        "query": string;
+        "recent": string[] | string;
+        "groups": SearchGroupView[] | string | null;
+        "watch": WatchView | string | null;
+        "sites": SearchSiteView[] | string;
+        "labels": SearchLabels | string;
+        "cardLabels": string;
+        "scrollerLabels": string;
+    }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
@@ -2124,6 +2300,8 @@ declare namespace LocalJSX {
         "mire-pick": Omit<MirePick, keyof MirePickAttributes> & { [K in keyof MirePick & keyof MirePickAttributes]?: MirePick[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `attr:${K}`]?: MirePickAttributes[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `prop:${K}`]?: MirePick[K] };
         "mire-rail": Omit<MireRail, keyof MireRailAttributes> & { [K in keyof MireRail & keyof MireRailAttributes]?: MireRail[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `attr:${K}`]?: MireRailAttributes[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `prop:${K}`]?: MireRail[K] };
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
+        "mire-search": MireSearch;
+        "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2295,6 +2473,23 @@ declare module "@stencil/core" {
              * focus. Cartes et actions comme `mire-card` (clé de l'élément).
              */
             "mire-row": LocalJSX.IntrinsicElements["mire-row"] & JSXBase.HTMLAttributes<HTMLMireRowElement>;
+            /**
+             * Hôte de la Recherche (P4-13) : ses méthodes sont les actions du contrôleur `mire-search` (recherches récentes,
+             * ouvrir un résultat, sa page, un titre de « Où regarder », chercher sur un site), qui vit avec l'état de l'interface
+             * (`src/renderer/controllers/search.ts`). Il contient la vue de la Recherche (`mire-search-view`, placée par la page).
+             * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-search": LocalJSX.IntrinsicElements["mire-search"] & JSXBase.HTMLAttributes<HTMLMireSearchElement>;
+            /**
+             * Vue de la Recherche (P4-13) : le champ, puis, sans recherche, les recherches récentes ; avec une recherche, les
+             * éléments du catalogue groupés par page (une rangée `mire-row` par page), les films et séries des fournisseurs
+             * `search` (« Où regarder ») et les sites où chercher.
+             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/search/`) lui donne les groupes et les
+             * textes déjà rédigés, et reçoit ce qui est tapé (`mireSearchInput`, `mireSearchSubmit`). Le champ n'est réécrit que
+             * si la page change la recherche (recherche récente) : la frappe n'est jamais interrompue. Les actions vont au
+             * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
+             */
+            "mire-search-view": LocalJSX.IntrinsicElements["mire-search-view"] & JSXBase.HTMLAttributes<HTMLMireSearchViewElement>;
         }
     }
 }

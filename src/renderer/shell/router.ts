@@ -4,8 +4,8 @@
  * liste) ou `screen:<nom>` (un écran du cœur, `CORE_SCREENS`).
  *
  * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
- * `mire-home`, P4-12), toutes deux dessinées par le thème ; le Centre dans la sienne (`CENTRE_VIEW`, `mire-centre`,
- * P4-18), avec l'habillage du cœur. Tant qu'un
+ * `mire-home`, P4-12), toutes deux dessinées par le thème ; la Recherche (`SEARCH_VIEW`, `mire-search`, P4-13) et le
+ * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) dans les leurs, avec l'habillage du cœur. Tant qu'un
  * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
  * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
@@ -39,19 +39,22 @@ export const CENTRE_TARGET = formatTarget({ kind: 'screen', screen: 'center' });
  */
 export const CENTRE_VIEW = 'downloads';
 
-/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-18 : le Centre). */
+export const SEARCH_TARGET = formatTarget({ kind: 'screen', screen: 'search' });
+
+/** Vue qui affiche la Recherche (P4-13) : la section `search` de l'interface, qui contient `<mire-search>`. */
+export const SEARCH_VIEW = 'search';
+
+/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre). */
 export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   [HOME_TARGET, HOME_VIEW],
+  [SEARCH_TARGET, SEARCH_VIEW],
   [CENTRE_TARGET, CENTRE_VIEW],
 ];
 
 /**
  * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
  */
-export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
-  ['screen:search', 'search'],
-  ['screen:settings', 'settings'],
-];
+export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [['screen:settings', 'settings']];
 
 /**
  * Section historique de chaque page prête à l'emploi (« Ancienne vue ») : elle garde ce que la vue de page ne fait pas

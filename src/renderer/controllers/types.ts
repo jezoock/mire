@@ -8,6 +8,7 @@ import type { State } from '../state/index.ts';
 import type { InfoScalar, PagePath } from '@mire/shared';
 import type { FormResult } from '@mire/ui/utils';
 import type { FormOptions } from '../ui/dialogs.ts';
+import type { Search } from '../search/index.ts';
 
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
@@ -100,11 +101,11 @@ export interface LegacyUi {
   learnSearch(): void;
   syncWeb(): void;
   setAdButton(state: Data): void;
-  // Recherche
+  // Recherche (P4-13)
   getQueries(): string[];
   rememberQuery(query: string): void;
-  setSearchQuery(query: string): void;
-  openTmdbResult(result: Data): void;
+  /** Écran de la Recherche (`src/renderer/search/`). */
+  search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult'>;
   // Téléchargements, boutique, réglages
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;
