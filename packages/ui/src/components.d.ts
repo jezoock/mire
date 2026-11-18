@@ -9,15 +9,21 @@ import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
+import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
+export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export namespace Components {
     /**
-     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
-     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
-     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
+     * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
+     * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
+     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
+     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
     }
@@ -328,6 +334,81 @@ export namespace Components {
         "variant": string;
     }
     /**
+     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
+     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
+     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     */
+    interface MireHeader {
+        /**
+          * @default ''
+         */
+        "datetime": string;
+        /**
+          * @default false
+         */
+        "gearBusy": boolean;
+        /**
+          * @default false
+         */
+        "gearHidden": boolean;
+        /**
+          * Icône du rouage (SVG de l'interface), fournie par la page.
+          * @default ''
+         */
+        "gearIcon": string;
+        /**
+          * Rouage : nom, bulle (état de la récupération des infos), occupé, caché (écran Réglages).
+          * @default ''
+         */
+        "gearLabel": string;
+        /**
+          * @default ''
+         */
+        "gearTitle": string;
+        /**
+          * Titre de l'écran.
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "searchLabel": string;
+        /**
+          * @default ''
+         */
+        "searchPlaceholder": string;
+        /**
+          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
+          * @default false
+         */
+        "searchable": boolean;
+        /**
+          * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
+          * @default ''
+         */
+        "time": string;
+    }
+    /**
+     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
+     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
+     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
+     * (P4-24).
+     */
+    interface MireLegacyView {
+    }
+    /**
+     * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
+     * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.
+     */
+    interface MirePadbar {
+        /**
+          * Aides (`PadHint`), en propriété ou en JSON.
+          * @default []
+         */
+        "hints": PadHint[] | string;
+    }
+    /**
      * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
      * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
      * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
@@ -357,6 +438,65 @@ export namespace Components {
           * @default {}
          */
         "labels": FormLabels | string;
+    }
+    /**
+     * Menu principal (P4-07) : les écrans du cœur et les pages épinglées, les sites ouverts sous leur page, le badge des
+     * téléchargements. À gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable.
+     * Chaque entrée est un `ds-trigger` vers le contrôleur `mire-app` (`open`, `openSite`, `openFile`, `quit`) autour d'un
+     * vrai bouton (`.rail-item`, destination de la navigation, habillé par l'interface historique). Le menu ne fait que
+     * s'afficher : la page lui donne ses entrées, l'entrée affichée et ses textes ; il prévient (`mireRailToggle`)
+     * quand le menu rétractable s'ouvre ou se ferme, la page en tire la mise en page (classes du document, vue web).
+     */
+    interface MireRail {
+        /**
+          * Menu rétractable : il se cache et revient quand on approche du bord ou qu'on y revient au clavier.
+          * @default false
+         */
+        "autohide": boolean;
+        /**
+          * Badges par clé d'entrée (téléchargements en cours sous le Centre).
+          * @default {}
+         */
+        "badges": Record<string, number> | string;
+        /**
+          * Clé de l'entrée affichée.
+          * @default ''
+         */
+        "current": string;
+        /**
+          * @default ''
+         */
+        "currentSite": string;
+        /**
+          * Entrées (`RailEntry`), en propriété ou en JSON.
+          * @default []
+         */
+        "entries": RailEntry[] | string;
+        /**
+          * Icônes par nom (SVG de l'interface), fournies par la page.
+          * @default {}
+         */
+        "icons": Record<string, string> | string;
+        /**
+          * Textes (`RailLabels`).
+          * @default {}
+         */
+        "labels": RailLabels | string;
+        /**
+          * Menu rétractable ouvert.
+          * @default false
+         */
+        "open": boolean;
+        /**
+          * `left`, `right`, `top` ou `bottom`.
+          * @default 'left'
+         */
+        "position": string;
+        /**
+          * Sites ouverts par clé d'entrée, et site affiché.
+          * @default {}
+         */
+        "sessions": Record<string, RailSession[]> | string;
     }
     /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
@@ -425,11 +565,19 @@ export interface MirePickCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMirePickElement;
 }
+export interface MireRailCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireRailElement;
+}
 declare global {
     /**
-     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
-     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
-     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
+     * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
+     * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
+     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
+     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
     }
@@ -557,6 +705,39 @@ declare global {
         prototype: HTMLMireGroupCardElement;
         new (): HTMLMireGroupCardElement;
     };
+    /**
+     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
+     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
+     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     */
+    interface HTMLMireHeaderElement extends Components.MireHeader, HTMLStencilElement {
+    }
+    var HTMLMireHeaderElement: {
+        prototype: HTMLMireHeaderElement;
+        new (): HTMLMireHeaderElement;
+    };
+    /**
+     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
+     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
+     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
+     * (P4-24).
+     */
+    interface HTMLMireLegacyViewElement extends Components.MireLegacyView, HTMLStencilElement {
+    }
+    var HTMLMireLegacyViewElement: {
+        prototype: HTMLMireLegacyViewElement;
+        new (): HTMLMireLegacyViewElement;
+    };
+    /**
+     * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
+     * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.
+     */
+    interface HTMLMirePadbarElement extends Components.MirePadbar, HTMLStencilElement {
+    }
+    var HTMLMirePadbarElement: {
+        prototype: HTMLMirePadbarElement;
+        new (): HTMLMirePadbarElement;
+    };
     interface HTMLMirePickElementEventMap {
         "mireDialogOpen": DialogEventDetail;
         "mireDialogClose": DialogEventDetail;
@@ -581,6 +762,31 @@ declare global {
         prototype: HTMLMirePickElement;
         new (): HTMLMirePickElement;
     };
+    interface HTMLMireRailElementEventMap {
+        "mireRailToggle": { open: boolean };
+    }
+    /**
+     * Menu principal (P4-07) : les écrans du cœur et les pages épinglées, les sites ouverts sous leur page, le badge des
+     * téléchargements. À gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable.
+     * Chaque entrée est un `ds-trigger` vers le contrôleur `mire-app` (`open`, `openSite`, `openFile`, `quit`) autour d'un
+     * vrai bouton (`.rail-item`, destination de la navigation, habillé par l'interface historique). Le menu ne fait que
+     * s'afficher : la page lui donne ses entrées, l'entrée affichée et ses textes ; il prévient (`mireRailToggle`)
+     * quand le menu rétractable s'ouvre ou se ferme, la page en tire la mise en page (classes du document, vue web).
+     */
+    interface HTMLMireRailElement extends Components.MireRail, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireRailElementEventMap>(type: K, listener: (this: HTMLMireRailElement, ev: MireRailCustomEvent<HTMLMireRailElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireRailElementEventMap>(type: K, listener: (this: HTMLMireRailElement, ev: MireRailCustomEvent<HTMLMireRailElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireRailElement: {
+        prototype: HTMLMireRailElement;
+        new (): HTMLMireRailElement;
+    };
     /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
@@ -602,15 +808,23 @@ declare global {
         "mire-form": HTMLMireFormElement;
         "mire-grid": HTMLMireGridElement;
         "mire-group-card": HTMLMireGroupCardElement;
+        "mire-header": HTMLMireHeaderElement;
+        "mire-legacy-view": HTMLMireLegacyViewElement;
+        "mire-padbar": HTMLMirePadbarElement;
         "mire-pick": HTMLMirePickElement;
+        "mire-rail": HTMLMireRailElement;
         "mire-row": HTMLMireRowElement;
     }
 }
 declare namespace LocalJSX {
     /**
-     * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
-     * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
-     * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+     * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
+     * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
+     * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
+     * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
+     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
+     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
     }
@@ -912,6 +1126,81 @@ declare namespace LocalJSX {
         "variant"?: string;
     }
     /**
+     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
+     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
+     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     */
+    interface MireHeader {
+        /**
+          * @default ''
+         */
+        "datetime"?: string;
+        /**
+          * @default false
+         */
+        "gearBusy"?: boolean;
+        /**
+          * @default false
+         */
+        "gearHidden"?: boolean;
+        /**
+          * Icône du rouage (SVG de l'interface), fournie par la page.
+          * @default ''
+         */
+        "gearIcon"?: string;
+        /**
+          * Rouage : nom, bulle (état de la récupération des infos), occupé, caché (écran Réglages).
+          * @default ''
+         */
+        "gearLabel"?: string;
+        /**
+          * @default ''
+         */
+        "gearTitle"?: string;
+        /**
+          * Titre de l'écran.
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "searchLabel"?: string;
+        /**
+          * @default ''
+         */
+        "searchPlaceholder"?: string;
+        /**
+          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
+          * @default false
+         */
+        "searchable"?: boolean;
+        /**
+          * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
+          * @default ''
+         */
+        "time"?: string;
+    }
+    /**
+     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
+     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
+     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
+     * (P4-24).
+     */
+    interface MireLegacyView {
+    }
+    /**
+     * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
+     * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.
+     */
+    interface MirePadbar {
+        /**
+          * Aides (`PadHint`), en propriété ou en JSON.
+          * @default []
+         */
+        "hints"?: PadHint[] | string;
+    }
+    /**
      * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
      * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
      * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
@@ -942,6 +1231,66 @@ declare namespace LocalJSX {
         "labels"?: FormLabels | string;
         "onMireDialogClose"?: (event: MirePickCustomEvent<DialogEventDetail>) => void;
         "onMireDialogOpen"?: (event: MirePickCustomEvent<DialogEventDetail>) => void;
+    }
+    /**
+     * Menu principal (P4-07) : les écrans du cœur et les pages épinglées, les sites ouverts sous leur page, le badge des
+     * téléchargements. À gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable.
+     * Chaque entrée est un `ds-trigger` vers le contrôleur `mire-app` (`open`, `openSite`, `openFile`, `quit`) autour d'un
+     * vrai bouton (`.rail-item`, destination de la navigation, habillé par l'interface historique). Le menu ne fait que
+     * s'afficher : la page lui donne ses entrées, l'entrée affichée et ses textes ; il prévient (`mireRailToggle`)
+     * quand le menu rétractable s'ouvre ou se ferme, la page en tire la mise en page (classes du document, vue web).
+     */
+    interface MireRail {
+        /**
+          * Menu rétractable : il se cache et revient quand on approche du bord ou qu'on y revient au clavier.
+          * @default false
+         */
+        "autohide"?: boolean;
+        /**
+          * Badges par clé d'entrée (téléchargements en cours sous le Centre).
+          * @default {}
+         */
+        "badges"?: Record<string, number> | string;
+        /**
+          * Clé de l'entrée affichée.
+          * @default ''
+         */
+        "current"?: string;
+        /**
+          * @default ''
+         */
+        "currentSite"?: string;
+        /**
+          * Entrées (`RailEntry`), en propriété ou en JSON.
+          * @default []
+         */
+        "entries"?: RailEntry[] | string;
+        /**
+          * Icônes par nom (SVG de l'interface), fournies par la page.
+          * @default {}
+         */
+        "icons"?: Record<string, string> | string;
+        /**
+          * Textes (`RailLabels`).
+          * @default {}
+         */
+        "labels"?: RailLabels | string;
+        "onMireRailToggle"?: (event: MireRailCustomEvent<{ open: boolean }>) => void;
+        /**
+          * Menu rétractable ouvert.
+          * @default false
+         */
+        "open"?: boolean;
+        /**
+          * `left`, `right`, `top` ou `bottom`.
+          * @default 'left'
+         */
+        "position"?: string;
+        /**
+          * Sites ouverts par clé d'entrée, et site affiché.
+          * @default {}
+         */
+        "sessions"?: Record<string, RailSession[]> | string;
     }
     /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
@@ -1057,12 +1406,40 @@ declare namespace LocalJSX {
         "action": string;
         "countLabels": string;
     }
+    interface MireHeaderAttributes {
+        "heading": string;
+        "searchable": boolean;
+        "searchPlaceholder": string;
+        "searchLabel": string;
+        "gearLabel": string;
+        "gearTitle": string;
+        "gearBusy": boolean;
+        "gearHidden": boolean;
+        "gearIcon": string;
+        "time": string;
+        "datetime": string;
+    }
+    interface MirePadbarAttributes {
+        "hints": PadHint[] | string;
+    }
     interface MirePickAttributes {
         "dialog": string;
         "heading": string;
         "help": string;
         "candidates": Candidate[] | string;
         "labels": FormLabels | string;
+    }
+    interface MireRailAttributes {
+        "entries": RailEntry[] | string;
+        "current": string;
+        "sessions": Record<string, RailSession[]> | string;
+        "currentSite": string;
+        "badges": Record<string, number> | string;
+        "position": string;
+        "autohide": boolean;
+        "open": boolean;
+        "labels": RailLabels | string;
+        "icons": Record<string, string> | string;
     }
     interface MireRowAttributes {
         "heading": string;
@@ -1087,7 +1464,11 @@ declare namespace LocalJSX {
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
         "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
+        "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
+        "mire-legacy-view": MireLegacyView;
+        "mire-padbar": Omit<MirePadbar, keyof MirePadbarAttributes> & { [K in keyof MirePadbar & keyof MirePadbarAttributes]?: MirePadbar[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `attr:${K}`]?: MirePadbarAttributes[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `prop:${K}`]?: MirePadbar[K] };
         "mire-pick": Omit<MirePick, keyof MirePickAttributes> & { [K in keyof MirePick & keyof MirePickAttributes]?: MirePick[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `attr:${K}`]?: MirePickAttributes[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `prop:${K}`]?: MirePick[K] };
+        "mire-rail": Omit<MireRail, keyof MireRailAttributes> & { [K in keyof MireRail & keyof MireRailAttributes]?: MireRail[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `attr:${K}`]?: MireRailAttributes[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `prop:${K}`]?: MireRail[K] };
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
     }
 }
@@ -1096,9 +1477,13 @@ declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
             /**
-             * Racine de l'interface (P4-04) : ses méthodes sont les actions du contrôleur `mire-app` (écrans, recherche,
-             * réglages, notifications), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Elle n'affiche rien
-             * pour l'instant ; la coquille (P4-07) y logera le menu, l'en-tête et les écrans.
+             * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
+             * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
+             * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
+             * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
+             * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
+             * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+             * ce que la page place dans ces hôtes n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
             /**
@@ -1156,12 +1541,39 @@ declare module "@stencil/core" {
              */
             "mire-group-card": LocalJSX.IntrinsicElements["mire-group-card"] & JSXBase.HTMLAttributes<HTMLMireGroupCardElement>;
             /**
+             * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
+             * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
+             * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+             */
+            "mire-header": LocalJSX.IntrinsicElements["mire-header"] & JSXBase.HTMLAttributes<HTMLMireHeaderElement>;
+            /**
+             * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
+             * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
+             * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
+             * (P4-24).
+             */
+            "mire-legacy-view": LocalJSX.IntrinsicElements["mire-legacy-view"] & JSXBase.HTMLAttributes<HTMLMireLegacyViewElement>;
+            /**
+             * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
+             * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.
+             */
+            "mire-padbar": LocalJSX.IntrinsicElements["mire-padbar"] & JSXBase.HTMLAttributes<HTMLMirePadbarElement>;
+            /**
              * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
              * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
              * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
              * de la fiche ; fermée sans choix (Échap, B, « Annuler »), la boîte émet `mireDialogClose`.
              */
             "mire-pick": LocalJSX.IntrinsicElements["mire-pick"] & JSXBase.HTMLAttributes<HTMLMirePickElement>;
+            /**
+             * Menu principal (P4-07) : les écrans du cœur et les pages épinglées, les sites ouverts sous leur page, le badge des
+             * téléchargements. À gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable.
+             * Chaque entrée est un `ds-trigger` vers le contrôleur `mire-app` (`open`, `openSite`, `openFile`, `quit`) autour d'un
+             * vrai bouton (`.rail-item`, destination de la navigation, habillé par l'interface historique). Le menu ne fait que
+             * s'afficher : la page lui donne ses entrées, l'entrée affichée et ses textes ; il prévient (`mireRailToggle`)
+             * quand le menu rétractable s'ouvre ou se ferme, la page en tire la mise en page (classes du document, vue web).
+             */
+            "mire-rail": LocalJSX.IntrinsicElements["mire-rail"] & JSXBase.HTMLAttributes<HTMLMireRailElement>;
             /**
              * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
              * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le

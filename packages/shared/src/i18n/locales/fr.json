@@ -499,6 +499,58 @@
         "crossDevice": "Mire ne peut pas encore déplacer un fichier vers un autre disque.",
         "failed": "L’opération n’a pas pu se faire : {reason}"
       }
+    },
+    "shell": {
+      "brand": "Mire",
+      "views": {
+        "home": "Accueil",
+        "search": "Rechercher",
+        "videos": "Vidéos",
+        "music": "Musique",
+        "images": "Images",
+        "streaming": "Streaming",
+        "web": "Streaming",
+        "tv": "Télévision",
+        "games": "Jeux",
+        "downloads": "Téléchargements",
+        "settings": "Réglages"
+      },
+      "menu": {
+        "label": "Menu principal",
+        "prev": "Défiler vers la gauche",
+        "next": "Défiler vers la droite",
+        "openFile": "Ouvrir un fichier",
+        "quit": "Quitter",
+        "sessions": {
+          "streaming": "Sites ouverts",
+          "tv": "Portails de télévision ouverts",
+          "games": "Sites de jeux ouverts"
+        }
+      },
+      "header": {
+        "search": "Rechercher",
+        "searchChannel": "Rechercher une chaîne",
+        "searchLabel": "Rechercher dans cette section",
+        "gear": "Réglages de cette page",
+        "gearScraping": "Récupération des infos : {done} sur {total}",
+        "gearPreparing": "Récupération des infos…"
+      },
+      "pad": {
+        "open": "Ouvrir",
+        "back": "Retour",
+        "edit": "Modifier",
+        "search": "Rechercher",
+        "section": "Section",
+        "pause": "Pause",
+        "minute": "1 min",
+        "otherVideo": "Autre vidéo",
+        "subtitles": "Sous-titres",
+        "close": "Fermer",
+        "slideshow": "Diaporama",
+        "image": "Image",
+        "confirm": "Valider",
+        "cancel": "Annuler"
+      }
     }
   }
 }

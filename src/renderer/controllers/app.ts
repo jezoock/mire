@@ -1,4 +1,5 @@
 import { Controller } from './base.ts';
+import type { PagePath } from '@mire/shared';
 import type { ItemRef } from './types.ts';
 
 /** `mire-app` : écrans, menu, réglages de la page, édition de l'élément sélectionné, notifications. */
@@ -6,6 +7,20 @@ export class AppController extends Controller {
   /** Affiche un écran (`home`, `videos`, `settings`…) ; le focus va au contenu, sauf `focus: 'keep'`. */
   go({ section, focus = 'content' }: { section: string; focus?: string }): void {
     this.ctx.ui.go(section, { focus });
+  }
+
+  /**
+   * Ouvre une cible (P4-07) : un écran du cœur (`screen:search`), une page (`movies`) ou une liste (`list:<id>`), et un
+   * chemin dans ses regroupements. Le focus va au contenu, sauf `focus: 'keep'` (choix dans le menu). Faux si aucune
+   * vue ne l'affiche encore (explorateur, page créée par l'utilisateur).
+   */
+  open({ target, path, focus = 'content' }: { target: string; path?: PagePath; focus?: string }): boolean {
+    return this.ctx.ui.open(target, { path: path ?? [], focus });
+  }
+
+  /** Site ouvert, choisi dans le menu sous la page d'où il vient. */
+  openSite({ id }: { id: string }): void {
+    this.ctx.ui.openSite(String(id));
   }
 
   /** Retour : ferme la console ouverte, quitte le site affiché, sinon revient à l'accueil. */

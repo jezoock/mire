@@ -6,6 +6,7 @@
 import { $ } from '../core/dom.ts';
 import { S } from '../state/index.ts';
 import { toast } from '../ui/toast.ts';
+import { t } from '../i18n/index.ts';
 import type { Controllers } from '../controllers/index.ts';
 import { handleKey } from './keyboard.ts';
 import { activeDialog, closeDialog, inColumns, moveFocus, relayPadKey, stickScroll } from './focus.ts';
@@ -17,7 +18,7 @@ import {
   VIDEO_PAD,
   WEB_PAD,
   padFamily,
-  padHintsHtml,
+  padHints,
   padKey,
   padPresses,
   readPad,
@@ -103,19 +104,15 @@ let padCtxShown = '';
 
 /** Barre de rappel des boutons : mise à jour quand le contexte ou la manette change (ou si `force`). */
 export function updatePadbar(force = false): void {
-  const padbar = $('#padbar') as HTMLElement;
   const ctx = S.pad ? context() : '';
   const key = `${ctx}|${S.pad?.family || ''}`;
   if (!force && key === padCtxShown) return;
   padCtxShown = key;
-  const html = S.pad ? padHintsHtml(ctx, S.pad.family as PadFamily) : null;
-  document.body.classList.toggle('has-pad', html !== null);
-  if (html === null) {
-    padbar.hidden = true;
-    return;
-  }
-  padbar.innerHTML = html;
-  padbar.hidden = false;
+  const hints = S.pad ? padHints(ctx, S.pad.family as PadFamily) : null;
+  document.body.classList.toggle('has-pad', hints !== null);
+  // Aide de la manette de la coquille (mire-padbar, P4-07), textes traduits.
+  const padbar = $('mire-padbar') as (HTMLElement & { hints: { glyphs: string[]; label: string }[] }) | null;
+  if (padbar) padbar.hints = (hints ?? []).map((h) => ({ glyphs: h.glyphs, label: t(h.key) }));
 }
 
 function setPad(gp: Gamepad): void {

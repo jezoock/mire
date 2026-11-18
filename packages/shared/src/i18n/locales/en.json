@@ -499,6 +499,58 @@
         "crossDevice": "Mire can't move a file to another drive yet.",
         "failed": "This couldn't be done: {reason}"
       }
+    },
+    "shell": {
+      "brand": "Mire",
+      "views": {
+        "home": "Home",
+        "search": "Search",
+        "videos": "Videos",
+        "music": "Music",
+        "images": "Pictures",
+        "streaming": "Streaming",
+        "web": "Streaming",
+        "tv": "TV",
+        "games": "Games",
+        "downloads": "Downloads",
+        "settings": "Settings"
+      },
+      "menu": {
+        "label": "Main menu",
+        "prev": "Scroll left",
+        "next": "Scroll right",
+        "openFile": "Open a file",
+        "quit": "Quit",
+        "sessions": {
+          "streaming": "Open sites",
+          "tv": "Open TV portals",
+          "games": "Open game sites"
+        }
+      },
+      "header": {
+        "search": "Search",
+        "searchChannel": "Search for a channel",
+        "searchLabel": "Search this section",
+        "gear": "Settings for this page",
+        "gearScraping": "Getting info: {done} of {total}",
+        "gearPreparing": "Getting info…"
+      },
+      "pad": {
+        "open": "Open",
+        "back": "Back",
+        "edit": "Edit",
+        "search": "Search",
+        "section": "Section",
+        "pause": "Pause",
+        "minute": "1 min",
+        "otherVideo": "Other video",
+        "subtitles": "Subtitles",
+        "close": "Close",
+        "slideshow": "Slideshow",
+        "image": "Picture",
+        "confirm": "OK",
+        "cancel": "Cancel"
+      }
     }
   }
 }

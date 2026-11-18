@@ -5,6 +5,7 @@
  */
 import type { MireApi } from '../api/index.ts';
 import type { State } from '../state/index.ts';
+import type { PagePath } from '@mire/shared';
 
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
@@ -28,6 +29,10 @@ export interface LegacyUi {
   // Écrans et vues
   render(opts?: { resetScroll?: boolean }): void;
   go(section: string, opts?: { focus?: string }): void;
+  /** Ouvre une cible (routeur de la coquille, P4-07) ; faux si aucune vue ne l'affiche encore. */
+  open(target: string, opts?: { path?: PagePath; focus?: string }): boolean;
+  /** Ouvre un site déjà ouvert, choisi dans le menu (`tv:…`, `rom:…`, `bm:…` ou un service). */
+  openSite(id: string): void;
   back(): void;
   nextSection(section: string, step: number): string;
   webHome(): string;

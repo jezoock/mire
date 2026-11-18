@@ -1,6 +1,7 @@
 // Navigation de l'interface déplacée de src/renderer/app.js vers src/renderer/nav/ (P1-24) : mêmes décisions qu'avant.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { focusSelectorOf, isShown, pickNeighbor, type Direction, type Navigable, type Rect } from '../../src/renderer/nav/spatial.ts';
 import { ARROW_KEYS, IMAGE_KEYS, LIST_KEYS, VIDEO_KEYS, activatesOnEnter, isTyping, keyAction } from '../../src/renderer/nav/keyboard.ts';
 import {
@@ -16,7 +17,7 @@ import {
   WEB_PAD,
   nextSection,
   padFamily,
-  padHintsHtml,
+  padHints,
   padKey,
   padPresses,
   readPad,
@@ -385,17 +386,23 @@ describe('nav/gamepad-data', () => {
     assert.deepEqual(padPresses({ ...none, a: true }, mem, 2001), [{ button: 'a', first: true }]);
   });
 
-  it('barre de rappel : libellés de la famille ; rien hors des contextes prévus', () => {
-    assert.equal(padHintsHtml('web', 'xbox'), null);
-    assert.equal(padHintsHtml('', 'xbox'), null);
-    assert.equal(
-      padHintsHtml('dialog', 'ps'),
-      '<span class="ph"><span class="pb">✕</span>Valider</span><span class="ph"><span class="pb">○</span>Annuler</span>',
-    );
-    assert.equal(
-      padHintsHtml('image', 'nintendo'),
-      '<span class="ph"><span class="pb">B</span>Diaporama</span><span class="ph"><span class="pb">L</span><span class="pb">R</span>Image</span><span class="ph"><span class="pb">A</span>Fermer</span>',
-    );
-    assert.match(padHintsHtml('video', 'xbox') as string, /<span class="pb">LT<\/span><span class="pb">RT<\/span>1 min/);
+  it('aide de la manette : libellés de la famille et clés des textes ; rien hors des contextes prévus', () => {
+    assert.equal(padHints('web', 'xbox'), null);
+    assert.equal(padHints('', 'xbox'), null);
+    assert.deepEqual(padHints('dialog', 'ps'), [
+      { glyphs: ['✕'], key: 'shell.pad.confirm' },
+      { glyphs: ['○'], key: 'shell.pad.cancel' },
+    ]);
+    assert.deepEqual(padHints('image', 'nintendo'), [
+      { glyphs: ['B'], key: 'shell.pad.slideshow' },
+      { glyphs: ['L', 'R'], key: 'shell.pad.image' },
+      { glyphs: ['A'], key: 'shell.pad.close' },
+    ]);
+    assert.deepEqual(padHints('video', 'xbox')?.[1], { glyphs: ['LT', 'RT'], key: 'shell.pad.minute' });
+  });
+
+  it('chaque texte de l’aide de la manette est dans les catalogues', () => {
+    const fr = JSON.parse(readFileSync(new URL('../../packages/shared/src/i18n/locales/fr.json', import.meta.url), 'utf8')).messages.shell.pad;
+    for (const hints of Object.values(PAD_HINTS)) for (const [, key] of hints ?? []) assert.equal(typeof fr[key], 'string', key);
   });
 });

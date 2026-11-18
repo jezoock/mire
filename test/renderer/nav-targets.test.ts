@@ -12,7 +12,7 @@ import {
   relaysPadKey,
   type ElementLike,
 } from '../../src/renderer/nav/targets.ts';
-import { PAD_HINTS, padHintsHtml } from '../../src/renderer/nav/gamepad-data.ts';
+import { PAD_HINTS, padHints } from '../../src/renderer/nav/gamepad-data.ts';
 
 interface Fake extends ElementLike {
   name: string;
@@ -129,7 +129,7 @@ describe('nav/targets : navigation par colonnes', () => {
 
   it('le rappel de la manette en colonnes est celui des listes (aucun nouveau texte)', () => {
     assert.deepEqual(PAD_HINTS.columns, PAD_HINTS.list);
-    assert.equal(padHintsHtml('columns', 'xbox'), padHintsHtml('list', 'xbox'));
+    assert.deepEqual(padHints('columns', 'xbox'), padHints('list', 'xbox'));
   });
 
   it('un focus différé cède à une flèche pressée pendant l’attente ou à un focus placé ailleurs (P4-03b)', () => {
