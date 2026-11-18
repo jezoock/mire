@@ -130,8 +130,10 @@
   &__palette {
     display: grid;
     gap: ds-spacing(2);
+    height: auto;
     padding: ds-spacing(2);
     text-align: left;
+    white-space: normal;
 
     &[aria-pressed='true'] {
       outline: 2px solid var(--text);
@@ -213,8 +215,10 @@
   &__theme {
     display: grid;
     gap: 2px;
-    max-width: 320px;
+    max-width: 360px;
+    height: auto;
     text-align: left;
+    white-space: normal;
 
     &[aria-pressed='true'] {
       outline: 2px solid var(--text);
