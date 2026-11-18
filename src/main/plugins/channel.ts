@@ -47,7 +47,8 @@ interface NodeStylePort {
 
 interface WebStylePort {
   postMessage(message: unknown): void;
-  onmessage: ((e: { data: unknown }) => void) | null;
+  // MessagePort du navigateur : (this, MessageEvent) => any.
+  onmessage: ((e: any) => void) | null;
   close(): void;
 }
 

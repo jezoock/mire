@@ -7,13 +7,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { adaptPort, callableMethod, createChannel, type Channel } from '../../src/main/plugins/channel.ts';
+import { adaptPort, callableMethod, createChannel, type Channel, type RequestHandler } from '../../src/main/plugins/channel.ts';
 import { startRuntime } from '../../src/main/plugins/runtime.ts';
 
 const opened: Channel[] = [];
 after(() => opened.forEach((c) => c.close()));
 
-function pair(handle?: Parameters<typeof createChannel>[1]['handle'], options: { timeout?: number; onEvent?: (n: string, d: unknown) => void } = {}) {
+function pair(handle?: RequestHandler, options: { timeout?: number; onEvent?: (n: string, d: unknown) => void } = {}) {
   const { port1, port2 } = new MessageChannel();
   const a = createChannel(adaptPort(port1), { timeout: options.timeout ?? 1000 });
   const b = createChannel(adaptPort(port2), { handle, onEvent: options.onEvent });

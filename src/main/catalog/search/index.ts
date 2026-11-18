@@ -26,7 +26,7 @@ export interface SearchServiceOptions {
   engine: Pick<TagEngine, 'peek' | 'keys' | 'element' | 'onChange'>;
   catalog: Pick<Catalog, 'get'>;
   pages: Pick<Pages, 'list'>;
-  registry: Pick<Registry, 'tagName' | 'infoSearch'>;
+  registry: Pick<Registry, 'tagName' | 'infoSearch'> & Partial<Pick<Registry, 'onChange'>>;
   /** Texte des catalogues (noms des pages, groupe des éléments hors pages). */
   translate: (key: string) => string;
 }
@@ -67,8 +67,13 @@ export function infoTexts(infos: Readonly<Effective['infos']>, infoSearch: Regis
 
 export function createSearch({ engine, catalog, pages, registry, translate }: SearchServiceOptions) {
   let entries: Map<ElementKey, Entry> | null = null;
-  // Ce que la recherche lit de chaque info, demandé une fois au registre (les infos du cœur ne changent pas).
+  // Ce que la recherche lit de chaque info, demandé une fois au registre ; oublié quand un plugin déclare ou retire
+  // les siennes (les textes préparés sont alors refaits à la recherche suivante).
   const how = new Map<string, ReturnType<Registry['infoSearch']>>();
+  registry.onChange?.(() => {
+    how.clear();
+    entries = null;
+  });
   const infoSearch = (id: string) => {
     if (!how.has(id)) how.set(id, registry.infoSearch(id));
     return how.get(id) ?? null;
