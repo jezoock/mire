@@ -782,6 +782,10 @@ les règles par extension de la configuration.
   (`null` : retour à l'automatique ; une valeur est ramenée au type de l'info, une valeur invalide ignorée) rendent
   l'élément, ou `null` s'il n'est pas dans le catalogue (la modification est gardée). `tagsList()` : tags du cœur, de
   l'utilisateur, puis ceux posés sans être déclarés, avec le nombre d'éléments.
+- **Éditeurs** (P4-22) : `catalogPickImage(clé, 'poster' | 'background')` (image choisie sur le disque, copiée dans
+  les données de Mire ; l'interface ne donne jamais de chemin), `catalogClearImages(clé, [images])` (retour à
+  l'automatique) et `catalogReset(clé)` (tags, infos et images reviennent à l'automatique). Un titre saisi à la main
+  (info `title` d'origine `user`) devient le nom affiché de l'élément (`nameOf`), et sert au tri par nom des pages.
 - **Modifications à la main** (`overrides.ts`) : `userData/catalog/overrides.json`, écrit aussitôt. Il reprend
   l'ancien `meta/meta.json` au premier démarrage (`legacy-meta.ts`) :
 
