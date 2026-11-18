@@ -75,7 +75,7 @@ export function railEntries(pages: readonly PageDefinition[] | null, t: Translat
   }
   return [
     screen(t, 'search', 'search', 'search', VIEW_COLORS.search as string),
-    { ...screen(t, 'home', 'home', '', VIEW_COLORS.home as string) },
+    screen(t, 'home', 'home', '', VIEW_COLORS.home as string),
     ...pageEntries,
     screen(t, 'center', 'downloads', 'download', MUTED, true),
     { key: 'openFile', kind: 'openFile', label: t('shell.menu.openFile'), icon: 'folder', color: MUTED, bottom: true },

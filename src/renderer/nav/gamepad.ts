@@ -6,7 +6,7 @@
 import { $ } from '../core/dom.ts';
 import { S } from '../state/index.ts';
 import { toast } from '../ui/toast.ts';
-import { t } from '../i18n/index.ts';
+import { i18n, t } from '../i18n/index.ts';
 import type { Controllers } from '../controllers/index.ts';
 import { handleKey } from './keyboard.ts';
 import { activeDialog, closeDialog, inColumns, moveFocus, relayPadKey, stickScroll } from './focus.ts';
@@ -153,6 +153,8 @@ function pollPads(now: number): void {
 export function initGamepad(h: GamepadHooks, controllers: GamepadControllers): void {
   hooks = h;
   ctrl = controllers;
+  // L'aide de la manette suit la langue de l'interface.
+  i18n.onChange(() => updatePadbar(true));
   window.addEventListener('gamepadconnected', (e) => setPad(e.gamepad));
   window.addEventListener('gamepaddisconnected', () => {
     const left = connectedPads();

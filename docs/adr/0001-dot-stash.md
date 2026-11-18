@@ -141,8 +141,8 @@ utilisés par Mire dans les cinq palettes : chaque cadre porte le `data-palette`
 - **Appel** : `<ds-trigger target="mire-app" action='go:[{"section":"videos"}]'>`. Le registre
   (`controllers/registry.ts`) donne à chaque élément `mire-*` les actions de son contrôleur : un composant qui a un
   contrôleur émet `mireConnect` à sa connexion (sans rien importer de l'interface), le registre lui ajoute alors les
-  méthodes. `<mire-app>` est dans `index.html` (caché, vide jusqu'à la coquille, P4-07), pour que les `ds-trigger`
-  le trouvent. La cible d'un `ds-trigger` est toujours la balise d'un `mire-*` : `npm run check:actions` le vérifie,
+  méthodes. `<mire-app>`, la coquille (P4-07), est le seul contenu de `index.html` : une seule balise par contrôleur,
+  pour que les `ds-trigger` la trouvent (`document.querySelector`). La cible d'un `ds-trigger` est toujours la balise d'un `mire-*` : `npm run check:actions` le vérifie,
   avec l'existence de chaque méthode.
 - **Erreurs** : une action qui échoue rejette ; le registre l'attrape, l'écrit dans la console et affiche un message
   (`app.errors.actionFailed`). Les échecs attendus (réponse `{ ok: false, error }` du processus principal) gardent leur
@@ -163,7 +163,7 @@ utilisés par Mire dans les cinq palettes : chaque cadre porte le `data-palette`
 `src/renderer/i18n/` : au démarrage, `api.i18nGet()` donne la langue retenue et les catalogues ; le moteur de
 `@mire/shared/i18n` fournit `t()` aux contrôleurs (et aux pages qui tirent des catalogues les textes des
 composants). Le service suit `api.onLanguageChange` et tient à jour `lang` sur `<html>`. Les vues historiques, en
-français jusqu'à leur remplacement, sont marquées `lang="fr"` (sur `<body>`) : un lecteur d'écran les lit en
+français jusqu'à leur remplacement, sont marquées `lang="fr"` (sur leurs hôtes `mire-legacy-view` depuis P4-07, sur `<body>` avant) : un lecteur d'écran les lit en
 français quelle que soit la langue de l'interface, et leur rendu ne change pas.
 
 ### 10. Navigation clavier et manette sur les composants (P4-03)

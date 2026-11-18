@@ -129,14 +129,16 @@ deux secondes au plus.
 ## Interface (renderer)
 
 `src/renderer/index.html` charge le script de l'interface, `dist/renderer/main.js`, construit par esbuild à partir
-de `main.js` (format IIFE, sans script en ligne ni `eval`, à cause de la CSP). `main.js` importe `app.js`, qui importe
-les modules, et définit les composants `mire-*` de `@mire/ui`. La page charge aussi, en module, le chargeur des
+de `main.js` (format IIFE, sans script en ligne ni `eval`, à cause de la CSP). La page ne contient que `<mire-app>`, la
+coquille (P4-07) : `main.js` définit les composants `mire-*` de `@mire/ui`, attend le rendu de la coquille (menu,
+en-tête, hôtes des vues historiques), puis importe `app.js`, qui importe les modules. La page charge aussi, en module, le chargeur des
 composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui` (`ui/mire-ui.css`) : voir
 `docs/adr/0001-dot-stash.md`.
 
 | Dossier ou fichier | Rôle |
 | --- | --- |
 | `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
+| `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>` et des vues historiques (`mire-legacy-view`), entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une cible sans vue à elle s'affiche dans la vue historique qui en tient lieu. |
 | `controllers/` | Contrôleurs (P4-04) : un par écran (`mire-app`, `mire-page`…), dont les méthodes publiques sont les actions de Mire, appelées par `ds-trigger`, par la navigation et les lecteurs ; registre et pont des `data-action` historiques (`bridge.ts`). Voir `docs/adr/0001-dot-stash.md` § 8. |
 | `i18n/` | Traduction de l'interface : catalogues reçus du processus principal, `t()`, langue courante, `lang` du document. |
 | `core/` | Outils sans état : accès au DOM et échappement (`dom.ts`), mise en forme (`format.ts`), icônes (`icons.ts`), couleurs (`colors.ts`), adresse de lecture d'un média (`media.ts`). |

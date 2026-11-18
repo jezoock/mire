@@ -1052,4 +1052,163 @@ describe('Test de fumée de Mire', () => {
     if (widevine.length) console.log(`Widevine (refusé par le proxy du test) : ${[...new Set(widevine)].join(', ')}`);
     assert.deepEqual({ chromium: chromiumRequests.filter((u) => !isWidevine(u)), node }, { chromium: [], node: [] });
   });
+
+  // Coquille (P4-07) : le menu (mire-rail) dans les quatre positions, rétractable, et parcouru à la manette.
+  describe('coquille : menu dans les quatre positions et à la manette (P4-07)', () => {
+    const PAD = { a: 0, select: 8, up: 12, down: 13, left: 14, right: 15 };
+    // Entrées du menu, dans l'ordre (data-key) : écrans du cœur, pages épinglées, Centre, outils, Réglages.
+    const KEYS = [
+      'screen:search',
+      'screen:home',
+      'movies',
+      'music',
+      'images',
+      'streaming',
+      'tv',
+      'games',
+      'screen:center',
+      'openFile',
+      'screen:settings',
+      'quit',
+    ];
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const focusedKey = () => page.evaluate(() => document.activeElement?.closest('#rail [data-key]')?.dataset.key ?? null);
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    // Place du menu et de l'écran : le menu touche le bon bord, l'écran ne le chevauche pas.
+    const layout = () =>
+      page.evaluate(() => {
+        const r = document.getElementById('rail').getBoundingClientRect();
+        const m = document.querySelector('.main').getBoundingClientRect();
+        const box = (b) => ({ left: Math.round(b.left), top: Math.round(b.top), right: Math.round(b.right), bottom: Math.round(b.bottom) });
+        return { rail: box(r), main: box(m), w: innerWidth, h: innerHeight };
+      });
+    // L'entrée qui a le focus est entièrement visible dans la zone des entrées (carrousel compris).
+    const focusVisible = () =>
+      page.evaluate(() => {
+        const a = document.activeElement.getBoundingClientRect();
+        const z = document.getElementById('rail-items').getBoundingClientRect();
+        return a.left >= z.left - 1 && a.right <= z.right + 1 && a.top >= z.top - 1 && a.bottom <= z.bottom + 1;
+      });
+    async function setMenu(position, autohide = false) {
+      // Par l'action du contrôleur (routeur de la coquille) : le menu rétractable peut être caché.
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await page.waitForFunction(() => document.body.dataset.section === 'settings');
+      await page.locator(`#view [data-action="menu-pos"][data-id="${position}"]`).click();
+      await page.waitForFunction((p) => document.body.classList.contains(`menu-${p}`), position);
+      const box = page.locator('#view [data-ui="menu-autohide"]');
+      if ((await box.isChecked()) !== autohide) await box.setChecked(autohide);
+      await page.waitForFunction((a) => document.body.classList.contains('menu-auto') === a, autohide);
+      await settle();
+    }
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(() => (location.hash = ''));
+      // Rendu des composants avant toute touche : le menu et ses ds-trigger ont la classe hydrated.
+      await page.waitForFunction(() => {
+        const rail = document.querySelector('mire-rail');
+        return rail?.classList.contains('hydrated') && [...rail.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'));
+      });
+    });
+
+    after(async () => {
+      await page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+      });
+      await setMenu('left', false);
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('les entrées du menu : écrans du cœur, pages épinglées, Centre et outils', async () => {
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#rail .rail-item')].map((b) => b.dataset.key)), KEYS);
+      assert.equal(await page.locator('#rail [data-key="screen:center"] .rail-badge').count(), 0, 'aucun téléchargement en cours');
+    });
+
+    it('le menu se place à gauche, à droite, en haut et en bas, sans chevaucher l’écran', async () => {
+      for (const position of ['right', 'top', 'bottom', 'left']) {
+        await setMenu(position);
+        const { rail, main, w, h } = await layout();
+        const edge = { left: rail.left === 0, right: rail.right === w, top: rail.top === 0, bottom: rail.bottom === h }[position];
+        assert.ok(edge, `${position} : ${JSON.stringify(rail)}`);
+        const apart = { left: main.left >= rail.right, right: main.right <= rail.left, top: main.top >= rail.bottom, bottom: main.bottom <= rail.top }[
+          position
+        ];
+        assert.ok(apart, `${position} : l'écran chevauche le menu ${JSON.stringify({ rail, main })}`);
+        // Barre latérale sur toute la hauteur, carrousel sur toute la largeur.
+        if (position === 'left' || position === 'right') assert.equal(rail.bottom - rail.top, h, position);
+        else assert.equal(rail.right - rail.left, w, position);
+        assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:settings');
+      }
+      assert.deepEqual(errors, []);
+    });
+
+    it('rétractable : caché, il s’ouvre quand le focus y arrive et se referme quand il part', async () => {
+      await setMenu('left', true);
+      await page.locator('#view .focusable').first().focus();
+      await page.waitForFunction(() => !document.body.classList.contains('menu-open'));
+      await settle();
+      assert.ok((await layout()).rail.right <= 0, 'le menu est caché');
+      await page.locator('#rail [data-key="screen:home"]').focus();
+      await page.waitForFunction(() => document.body.classList.contains('menu-open'));
+      await settle();
+      assert.equal((await layout()).rail.left, 0, 'le menu est ouvert');
+      await page.locator('#view .focusable').first().focus();
+      await page.waitForFunction(() => !document.body.classList.contains('menu-open'));
+      await setMenu('left', false);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt le menu (barre latérale et carrousel), A ouvre, Affichage y revient', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
+      // Aide de la manette (mire-padbar) : textes des catalogues.
+      assert.ok((await page.locator('#padbar .ph').count()) >= 4);
+      for (const [position, next] of [
+        ['left', 'down'],
+        ['top', 'right'],
+      ]) {
+        await setMenu(position);
+        await page.locator('#rail [data-key="screen:search"]').focus();
+        const seen = [await focusedKey()];
+        for (let i = 1; i < KEYS.length; i++) {
+          await padPress(next);
+          seen.push(await focusedKey());
+          assert.ok(await focusVisible(), `${position} : ${seen.at(-1)} est visible`);
+        }
+        assert.deepEqual(seen, KEYS, position);
+      }
+      // A ouvre l'entrée choisie ; Affichage ramène au menu, sur l'entrée affichée.
+      await page.locator('#rail [data-key="music"]').focus();
+      await padPress('a');
+      await page.waitForFunction(() => document.body.dataset.section === 'music');
+      await page.locator('#view .focusable').first().focus();
+      await padPress('select');
+      assert.equal(await focusedKey(), 'music');
+      assert.deepEqual(errors, []);
+    });
+  });
 });
