@@ -235,8 +235,11 @@ ni dossier, ni fichier, ni hôte.
   toutes les requêtes en attente quand l'autre côté disparaît ; méthodes refusées (`_…`, `constructor`, noms
   d'`Object.prototype`, propriétés qui ne sont pas des fonctions). Codes stables : `timeout`, `cancelled`,
   `not-found`, `plugin-error`, `host-gone`, `not-available`.
-- **Contexte** : `log` (journal du plugin) et `events.on` (événements de Mire : `language`) ; `settings.get` rend les
-  valeurs par défaut du manifeste ; `http`, `files` et `storage` refusent avec `not-available` (P3-04).
+- **Contexte** (P3-04) : `log` (journal du plugin) et `events.on` (événements de Mire : `language`) restent dans le
+  runtime ; `settings.get` lit les réglages reçus au chargement, tenus à jour par l'événement `settings`
+  (`onChange`) ; `http`, `files` et `storage` sont relayés au processus principal (cible `ctx`, méthode
+  `http.request`, `files.walk`…), par **le port du plugin** : `context.ts` y applique les permissions du plugin
+  auquel ce port est attribué, jamais d'après un champ du message. Voir « Contexte et permissions des plugins ».
 - **Pannes** : une exception (requête, lot, ou erreur non rattrapée du Worker), une requête sans réponse dans son
   délai, un chien de garde sans réponse (ping toutes les 250 ms, délai 1 s) ou un hôte planté (le plugin qui avait une
   requête en cours ; les autres plugins de l'hôte redémarrent) : le plugin est désactivé, son Worker arrêté, l'erreur
@@ -251,8 +254,15 @@ ni dossier, ni fichier, ni hôte.
   les catalogues à jour) ; tags automatiques (`taggers.ts`) au moteur de tags : le moteur appelle ses contributions de
   façon synchrone, le pont rend le dernier résultat connu de chaque élément et calcule les éléments nouveaux ou changés
   par lots de 500 dans l'hôte, puis fait recalculer ces éléments ; seuls les tags et infos déclarés par la
-  contribution sont gardés, au type déclaré. Les autres contributions de code (`sources`, `metadata`, `search`,
-  `webExtensions`, `downloaders`) sont dans le registre et appelables par messages (`service.call`) ; les
+  contribution sont gardés, au type déclaré. `sources`, `metadata` et `search` sont branchées par `bridges.ts`
+  (P3-04) : chaque source active est analysée à son activation (emplacement `null` en attendant les réglages de
+  P4-20) et ses éléments vont au catalogue sous `{ plugin: <id>, instance: <contribution> }`, puis le quittent à sa
+  désactivation ; les fournisseurs d'infos en ligne s'ajoutent après les quatre du cœur (`extraProviders` du moteur) ;
+  `pluginBridges.search(query)` interroge les fournisseurs de recherche (l'écran Recherche, P4-12, les affichera).
+  Ce qu'un plugin rend y est vérifié d'après son niveau : un plugin de code limité ne fournit ni programme ni jeu à
+  lancer, ni fichier local hors de ses dossiers accordés, et ses clés sont préfixées par `plugin:<id>|` ; une fiche
+  porte la source du plugin, une image seulement en `http(s)`. `webExtensions` et `downloaders` sont dans le registre
+  et appelables par messages (`service.call`) ; les
   contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles, packs, sites) y sont exposées
   par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec leur tâche.
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
@@ -475,6 +485,38 @@ gestionnaire n'est installé **que sur la session de l'hôte isolé**, jamais su
   du code public, sans secret ; la sandbox du système n'est éprouvée que sur une vraie machine (ADR 0002). Un plugin
   `privileged` (inclus seulement) tourne avec Node dans le processus principal : ce n'est pas un isolement.
 
+### Contexte et permissions des plugins
+
+P3-04, ADR 0002 (« Pour P3-04 »). Le plugin ne fait rien lui-même : tout passe par `ctx`, relayé par son port, et
+s'applique dans le processus principal (`src/main/plugins/context.ts`, `permissions.ts`) d'après le plugin auquel le
+port est attribué. Aucune vérification n'est laissée à l'hôte.
+
+- **Niveau** : `grantedPermissions` ne donne une permission sensible (`localNetwork`, `launch`, `webViews`,
+  `deleteFiles`) qu'au niveau `privileged`, même à un manifeste qui aurait échappé à la vérification (qui la refuse
+  déjà) ; un plugin `data` n'a rien.
+- **`http`** : client du cœur (`net/http.ts`, identité de Mire, ni cookie ni hôte forcé). Seuls `http:` et `https:`,
+  sans nom d'utilisateur ; hôte exact ou sous-domaine d'une entrée `*.domaine` (pas le domaine lui-même) ; adresses
+  IP, noms et adresses du réseau local refusés sans `localNetwork`. Les redirections sont suivies à la main (5 au
+  plus), chacune vérifiée de même. `set-cookie` n'est pas rendu.
+- **`files`** : demande `folders`. `requestFolder` ouvre la boîte du système, titrée du nom du plugin ; le dossier
+  choisi est mémorisé pour ce plugin dans `plugins/state.json`. Chaque chemin est vérifié par une politique d'accès
+  propre au plugin (`createAccessPolicy` sur ses seuls dossiers : celle de l'interface n'est jamais élargie), puis une
+  seconde fois une fois les liens résolus. `walk` parcourt dans le processus principal sans suivre les liens.
+- **`storage`** : `userData/plugin-data/<id>/storage.json`, écriture atomique et différée (`json-store.ts`), écrite à
+  la fermeture ; 1 000 clés, 8 Mio en tout.
+- **`settings`** : `plugins.<id>` de la configuration, d'après le `settings` du manifeste (`settings.ts`). Un réglage
+  `secret` est rangé `{ "$secret", "encrypted" }`, chiffré par `safeStorage` quand le système le permet ; il n'est
+  jamais rendu à l'interface (`getConfig`, `saveConfig`), ni exporté, ni effacé par un import, ni écrit dans un
+  journal ou un message d'erreur. L'interface ne peut pas écrire `plugins` (ce qu'elle renvoie est ignoré).
+  `service.setSetting` change un réglage (pour P4-20).
+- **Bornes** (`LIMITS`) : requête du plugin 1 Mio (en JSON) ; corps HTTP ou fichier relayé 8 Mio ; 8 requêtes du
+  contexte en cours par plugin, 64 en attente, au-delà `busy` ; délai HTTP 15 s (60 s au plus) ; `walk` 10 000
+  fichiers (50 000 au plus). Côté ponts (`BRIDGE_LIMITS`) : 50 000 éléments par analyse, résultat de recherche 1 Mio.
+- **Codes d'erreur** rendus au plugin : `refused`, `too-large`, `busy`, `http-error`, `io-error` (en plus de ceux du
+  canal).
+- **Limite** : un hôte déclaré qui se résout vers une adresse locale n'est pas arrêté (la vérification porte sur le
+  nom) ; à reprendre avec la confiance des dépôts (P3-08).
+
 ### Ce qu'il ne faut jamais affaiblir
 
 - `contextIsolation`, `sandbox` et `nodeIntegration: false`, pour la fenêtre comme pour les vues web ;
@@ -541,7 +583,8 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
 | `cache/roms/` | Jeux en ligne téléchargés pour être lancés | jeux (`src/main/games/`) |
 | `plugins/<id>/<version>/` | Plugins installés (posés à la main pour l'instant ; installation par le Centre : P3-07) | — |
-| `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver (`{ version, plugins: { <id>: { enabled, fault? } } }`) ; absent tant que rien n'a changé | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
+| `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver, dossiers accordés (`{ version, plugins: { <id>: { enabled, fault?, folders? } } }`) ; absent tant que rien n'a changé | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
+| `plugin-data/<id>/storage.json` | Stockage d'un plugin (`ctx.storage`) : `{ version, values }` | `src/main/plugins/plugin-storage.ts`, stockage JSON (écriture différée) |
 | `plugins/logs/<id>.log` | Journal de chaque plugin (son `ctx.log`, refus, pannes), 256 Ko au plus puis `<id>.log.1` | `src/main/plugins/journal.ts` |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | service d'archives (`src/main/archive/`) |
 
