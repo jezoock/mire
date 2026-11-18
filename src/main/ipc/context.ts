@@ -16,6 +16,7 @@ import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
 import type { WebManager } from '../web/index.ts';
+import type { PluginService } from '../plugins/service.ts';
 
 // Fonction d'un service, passée telle quelle (types encore larges).
 type Fn = (...args: any[]) => any;
@@ -52,6 +53,8 @@ export interface MainContext {
   readonly search: Search;
   /** Renommer, déplacer, supprimer sous les dossiers locaux de la configuration (P2-10). */
   readonly fileManager: FilesService;
+  /** Hôte de plugins (P3-03). */
+  readonly plugins: Pick<PluginService, 'list' | 'setEnabled'>;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;

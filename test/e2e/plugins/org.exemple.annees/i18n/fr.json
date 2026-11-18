@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "fr",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Années"
+    },
+    "tags": {
+      "date": "Daté"
+    },
+    "infos": {
+      "millesime": "Millésime"
+    }
+  }
+}

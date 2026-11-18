@@ -36,6 +36,7 @@ export interface MainServices {
   lists: Lists;
   search: Search;
   fileManager: FilesService;
+  plugins: MainContext['plugins'];
   access: AccessPolicy;
   window: Pick<MainWindow, 'get' | 'themeBackground'>;
   pending: PendingFiles;
@@ -67,6 +68,7 @@ export function mainContext(s: MainServices): MainContext {
     lists: s.lists,
     search: s.search,
     fileManager: s.fileManager,
+    plugins: s.plugins,
     access: s.access,
     get mainWindow() {
       return s.window.get();

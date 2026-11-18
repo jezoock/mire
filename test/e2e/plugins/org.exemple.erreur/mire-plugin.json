@@ -1,0 +1,18 @@
+{
+  "id": "org.exemple.erreur",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "erreur",
+        "main": "erreur.mjs",
+        "tags": ["erreur"]
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

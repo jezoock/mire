@@ -149,6 +149,28 @@ export interface LanguageInfo {
   catalogs: Record<string, Catalog>;
 }
 
+/** Un plugin trouvé par l'hôte de plugins (P3-03) : ce que le futur Centre (P4-18) affiche. */
+export interface PluginSummary {
+  id: string;
+  /** Version (`null` : manifeste illisible d'un plugin inclus). */
+  version: string | null;
+  /** `bundled` : livré avec Mire (`resources/plugins/`) ; `installed` : `userData/plugins/`. */
+  origin: 'bundled' | 'installed';
+  /** Niveau de sécurité (D-18), `null` si le manifeste est illisible. */
+  level: 'data' | 'code' | 'privileged' | null;
+  /** Nom affiché (textes du plugin), ou l'identifiant. */
+  name: string;
+  /** Voulu actif (état mémorisé). */
+  enabled: boolean;
+  /** `active` ; `disabled` à la demande ; `fault` : désactivé par une erreur ; `refused` : invalide ou incompatible. */
+  status: 'active' | 'disabled' | 'fault' | 'refused';
+  /** Raison du refus ou de la désactivation, dans la langue de l'interface. */
+  message: string | null;
+  contributions: { kind: string; id: string }[];
+  /** Le changement prendra effet au prochain démarrage de Mire. */
+  restartRequired: boolean;
+}
+
 export interface Bounds {
   x: number;
   y: number;
@@ -323,6 +345,10 @@ export interface IpcMethods {
   filesRename(path: string, name: string): Outcome<{ path: string }>;
   filesMove(path: string, folder: string): Outcome<{ path: string }>;
   filesRemove(path: string): Outcome<{ path: string }>;
+  // Plugins (P3-03) : plugins trouvés et leur état ; activer ou désactiver (à chaud quand c'est possible). `null` :
+  // plugin inconnu.
+  pluginsList(): PluginSummary[];
+  pluginsSetEnabled(id: string, enabled: boolean): PluginSummary | null;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -465,6 +491,8 @@ export const IPC_METHODS = {
   filesRename: 'files:rename',
   filesMove: 'files:move',
   filesRemove: 'files:remove',
+  pluginsList: 'plugins:list',
+  pluginsSetEnabled: 'plugins:setEnabled',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

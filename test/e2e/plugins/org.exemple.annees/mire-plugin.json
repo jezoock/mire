@@ -1,0 +1,23 @@
+{
+  "id": "org.exemple.annees",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "annee",
+        "main": "annee.mjs",
+        "tags": ["date"],
+        "infos": {
+          "millesime": {
+            "type": "text"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

@@ -1,7 +1,8 @@
 /**
  * Registre des tags et des infos : identifiants du cœur (anglais, stables), nom affiché tiré des catalogues de
  * textes (`catalog.tags.<id>`, `catalog.infos.<id>`), type de valeur d'une info, et tags créés par l'utilisateur
- * (identifiant : nom simplifié). Les plugins y déclareront les leurs (phase 3).
+ * (identifiant : nom simplifié). Les plugins actifs y déclarent les leurs (`tags` et `infos` de leurs contributions,
+ * P3-03) ; le cœur garde la priorité sur un identifiant qu'il déclare aussi.
  */
 import { slug, type InfoType, type InfoValue } from '@mire/shared';
 import type { InfoDeclaration } from '@mire/plugin-sdk';
@@ -102,10 +103,31 @@ export interface UserTag {
   name: string;
 }
 
+/** Tags et infos déclarés par un plugin, et le préfixe de ses textes dans les catalogues (`pluginTexts.<id>.`). */
+export interface PluginDeclarations {
+  tags: readonly string[];
+  infos: Readonly<Record<string, InfoDeclaration>>;
+  textPrefix: string;
+}
+
 /** Registre : tags du cœur et de l'utilisateur, infos du cœur. `translate` donne les noms affichés. */
 export function createRegistry(translate: (key: string) => string) {
   const core = new Set<string>(CORE_TAGS);
   let user: Record<string, UserTag> = {};
+  // Plugins actifs, dans l'ordre d'activation : le premier qui déclare un tag ou une info en donne le nom et le type.
+  const plugins = new Map<string, PluginDeclarations>();
+  const listeners = new Set<() => void>();
+  const pluginTag = (id: string) => [...plugins.values()].find((p) => p.tags.includes(id));
+  const pluginInfo = (id: string) => [...plugins.values()].find((p) => Object.hasOwn(p.infos, id));
+  const declaration = (id: string): InfoDeclaration | undefined => {
+    const own = infoDeclaration(id);
+    if (own) return own;
+    const p = pluginInfo(id);
+    return p ? p.infos[id] : undefined;
+  };
+  const changed = () => {
+    for (const l of listeners) l();
+  };
 
   return {
     /** Tags créés par l'utilisateur (lus depuis `overrides.json`). */
@@ -120,13 +142,37 @@ export function createRegistry(translate: (key: string) => string) {
     /** Nom affiché d'un tag : catalogue de textes pour le cœur, nom saisi pour l'utilisateur, identifiant sinon. */
     tagName(id: string): string {
       if (core.has(id)) return translate(`catalog.tags.${id}`);
-      return user[id]?.name ?? id;
+      if (user[id]) return user[id].name;
+      const p = pluginTag(id);
+      return p ? translate(`${p.textPrefix}tags.${id}`) : id;
     },
     /** Nom affiché d'une info. */
-    infoName: (id: string): string => (Object.hasOwn(CORE_INFOS, id) ? translate(`catalog.infos.${id}`) : id),
-    infoType: (id: string): InfoType | undefined => infoDeclaration(id)?.type,
+    infoName(id: string): string {
+      if (Object.hasOwn(CORE_INFOS, id)) return translate(`catalog.infos.${id}`);
+      const p = pluginInfo(id);
+      return p ? translate(`${p.textPrefix}infos.${id}`) : id;
+    },
+    infoType: (id: string): InfoType | undefined => declaration(id)?.type,
     /** Ce que la recherche lit de l'info (`searchedAs`). */
-    infoSearch: (id: string): ReturnType<typeof searchedAs> => searchedAs(infoDeclaration(id)),
+    infoSearch: (id: string): ReturnType<typeof searchedAs> => searchedAs(declaration(id)),
+    /** Tag déclaré par un plugin actif. */
+    isPluginTag: (id: string): boolean => !core.has(id) && !!pluginTag(id),
+    /** Infos déclarées par un plugin actif (en plus de celles du cœur). */
+    pluginInfo: (id: string): InfoDeclaration | undefined => pluginInfo(id)?.infos[id],
+    /** Un plugin activé déclare ses tags et ses infos ; les abonnés (recherche) oublient ce qu'ils en avaient retenu. */
+    declarePlugin(pluginId: string, decl: PluginDeclarations): void {
+      plugins.set(pluginId, { tags: [...decl.tags], infos: { ...decl.infos }, textPrefix: decl.textPrefix });
+      changed();
+    },
+    /** Un plugin désactivé retire ses déclarations. */
+    removePlugin(pluginId: string): void {
+      if (plugins.delete(pluginId)) changed();
+    },
+    /** Abonnement aux changements de déclarations ; rend de quoi se désabonner. */
+    onChange(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
   };
 }
 

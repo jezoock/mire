@@ -71,6 +71,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `i18n/` | Langue de l'interface (`index.ts`), traduction des textes du processus principal (`current.ts`, fonction `t`), langue des fiches (`metadata.ts`). |
 | `fs/` | Parcours générique d'une arborescence de dossiers (`walk.ts`). |
 | `files/` | Gestion des fichiers (P2-10) : renommer, déplacer, mettre à la corbeille sous les dossiers locaux de la configuration (`service.ts`, `guard.ts`, `roots.ts`) ; le catalogue suit (`follow.ts`). |
+| `plugins/` | Hôte de plugins (P3-03) : découverte et vérification, état, journal par plugin, registre des contributions, tags automatiques des plugins, canal et runtime d'un plugin, hôte isolé (page et Worker dans `host/`, construits à part dans `dist/plugin-host/`), plugins sensibles dans ce processus, protocole `mire-plugin://`. Voir « Hôte de plugins ». |
 | `lib/` | Petites fonctions pures : chemin sous un dossier autorisé (`paths.ts`), arguments d'une ligne de commande (`args.ts`), texte (`text.ts`), entrées des vues web (`web-entry.ts`). |
 
 Les preloads sont dans `src/preload/` (JavaScript, CommonJS) :
@@ -205,6 +206,57 @@ de plugins : `packages/plugin-sdk/README.md`.
   (aucune condition à prévoir pour Stencil). `npm pack -w @mire/plugin-sdk` construit `dist/` (`tsconfig.build.json` :
   JavaScript et déclarations) et produit l'archive ; `test/plugin-sdk/pack.test.ts` l'installe dans un dossier vide,
   en compile les types et lance l'outil.
+
+## Hôte de plugins
+
+`src/main/plugins/` (P3-03, ADR `docs/adr/0002-hote-isole.md`). Le service (`service.ts`) est créé par la racine de
+composition après la recherche ; `start()` est lancé après l'ouverture de la fenêtre. Sans plugin, rien n'est créé :
+ni dossier, ni fichier, ni hôte.
+
+- **Découverte** (`discovery.ts`) : plugins inclus `resources/plugins/<id>/` (`process.resourcesPath` une fois
+  empaqueté ; le dossier est construit par P3-05) et installés `userData/plugins/<id>/<version>/` (la version la plus
+  haute ; à version égale, l'inclus). Le dossier d'un plugin et chaque fichier qu'il contient doivent rester sous leur
+  racine une fois les liens symboliques résolus ; au plus 5 000 fichiers sur 16 niveaux.
+- **Vérification** : `validatePluginDir` du SDK (`official` pour un plugin inclus), identifiant et version d'accord
+  avec le dossier, `engines.mire` (`satisfies` de `semver.ts`, écrit à la main : `^`, `~`, comparateurs, `1.x`, `*`,
+  `||`, pré-publications à la manière de npm) contre `app.getVersion()`. Le niveau est vérifié d'après le contenu :
+  un plugin `data` ne contient aucun fichier de code (`.js`, `.mjs`, `.cjs`, `.wasm`, `.node`) ; un plugin `code` ou
+  `privileged` a au moins une contribution de code. Un plugin `privileged` installé est refusé : seuls les plugins
+  inclus tournent dans le processus principal tant que la signature et la confiance des dépôts n'existent pas
+  (P3-07, P3-08). Textes (`i18n`, langues de Mire) et fichiers JSON des contributions de données (2 Mo au plus)
+  sont lus par le cœur. Un plugin refusé reste dans la liste, avec la raison (`plugins.refused.<code>`).
+- **Exécution** : `data`, rien ne s'exécute ; `code`, un Worker par plugin dans l'hôte isolé (`host.ts`), démarré à la
+  première demande et arrêté quand il n'a plus de plugin ; `privileged`, le runtime dans le processus principal
+  (`in-process.ts`), relié au cœur par une paire de ports : même canal, même API. Le runtime (`runtime.ts`) charge
+  l'export par défaut de chaque `main` (une `ContributionFactory`), vérifie l'identifiant de la contribution rendue,
+  répond à `runtime.ping`, `runtime.load`, `runtime.computeBatch` et aux méthodes des contributions
+  (`<nature>/<id>`), et passe son propre contexte aux méthodes du SDK qui en reçoivent un.
+- **Canal** (`channel.ts`) : requête, réponse, événement, annulation ; délai par requête (5 s) ; `host-gone` pour
+  toutes les requêtes en attente quand l'autre côté disparaît ; méthodes refusées (`_…`, `constructor`, noms
+  d'`Object.prototype`, propriétés qui ne sont pas des fonctions). Codes stables : `timeout`, `cancelled`,
+  `not-found`, `plugin-error`, `host-gone`, `not-available`.
+- **Contexte** : `log` (journal du plugin) et `events.on` (événements de Mire : `language`) ; `settings.get` rend les
+  valeurs par défaut du manifeste ; `http`, `files` et `storage` refusent avec `not-available` (P3-04).
+- **Pannes** : une exception (requête, lot, ou erreur non rattrapée du Worker), une requête sans réponse dans son
+  délai, un chien de garde sans réponse (ping toutes les 250 ms, délai 1 s) ou un hôte planté (le plugin qui avait une
+  requête en cours ; les autres plugins de l'hôte redémarrent) : le plugin est désactivé, son Worker arrêté, l'erreur
+  gardée dans son état avec un message des catalogues (`plugins.faults.<code>`), et écrite dans son journal.
+- **Activation** (`setEnabled`, IPC `pluginsSetEnabled`) : à chaud pour toutes les natures, sauf `webExtensions` et
+  `downloaders` (branchées au démarrage : `restartRequired`). L'état est mémorisé dans `userData/plugins/state.json`
+  (un plugin absent de l'état est actif). Désactiver un plugin `privileged` coupe ses ports, son code reste chargé
+  jusqu'au redémarrage.
+- **Branchements** (`registry.ts`) : tags et infos déclarés (`tags`, `infos` des contributions) au registre du
+  catalogue (`declarePlugin`, `removePlugin`), qui prévient la recherche (elle oublie ce qu'elle savait des infos) ;
+  textes au moteur de traduction sous `pluginTexts.<id, points remplacés par _>` (`setPluginTexts`, l'interface reçoit
+  les catalogues à jour) ; tags automatiques (`taggers.ts`) au moteur de tags : le moteur appelle ses contributions de
+  façon synchrone, le pont rend le dernier résultat connu de chaque élément et calcule les éléments nouveaux ou changés
+  par lots de 500 dans l'hôte, puis fait recalculer ces éléments ; seuls les tags et infos déclarés par la
+  contribution sont gardés, au type déclaré. Les autres contributions de code (`sources`, `metadata`, `search`,
+  `webExtensions`, `downloaders`) sont dans le registre et appelables par messages (`service.call`) ; les
+  contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles, packs, sites) y sont exposées
+  par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec leur tâche.
+- **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
+  rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 
 ## Contrat IPC
 
@@ -396,13 +448,42 @@ Autres points d'extension du même genre, plus internes :
   chaîne vide.
 - Fenêtres surgissantes refusées (voir `windowOpenAction`).
 
+### Hôte de plugins (`mire-plugin://`)
+
+Changement de sécurité de P3-03 (ADR 0002). **Ajout au démarrage** : `mire-plugin` est enregistré comme schéma
+privilégié avant `ready` (`standard`, `secure`, `supportFetchAPI`, `corsEnabled` ; ni `bypassCSP`, ni `stream`, ni
+service workers), dans le même appel que `media` (Electron n'en accepte qu'un ; `media://` ne change pas). Le
+gestionnaire n'est installé **que sur la session de l'hôte isolé**, jamais sur celle de la fenêtre principale ni sur
+`persist:web` : ailleurs, une adresse `mire-plugin://` ne mène à rien.
+
+- **Session** : `mire-plugins-<groupe>`, en mémoire (sans `persist:`). `webRequest` annule toute requête qui n'est pas
+  `mire-plugin:` ; permissions, appareils et téléchargements refusés.
+- **Page** : `BrowserWindow` cachée, `sandbox`, `contextIsolation`, sans Node (ni dans les Workers ni dans les
+  cadres), sans `<webview>` ; fenêtres refusées, navigation et redirections annulées, WebRTC sans UDP
+  (`disable_non_proxied_udp`). CSP de la page et des Workers : `default-src 'none'; script-src mire-plugin:;
+  worker-src mire-plugin:; connect-src mire-plugin:; base-uri 'none'; form-action 'none'`. Son preload n'expose rien
+  et ne reçoit qu'un message IPC, une fois : le port de contrôle.
+- **Protocole** (`protocol.ts`) : `GET` seulement ; `mire-plugin://host/` ne sert que `index.html`, `page.js` et
+  `worker.js` de `dist/plugin-host/` ; `mire-plugin://<id>/` ne sert que les plugins de cet hôte, chemin décodé refusé
+  s'il contient `..`, `\` ou un octet nul, chemin réel (liens résolus) refusé hors du dossier du plugin.
+- **Workers** : un par plugin, avec un port à lui ; le processus principal reconnaît le plugin par ce port, jamais
+  par un champ du message. Liste de retrait avant tout code de plugin (`host/worker.ts`) : `WebTransport`, `Worker`,
+  `SharedWorker`, et ce que les Workers d'un même hôte partagent par leur origine commune (`BroadcastChannel`,
+  `indexedDB`, `caches`, `navigator.locks`, `navigator.storage`). À revérifier à chaque montée d'Electron avec
+  `spikes/hote-isole/main.mjs`.
+- **Limites** : un plugin peut lire les fichiers d'un autre plugin du même hôte (`fetch` de `mire-plugin://<autre>/`) :
+  du code public, sans secret ; la sandbox du système n'est éprouvée que sur une vraie machine (ADR 0002). Un plugin
+  `privileged` (inclus seulement) tourne avec Node dans le processus principal : ce n'est pas un isolement.
+
 ### Ce qu'il ne faut jamais affaiblir
 
 - `contextIsolation`, `sandbox` et `nodeIntegration: false`, pour la fenêtre comme pour les vues web ;
 - la CSP `script-src 'self'` ;
 - un preload qui n'expose que le contrat ;
 - `media://` toujours derrière la politique d'accès, limitée aux dossiers autorisés ;
-- la séparation des sessions : les sites ne partagent ni la session ni le preload de l'interface.
+- la séparation des sessions : les sites ne partagent ni la session ni le preload de l'interface ;
+- l'hôte des plugins : `mire-plugin://` seulement sur ses sessions, réseau refusé, un Worker et un port par plugin,
+  liste de retrait, plugins `privileged` réservés aux plugins inclus.
 
 ### Gestion des fichiers
 
@@ -459,6 +540,9 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `src/main/web/adblock.ts` |
 | `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
 | `cache/roms/` | Jeux en ligne téléchargés pour être lancés | jeux (`src/main/games/`) |
+| `plugins/<id>/<version>/` | Plugins installés (posés à la main pour l'instant ; installation par le Centre : P3-07) | — |
+| `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver (`{ version, plugins: { <id>: { enabled, fault? } } }`) ; absent tant que rien n'a changé | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
+| `plugins/logs/<id>.log` | Journal de chaque plugin (son `ctx.log`, refus, pannes), 256 Ko au plus puis `<id>.log.1` | `src/main/plugins/journal.ts` |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | service d'archives (`src/main/archive/`) |
 
 Le dossier `userData` contient aussi les dossiers propres à Chromium (cache, cookies, `Local Storage`…), gérés

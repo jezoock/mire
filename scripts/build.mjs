@@ -9,6 +9,9 @@
  *   (packages/ui/dist/components/) puis intégrés au script de l'interface ; leur feuille de style est compilée avec
  *   le moteur SCSS de dot-stash (dist/renderer/ui/) ; le chargeur paresseux des composants ds-* est copié depuis
  *   l'archive de dot-stash (dist/renderer/vendor/dot-stash/).
+ * - hôte isolé des plugins (P3-03, docs/adr/0002-hote-isole.md) : sa page et le Worker de chaque plugin (modules ES
+ *   pour le navigateur, sans carte de source : seuls trois fichiers nommés sont servis par mire-plugin://host/), son
+ *   preload (CommonJS) et sa page HTML, dans dist/plugin-host/, à part du processus principal.
  * Usage : node scripts/build.mjs [--watch [--electron]]
  * --electron (avec --watch) : lance Mire une fois la première construction faite ; fermer Mire arrête la
  * surveillance. Les changements du processus principal demandent de relancer Mire, ceux du renderer
@@ -68,8 +71,21 @@ const renderer = {
   logLevel: 'info',
 };
 
+// Hôte isolé des plugins : page et Worker (modules ES du navigateur, sans Node ni dépendance externe).
+const pluginHost = {
+  entryPoints: { 'plugin-host/page': 'src/main/plugins/host/page.ts', 'plugin-host/worker': 'src/main/plugins/host/worker.ts' },
+  bundle: true,
+  platform: 'browser',
+  format: 'esm',
+  target: 'chrome140',
+  sourcemap: false,
+  logLevel: 'info',
+};
+
 const targets = [
   { ...common, entryPoints: { 'main/index': 'src/main/index.ts' } },
+  { ...common, sourcemap: false, entryPoints: { 'plugin-host/preload': 'src/main/plugins/host/preload.ts' } },
+  pluginHost,
   {
     ...common,
     entryPoints: { 'preload/preload': 'src/preload/preload.js', 'preload/web-preload': 'src/preload/web-preload.js' },
@@ -82,6 +98,12 @@ const CODE = /\.(?:js|mjs|ts)$/;
 // Produits par d'autres étapes que la copie : le script d'esbuild, la feuille de @mire/ui, dot-stash.
 const BUNDLE = /^(?:main\.js(?:\.map)?|ui|vendor)$/;
 const hasAssets = (dir) => fs.readdirSync(dir, { withFileTypes: true }).some((e) => (e.isDirectory() ? hasAssets(path.join(dir, e.name)) : !CODE.test(e.name)));
+
+// Page HTML de l'hôte isolé des plugins (le reste est construit par esbuild).
+function copyPluginHost() {
+  fs.mkdirSync(path.join(DIST, 'plugin-host'), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'src', 'main', 'plugins', 'host', 'index.html'), path.join(DIST, 'plugin-host', 'index.html'));
+}
 
 function copyRenderer() {
   const out = path.join(DIST, 'renderer');
@@ -99,7 +121,9 @@ const copyPlugin = {
   name: 'copie-renderer',
   setup(build) {
     build.onEnd((result) => {
-      if (!result.errors.length) copyRenderer();
+      if (result.errors.length) return;
+      copyRenderer();
+      copyPluginHost();
     });
   },
 };

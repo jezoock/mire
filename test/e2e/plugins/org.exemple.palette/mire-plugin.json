@@ -1,0 +1,17 @@
+{
+  "id": "org.exemple.palette",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "palettes": [
+      {
+        "id": "nuit",
+        "file": "palettes/nuit.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}
