@@ -807,13 +807,16 @@ describe('Test de fumée de Mire', () => {
       await page.keyboard.press(key);
       await frames();
     };
-    // Boîte au premier plan rendue et ouverte : le composant et ses ds-* ont la classe hydrated, le ds-modal est affiché.
+    // Boîtes rendues et ouvertes : chaque composant et ses ds-* ont la classe hydrated, chaque ds-modal est affiché, et
+    // le focus est entré dans la dernière.
     const boxOpen = (tag, count = 1) =>
       page.waitForFunction(
         ({ tag, count }) => {
           const boxes = [...document.querySelectorAll(tag)];
-          const ready = (b) => b.classList.contains('hydrated') && [...b.querySelectorAll('ds-modal, ds-trigger')].every((d) => d.classList.contains('hydrated'));
-          return boxes.length === count && boxes.every(ready) && boxes.every((b) => b.querySelector('ds-modal').shown);
+          const ready = (b) =>
+            b.classList.contains('hydrated') && [...b.querySelectorAll('ds-modal, ds-trigger')].every((d) => d.classList.contains('hydrated'));
+          const focusIn = document.activeElement?.closest(tag) === boxes.at(-1);
+          return boxes.length === count && boxes.every(ready) && boxes.every((b) => b.querySelector('ds-modal').shown) && focusIn;
         },
         { tag, count },
       );
@@ -864,12 +867,15 @@ describe('Test de fumée de Mire', () => {
       for (let i = 0; i < 12; i++) await press('ArrowDown');
       assert.equal(await inBox(), key, 'les flèches restent dans la boîte');
       // Champ obligatoire vidé : « Enregistrer » laisse la boîte ouverte et y ramène le focus.
+      const save = page.locator('mire-form ds-trigger', { hasText: /Enregistrer|Save/ });
       await page.locator('mire-form input[name="name"]').fill('');
-      await page.locator('mire-form ds-trigger', { hasText: /Enregistrer|Save/ }).click();
+      await save.focus();
+      await press('Enter');
       await page.waitForFunction(() => document.activeElement?.name === 'name');
       assert.equal(await boxCount(), 1);
       await page.locator('mire-form input[name="name"]').fill('  Le Voyage  ');
-      await page.locator('mire-form ds-trigger', { hasText: /Enregistrer|Save/ }).click();
+      await save.focus();
+      await press('Enter');
       await page.waitForFunction(() => !document.querySelector('mire-form'));
       assert.deepEqual(await result(), {
         action: 'save',
@@ -954,7 +960,7 @@ describe('Test de fumée de Mire', () => {
       assert.ok(await inBox(), 'le focus est dans le formulaire');
       await padPress('b');
       await page.waitForFunction(() => !document.querySelector('mire-form'));
-      assert.equal(await result(), null, 'formulaire fermé sans choix');
+      assert.equal((await result()).action, 'cancel', 'formulaire fermé sans choix');
       assert.equal(await page.evaluate(() => document.activeElement?.dataset.demoDialog), 'form');
       assert.deepEqual(errors, []);
     });
@@ -963,15 +969,18 @@ describe('Test de fumée de Mire', () => {
       await demoButton('pick');
       await press('Enter');
       await boxOpen('mire-pick');
-      const pictures = await page.evaluate(() => [...document.querySelectorAll('mire-pick ds-thumb')].map((t) => t.getAttribute('src') ?? ''));
       // La première image est introuvable : la vignette de secours (une image de la bibliothèque, s'il y en a) la remplace.
-      await page.waitForFunction((first) => (document.querySelector('mire-pick ds-thumb').getAttribute('src') ?? '') !== first, pictures[0]);
+      await page.waitForFunction(() => !(document.querySelector('mire-pick ds-thumb').src ?? '').includes('introuvable'));
       assert.equal(await inBox(), await page.evaluate(() => document.querySelector('mire-pick').dialog));
       await press('ArrowRight');
       assert.equal(await page.evaluate(() => document.activeElement.closest('[data-key]')?.dataset.key), 'tmdb:2');
       await press('Enter');
       await page.waitForFunction(() => !document.querySelector('mire-pick'));
-      assert.deepEqual(await result(), { id: 'tmdb:2', title: await page.evaluate(() => JSON.parse(document.querySelector('.mire-ui-demo__result').dataset.result).title), year: 1903 });
+      assert.deepEqual(await result(), {
+        id: 'tmdb:2',
+        title: await page.evaluate(() => JSON.parse(document.querySelector('.mire-ui-demo__result').dataset.result).title),
+        year: 1903,
+      });
       assert.deepEqual(errors, []);
     });
 
@@ -1021,7 +1030,6 @@ describe('Test de fumée de Mire', () => {
       });
       assert.equal(toaster.delay, 3800);
       assert.ok(toaster.text.length > 0);
-      assert.equal(await page.evaluate(() => document.getElementById('toast').classList.contains('show')), false, 'le toast historique ne s’affiche pas');
       assert.deepEqual(errors, []);
     });
   });

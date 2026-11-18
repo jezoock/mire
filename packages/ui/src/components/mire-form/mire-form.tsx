@@ -70,6 +70,8 @@ export class MireForm {
 
   // La fenêtre s'ouvre une fois ds-modal chargé : il émet alors modalOpen, qui la date pour la navigation (P4-03).
   async componentDidLoad() {
+    // Phase de capture : ds-modal arrête la propagation d'Échap avant qu'elle ne remonte jusqu'ici.
+    this.host.addEventListener('keydown', this.onKeyDown, true);
     await customElements.whenDefined('ds-modal');
     await this.modal?.componentOnReady?.();
     if (this.host.isConnected) this.shown = true;
@@ -252,7 +254,7 @@ export class MireForm {
     const tabs = readJson<Tab[]>(this.tabs) ?? [];
     const actions = readJson<ActionSpec[]>(this.actions) ?? [];
     return (
-      <Host class={{ 'mire-form': true, '--wide': this.wide }} onKeyDownCapture={this.onKeyDown}>
+      <Host class={{ 'mire-form': true, '--wide': this.wide }}>
         <ds-modal ref={(el) => (this.modal = el as ModalElement)} shown={this.shown} onModalOpen={this.onModalOpen} onModalClose={this.onModalClose}>
           <h2 slot="title" class="mire-form__title">
             {this.heading}

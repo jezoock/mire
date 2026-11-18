@@ -187,7 +187,7 @@ describe('pont des data-action historiques', () => {
   it('vérifie aussi la cible et l’action passées aux composants d’éléments, pas celles qu’ils transmettent (P4-05)', () => {
     const triggers = findTriggers();
     // Les boutons de la démonstration des boîtes (P4-06) appellent openDialog ; les composants d'éléments, pick.
-    const demo = triggers.filter((tr: { file: string; action: string }) => tr.file === 'src/renderer/demo/index.ts' && !tr.action.startsWith('openDialog:'));
+    const demo = triggers.filter((tr: { file: string; action?: string }) => tr.file === 'src/renderer/demo/index.ts' && !tr.action?.startsWith('openDialog:'));
     assert.ok(demo.length >= 4, `${demo.length} composants d'éléments dans la démonstration`);
     assert.ok(demo.every((tr: { target: unknown; action: unknown }) => tr.target === 'mire-demo' && tr.action === 'pick'));
     assert.ok(!triggers.some((tr: { file: string }) => /packages\/ui\/src\/components\/mire-(card|grid|row|group-card)\//.test(tr.file)));

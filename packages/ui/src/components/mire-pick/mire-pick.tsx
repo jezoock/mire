@@ -40,6 +40,8 @@ export class MirePick {
   private modal?: ModalElement;
 
   async componentDidLoad() {
+    // Phase de capture : ds-modal arrête la propagation d'Échap avant qu'elle ne remonte jusqu'ici.
+    this.host.addEventListener('keydown', this.onKeyDown, true);
     await customElements.whenDefined('ds-modal');
     await this.modal?.componentOnReady?.();
     if (this.host.isConnected) this.shown = true;
@@ -81,7 +83,7 @@ export class MirePick {
     const candidates = readJson<Candidate[]>(this.candidates) ?? [];
     const arg = (args: Record<string, string>) => JSON.stringify([{ dialog: this.dialog, ...args }]);
     return (
-      <Host class="mire-pick" onKeyDownCapture={this.onKeyDown} onErrorCapture={this.onImageError}>
+      <Host class="mire-pick" onErrorCapture={this.onImageError}>
         <ds-modal ref={(el) => (this.modal = el as ModalElement)} shown={this.shown} onModalOpen={this.onModalOpen} onModalClose={this.onModalClose}>
           <h2 slot="title" class="mire-pick__title">
             {this.heading}
