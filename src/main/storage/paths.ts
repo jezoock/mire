@@ -46,6 +46,10 @@ export interface DataPaths {
   /** Copie exécutable de 7za quand l'original ne peut pas l'être. */
   binDir: string;
   sevenZip: string;
+  /** Plugins installés (`<id>/<version>/`), leur état et leurs journaux (P3-03). */
+  plugins: string;
+  pluginState: string;
+  pluginLogs: string;
 }
 
 export function dataPaths(root: string): DataPaths {
@@ -77,5 +81,8 @@ export function dataPaths(root: string): DataPaths {
     romCache: at('cache', 'roms'),
     binDir: at('bin'),
     sevenZip: at('bin', '7za'),
+    plugins: at('plugins'),
+    pluginState: at('plugins', 'state.json'),
+    pluginLogs: at('plugins', 'logs'),
   };
 }

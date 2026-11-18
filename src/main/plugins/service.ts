@@ -9,8 +9,9 @@
  * processus principal (`in-process.ts`), derrière la même API par messages.
  */
 import path from 'node:path';
-import type { ContributionKind, PluginLevel } from '@mire/plugin-sdk';
+import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
+import type { PluginSummary } from '@mire/shared/ipc';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -20,7 +21,7 @@ import type { PluginEndpoint } from './host.ts';
 import type { Journal } from './journal.ts';
 import { contributionEntries, createContributionRegistry, declaredTagsAndInfos, RESTART_KINDS, type ContributionEntry } from './registry.ts';
 import type { RuntimePlugin } from './runtime.ts';
-import type { PluginFault, PluginState } from './state.ts';
+import type { FaultCode, PluginState } from './state.ts';
 import { createPluginTaggers } from './taggers.ts';
 
 /** Racine des textes d'un plugin dans les catalogues : `pluginTexts.<id, points remplacés par _>.` */
@@ -52,24 +53,8 @@ export interface RunnerEvents {
   workerError(pluginId: string, message: string): void;
 }
 
-/** Ce que l'interface (et le futur Centre) voit d'un plugin. */
-export interface PluginInfo {
-  id: string;
-  version: string | null;
-  origin: PluginOrigin;
-  level: PluginLevel | null;
-  /** Nom affiché (`plugin.name` de ses textes), ou l'identifiant. */
-  name: string;
-  /** Voulu actif (état mémorisé). */
-  enabled: boolean;
-  /** `active` ; `disabled` (à la demande) ; `fault` (désactivé par une erreur) ; `refused` (invalide, incompatible…). */
-  status: 'active' | 'disabled' | 'fault' | 'refused';
-  /** Message affichable : raison du refus ou de la désactivation. */
-  message: string | null;
-  contributions: { kind: ContributionKind; id: string }[];
-  /** Le changement prendra effet au prochain démarrage de Mire. */
-  restartRequired: boolean;
-}
+/** Ce que l'interface (et le futur Centre) voit d'un plugin (contrat IPC `pluginsList`). */
+export type PluginInfo = PluginSummary;
 
 export interface PluginServiceOptions {
   roots: DiscoveryRoots;
@@ -159,7 +144,7 @@ export function createPluginService(opts: PluginServiceOptions) {
   // Erreurs
 
   /** Code d'une panne d'après l'erreur d'une requête. */
-  function faultCode(err: unknown): PluginFault['code'] {
+  function faultCode(err: unknown): FaultCode {
     const code = (err as { code?: string })?.code;
     if (code === CHANNEL_ERRORS.timeout) return 'timeout';
     if (code === CHANNEL_ERRORS.hostGone) return 'crashed';
@@ -170,7 +155,7 @@ export function createPluginService(opts: PluginServiceOptions) {
     setFault(id, faultCode(err), String((err as Error)?.message ?? err));
   }
 
-  function setFault(id: string, code: PluginFault['code'], details: string): void {
+  function setFault(id: string, code: FaultCode, details: string): void {
     if (!active.has(id) || stopped) return;
     const message = translate(`plugins.faults.${code}`, { name: nameOf(id), details });
     log(id, 'error', `${message} (${details})`);
@@ -185,7 +170,7 @@ export function createPluginService(opts: PluginServiceOptions) {
   /** Requête à un plugin : comptée (pour désigner un fautif), et toute erreur du plugin le désactive. */
   async function call<T>(id: string, target: string, method: string, args: unknown[] = []): Promise<T> {
     const a = active.get(id);
-    if (!a?.runner) throw new ChannelError(CHANNEL_ERRORS.notFound, `${id} n'est pas actif.`);
+    if (!a?.runner) throw new ChannelError(CHANNEL_ERRORS.notFound, `${id} is not active.`);
     a.busy++;
     try {
       return await a.runner.channel.request<T>(target, method, args);
@@ -204,7 +189,7 @@ export function createPluginService(opts: PluginServiceOptions) {
     const handle: RequestHandler = (target, method) => {
       if (target !== 'ctx') throw new ChannelError(CHANNEL_ERRORS.notFound, `${target}.${method}`);
       // Le contexte relayé (http, files, storage, settings) arrive avec P3-04.
-      throw new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${method} n'est pas encore disponible pour les plugins (P3-04).`);
+      throw new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${method} is not available to plugins yet (P3-04).`);
     };
     return {
       handle,
@@ -311,7 +296,7 @@ export function createPluginService(opts: PluginServiceOptions) {
     if (watchdogTimer || !watchdog.interval) return;
     const inFlight = new Set<string>();
     watchdogTimer = setInterval(() => {
-      const running = [...active.entries()].filter(([, a]) => a.runner && a.plugin.manifest.level === 'code');
+      const running = [...active.entries()].filter(([, a]) => a.runner && a.plugin.manifest.level !== 'privileged');
       if (!running.length) {
         clearInterval(watchdogTimer!);
         watchdogTimer = null;

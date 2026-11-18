@@ -499,6 +499,25 @@
         "crossDevice": "Mire ne peut pas encore déplacer un fichier vers un autre disque.",
         "failed": "L’opération n’a pas pu se faire : {reason}"
       }
+    },
+    "plugins": {
+      "faults": {
+        "exception": "« {name} » a rencontré une erreur et a été désactivé : {details}",
+        "load": "« {name} » n’a pas pu démarrer et a été désactivé : {details}",
+        "timeout": "« {name} » ne répondait plus et a été désactivé.",
+        "crashed": "« {name} » s’est arrêté brutalement et a été désactivé."
+      },
+      "refused": {
+        "invalid": "« {name} » n’est pas un plugin valide : {details}",
+        "mismatch": "Le dossier de « {name} » ne correspond pas à son contenu ({details}).",
+        "engine": "« {name} » est fait pour une autre version de Mire ({range}) ; vous avez la {version}.",
+        "level": "« {name} » ne contient pas ce que son niveau de sécurité annonce.",
+        "privileged": "« {name} » demande un accès étendu à votre ordinateur : seuls les plugins livrés avec Mire y ont droit pour l’instant.",
+        "outside": "« {name} » contient un lien vers un fichier hors de son dossier.",
+        "data": "Un fichier de « {name} » est illisible ou trop gros : {details}",
+        "texts": "Les textes de « {name} » sont illisibles : {details}",
+        "too-big": "« {name} » contient trop de fichiers."
+      }
     }
   }
 }

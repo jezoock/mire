@@ -20,7 +20,7 @@ function onControl(e: MessageEvent): void {
     // Exception non rattrapée du plugin (hors d'une requête), ou module illisible : le processus principal décide.
     w.onerror = (ev) => {
       ev.preventDefault();
-      control?.postMessage({ t: 'worker-error', key, message: ev.message || 'Erreur du Worker.' });
+      control?.postMessage({ t: 'worker-error', key, message: ev.message || 'Worker error.' });
     };
     w.postMessage('mire-host:port', [e.ports[0]]);
     workers.set(key, w);

@@ -161,6 +161,9 @@ const ADDED_METHODS: Record<string, string> = {
   filesRename: 'files:rename',
   filesMove: 'files:move',
   filesRemove: 'files:remove',
+  // P3-03 : plugins
+  pluginsList: 'plugins:list',
+  pluginsSetEnabled: 'plugins:setEnabled',
 };
 
 // Événements ajoutés après P1-08.

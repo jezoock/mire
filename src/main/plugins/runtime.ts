@@ -26,7 +26,7 @@ export interface RuntimePlugin {
 export type ModuleLoader = (url: string) => Promise<{ default?: unknown }>;
 
 const unavailable = (what: string) => () =>
-  Promise.reject(new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${what} n'est pas encore disponible pour les plugins (P3-04).`));
+  Promise.reject(new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${what} is not available to plugins yet (P3-04).`));
 
 /**
  * Contexte du plugin. `log` et `events` fonctionnent ; `settings.get` rend la valeur par défaut du manifeste ; `http`,
@@ -41,7 +41,7 @@ function createContext(channel: Channel, plugin: RuntimePlugin, listeners: Map<s
       try {
         safe = details.map((d) => (d instanceof Error ? d.message : typeof d === 'object' ? JSON.parse(JSON.stringify(d)) : d));
       } catch {
-        safe = ['(détails illisibles)'];
+        safe = ['(unreadable details)'];
       }
       channel.event('log', { level, message: String(message), details: safe });
     };
@@ -83,16 +83,16 @@ export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
   let context: ReturnType<typeof createContext> | null = null;
 
   async function loadPlugin(p: RuntimePlugin): Promise<string[]> {
-    if (plugin) throw new ChannelError(CHANNEL_ERRORS.plugin, 'Plugin déjà chargé.');
+    if (plugin) throw new ChannelError(CHANNEL_ERRORS.plugin, 'Plugin already loaded.');
     plugin = p;
     context = createContext(channel, p, listeners);
     const loaded: string[] = [];
     for (const c of p.contributions) {
       const module = await load(new URL(c.main, p.base).href);
-      if (typeof module.default !== 'function') throw new ChannelError(CHANNEL_ERRORS.plugin, `${c.main} : pas de fonction exportée par défaut.`);
+      if (typeof module.default !== 'function') throw new ChannelError(CHANNEL_ERRORS.plugin, `${c.main}: no default export function.`);
       const instance = (await (module.default as (ctx: unknown) => unknown)(context)) as Record<string, unknown> | null;
       if (!instance || typeof instance !== 'object' || instance.id !== c.id)
-        throw new ChannelError(CHANNEL_ERRORS.plugin, `${c.main} : la contribution rendue doit avoir l'identifiant « ${c.id} ».`);
+        throw new ChannelError(CHANNEL_ERRORS.plugin, `${c.main}: the returned contribution must have the id "${c.id}".`);
       contributions.set(`${c.kind}/${c.id}`, instance);
       loaded.push(`${c.kind}/${c.id}`);
     }
@@ -106,7 +106,7 @@ export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
     if (!compute) throw new ChannelError(CHANNEL_ERRORS.notFound, `${target}.compute`);
     const out = new Array(elements.length);
     for (let i = 0; i < elements.length; i++) {
-      if (signal.aborted) throw new ChannelError(CHANNEL_ERRORS.cancelled, 'Lot annulé.');
+      if (signal.aborted) throw new ChannelError(CHANNEL_ERRORS.cancelled, 'Batch cancelled.');
       out[i] = compute.call(instance, elements[i]) ?? null;
     }
     return out;

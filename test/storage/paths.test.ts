@@ -35,5 +35,8 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     romCache: at('cache', 'roms'),
     binDir: at('bin'),
     sevenZip: at('bin', '7za'),
+    plugins: at('plugins'),
+    pluginState: at('plugins', 'state.json'),
+    pluginLogs: at('plugins', 'logs'),
   });
 });

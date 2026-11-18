@@ -181,8 +181,13 @@ function levelMatches(m: PluginManifest, files: string[]): Refusal | null {
 
 async function readJson(file: string): Promise<unknown> {
   const stat = await fsp.stat(file);
-  if (stat.size > MAX_JSON_BYTES) throw new Error(`${path.basename(file)} : plus de ${MAX_JSON_BYTES / 1024 / 1024} Mo`);
-  return JSON.parse(await fsp.readFile(file, 'utf8'));
+  // Le message d'erreur est le nom du fichier : le texte affiché vient des catalogues (`plugins.refused.data`).
+  if (stat.size > MAX_JSON_BYTES) throw new Error(path.basename(file));
+  try {
+    return JSON.parse(await fsp.readFile(file, 'utf8'));
+  } catch {
+    throw new Error(path.basename(file));
+  }
 }
 
 /** Textes du plugin pour les langues de Mire ; l'anglais est obligatoire (vérifié par le SDK). */

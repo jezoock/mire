@@ -10,9 +10,12 @@ import { createJsonStore } from '../storage/json-store.ts';
 
 export const PLUGIN_STATE_VERSION = 1;
 
+/** Panne : exception du plugin, délai dépassé (requête ou chien de garde), hôte planté, chargement impossible. */
+export type FaultCode = 'exception' | 'timeout' | 'crashed' | 'load';
+
 /** Erreur qui a fait désactiver un plugin : code stable, message affiché (langue du moment), date. */
 export interface PluginFault {
-  code: 'exception' | 'timeout' | 'crashed' | 'load';
+  code: FaultCode;
   message: string;
   at: number;
 }
@@ -27,7 +30,7 @@ export interface PluginStateFile {
   plugins: Record<string, PluginStateEntry>;
 }
 
-const FAULT_CODES = new Set<PluginFault['code']>(['exception', 'timeout', 'crashed', 'load']);
+const FAULT_CODES = new Set<FaultCode>(['exception', 'timeout', 'crashed', 'load']);
 
 /** Ne garde que des entrées bien formées (fichier modifié à la main, version future). */
 export function normalizeState(raw: unknown): PluginStateFile {

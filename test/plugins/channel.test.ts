@@ -123,6 +123,6 @@ describe('runtime d’un plugin', () => {
 
   it('refuse une contribution qui ne porte pas l’identifiant déclaré', async () => {
     const { main } = start();
-    await assert.rejects(main.request('runtime', 'load', [plugin('mauvais.mjs', 'annee')]), /identifiant « annee »/);
+    await assert.rejects(main.request('runtime', 'load', [plugin('mauvais.mjs', 'annee')]), /id "annee"/);
   });
 });

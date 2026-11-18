@@ -104,7 +104,7 @@ export function createIsolatedHost({ group, hostDir, onGone, onWorkerError }: Is
     wc.setWindowOpenHandler(() => ({ action: 'deny' }));
     wc.on('will-navigate', (e) => e.preventDefault());
     wc.on('will-redirect', (e) => e.preventDefault());
-    wc.on('render-process-gone', (_e, d) => gone(`Hôte des plugins arrêté (${d.reason}).`));
+    wc.on('render-process-gone', (_e, d) => gone(`Plugin host gone (${d.reason}).`));
     await wc.loadURL(`${HOST_ORIGIN}/index.html`);
 
     const { port1: control, port2 } = new MessageChannelMain();
@@ -117,7 +117,7 @@ export function createIsolatedHost({ group, hostDir, onGone, onWorkerError }: Is
       control.start();
     });
     wc.postMessage('mire-host:port', null, [port2]);
-    await withTimeout(ready, START_TIMEOUT, 'La page de l’hôte des plugins ne répond pas.');
+    await withTimeout(ready, START_TIMEOUT, 'Plugin host page did not answer.');
     return (running = { win, wc, control, ses });
   }
 
@@ -146,7 +146,7 @@ export function createIsolatedHost({ group, hostDir, onGone, onWorkerError }: Is
       channels.set(pluginId, channel);
       r.control.postMessage({ t: 'start', key: pluginId }, [port2]);
       try {
-        await withTimeout(announced, START_TIMEOUT, 'Le plugin n’a pas démarré.');
+        await withTimeout(announced, START_TIMEOUT, 'Plugin did not start.');
       } catch (err) {
         this.stop(pluginId);
         throw err;

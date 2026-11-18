@@ -12,6 +12,7 @@ import { gamesHandlers } from './games.ts';
 import { i18nHandlers } from './i18n.ts';
 import { libraryHandlers } from './library.ts';
 import { metaHandlers } from './meta.ts';
+import { pluginsHandlers } from './plugins.ts';
 import { scrapeHandlers } from './scrape.ts';
 import { storeHandlers } from './store.ts';
 import { tvHandlers } from './tv.ts';
@@ -30,6 +31,7 @@ export const DOMAINS = {
   i18n: i18nHandlers,
   library: libraryHandlers,
   meta: metaHandlers,
+  plugins: pluginsHandlers,
   scrape: scrapeHandlers,
   store: storeHandlers,
   tv: tvHandlers,

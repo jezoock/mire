@@ -8,7 +8,9 @@
  *   événement  { t: 'evt', nom, donnees } (sans réponse : journal du plugin, événements de Mire)
  *
  * Seulement des données (clonage structuré). Ce fichier est aussi intégré au runtime de l'hôte (navigateur) : il
- * n'importe rien de Node ni d'Electron.
+ * n'importe rien de Node ni d'Electron. Ses messages d'erreur, comme ceux du runtime, sont des diagnostics techniques
+ * en anglais (le runtime n'a pas les catalogues) : ils vont au journal du plugin ; l'utilisateur voit le message du
+ * service, tiré des catalogues d'après le code.
  */
 
 /** Codes d'erreur stables du canal. */
@@ -140,7 +142,7 @@ export function createChannel(port: PortLike, { handle = null, onEvent = null, t
     const ctrl = new AbortController();
     running.set(m.id, ctrl);
     try {
-      if (!handle) throw new ChannelError(CHANNEL_ERRORS.notFound, 'Ce côté ne traite aucune requête.');
+      if (!handle) throw new ChannelError(CHANNEL_ERRORS.notFound, 'No request handler on this side.');
       const value = await handle(String(m.cible), String(m.methode), Array.isArray(m.args) ? m.args : [], ctrl.signal);
       if (!ctrl.signal.aborted) reply(m.id, true, value);
     } catch (err) {
@@ -186,13 +188,13 @@ export function createChannel(port: PortLike, { handle = null, onEvent = null, t
           reject(new ChannelError(code, message));
         },
       };
-      if (ms > 0) w.timer = setTimeout(() => w.abandon(CHANNEL_ERRORS.timeout, `Pas de réponse en ${ms} ms.`), ms);
+      if (ms > 0) w.timer = setTimeout(() => w.abandon(CHANNEL_ERRORS.timeout, `No answer within ${ms} ms.`), ms);
       if (options.signal?.aborted) {
-        reject(new ChannelError(CHANNEL_ERRORS.cancelled, 'Requête annulée.'));
+        reject(new ChannelError(CHANNEL_ERRORS.cancelled, 'Request cancelled.'));
         if (w.timer) clearTimeout(w.timer);
         return;
       }
-      options.signal?.addEventListener('abort', () => w.abandon(CHANNEL_ERRORS.cancelled, 'Requête annulée.'), { once: true });
+      options.signal?.addEventListener('abort', () => w.abandon(CHANNEL_ERRORS.cancelled, 'Request cancelled.'), { once: true });
       waiting.set(id, w);
       port.send({ t: 'req', id, cible: target, methode: method, args });
     });
@@ -211,7 +213,7 @@ export function createChannel(port: PortLike, { handle = null, onEvent = null, t
       for (const c of running.values()) c.abort();
     },
     close() {
-      this.breakOff('Canal fermé.');
+      this.breakOff('Channel closed.');
       try {
         port.close();
       } catch {

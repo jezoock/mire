@@ -45,6 +45,8 @@ const ALLOWED = new Set([
   'Accès refusé',
   'pas un fichier',
   'Introuvable',
+  // Type du Worker d'un plugin (module ES), dans la page de l'hôte isolé (P3-03).
+  'module',
 ]);
 
 function files(dir: string): string[] {
