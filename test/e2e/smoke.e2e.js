@@ -2515,12 +2515,8 @@ describe('Test de fumée de Mire', () => {
       await columns(2);
       // Les sources de la configuration de démonstration, avec leur sorte et leur emplacement.
       const sources = await page.$$eval(`${VIEW} .mire-explorer-view__column:nth-child(2) .mire-explorer-view__label`, (ls) => ls.map((l) => l.textContent));
-      for (const name of ['Images', 'Musique', 'Vidéos'])
-        assert.ok(
-          sources.some((s) => s.startsWith('Dossier · ') && s.endsWith(`/bibliotheque/${name}`)),
-          sources.join(' | '),
-        );
-      await row(1, '/bibliotheque/Images').click();
+      for (const name of ['Images', 'Musique', 'Vidéos']) assert.ok(sources.includes(`Dossier · ${name}`), sources.join(' | '));
+      await row(1, 'Dossier · Images').click();
       await columns(3);
       await row(2, 'Vacances').click();
       await columns(4);
@@ -2555,7 +2551,7 @@ describe('Test de fumée de Mire', () => {
       await padPress('a');
       await inColumn(1);
       const [, first] = await focusedRow();
-      assert.ok(first.endsWith('/bibliotheque/Vidéos'), first);
+      assert.equal(first, 'Vidéos');
       // A : les sous-dossiers, puis les fichiers de Vidéos.
       await padPress('a');
       await inColumn(2);
@@ -2571,7 +2567,7 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await focusedRow(), [2, film]);
       await padPress('b');
       await inColumn(1);
-      assert.ok((await focusedRow())[1].endsWith('/bibliotheque/Vidéos'));
+      assert.deepEqual(await focusedRow(), [1, 'Vidéos']);
       await padPress('b');
       assert.deepEqual(await focusedRow(), [0, 'Dossiers']);
       await padPress('b');

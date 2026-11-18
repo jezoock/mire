@@ -10,6 +10,7 @@ import {
   levelNode,
   parseFolderNode,
   parseLevelNode,
+  placeName,
   ROOT,
   sourceLabel,
 } from '../../src/renderer/explorer/index.ts';
@@ -100,6 +101,7 @@ const SOURCES: CatalogSources = {
     { id: 's1', plugin: 'src-local', place: '/bib', count: 3 },
     { id: 's2', plugin: 'web-perso', place: 'config', count: 2 },
     { id: 's3', plugin: 'mon-plugin', place: 'compte', count: 1 },
+    { id: 's4', plugin: 'web-bm', place: 'config', count: 0 },
   ],
   folders: [{ id: 'd1', place: '/bib', count: 3 }],
 };
@@ -214,7 +216,7 @@ describe('Explorateur : colonnes', () => {
   it('Sources → une source → ses dossiers → leurs éléments, désignés par la source et un chemin relatif', async () => {
     const { model, last, headings, labels, calls } = setup();
     assert.ok(await model.open('sources'));
-    assert.deepEqual(labels(1), ['Dossier · /bib', 'Sites ajoutés', 'mon-plugin · compte']);
+    assert.deepEqual(labels(1), ['Dossier · bib', 'Sites ajoutés', 'mon-plugin · compte']);
     assert.deepEqual(
       last().columns[1]?.rows.map((r) => r.count),
       [3, 2, 1],
@@ -223,7 +225,7 @@ describe('Explorateur : colonnes', () => {
     assert.deepEqual(labels(2), ['Films', 'Racine']);
     assert.equal(last().columns[2]?.rows[1]?.key, 'local:/bib/a.mkv');
     assert.ok(await model.open(folderNode('s1', 'Films')));
-    assert.deepEqual(headings(), ['Explorateur', 'Sources', 'Dossier · /bib', 'Films']);
+    assert.deepEqual(headings(), ['Explorateur', 'Sources', 'Dossier · bib', 'Films']);
     assert.ok(await model.show('local:/f/amelie.mkv'));
     assert.equal(last().preview?.name, 'Amélie');
     // Aucun chemin absolu ne part vers le processus principal.
@@ -236,23 +238,25 @@ describe('Explorateur : colonnes', () => {
   it('Dossiers : les dossiers autorisés, puis leurs sous-dossiers ; un dossier refusé n’ouvre pas de colonne', async () => {
     const { model, headings, labels } = setup(tEn);
     assert.ok(await model.open('folders'));
-    assert.deepEqual(labels(1), ['/bib']);
+    assert.deepEqual(labels(1), ['bib']);
     assert.ok(await model.open(folderNode('d1', '')));
     assert.deepEqual(labels(2), ['Films', 'Racine']);
     assert.ok(await model.open(folderNode('d1', 'Films')));
-    assert.deepEqual(headings(), ['Explorer', 'Folders', '/bib', 'Films']);
+    assert.deepEqual(headings(), ['Explorer', 'Folders', 'bib', 'Films']);
     // Le processus principal refuse (`null`) : la colonne ne s'ouvre pas.
     const { model: m2, headings: h2 } = setup(tFr, { folder: async (src, p, c) => (p === 'Films' ? null : folder(src, p, c)) });
     await m2.open('folders');
     await m2.open(folderNode('d1', ''));
     assert.equal(await m2.open(folderNode('d1', 'Films')), false);
-    assert.deepEqual(h2(), ['Explorateur', 'Dossiers', '/bib']);
+    assert.deepEqual(h2(), ['Explorateur', 'Dossiers', 'bib']);
   });
 
   it('nom des sources, en français et en anglais ; nœuds de dossier', () => {
-    assert.equal(sourceLabel('src-smb', '//nas/films', tFr), 'Partage réseau · //nas/films');
-    assert.equal(sourceLabel('jeux-roms', 'snes|/roms', tEn), 'Console games · /roms');
+    assert.equal(sourceLabel('src-smb', '//nas/films', tFr), 'Partage réseau · films');
+    assert.equal(sourceLabel('jeux-roms', 'snes|/roms', tEn), 'Console games · roms');
     assert.equal(sourceLabel('web-bm', 'config', tEn), 'Bookmarks');
+    assert.equal(sourceLabel('src-http', 'https://nas.local/', tFr), 'Serveur web · nas.local');
+    assert.deepEqual(['/bib/Films/', 'C:\\Jeux', 'https://nas/films/', '/'].map(placeName), ['Films', 'Jeux', 'films', '/']);
     assert.deepEqual(parseFolderNode(folderNode('s1', 'a/b')), { source: 's1', path: 'a/b' });
     assert.equal(parseFolderNode('folder:[1]'), null);
     assert.equal(parseFolderNode('folder:pas du json'), null);
@@ -306,7 +310,7 @@ describe('Explorateur : aperçu', () => {
       { label: 'Genres', value: 'Comédie' },
     ]);
     assert.deepEqual(p?.tags, ['Vidéo', 'À revoir']);
-    assert.equal(p?.source, 'Dossier · /bib');
+    assert.equal(p?.source, 'Dossier · bib');
     assert.equal(p?.location, '/f/amelie.mkv');
     assert.equal(last().columns[2]?.selected, 'local:/f/amelie.mkv');
   });

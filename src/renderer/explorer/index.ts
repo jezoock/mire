@@ -15,6 +15,7 @@ export {
   locationOf,
   parseFolderNode,
   parseLevelNode,
+  placeName,
   PREVIEW_INFOS,
   ROOT,
   SECTIONS,

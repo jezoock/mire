@@ -90,12 +90,21 @@ export const SOURCE_KINDS = [
   'web-bm',
 ] as const;
 
+/**
+ * Nom court d'un emplacement : son dernier dossier (`/bib/Films` → `Films`, `https://nas/films/` → `films`), ou l'hôte
+ * d'une adresse sans chemin. Le chemin complet se lit dans l'aperçu (emplacement d'un élément).
+ */
+export function placeName(place: string): string {
+  const s = place.replace(/[\\/]+$/, '');
+  return s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1) || place;
+}
+
 /** Nom d'une source : sa sorte, puis où elle se trouve (sauf pour une source tirée de la configuration). */
 export function sourceLabel(plugin: string, place: string, t: Translate): string {
   const kind = (SOURCE_KINDS as readonly string[]).includes(plugin) ? t(`explorer.sourceKinds.${plugin}`) : plugin;
   // `console|chemin` (consoles) : seul le chemin se montre.
   const where = place.slice(place.lastIndexOf('|') + 1);
-  return where && where !== 'config' ? t('explorer.sourceLabel', { kind, place: where }) : kind;
+  return where && where !== 'config' ? t('explorer.sourceLabel', { kind, place: placeName(where) }) : kind;
 }
 
 /** Ce dont l'explorateur a besoin : textes et données du catalogue. */
@@ -231,10 +240,13 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
       });
     if (section === 'sources' || section === 'folders') {
       const all = await src.sources();
-      return (all?.[section] ?? []).map((x) => {
-        const node = folderNode(x.id, '');
-        return { id: node, node, label: x.plugin ? sourceLabel(x.plugin, x.place, t) : x.place, count: x.count };
-      });
+      // Une source sans élément n'est pas proposée (comme un tag vide) ; un dossier autorisé l'est toujours.
+      return (all?.[section] ?? [])
+        .filter((x) => section === 'folders' || x.count > 0)
+        .map((x) => {
+          const node = folderNode(x.id, '');
+          return { id: node, node, label: x.plugin ? sourceLabel(x.plugin, x.place, t) : placeName(x.place), count: x.count };
+        });
     }
     const tags = ((await src.tags()) ?? []).filter((x) => x.count > 0);
     return tags
