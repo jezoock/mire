@@ -25,6 +25,7 @@ export const VIEW_COLORS: Readonly<Record<string, string>> = {
   games: 'var(--bar-blue)',
 };
 const MUTED = 'var(--muted)';
+const CENTRE_KEY = 'screen:center';
 
 /** Vues dont les sites ouverts s'affichent sous l'entrée : services, portails de télévision, sites de jeux. */
 export const SESSION_VIEWS = ['streaming', 'tv', 'games'] as const;
@@ -92,9 +93,14 @@ export function currentEntry(entries: readonly RailEntry[], section: string, tar
   return entries.find((e) => e.view === section)?.key ?? '';
 }
 
-/** Cibles que parcourent les boutons LB et RB de la manette : les écrans et pages du haut du menu, dans l'ordre. */
+/**
+ * Cibles que parcourent les boutons LB et RB de la manette : les écrans et pages du haut du menu, dans l'ordre, puis le
+ * Centre (en bas du menu, mais c'est un écran qu'on visite comme une page). Réglages et Quitter restent hors du cycle.
+ */
 export function cycleTargets(entries: readonly RailEntry[]): string[] {
-  return entries.filter((e) => !e.bottom && e.target).map((e) => e.target as string);
+  const top = entries.filter((e) => !e.bottom && e.target).map((e) => e.target as string);
+  const centre = entries.find((e) => e.key === CENTRE_KEY);
+  return centre ? [...top, CENTRE_KEY] : top;
 }
 
 /** Cible suivante (`step` 1) ou précédente (-1), en boucle ; une cible hors de la liste compte comme la première. */

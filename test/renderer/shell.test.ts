@@ -178,12 +178,14 @@ describe('entrées du menu', () => {
     assert.equal(currentEntry(entries, 'demo'), '');
   });
 
-  it('LB et RB parcourent les écrans et pages du haut du menu, en boucle', () => {
+  it('LB et RB parcourent les écrans et pages du haut du menu, puis le Centre, en boucle', () => {
     const targets = cycleTargets(railEntries(BUILTIN, t));
-    assert.deepEqual(targets, ['screen:search', 'screen:home', ...DEFAULT_PINNED]);
+    assert.deepEqual(targets, ['screen:search', 'screen:home', ...DEFAULT_PINNED, 'screen:center']);
     assert.equal(nextTarget(targets, 'screen:home', 1), 'movies');
-    assert.equal(nextTarget(targets, 'games', 1), 'screen:search');
-    assert.equal(nextTarget(targets, 'screen:search', -1), 'games');
+    assert.equal(nextTarget(targets, 'games', 1), 'screen:center');
+    assert.equal(nextTarget(targets, 'screen:center', 1), 'screen:search');
+    assert.equal(nextTarget(targets, 'screen:center', -1), 'games');
+    assert.equal(nextTarget(targets, 'screen:search', -1), 'screen:center');
     assert.equal(nextTarget(targets, 'screen:settings', 1), 'screen:home');
     assert.equal(nextTarget([], 'x', 1), null);
   });
