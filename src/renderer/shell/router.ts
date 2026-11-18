@@ -4,7 +4,8 @@
  * liste) ou `screen:<nom>` (un écran du cœur, `CORE_SCREENS`).
  *
  * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
- * `mire-home`, P4-12), toutes deux dessinées par le thème. Tant qu'un
+ * `mire-home`, P4-12), toutes deux dessinées par le thème ; le Centre dans la sienne (`CENTRE_VIEW`, `mire-centre`,
+ * P4-18), avec l'habillage du cœur. Tant qu'un
  * écran du cœur n'a pas de vue à lui (explorateur P4-08…), il s'affiche dans la vue historique qui en tient lieu
  * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
@@ -30,15 +31,25 @@ export const PAGE_VIEW = 'page';
  */
 export const HOME_VIEW = 'home';
 
-/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil). */
-export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [[HOME_TARGET, HOME_VIEW]];
+export const CENTRE_TARGET = formatTarget({ kind: 'screen', screen: 'center' });
+
+/**
+ * Vue qui affiche le Centre (P4-18) : la section `downloads` de l'interface, qui contient `<mire-centre>`. Elle garde le
+ * nom de l'ancienne section Téléchargements, que l'interface historique emploie encore (rouage, badge, LB et RB).
+ */
+export const CENTRE_VIEW = 'downloads';
+
+/** Écrans du cœur qui ont déjà leur vue en composants (P4-12 : l'accueil ; P4-18 : le Centre). */
+export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
+  [HOME_TARGET, HOME_VIEW],
+  [CENTRE_TARGET, CENTRE_VIEW],
+];
 
 /**
  * Vue historique qui tient lieu de chaque écran du cœur, jusqu'à son remplacement. L'explorateur n'en a pas (P4-08).
  */
 export const LEGACY_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   ['screen:search', 'search'],
-  ['screen:center', 'downloads'],
   ['screen:settings', 'settings'],
 ];
 

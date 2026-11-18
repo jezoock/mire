@@ -381,12 +381,6 @@
         "pageChanged": "La page de téléchargement de {name} a changé. Installez-le depuis {site}.",
         "noRelease": "Aucune version publiée pour {repo}.",
         "unknownConsole": "Console inconnue."
-      },
-      "progress": {
-        "latestVersion": "Recherche de la dernière version",
-        "extracting": "Extraction",
-        "extractingRetroarch": "Extraction de RetroArch",
-        "core": "Module {core}"
       }
     },
     "dialogs": {
@@ -670,6 +664,199 @@
         "sites": "Sites épinglés",
         "up": "Monter {name}",
         "down": "Descendre {name}"
+      }
+    },
+    "centre": {
+      "tabs": {
+        "label": "Sections du Centre",
+        "downloads": "Téléchargements",
+        "apps": "Apps"
+      },
+      "downloads": {
+        "add": "Ajouter un lien",
+        "torrent": "Ouvrir un fichier .torrent",
+        "hint": {
+          "mire": "Les liens magnet et fichiers .torrent sont téléchargés par le client intégré de Mire (réglable avec le rouage). Les téléchargements des sites ouverts dans Mire arrivent ici aussi ; depuis « Ajouter des jeux », ils vont dans le dossier de la console.",
+          "system": "Les liens magnet et fichiers .torrent sont confiés à votre logiciel de torrent (réglable avec le rouage). Les téléchargements des sites ouverts dans Mire arrivent ici aussi ; depuis « Ajouter des jeux », ils vont dans le dossier de la console."
+        },
+        "running": "En cours",
+        "others": "Terminés et autres",
+        "noneRunning": "Aucun téléchargement en cours.",
+        "noneOthers": "Rien pour l’instant.",
+        "clear": "Vider la liste",
+        "kind": {
+          "torrent": "Torrent",
+          "http": "HTTP"
+        },
+        "untitled": "Téléchargement",
+        "state": {
+          "pending": "En attente de téléchargement",
+          "waiting": "En attente",
+          "downloading": "En cours",
+          "paused": "En pause",
+          "extracting": "Décompression",
+          "done": "Terminé",
+          "error": "Erreur",
+          "cancelled": "Annulé",
+          "interrupted": "Interrompu",
+          "external": "Confié au logiciel de torrent"
+        },
+        "meta": {
+          "progress": "{received} sur {total}",
+          "speed": "{speed}/s",
+          "peers": {
+            "one": "{count} pair",
+            "other": "{count} pairs"
+          },
+          "eta": "reste {eta}",
+          "toConsole": "vers {console}",
+          "toDownloads": "vers Téléchargements",
+          "group": "fait partie de « {group} »",
+          "companions": {
+            "one": "{count} fichier du jeu ajouté",
+            "other": "{count} fichiers du jeu ajoutés"
+          },
+          "extracted": "archive décompressée"
+        },
+        "actions": {
+          "pause": "Pause",
+          "resume": "Reprendre",
+          "retry": "Réessayer",
+          "cancel": "Annuler",
+          "remove": "Retirer",
+          "reveal": "Ouvrir le dossier",
+          "start": "Télécharger",
+          "install": "Lancer {file}"
+        },
+        "form": {
+          "title": "Ajouter un téléchargement",
+          "help": "Collez un lien (https://… ou magnet:?…), ou ouvrez un fichier .torrent enregistré sur l’ordinateur.",
+          "url": "Lien",
+          "urlPlaceholder": "https://… ou magnet:?…",
+          "dest": "Destination",
+          "destDownloads": "Dossier des téléchargements",
+          "destConsole": "Console : {name}",
+          "add": "Télécharger",
+          "torrent": "Ouvrir un fichier .torrent"
+        },
+        "messages": {
+          "needUrl": "Collez d’abord un lien (https://… ou magnet:?…).",
+          "addFailed": "Ce lien n’a pas pu être ajouté.",
+          "external": "Lien confié à votre logiciel de torrent.",
+          "added": "Téléchargement ajouté.",
+          "addedFollow": "Téléchargement ajouté : suivez-le dans Téléchargements.",
+          "startFailed": "Ce téléchargement n’a pas pu démarrer.",
+          "torrentFailed": "Ce fichier .torrent n’a pas pu être ajouté.",
+          "started": "Téléchargement lancé.",
+          "finished": "{name} est téléchargé.",
+          "cancelTitle": "Annuler « {name} » ?",
+          "cancelUntitled": "ce téléchargement",
+          "cancelHelp": "Les fichiers déjà téléchargés pour lui seront supprimés.",
+          "cancelYes": "Annuler le téléchargement",
+          "installerFailed": "Le programme d’installation n’a pas pu être lancé.",
+          "installerLater": "{name} contient un programme d’installation : lancez-le depuis Téléchargements.",
+          "installerTitle": "Téléchargement terminé",
+          "installerHelp": "« {name} » contient un programme d’installation : {file}. Voulez-vous le lancer maintenant ?",
+          "installerRun": "Lancer l’installation",
+          "installerNotNow": "Plus tard"
+        }
+      },
+      "size": {
+        "b": "{value} o",
+        "kb": "{value} Ko",
+        "mb": "{value} Mo",
+        "gb": "{value} Go",
+        "tb": "{value} To"
+      },
+      "eta": {
+        "soon": "moins d’une minute",
+        "minutes": "{minutes} min",
+        "hours": "{hours} h {minutes}"
+      },
+      "apps": {
+        "loading": "Chargement des apps…",
+        "root": "Dossier des jeux :",
+        "changeRoot": "Changer",
+        "unavailable": "Sur ce système, installez les émulateurs depuis leur site officiel, puis déclarez-les dans Réglages.",
+        "emulators": "Émulateurs",
+        "emulatorsHelp": "Téléchargés depuis leurs sites officiels. Chaque console installée apparaît dans « Ma ludothèque », avec son dossier de jeux.",
+        "status": {
+          "unavailable": "Non disponible sur ce système",
+          "installed": "Installé",
+          "installedVersion": "Installé, version {version}",
+          "notInstalled": "Non installé"
+        },
+        "systems": "Consoles de {name}",
+        "systemAdded": "ajoutée",
+        "install": "Installer",
+        "update": "Mettre à jour",
+        "uninstall": "Désinstaller",
+        "addConsoles": {
+          "one": "Ajouter {count} console",
+          "other": "Ajouter {count} consoles"
+        },
+        "chooseConsoles": "Choisissez des consoles",
+        "bios": {
+          "title": "BIOS",
+          "files": "Présents : {files}",
+          "none": "Aucun fichier pour l’instant.",
+          "dir": "Dossier : {dir}",
+          "add": "Charger un BIOS…",
+          "open": "Ouvrir le dossier"
+        },
+        "games": "Jeux libres",
+        "gamesHelp": "Des jeux récents créés pour ces vieilles consoles, que leurs auteurs distribuent gratuitement.",
+        "gameMeta": "{system}, par {author}",
+        "download": "Télécharger",
+        "inLibrary": "Dans votre ludothèque",
+        "needConsole": "Ajoutez d’abord la console {system}",
+        "own": "Vos propres jeux",
+        "ownHelp": "Copiez dans la bonne console vos sauvegardes personnelles de cartouches et de disques. Mire ne fournit pas de jeux du commerce.",
+        "import": "Choisir des fichiers",
+        "noConsole": "Ajoutez d’abord une console ci-dessus.",
+        "importForm": {
+          "title": "Importer vos jeux",
+          "help": "Choisissez la console, puis les fichiers à copier dans son dossier de jeux.",
+          "console": "Console",
+          "choose": "Choisir des fichiers"
+        },
+        "messages": {
+          "installed": "Installé. Les consoles sont prêtes dans « Ma ludothèque ».",
+          "uninstalled": "Émulateur désinstallé. Vos jeux sont conservés.",
+          "gameAdded": "Jeu ajouté à votre ludothèque.",
+          "installFailed": "Échec de l’installation.",
+          "imported": {
+            "one": "{count} jeu copié dans {console}.",
+            "other": "{count} jeux copiés dans {console}."
+          },
+          "rootChanged": "Les prochaines consoles utiliseront ce dossier.",
+          "biosCopied": {
+            "one": "{count} fichier copié dans le dossier des BIOS.",
+            "other": "{count} fichiers copiés dans le dossier des BIOS."
+          },
+          "biosFailed": "Copie impossible."
+        }
+      },
+      "progress": {
+        "preparing": "Préparation…",
+        "latestVersion": "Recherche de la dernière version",
+        "program": "{name} {version}",
+        "core": "Module {core}",
+        "game": "{name}",
+        "extracting": "Extraction de {name}",
+        "amount": "{step}, {received} sur {total}"
+      },
+      "notices": {
+        "romAdded": "{name} ajouté à {console}. Il apparaît dans la liste des jeux de la console.",
+        "romAddedDetail": "{name} ajouté à {console} ({detail}). Il apparaît dans la liste des jeux de la console.",
+        "romFiles": {
+          "one": "{count} fichier",
+          "other": "{count} fichiers"
+        },
+        "romExtracted": "archive décompressée",
+        "romReady": "{name} est prêt, lancement…",
+        "romProgress": "Téléchargement de {name} : {percent} %",
+        "romProgressUnknown": "Téléchargement de {name}…"
       }
     }
   }

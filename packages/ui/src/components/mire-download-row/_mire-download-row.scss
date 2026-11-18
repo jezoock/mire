@@ -1,0 +1,80 @@
+@use '../../theme/tokens' as *;
+
+// Une ligne de téléchargement : nature, nom et infos avec la barre, boutons. Même allure que la ligne historique
+// (.dl-row de styles.css), couleurs de la palette des réglages.
+.mire-download-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: ds-spacing(4);
+  padding: ds-spacing(3) ds-spacing(4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, #{ds-radius(sm)});
+  background: var(--surface);
+
+  &__kind {
+    padding: ds-spacing(1) ds-spacing(2);
+    border-radius: ds-radius(sm);
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: ds-token(font-size, 100);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  &__name {
+    overflow: hidden;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__error {
+    margin-top: ds-spacing(1);
+    color: var(--bar-red);
+    font-size: ds-token(font-size, 200);
+  }
+
+  &__bar {
+    height: 6px;
+    margin-top: ds-spacing(2);
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+
+    i {
+      display: block;
+      height: 100%;
+      background: var(--ring);
+      transition: width 0.4s ease;
+
+      @include ds-reduced-motion() {
+        transition: none;
+      }
+    }
+  }
+
+  &.--done &__bar i {
+    background: var(--bar-green);
+  }
+
+  &.--error &__bar i,
+  &.--cancelled &__bar i {
+    background: var(--muted);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: ds-spacing(2);
+  }
+}

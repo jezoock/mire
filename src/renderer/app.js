@@ -1,7 +1,7 @@
 /* Mire : interface. Affichage des sections et actions ; les lecteurs intégrés (players/) et la navigation au clavier
    et à la manette (nav/) sont branchés plus bas, avec ce qu'ils attendent de l'interface. */
 import { $, $$, esc } from './core/dom.ts';
-import { fmtSize, plural } from './core/format.ts';
+import { plural } from './core/format.ts';
 import { ICON } from './core/icons.ts';
 import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
 import { toast } from './ui/toast.ts';
@@ -27,9 +27,10 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { HOME_VIEW, PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
 import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
+import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
 import { activeDownloads } from './shell/menu.ts';
@@ -111,6 +112,24 @@ const home = createHome({
     const a = document.activeElement;
     if (S.pendingFocus || !a || a === document.body || !a.isConnected) focusFirst();
     S.pendingFocus = false;
+  },
+});
+
+// Centre (P4-18) : téléchargements et apps, rédigés par les catalogues d'après les données du processus principal.
+const centre = createCentre({
+  t,
+  language: () => i18n.language,
+  downloads: () => S.downloads,
+  torrentClient: () => S.dlSettings?.torrentClient,
+  catalog: () => S.catalog,
+  loadCatalog: () => loadCatalog(),
+  apps: () => ({ picks: S.raPick, progress: S.storeProgress, consoles: S.config?.emulators ?? [] }),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  // Centre redessiné : le focus, s'il était sur un bouton retiré, va au premier élément du contenu.
+  onRendered: () => {
+    if (S.section !== CENTRE_VIEW) return;
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) focusFirst();
   },
 });
 
@@ -337,13 +356,14 @@ function render({ resetScroll = false } = {}) {
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings, [DEMO_SECTION]: viewDemo };
+  const views = { search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, settings: viewSettings, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
-  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage.
-  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : null;
+  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, et pour le Centre (P4-18).
+  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === CENTRE_VIEW ? centre.host : null;
   if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
   else viewEl.innerHTML = views[sec]();
   if (sec === HOME_VIEW) home.refresh();
+  if (sec === CENTRE_VIEW) centre.refresh();
   if (resetScroll) viewEl.scrollTop = 0;
 
   if (hadFocus) {
@@ -719,7 +739,7 @@ function viewGames() {
 
   const emptyAll = !all.length;
   const hint = emptyAll
-    ? emptyBlock('Aucun jeu pour l’instant', 'Ajoutez un jeu PC, un dossier de jeux PC ou une console (avec ses jeux) dans les réglages de cette page (rouage en haut à droite). Les consoles ouvrent aussi « Ajouter des jeux » pour en télécharger.', '<button class="btn btn-primary focusable" data-action="open-store">Ouvrir la Boutique</button>')
+    ? emptyBlock('Aucun jeu pour l’instant', 'Ajoutez un jeu PC, un dossier de jeux PC ou une console (avec ses jeux) dans les réglages de cette page (rouage en haut à droite). Les consoles ouvrent aussi « Ajouter des jeux » pour en télécharger.', '<button class="btn btn-primary focusable" data-action="open-store">Ouvrir les apps du Centre</button>')
     : '';
 
   return `<section class="games-hero" id="focus-info">${first ? focusInfoHtml(first) : ''}</section>
@@ -803,51 +823,7 @@ function viewRoms() {
 
 const sourceLabel = (l) => { try { return new URL(l).hostname.replace(/^www\./, ''); } catch { return l; } };
 
-/* ---------- Téléchargements ---------- */
-
-function dlRow(d) {
-  const pct = d.total ? Math.min(100, Math.round(((d.received || 0) / d.total) * 100)) : d.state === 'done' ? 100 : 0;
-  const b = (action, label, extra = '') => `<button class="btn btn-sm focusable" data-action="${action}" data-id="${esc(d.id)}"${extra}>${label}</button>`;
-  const actions = [];
-  if (D.DL_ACTIVE.has(d.state) && d.state !== 'extracting') actions.push(b('dl-pause', 'Pause'), b('dl-cancel', 'Annuler'));
-  if (d.state === 'paused') actions.push(b('dl-resume', 'Reprendre'), b('dl-cancel', 'Annuler'));
-  if (['error', 'interrupted', 'cancelled'].includes(d.state)) actions.push(b('dl-resume', 'Réessayer'), b('dl-remove', 'Retirer'));
-  if (d.state === 'done') {
-    for (const f of (d.installers || []).slice(0, 2)) actions.push(`<button class="btn btn-sm btn-primary focusable" data-action="dl-install" data-id="${esc(d.id)}" data-file="${esc(f)}" title="${esc(f)}">Lancer ${esc(f.split(/[\\/]/).pop())}</button>`);
-    actions.push(b('dl-reveal', 'Ouvrir le dossier'), b('dl-remove', 'Retirer'));
-  }
-  if (d.state === 'pending') actions.push(`<button class="btn btn-sm btn-primary focusable" data-action="dl-start" data-id="${esc(d.id)}">Télécharger</button>`, b('dl-remove', 'Retirer'));
-  if (d.state === 'external') actions.push(b('dl-remove', 'Retirer'));
-  return `<div class="dl-row is-${esc(d.state)}" id="dl-${esc(d.id)}" data-state="${esc(d.state)}">
-    <span class="dl-kind">${d.kind === 'torrent' ? 'Torrent' : 'HTTP'}</span>
-    <div class="dl-main">
-      <div class="dl-name" title="${esc(d.name || '')}">${esc(d.name || 'Téléchargement')}</div>
-      <div class="dl-meta" id="dl-${esc(d.id)}-meta">${esc(D.dlMeta(d))}</div>
-      ${d.error ? `<div class="dl-error">${esc(d.error)}</div>` : ''}
-      ${d.state !== 'external' ? `<div class="dl-bar"><i id="dl-${esc(d.id)}-bar" style="width:${pct}%"></i></div>` : ''}
-    </div>
-    <div class="dl-actions">${actions.join('')}</div>
-  </div>`;
-}
-
-function viewDownloads() {
-  const list = S.downloads;
-  const running = list.filter((d) => D.DL_ACTIVE.has(d.state) || d.state === 'paused' || d.state === 'pending');
-  const others = list.filter((d) => !running.includes(d));
-  const dests = [['', 'Dossier des téléchargements'], ...S.config.emulators.map((e) => [e.id, `Console : ${e.name}`])];
-  const client = S.dlSettings.torrentClient === 'system' ? 'confiés à votre logiciel de torrent' : 'téléchargés par le client intégré de Mire';
-  return `<section class="dl-add">
-      <div class="field-row"><input class="input focusable" id="dl-url" placeholder="Coller un lien : https://… ou magnet:?…" aria-label="Lien à télécharger">
-      <select class="input focusable dl-dest" id="dl-dest" aria-label="Destination">${dests.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>
-      <button class="btn btn-primary focusable" data-action="dl-add">Télécharger</button></div>
-      <div class="btn-row"><button class="btn btn-sm focusable" data-action="dl-torrent">Ouvrir un fichier .torrent</button></div>
-      <p class="hint">Les liens magnet et fichiers .torrent sont ${client} (réglable avec le rouage). Les téléchargements des sites ouverts dans Mire arrivent ici aussi ; depuis « Ajouter des jeux », ils vont dans le dossier de la console.</p>
-    </section>
-    <h2 class="sec-h">En cours <span class="count">${running.length}</span></h2>
-    ${running.length ? `<div class="dl-list">${running.map(dlRow).join('')}</div>` : '<p class="hint">Aucun téléchargement en cours.</p>'}
-    <div class="sec-h-row"><h2 class="sec-h">Terminés et autres <span class="count">${others.length}</span></h2>${others.length ? '<button class="btn btn-sm btn-ghost focusable" data-action="dl-clear">Vider la liste</button>' : ''}</div>
-    ${others.length ? `<div class="dl-list">${others.map(dlRow).join('')}</div>` : '<p class="hint">Rien pour l’instant.</p>'}`;
-}
+/* ---------- Téléchargements (vue : Centre, P4-18) ---------- */
 
 function updateDlBadge() {
   shell.setDownloads(activeDownloads(S.downloads, D.DL_ACTIVE));
@@ -862,22 +838,12 @@ async function loadDownloads() {
 
 let dlRenderTimer = 0;
 api.onDownload((d) => {
-  const i = S.downloads.findIndex((x) => x.id === d.id);
-  if (d.removed) { if (i >= 0) S.downloads.splice(i, 1); }
-  else if (i >= 0) S.downloads[i] = d;
-  else S.downloads.unshift(d);
+  const { list, fine } = applyDownload(S.downloads, d);
+  S.downloads = list;
   updateDlBadge();
-  if (S.section !== 'downloads') return;
-  // Même état : seules la barre et la ligne d'infos changent. Sinon la page est redessinée.
-  const row = $(`#dl-${CSS.escape(d.id)}`);
-  if (row && !d.removed && row.dataset.state === d.state) {
-    const pct = d.total ? Math.min(100, Math.round(((d.received || 0) / d.total) * 100)) : 0;
-    const bar = $(`#dl-${CSS.escape(d.id)}-bar`);
-    if (bar) bar.style.width = `${pct}%`;
-    const meta = $(`#dl-${CSS.escape(d.id)}-meta`);
-    if (meta) meta.textContent = D.dlMeta(d);
-    return;
-  }
+  if (S.section !== CENTRE_VIEW) return;
+  // Même état : seule la ligne de ce téléchargement change (barre et ligne d'infos). Sinon le Centre est redessiné.
+  if (fine && centre.updateDownload(d)) return;
   clearTimeout(dlRenderTimer);
   dlRenderTimer = setTimeout(() => render(), 80);
 });
@@ -885,29 +851,24 @@ api.onTvDetected(({ name }) => {
   if (name) toast(`Service de télévision détecté : ${name}.`, { duration: 5000 });
   api.getConfig().then((r) => { S.config = r.config; if (S.section === 'tv') { S.channels = null; S.tvWeb = null; loadChannels(); } });
 });
-api.onDownloadAdded((r) => {
-  if (!r.ok) toast(r.error || 'Ce téléchargement n’a pas pu démarrer.', { duration: 8000 });
-  else toast(r.external ? 'Lien confié à votre logiciel de torrent.' : 'Téléchargement ajouté : suivez-le dans Téléchargements.', { duration: 4000 });
-});
+api.onDownloadAdded((r) => toast(downloadAddedNotice(r, t), { duration: r.ok ? 4000 : 8000 }));
 // Fin d'un torrent qui contient un programme d'installation : on propose de le lancer.
 api.onDownloadFinished(async (d) => {
   // Un jeu bookmarké vient d'être téléchargé : on recharge config (sa carte « à télécharger » disparaît), les fiches
   // (celle du marque-page reportée sur le jeu) et les jeux.
   if (d.gameBookmark) { S.config = (await api.getConfig()).config; S.scrape = (await api.scrapeData()) || {}; if (d.console != null) { const r = await api.listRoms(d.console).catch(() => null); if (r?.ok) S.localRoms[d.console] = r.roms; } if (S.section === 'games') render(); }
-  if (d.console == null) toast(`${d.name} est téléchargé.`, { duration: 5000 });
+  const m = (key, vars) => t(`centre.downloads.messages.${key}`, vars);
+  if (d.console == null) toast(m('finished', { name: d.name }), { duration: 5000 });
   const installer = (d.installers || [])[0];
   if (d.kind !== 'torrent' || !installer) return;
-  if (topDialog()) { toast(`${d.name} contient un programme d’installation : lancez-le depuis Téléchargements.`, { duration: 8000 }); return; }
-  const res = await openForm({
-    title: 'Téléchargement terminé',
-    help: `« ${d.name} » contient un programme d’installation : ${installer.split(/[\\/]/).pop()}. Voulez-vous le lancer maintenant ?`,
+  if (topDialog()) { toast(m('installerLater', { name: d.name }), { duration: 8000 }); return; }
+  const res = await dialogs.openForm({
+    title: m('installerTitle'),
+    help: m('installerHelp', { name: d.name, file: installer.split(/[\\/]/).pop() }),
     fields: [],
-    actions: [{ id: 'run', label: 'Lancer l’installation', kind: 'primary' }, { id: 'later', label: 'Plus tard', kind: 'ghost' }],
+    actions: [{ id: 'run', label: m('installerRun'), kind: 'primary' }, { id: 'later', label: m('installerNotNow'), kind: 'ghost' }],
   });
-  if (res?.action === 'run') {
-    const r = await api.downloadsRunInstaller(d.id, installer);
-    if (!r?.ok) toast(r?.error || 'Le programme d’installation n’a pas pu être lancé.', { duration: 8000 });
-  }
+  if (res?.action === 'run') C.centre.runInstaller({ id: d.id, file: installer });
 });
 
 function pathField(id, label, value, placeholder, kind) {
@@ -1988,16 +1949,11 @@ async function reloadScrape() {
 api.onRomDownload((p) => {
   if (p.phase !== 'done') return;
   delete S.romsCache[p.console];
-  const detail = [p.files > 1 ? `${p.files} fichiers` : '', p.extracted ? 'archive décompressée' : ''].filter(Boolean).join(', ');
-  toast(`${p.name} ajouté à ${p.consoleName}${detail ? ` (${detail})` : ''}. Il apparaît dans la liste des jeux de la console.`, { duration: 7000 });
+  toast(romAddedNotice(p, t), { duration: 7000 });
   if (S.section === 'games' && S.romsOf === p.console) openEmu(p.console);
 });
 
-api.onRomProgress((p) => {
-  if (p.phase === 'done') { toast(`${p.name} est prêt, lancement…`, { duration: 2500 }); return; }
-  const pct = p.total ? ` : ${Math.round((p.received / p.total) * 100)} %` : '…';
-  toast(`Téléchargement de ${p.name}${pct}`, { duration: 5000 });
-});
+api.onRomProgress((p) => toast(romProgressNotice(p, t), { duration: p.phase === 'done' ? 2500 : 5000 }));
 
 api.onScrapeProgress((p) => {
   S.scraping = p;
@@ -2105,7 +2061,6 @@ function panelSpec(section) {
     case 'games':
       return [
         { id: 'consoles', label: 'Consoles', html: () => consolesBlock() },
-        { id: 'store', label: 'Boutique', html: () => viewStore() },
         { id: 'pc', label: 'Jeux PC', html: () => `<section class="pset"><h3 class="pset-h">Dossiers de jeux PC</h3><p class="set-help">Analysés automatiquement : un jeu par raccourci ou par sous-dossier.</p><div class="sources-box" data-kinds="game">${sourcesHtml(['game'])}</div>
           <div class="btn-row"><button type="button" class="btn btn-sm focusable" data-action="add-game">Ajouter un jeu à la main</button></div></section>
           <section class="pset"><h3 class="pset-h">Sites pour télécharger des jeux PC</h3>
@@ -2147,7 +2102,7 @@ function consolesBlock() {
       <span class="con-thumb"${e.banner ? ` style="background-image:url('${esc(mediaUrl(e.banner)).replace(/'/g, '%27')}')"` : ''}></span>
       <span class="con-name">${esc(e.name)}<span class="con-sub">${esc([e.system || '', plural((e.sources || []).length + (e.romsDir ? 1 : 0), 'source')].filter(Boolean).join(', '))}</span></span>
       <button type="button" class="btn btn-ghost btn-sm focusable" data-action="edit-console" data-console="${esc(e.id)}">Modifier</button>
-    </li>`).join('') : '<li class="none">Aucune console. L’onglet Boutique les installe en un clic.</li>';
+    </li>`).join('') : '<li class="none">Aucune console. Les apps du Centre les installent en un clic.</li>';
   return `<section class="pset"><p class="set-help">« Modifier » change l’émulateur, les dossiers et sources de jeux, et la bannière affichée dans Jeux.</p><ul class="folder-list con-list">${rows}</ul></section>`;
 }
 
@@ -2683,101 +2638,20 @@ viewEl.addEventListener('contextmenu', (e) => {
 });
 
 /* ------------------------------------------------------------------ */
-/* Boutique                                                            */
+/* Boutique (vue : Centre, P4-18)                                      */
 /* ------------------------------------------------------------------ */
 
 async function loadCatalog() {
   S.catalog = await api.storeCatalog();
-  if (panel.open && P.tab === 'store') refreshPanel();
+  if (S.section === CENTRE_VIEW) centre.refresh();
 }
 
-function progressHtml(id) {
-  const p = S.storeProgress[id];
-  if (!p || p.phase === 'done' || p.phase === 'error') return '';
-  const pct = p.total ? Math.round((p.received / p.total) * 100) : null;
-  const text = p.phase === 'download' && p.total ? `${p.label}, ${fmtSize(p.received)} sur ${fmtSize(p.total)}` : p.label || 'Préparation…';
-  return `<div class="st-progress"><div class="st-bar${pct == null ? ' indeterminate' : ''}" style="width:${pct == null ? 35 : pct}%"></div></div><p class="st-status">${esc(text)}</p>`;
-}
-
-function viewStore() {
-  const c = S.catalog;
-  if (!c) { loadCatalog(); return loading('Chargement de la boutique…'); }
-  const unavailable = c.platform === 'other';
-  const emuCards = c.emulators.map((e) => {
-    const busy = !!S.storeProgress[e.id] && !['done', 'error'].includes(S.storeProgress[e.id].phase);
-    const shownVersion = e.version && e.version !== 'latest' ? `, version ${e.version.replace(/^v/, '')}` : '';
-    const status = !e.available ? 'Non disponible sur ce système' : e.installed ? `Installé${shownVersion}` : 'Non installé';
-    let systems;
-    let actions;
-    if (e.retroarch) {
-      systems = `<div class="st-systems">${e.systems.map((sy) => {
-        const on = S.raPick.has(sy.id);
-        return `<button class="st-sys focusable${sy.installed ? ' is-installed' : ''}" data-action="ra-pick" data-id="${sy.id}" aria-pressed="${on}">${esc(sy.name)}${sy.installed ? '<span class="st-ok">ajoutée</span>' : ''}</button>`;
-      }).join('')}</div>`;
-      actions = `<button class="btn btn-primary focusable" data-action="store-install" data-id="${e.id}"${busy || !e.available || !S.raPick.size ? ' disabled' : ''}>${S.raPick.size ? `Ajouter ${plural(S.raPick.size, 'console')}` : 'Choisissez des consoles'}</button>`;
-    } else {
-      systems = `<div class="st-systems">${e.systems.map((sy) => `<span class="st-chip">${esc(sy.name)}</span>`).join('')}</div>`;
-      actions = `<button class="btn ${e.installed ? '' : 'btn-primary '}focusable" data-action="store-install" data-id="${e.id}"${busy || !e.available ? ' disabled' : ''}>${e.installed ? 'Mettre à jour' : 'Installer'}</button>`;
-    }
-    if (e.installed) actions += `<button class="btn btn-ghost focusable" data-action="store-uninstall" data-id="${e.id}"${busy ? ' disabled' : ''}>Désinstaller</button>`;
-    return `<article class="st-card" data-store-card="${e.id}">
-      <div class="st-head"><h3 class="st-name">${esc(e.name)}</h3><span class="st-state${e.installed ? ' ok' : ''}">${esc(status)}</span></div>
-      <p class="st-desc">${esc(e.desc)}</p>
-      ${systems}
-      <div class="st-prog" id="prog-${e.id}">${progressHtml(e.id)}</div>
-      <div class="st-actions">${actions}</div>
-      ${e.bios ? `<div class="st-bios">
-        <h4 class="st-bios-h">BIOS</h4>
-        <p class="st-bios-hint">${esc(e.bios.hint)}</p>
-        <p class="st-bios-files">${e.bios.files.length ? `Présents : ${esc(e.bios.files.join(', '))}` : 'Aucun fichier pour l’instant.'}</p>
-        <p class="st-bios-dir" title="${esc(e.bios.dir)}">Dossier : ${esc(e.bios.dir)}</p>
-        <div class="st-actions"><button class="btn btn-sm focusable" data-action="bios-add" data-id="${e.id}">Charger un BIOS…</button><button class="btn btn-sm btn-ghost focusable" data-action="bios-open" data-id="${e.id}">Ouvrir le dossier</button></div>
-      </div>` : ''}
-    </article>`;
-  }).join('');
-
-  const gameCards = c.games.map((g) => {
-    const id = `game:${g.id}`;
-    const busy = !!S.storeProgress[id] && !['done', 'error'].includes(S.storeProgress[id].phase);
-    const btn = g.installed
-      ? '<span class="st-state ok">Dans votre ludothèque</span>'
-      : g.ready
-        ? `<button class="btn btn-primary btn-sm focusable" data-action="store-game" data-id="${g.id}"${busy ? ' disabled' : ''}>Télécharger</button>`
-        : `<span class="st-state">Ajoutez d’abord la console ${esc(g.systemName)}</span>`;
-    return `<article class="st-game">
-      <span class="art r-game st-art"><span class="art-fallback" style="--mono:var(--bar-${barFor(g.system)})" aria-hidden="true">${esc(monogram(g.name))}</span></span>
-      <div class="st-gtext"><h3 class="st-gname">${esc(g.name)}</h3><p class="st-gmeta">${esc(g.systemName)}, par ${esc(g.author)}</p><p class="st-desc">${esc(g.desc)}</p>
-        <div class="st-prog" id="prog-${id.replace(':', '-')}">${progressHtml(id)}</div>${btn}</div>
-    </article>`;
-  }).join('');
-
-  const consoles = S.config.emulators.filter((e) => e.romsDir);
-  const importer = consoles.length
-    ? `<div class="st-import"><div class="field"><label for="st-console">Console</label><select class="input focusable" id="st-console">${consoles.map((e) => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}</select></div>
-       <button class="btn focusable" data-action="store-import">Choisir des fichiers</button></div>`
-    : '<p class="set-help">Ajoutez d’abord une console ci-dessus.</p>';
-
-  return `<div class="st-root"><span>Dossier des jeux : <strong>${esc(c.romsRoot)}</strong></span><button class="btn btn-ghost btn-sm focusable" data-action="store-root">Changer</button></div>
-    ${unavailable ? '<p class="hint">Sur ce système, installez les émulateurs depuis leur site officiel, puis déclarez-les dans Réglages.</p>' : ''}
-    <h2 class="sec-h">Émulateurs</h2>
-    <p class="set-help">Téléchargés depuis leurs sites officiels. Chaque console installée apparaît dans « Ma ludothèque », avec son dossier de jeux.</p>
-    <div class="st-grid">${emuCards}</div>
-    <h2 class="sec-h">Jeux libres</h2>
-    <p class="set-help">Des jeux récents créés pour ces vieilles consoles, que leurs auteurs distribuent gratuitement.</p>
-    <div class="st-games">${gameCards}</div>
-    <h2 class="sec-h">Vos propres jeux</h2>
-    <p class="set-help">Copiez dans la bonne console vos sauvegardes personnelles de cartouches et de disques. Mire ne fournit pas de jeux du commerce.</p>
-    ${importer}`;
-}
-
+// Avancement d'une installation (données du processus principal, rédigées par le Centre). La fin est traitée par
+// l'action qui l'a lancée (afterStoreChange) ; une erreur est annoncée ici.
 api.onStoreProgress((p) => {
   S.storeProgress[p.id] = p;
-  const box = document.getElementById(`prog-${p.id.replace(':', '-')}`);
-  if (p.phase === 'done' || p.phase === 'error') {
-    if (p.phase === 'error') toast(p.message || 'Échec de l’installation.', { duration: 9000 });
-    return; // la vue est rafraîchie à la fin de l'appel
-  }
-  if (box) box.innerHTML = progressHtml(p.id);
+  if (p.phase === 'error') toast(p.message || t('centre.apps.messages.installFailed'), { duration: 9000 });
+  if (p.phase !== 'done' && p.phase !== 'error' && S.section === CENTRE_VIEW) centre.refresh();
 });
 
 async function afterStoreChange(r, okMessage) {
@@ -2785,7 +2659,7 @@ async function afterStoreChange(r, okMessage) {
   else S.config = (await api.getConfig()).config;
   S.romsCache = {};
   await loadCatalog();
-  if (!panel.open && S.section === 'games') render();
+  if (!panel.open && [CENTRE_VIEW, 'games'].includes(S.section)) render();
   if (r?.ok && okMessage) toast(okMessage, { duration: 6000 });
 }
 
@@ -2819,7 +2693,8 @@ const legacyUi = {
     S.gq = q;
     refreshSearch();
   },
-  loadDownloads, updateDlBadge, loadCatalog, afterStoreChange, afterAdblockChange, setCfg, saveUi, applyMenu,
+  loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
+  showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),
   cycle: (step) => shell.cycle(step),
   openPageGroup: (value) => pages.openGroup(value),
@@ -2843,7 +2718,7 @@ dialogs.initDialogs({
   toastWithAction: (message, opts) => toast(message, opts),
 });
 initDemoDialogs({ openForm });
-const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction } });
+const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm } });
 setActionErrorHandler((error, { tag, method }) => {
   console.error(`Action ${tag}.${method} :`, error);
   toast(t('app.errors.actionFailed'), { duration: 6000 });

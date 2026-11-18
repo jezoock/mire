@@ -1588,4 +1588,244 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  // Centre (P4-18) : téléchargements et apps dans mire-centre ; une ligne qui avance ne redessine qu'elle ; parcours à
+  // la manette ; installation d'un émulateur suivie jusqu'au bout, avec une source simulée dans le processus principal.
+  describe('Centre (P4-18)', () => {
+    const PAD = { a: 0, b: 1, lb: 4, rb: 5, up: 12, down: 13, right: 15 };
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    // Un appui de la manette simulée : trois images enfoncé, puis relâché, sans autre pause.
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const VIEW = '#view mire-centre mire-centre-view';
+    // Centre affiché sur l'onglet voulu, rendu : la vue et chaque composant qu'elle contient ont la classe hydrated.
+    const centreReady = (tab) =>
+      page.waitForFunction(
+        ([sel, want]) => {
+          const v = document.querySelector(sel);
+          if (document.body.dataset.section !== 'downloads' || !v?.classList.contains('hydrated') || v.tab !== want) return false;
+          return [...v.querySelectorAll('ds-trigger, mire-download-row')].every((c) => c.classList.contains('hydrated'));
+        },
+        [VIEW, tab],
+      );
+    const openCentre = async (tab = 'downloads') => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+      await page.waitForFunction(() => document.querySelector('#view mire-centre')?.showTab);
+      await page.evaluate((t) => document.querySelector('#view mire-centre').showTab({ tab: t }), tab);
+      await centreReady(tab);
+    };
+    const active = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        return a?.dataset.tab ?? (a?.classList.contains('mire-centre-view__add-link') ? 'addLink' : (a?.localName ?? null));
+      });
+    // Téléchargement envoyé par le processus principal, comme le gestionnaire de téléchargements (canal `download`).
+    const sendDownload = (item) => app.evaluate(({ BrowserWindow }, d) => BrowserWindow.getAllWindows()[0].webContents.send('download', d), item);
+    const STOPPED = {
+      id: 'demo-interrompu',
+      kind: 'http',
+      name: 'Course de karts (Europe).sfc',
+      console: 0,
+      consoleName: 'Super Nintendo',
+      dir: '/jeux',
+      // Le gestionnaire passe au démarrage les téléchargements en pause de la démonstration à « interrompu ».
+      state: 'interrupted',
+      received: 262144,
+      total: 524288,
+      error: '',
+      installers: [],
+    };
+
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Dossier des jeux dans le dossier du test, avant la première lecture du catalogue de la boutique : les consoles
+    // installées y créent leur dossier, et la capture montre un chemin qui ne dépend pas de la machine.
+    const roms = () => path.join(tmp, 'roms');
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(async (root) => {
+        const { config } = await window.api.getConfig();
+        await window.api.saveConfig({ ...config, store: { ...config.store, romsRoot: root } });
+      }, roms());
+    });
+
+    after(async () => {
+      await disconnectPad();
+      await page.evaluate(() => document.querySelector('mire-centre')?.showTab({ tab: 'downloads' }));
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('le Centre affiche les téléchargements ; une ligne qui avance ne redessine qu’elle', async () => {
+      await openCentre();
+      assert.equal(await page.locator('#title').textContent(), 'Téléchargements');
+      assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'screen:center');
+      const rows = () => page.$$eval(`${VIEW} mire-download-row`, (els) => els.map((e) => [e.closest('[data-group]').dataset.group, e.dataset.key]));
+      assert.deepEqual(await rows(), [
+        ['others', 'demo-erreur'],
+        ['others', 'demo-interrompu'],
+        ['others', 'demo-termine'],
+      ]);
+      // Rendus comptés à partir d'ici : la vue, et chaque ligne.
+      await page.evaluate((sel) => {
+        const v = document.querySelector(sel);
+        window.__renders = { view: 0, rows: {} };
+        window.__row = v.querySelector('mire-download-row[data-key="demo-interrompu"]');
+        v.addEventListener('mireCentreRender', () => window.__renders.view++);
+        v.addEventListener('mireDownloadRowRender', (e) => (window.__renders.rows[e.detail.id] = (window.__renders.rows[e.detail.id] || 0) + 1));
+      }, VIEW);
+      // Les rendus de l'ouverture terminés, on repart de zéro.
+      await settle();
+      await page.evaluate(() => (window.__renders = { view: 0, rows: {} }));
+      const meta = `${VIEW} mire-download-row[data-key="demo-interrompu"] .mire-download-row__meta`;
+      await sendDownload({ ...STOPPED, received: 393216 });
+      await page.waitForFunction((sel) => document.querySelector(sel)?.textContent.includes('384 Ko sur 512 Ko'), meta);
+      assert.deepEqual(await page.evaluate(() => window.__renders), { view: 0, rows: { 'demo-interrompu': 1 } });
+      assert.ok(
+        await page.evaluate(() => window.__row.isConnected && window.__row.querySelector('[role="progressbar"]').getAttribute('aria-valuenow') === '75'),
+      );
+      // Autre état : la ligne change de groupe et de boutons, la liste est redessinée.
+      await sendDownload({ ...STOPPED, state: 'downloading', speed: 1024 });
+      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="running"] mire-download-row[data-key="demo-interrompu"]`), VIEW);
+      assert.ok((await page.evaluate(() => window.__renders.view)) >= 1);
+      await sendDownload(STOPPED);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="others"] mire-download-row[data-key="demo-interrompu"]`), VIEW);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix va aux onglets et aux boutons, A ouvre, B ferme, LB et RB changent d’écran', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await openCentre();
+      await page.locator(`${VIEW} .mire-centre-view__tab[data-tab="downloads"]`).focus();
+      // Croix vers le bas : « Ajouter un lien » ; A ouvre le formulaire d'ajout (P4-06), B le ferme.
+      await padPress('down');
+      assert.equal(await active(), 'addLink');
+      await padPress('a');
+      const form = page.locator('mire-dialogs mire-form');
+      await form.locator('input').first().waitFor();
+      assert.equal(await form.locator('.ds-modal__title, h2').first().textContent(), 'Ajouter un téléchargement');
+      assert.ok(await form.locator('select').count(), 'le formulaire propose la destination');
+      await padPress('b');
+      await page.waitForFunction(() => !document.querySelector('mire-dialogs mire-form'));
+      await page.waitForFunction(() => document.activeElement?.classList.contains('mire-centre-view__add-link'));
+      // Croix vers le haut puis à droite : l'onglet Apps ; A l'affiche.
+      await padPress('up');
+      await padPress('right');
+      assert.equal(await active(), 'apps');
+      await padPress('a');
+      await centreReady('apps');
+      await page.locator(`${VIEW} .mire-centre-view__card`).first().waitFor();
+      // LB : l'écran précédent du menu (le Centre, en bas du menu, compte comme le premier) ; RB : le suivant.
+      await padPress('lb');
+      await page.waitForFunction(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key === 'games');
+      await openCentre('apps');
+      await padPress('rb');
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+
+    it('installation d’un émulateur suivie jusqu’au bout (source simulée), puis désinstallation', async () => {
+      // Source simulée : le fetch du processus principal répond pour la dernière version de DuckStation sur GitHub
+      // (redirection, page des fichiers, fichier de 512 Ko envoyé en huit morceaux) ; le reste passe au vrai fetch.
+      await app.evaluate(() => {
+        const real = globalThis.fetch;
+        globalThis.__mireRealFetch = real;
+        const repo = 'https://github.com/stenzek/duckstation';
+        const file = '/stenzek/duckstation/releases/download/v0.1-e2e/DuckStation-x64.AppImage';
+        globalThis.fetch = async (url, init) => {
+          const u = String(url);
+          if (u === `${repo}/releases/latest`) {
+            // Un court délai, comme le vrai site : l'étape « Recherche de la dernière version » reste visible.
+            await new Promise((r) => setTimeout(r, 300));
+            return new Response(null, { status: 302, headers: { location: `${repo}/releases/tag/v0.1-e2e` } });
+          }
+          if (u === `${repo}/releases/expanded_assets/v0.1-e2e`)
+            return new Response(`<a href="${file}">DuckStation</a>`, { headers: { 'content-type': 'text/html' } });
+          if (u === `https://github.com${file}`) {
+            let sent = 0;
+            const body = new ReadableStream({
+              async pull(controller) {
+                if (sent === 8) return controller.close();
+                await new Promise((r) => setTimeout(r, 120));
+                sent += 1;
+                controller.enqueue(new Uint8Array(64 * 1024));
+              },
+            });
+            return new Response(body, { headers: { 'content-length': String(8 * 64 * 1024) } });
+          }
+          return real(url, init);
+        };
+      });
+      try {
+        await openCentre('apps');
+        // Capture sans le message de la manette débranchée, focus sur le premier onglet.
+        await page.evaluate(() => document.getElementById('toast').classList.remove('show'));
+        await page.locator(`${VIEW} .mire-centre-view__tab[data-tab="downloads"]`).focus();
+        await page.mouse.move(1, 1);
+        await settle();
+        await shot('centre-apps');
+        const card = page.locator(`${VIEW} .mire-centre-view__card[data-key="duckstation"]`);
+        assert.equal(await card.locator('.mire-centre-view__state').textContent(), 'Non installé');
+        // Textes d'avancement vus dans la carte, du début à la fin.
+        await page.evaluate((sel) => {
+          window.__steps = [];
+          const el = document.querySelector(sel);
+          const note = () => {
+            const t = el.querySelector('.mire-centre-view__status')?.textContent;
+            if (t && window.__steps.at(-1) !== t) window.__steps.push(t);
+          };
+          new MutationObserver(note).observe(el, { subtree: true, childList: true, characterData: true });
+        }, `${VIEW} .mire-centre-view__card[data-key="duckstation"]`);
+        await card.locator('ds-trigger.mire-centre-view__install.hydrated').click();
+        await card.locator('.mire-centre-view__state', { hasText: 'Installé, version 0.1-e2e' }).waitFor({ timeout: 15000 });
+        const steps = await page.evaluate(() => window.__steps);
+        assert.ok(steps.includes('Recherche de la dernière version'), steps.join(' | '));
+        assert.ok(
+          steps.some((t) => /^DuckStation 0\.1-e2e, \d+ Ko sur 512 Ko$/.test(t)),
+          steps.join(' | '),
+        );
+        await page.locator('#toast', { hasText: 'Installé. Les consoles sont prêtes dans « Ma ludothèque ».' }).waitFor();
+        // Le programme est en place, la console PlayStation a son dossier, et la carte rappelle les BIOS.
+        assert.ok(fs.existsSync(path.join(tmp, 'data', 'emulators', 'duckstation', 'DuckStation-x64.AppImage')));
+        assert.ok(fs.readdirSync(roms()).length > 0);
+        await card.locator('.mire-centre-view__bios-files').waitFor();
+        await card.locator('ds-trigger.hydrated', { hasText: 'Désinstaller' }).click();
+        await card.locator('.mire-centre-view__state', { hasText: 'Non installé' }).waitFor();
+        assert.deepEqual(errors, []);
+      } finally {
+        await app.evaluate(() => {
+          if (globalThis.__mireRealFetch) globalThis.fetch = globalThis.__mireRealFetch;
+        });
+      }
+    });
+  });
 });
