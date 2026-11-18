@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "id": "mire",
+  "name": { "key": "themes.mire.name" },
+  "description": { "key": "themes.mire.description" },
+  "home": { "layout": "rows" },
+  "page": { "layout": "grid", "card": "auto", "size": "m", "background": "backdrop" }
+}

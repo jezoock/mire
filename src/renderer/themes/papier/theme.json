@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "id": "papier",
+  "name": { "key": "themes.papier.name" },
+  "description": { "key": "themes.papier.description" },
+  "palette": "jour",
+  "fonts": {
+    "body": { "family": "Georgia, 'Times New Roman', serif" },
+    "heading": { "family": "'Palatino Linotype', Palatino, Georgia, serif" }
+  },
+  "images": { "background": "images/fond.svg" },
+  "sounds": { "move": "sons/deplacement.wav" },
+  "menu": { "position": "top" },
+  "home": { "layout": "grid" },
+  "page": { "layout": "rows", "card": "thumbnail", "size": "l", "background": "image" }
+}

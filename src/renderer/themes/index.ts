@@ -1,0 +1,53 @@
+/**
+ * Thèmes intégrés (P4-11) et branchement du moteur sur la page. Le thème Mire reprend l'apparence de Mire ; il
+ * deviendra un plugin inclus (P5-10). « Papier », thème d'essai très différent (palette claire, polices à empattements,
+ * rangées de vignettes, menu en haut, fond dessiné), vérifie que les composants sont assez souples.
+ *
+ * Chaque thème est un dossier `themes/<id>/` (copié tel quel dans `dist/renderer/themes/`) : son `theme.json`, lu et
+ * vérifié ici, et ses fichiers, désignés par des chemins relatifs à ce dossier.
+ */
+import { validateTheme } from '@mire/shared';
+import { documentHost, paletteHref } from '@mire/ui/palettes';
+import mire from './mire/theme.json' with { type: 'json' };
+import papier from './papier/theme.json' with { type: 'json' };
+import type { ThemeEntry, ThemeHost } from './engine.ts';
+
+export { createThemeEngine, activeTheme, DEFAULT_PAGE_LAYOUT } from './engine.ts';
+export type { ActiveTheme, ThemeEngine, ThemeEntry, ThemeHost } from './engine.ts';
+
+/** Lit les `theme.json` intégrés ; un thème invalide est écarté (avec un message dans la console). */
+export function readThemes(sources: Readonly<Record<string, unknown>>, base = 'themes'): ThemeEntry[] {
+  const out: ThemeEntry[] = [];
+  for (const [id, data] of Object.entries(sources)) {
+    const r = validateTheme(data, id);
+    if (r.ok) out.push({ theme: r.theme, base: `${base}/${id}` });
+    else console.error(`Thème « ${id} » ignoré : ${r.errors.join(', ') || 'fichier invalide'}`);
+  }
+  return out;
+}
+
+export const BUILTIN_THEMES: readonly ThemeEntry[] = readThemes({ mire, papier });
+
+/** La page réelle : la portée habillée, les feuilles de palettes du `<head>`, `FontFace` et `Audio`. */
+export function documentThemeHost(scope: HTMLElement, doc: Document = document): ThemeHost {
+  const palettes = documentHost(doc);
+  return {
+    scope,
+    hasTokens: (id) => palettes.hasTokens(id),
+    addTokens: (id, onReady) => palettes.addTokens(id, paletteHref(id), onReady),
+    async loadFont(family, url) {
+      try {
+        const face = new FontFace(family, `url("${url}")`);
+        doc.fonts.add(await face.load());
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    playSound(url) {
+      const audio = new Audio(url);
+      audio.volume = 0.4;
+      audio.play().catch(() => {});
+    },
+  };
+}

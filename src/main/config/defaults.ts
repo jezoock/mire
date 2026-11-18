@@ -21,6 +21,8 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
   ui: {
     fullscreen: false,
     theme: 'ecran',
+    // Thème des pages (P4-11) : `mire` (l'apparence de Mire) ou un autre thème sans code.
+    pageTheme: 'mire',
     backdrop: true,
     // Menu principal : à gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable ou non.
     menu: { position: 'left', autohide: false },

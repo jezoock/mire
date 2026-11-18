@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <!-- Fond du thème d'essai « Papier » (P4-11) : un quadrillage de cahier, discret. -->
+  <rect width="240" height="240" fill="#f6f1e4"/>
+  <path d="M0 40H240M0 80H240M0 120H240M0 160H240M0 200H240" stroke="#c9d6e8" stroke-width="1"/>
+  <path d="M40 0V240" stroke="#e4b4b4" stroke-width="1.5"/>
+</svg>
