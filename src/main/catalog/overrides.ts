@@ -9,7 +9,7 @@
  * - la façade lit et écrit les fiches sous leurs anciennes clés (`legacyAll`, `legacySet`).
  */
 import fs from 'node:fs';
-import type { Element, ElementKey, InfoValue, OpenKind } from '@mire/shared';
+import type { Element, ElementImages, ElementKey, InfoValue, OpenKind } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
 import { corruptReason, createJsonStore, readJsonFile } from '../storage/json-store.ts';
 import { movedKey } from './keys.ts';
@@ -224,6 +224,28 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
           else infos[id] = v;
         }
         o.infos = infos;
+      });
+    },
+
+    /** Images d'un élément (chemins ou adresses déjà vérifiés) ; `null` revient à l'automatique. */
+    setImages(key: ElementKey, changes: Partial<Record<keyof ElementImages, string | null>>): void {
+      change(key, (o) => {
+        const images: ElementImages = { ...o.images };
+        for (const [id, v] of Object.entries(changes) as [keyof ElementImages, string | null][]) {
+          if (v) images[id] = v;
+          else delete images[id];
+        }
+        o.images = images;
+      });
+    },
+
+    /** Efface tout ce qui a été modifié à la main pour un élément : tags, infos et images (« Réinitialiser »). */
+    reset(key: ElementKey): void {
+      if (!data.elements[key]) return;
+      change(key, (o) => {
+        delete o.tags;
+        delete o.infos;
+        delete o.images;
       });
     },
 
