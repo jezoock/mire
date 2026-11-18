@@ -21,6 +21,16 @@ export const CHANNEL_ERRORS = {
   plugin: 'plugin-error',
   hostGone: 'host-gone',
   unavailable: 'not-available',
+  /** Le contexte refuse : permission absente, hôte non déclaré, dossier non accordé (P3-04). */
+  refused: 'refused',
+  /** Message, corps ou fichier au-delà des bornes du contexte. */
+  tooLarge: 'too-large',
+  /** Trop de requêtes du contexte en attente pour ce plugin. */
+  busy: 'busy',
+  /** Échec d'une requête HTTP du contexte (hôte injoignable, délai, code de réponse). */
+  http: 'http-error',
+  /** Échec d'une lecture de fichier du contexte (absent, illisible). */
+  io: 'io-error',
 } as const;
 
 export type ChannelErrorCode = (typeof CHANNEL_ERRORS)[keyof typeof CHANNEL_ERRORS];

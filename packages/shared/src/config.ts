@@ -230,7 +230,24 @@ export interface Config {
   emulators: Emulator[];
   /** Catalogue d'éléments : absent tant que rien n'y a été changé (la version de la configuration ne change pas). */
   catalog?: CatalogSettings;
+  /**
+   * Réglages des plugins, par identifiant (P3-04) : absent tant qu'aucun n'a été changé. Les réglages secrets n'en
+   * sortent jamais vers l'interface ni dans un export.
+   */
+  plugins?: PluginSettingsSection;
 }
+
+/** Réglage secret d'un plugin : chiffré par le système quand il le permet (`encrypted`). */
+export interface StoredSecret {
+  $secret: string;
+  encrypted: boolean;
+}
+
+/** Valeur rangée d'un réglage de plugin. */
+export type StoredPluginSetting = string | number | boolean | string[] | StoredSecret;
+
+/** Section `plugins` de la configuration : identifiant du plugin → clé du réglage → valeur. */
+export type PluginSettingsSection = Record<string, Record<string, StoredPluginSetting>>;
 
 /** Réglages du catalogue d'éléments (P2-04). */
 export interface CatalogSettings {

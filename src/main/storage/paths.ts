@@ -50,6 +50,8 @@ export interface DataPaths {
   plugins: string;
   pluginState: string;
   pluginLogs: string;
+  /** Données des plugins (`ctx.storage`, P3-04) : un dossier par plugin. */
+  pluginData: string;
 }
 
 export function dataPaths(root: string): DataPaths {
@@ -84,5 +86,6 @@ export function dataPaths(root: string): DataPaths {
     plugins: at('plugins'),
     pluginState: at('plugins', 'state.json'),
     pluginLogs: at('plugins', 'logs'),
+    pluginData: at('plugin-data'),
   };
 }
