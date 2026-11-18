@@ -9,6 +9,7 @@ import type { InfoScalar, PagePath } from '@mire/shared';
 import type { CandidateSpec, FormResult } from '@mire/ui/utils';
 import type { FormOptions } from '../ui/dialogs.ts';
 import type { Search } from '../search/index.ts';
+import type { Explorer } from '../explorer/index.ts';
 import type { Settings } from '../settings/index.ts';
 
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
@@ -59,6 +60,8 @@ export interface LegacyUi {
   editRef(ref: ItemRef | null): void;
   /** Clé de l'élément du catalogue dont la carte a le focus (vue de page, accueil, Recherche), ou `null`. */
   selectedKey?(): string | null;
+  /** Regroupement dont la carte a le focus (vue de page, accueil), désigné par sa page et son chemin, ou `null`. */
+  selectedGroup?(): { page: string; path: PagePath } | null;
   /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
   afterEdit?(): void;
   editConsole(consoleId: unknown): void;
@@ -111,6 +114,9 @@ export interface LegacyUi {
   rememberQuery(query: string): void;
   /** Écran de la Recherche (`src/renderer/search/`). */
   search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult' | 'resetWatch'>;
+  // Explorateur (P4-08)
+  /** Écran de l'explorateur (`src/renderer/explorer/`). */
+  explorer: Pick<Explorer, 'open' | 'show' | 'more'>;
   /** Écran des Réglages (`src/renderer/settings/`, P4-20). */
   settings: Pick<Settings, 'refresh' | 'draft' | 'clearDraft' | 'focus'>;
   // Téléchargements, boutique, réglages

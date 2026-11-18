@@ -27,12 +27,13 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { CENTRE_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, SETTINGS_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { CENTRE_VIEW, EXPLORER_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, SETTINGS_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
 import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
 import { createSearch } from './search/index.ts';
+import { createExplorer } from './explorer/index.ts';
 import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
-import { cardKeyOf, initEditors } from './editors/index.ts';
+import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -148,6 +149,28 @@ const search = createSearch({
   },
 });
 
+// Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags), puis l'aperçu d'un élément.
+const explorer = createExplorer({
+  t,
+  plural: (key, count) => {
+    const forms = i18n.raw(key);
+    return forms && typeof forms === 'object' ? pluralLabel(forms, count, i18n.language || 'fr') : '';
+  },
+  pages: () => shell.pages(),
+  lists: () => api.listsList(),
+  tags: () => api.tagsList(),
+  level: (id, path, cursor) => api.catalogPage(id, path, cursor),
+  element: (key) => api.catalogElement(key),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); },
+  shown: () => S.section === EXPLORER_VIEW,
+  // Colonnes redessinées : le focus, s'il était sur une ligne retirée, revient à la première colonne.
+  onRendered: () => {
+    if (S.section !== EXPLORER_VIEW) return;
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) explorer.focusFirst();
+  },
+});
 // Réglages (P4-20) : panneaux générés depuis le schéma des réglages et les manifestes des plugins, enregistrés dès
 // qu'ils changent.
 const settings = createSettings({
@@ -284,7 +307,8 @@ function go(section, { focus = 'keep' } = {}) {
     if (!S.channels && !S.tvLoading && !S.tvError) loadChannels();
   }
   // Le contenu de la Recherche est son champ (ci-dessus).
-  if (focus === 'content' && section !== SEARCH_VIEW) {
+  if (focus === 'content' && section === EXPLORER_VIEW) explorer.focusFirst();
+  else if (focus === 'content' && section !== SEARCH_VIEW) {
     focusFirst();
     // Vue encore en chargement (télé) : le focus ira au contenu dès qu'il arrive.
     // L'accueil rend ses rangées après avoir lu le catalogue : le focus ira à la première barre une fois rendues.
@@ -304,6 +328,7 @@ addEventListener('hashchange', openDemoFromHash);
 function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
   if (S.section === PAGE_VIEW && pages.back()) return;
+  if (S.section === EXPLORER_VIEW && explorer.back()) return;
   if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
   if (S.section !== HOME_VIEW) go(HOME_VIEW, { focus: 'content' });
 }
@@ -405,13 +430,14 @@ function render({ resetScroll = false } = {}) {
   const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
   // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
-  // (P4-18) et les Réglages (P4-20).
-  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === SETTINGS_VIEW ? settings.host : null;
+  // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
+  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
   if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
   else viewEl.innerHTML = views[sec]();
   if (sec === HOME_VIEW) home.refresh();
   if (sec === SEARCH_VIEW) search.refresh();
   if (sec === CENTRE_VIEW) centre.refresh();
+  if (sec === EXPLORER_VIEW) explorer.refresh();
   if (sec === SETTINGS_VIEW) settings.refresh({ plugins: true });
   if (resetScroll) viewEl.scrollTop = 0;
 
@@ -2397,7 +2423,8 @@ const legacyUi = {
     settings.focus(blockId.replace(/^set-/, ''));
   },
   selectedRef: () => refFromEl(document.activeElement),
-  selectedKey: () => cardKeyOf(),
+  selectedKey: () => cardKeyOf() ?? (S.section === EXPLORER_VIEW ? explorer.selectedKey() : null),
+  selectedGroup: () => groupRefOf(document.activeElement, pages.route()),
   afterEdit: () => { if (S.section === SEARCH_VIEW) search.refresh(); },
   firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
   editRef, editConsole, deletableGame, deleteGameRef,
@@ -2409,7 +2436,7 @@ const legacyUi = {
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,
-  getQueries, rememberQuery, search, settings,
+  getQueries, rememberQuery, search, explorer, settings,
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),
@@ -2436,7 +2463,11 @@ dialogs.initDialogs({
 });
 initDemoDialogs({ openForm });
 const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
-initEditors(document, (key) => C.editor.edit({ key }));
+initEditors(document, (key) => C.editor.edit({ key }), (node) => {
+  const ref = groupRefOf(node, pages.route());
+  if (ref) C.editor.editGroup(ref);
+  return ref;
+});
 setActionErrorHandler((error, { tag, method }) => {
   console.error(`Action ${tag}.${method} :`, error);
   toast(t('app.errors.actionFailed'), { duration: 6000 });

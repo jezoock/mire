@@ -30,6 +30,8 @@ export interface FieldSpec {
   browse?: 'file' | 'folder';
   /** Image : aperçu large (fond d'écran). */
   wide?: boolean;
+  /** Liste : bouton « Choisir un dossier » (oui par défaut, pour les sources ; non pour des tags). */
+  folders?: boolean;
 }
 
 /** Bouton d'action : `primary` valide le formulaire (et vérifie les champs obligatoires), `ghost` est discret. */
@@ -59,6 +61,7 @@ export interface Field {
   full: boolean;
   browse: 'file' | 'folder' | '';
   wide: boolean;
+  folders: boolean;
 }
 
 export interface Tab {
@@ -123,6 +126,7 @@ export function normalizeField(spec: FieldSpec): Field {
     full: !!spec.full || type === 'textarea' || type === 'list',
     browse: spec.browse === 'file' || spec.browse === 'folder' ? spec.browse : '',
     wide: !!spec.wide,
+    folders: type === 'list' && spec.folders !== false,
   };
 }
 

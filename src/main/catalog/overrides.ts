@@ -108,9 +108,15 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
   const legacyIndex = new Map<string, ElementKey>();
   const listeners = new Set<OverridesListener>();
   let facade: Record<string, UserMeta> | null = null;
+  // Modifications groupées (`batch`) : clés touchées, écrites et annoncées une seule fois à la fin.
+  let batching: Set<ElementKey> | null = null;
 
   function save(keys: ElementKey[]): void {
     facade = null;
+    if (batching) {
+      for (const key of keys) batching.add(key);
+      return;
+    }
     store.set(data);
     if (keys.length) for (const listener of listeners) listener(keys);
   }
@@ -157,6 +163,21 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
   }
 
   return {
+    /**
+     * Applique plusieurs modifications (celles d'un regroupement, P4-22) en une seule écriture et un seul changement
+     * annoncé, pour toutes les clés touchées.
+     */
+    batch<T>(fn: () => T): T {
+      if (batching) return fn();
+      const touched = (batching = new Set());
+      try {
+        return fn();
+      } finally {
+        batching = null;
+        save([...touched]);
+      }
+    },
+
     /**
      * Lit `overrides.json`. Absent, et `meta.json` présent : reprend ses fiches (premier démarrage après la mise à
      * jour). À appeler une fois le catalogue lu, pour retrouver les éléments par leur adresse.

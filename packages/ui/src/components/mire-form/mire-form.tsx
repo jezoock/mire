@@ -237,7 +237,7 @@ export class MireForm {
             onInput={(e) => this.input.emit({ dialog: this.dialog, field: f.id, draft: (e.target as HTMLInputElement).value })}
           />
           {this.trigger(labels.add ?? '', { action: 'list-add', field: f.id })}
-          {this.trigger(labels.addFolder ?? '', { action: 'list-folder', field: f.id }, 'stl-3')}
+          {f.folders && this.trigger(labels.addFolder ?? '', { action: 'list-folder', field: f.id }, 'stl-3')}
         </div>
       </div>
     );

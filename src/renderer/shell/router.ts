@@ -5,9 +5,9 @@
  *
  * Une page s'affiche dans la vue de page (`PAGE_VIEW`, `mire-page-view`, P4-11), l'accueil dans la sienne (`HOME_VIEW`,
  * `mire-home`, P4-12), toutes deux dessinées par le thème ; la Recherche (`SEARCH_VIEW`, `mire-search`, P4-13), le
- * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) et les Réglages (`SETTINGS_VIEW`, `mire-settings`, P4-20) dans les
- * leurs, avec l'habillage du cœur. Un écran du cœur sans vue (l'explorateur, P4-08) ne s'ouvre pas encore. Les
- * sections historiques des pages prêtes à l'emploi restent ouvrables
+ * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18), l'explorateur (`EXPLORER_VIEW`, `mire-explorer`, P4-08) et les Réglages
+ * (`SETTINGS_VIEW`, `mire-settings`, P4-20) dans les leurs, avec l'habillage du cœur. Les sections historiques des pages
+ * prêtes à l'emploi restent ouvrables
  * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
  */
 import { formatTarget, parseTarget } from '@mire/shared';
@@ -44,6 +44,11 @@ export const SEARCH_TARGET = formatTarget({ kind: 'screen', screen: 'search' });
 /** Vue qui affiche la Recherche (P4-13) : la section `search` de l'interface, qui contient `<mire-search>`. */
 export const SEARCH_VIEW = 'search';
 
+export const EXPLORER_TARGET = formatTarget({ kind: 'screen', screen: 'explorer' });
+
+/** Vue qui affiche l'explorateur (P4-08) : la section `explorer` de l'interface, qui contient `<mire-explorer>`. */
+export const EXPLORER_VIEW = 'explorer';
+
 export const SETTINGS_TARGET = formatTarget({ kind: 'screen', screen: 'settings' });
 
 /**
@@ -54,12 +59,13 @@ export const SETTINGS_VIEW = 'settings';
 
 /**
  * Écrans du cœur, chacun avec sa vue en composants (P4-12 : l'accueil ; P4-13 : la Recherche ; P4-18 : le Centre ;
- * P4-20 : les Réglages). Depuis P4-20, plus aucun écran ne s'affiche dans une vue historique.
+ * P4-08 : l'explorateur ; P4-20 : les Réglages). Depuis P4-20, plus aucun écran ne s'affiche dans une vue historique.
  */
 export const SCREEN_VIEWS: ReadonlyArray<readonly [target: string, section: string]> = [
   [HOME_TARGET, HOME_VIEW],
   [SEARCH_TARGET, SEARCH_VIEW],
   [CENTRE_TARGET, CENTRE_VIEW],
+  [EXPLORER_TARGET, EXPLORER_VIEW],
   [SETTINGS_TARGET, SETTINGS_VIEW],
 ];
 

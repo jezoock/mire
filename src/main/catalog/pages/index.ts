@@ -7,7 +7,7 @@
  * effacent ses niveaux en cache et annoncent les pages touchées (`onChange`).
  */
 import type { ElementKey, PageDefinition, PageGroup, PageLevel, PagePath, PageSaveResult } from '@mire/shared';
-import { validatePage } from '@mire/shared';
+import { tagIdOfPage, validatePage } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { TagEngine } from '../tags/engine.ts';
 import { corruptReason, createJsonStore } from '../../storage/json-store.ts';
@@ -85,6 +85,15 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
     return data.removed.includes(id) ? undefined : builtinById.get(id);
   }
 
+  /**
+   * Page d'un tag (`tag:<id>`, explorateur P4-08) : les éléments qui portent ce tag, triés par nom. Elle se calcule et
+   * se garde en cache comme une page, mais n'est jamais listée ni annoncée : un changement du moteur l'efface.
+   */
+  function scope(id: unknown): PageDefinition | undefined {
+    const tag = tagIdOfPage(id);
+    return tag === null ? definition(id) : { id: id as string, name: tag, require: [tag] };
+  }
+
   function all(): PageDefinition[] {
     const ids = new Set([...builtin.map((p) => p.id), ...Object.keys(data.pages)]);
     const pages = [...ids].map(definition).filter((p): p is PageDefinition => !!p);
@@ -147,6 +156,7 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
 
   /** Changements du moteur : pages touchées, éléments et niveaux en cache mis à jour. */
   engine.onChange((keys) => {
+    for (const id of [...caches.keys()]) if (tagIdOfPage(id) !== null) caches.delete(id);
     const pages = all();
     if (keys.length > BULK) {
       caches.clear();
@@ -216,10 +226,10 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
     /**
      * Un niveau d'une page (`catalog.page`) : ses regroupements tant que le chemin n'a pas atteint le dernier niveau
      * de `groupBy`, puis ses éléments triés. `cursor` : celui de la tranche précédente (`next`). `null` si la page
-     * n'existe pas ou si le chemin ne convient pas.
+     * n'existe pas ou si le chemin ne convient pas. `tag:<id>` : les éléments d'un tag (`scope`).
      */
     page(pageId: unknown, path: unknown = [], cursor: unknown = null): PageLevel | null {
-      const page = definition(pageId);
+      const page = scope(pageId);
       const p = path ?? [];
       if (!page || !Array.isArray(p) || p.length > (page.groupBy?.length ?? 0) || !p.every(isScalarOrNull)) return null;
       const from = typeof cursor === 'string' && /^\d+$/.test(cursor) ? Number(cursor) : 0;
@@ -234,6 +244,19 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
         .map((k) => engine.element(k))
         .filter((e) => !!e);
       return { ...base, kind: 'elements', elements };
+    },
+
+    /**
+     * Regroupement désigné par son chemin (éditeurs, P4-22) : l'info qui le forme (celle du dernier niveau du chemin)
+     * et les clés de tous ses éléments, quel que soit le nombre de niveaux en dessous. `null` si la page, le chemin ou
+     * le regroupement n'existent pas.
+     */
+    group(pageId: unknown, path: unknown): { page: string; path: PagePath; info: string; keys: ElementKey[] } | null {
+      const page = definition(pageId);
+      const levels = page?.groupBy ?? [];
+      if (!page || !Array.isArray(path) || !path.length || path.length > levels.length || !path.every(isScalarOrNull)) return null;
+      const keys = followPath(members(page), levels, path as PagePath, engine.peek);
+      return keys.length ? { page: page.id, path: [...path] as PagePath, info: levels[path.length - 1], keys } : null;
     },
 
     /** Abonnement aux pages dont le contenu a pu changer. */

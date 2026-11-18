@@ -4,7 +4,7 @@
  * niveau). Le calcul se fait dans le processus principal (`src/main/catalog/pages/`) ; l'interface demande un niveau à
  * la fois, par tranches (`catalog.page`).
  */
-import type { Element } from './element.ts';
+import type { Element, ElementImages, InfoChanges, TagChanges } from './element.ts';
 // Règle des identifiants de page : celle des cibles, publiée dans le SDK des plugins.
 import { PAGE_ID_RE } from '../../plugin-sdk/src/targets.ts';
 
@@ -82,6 +82,44 @@ export type PageLevel = {
   next: string | null;
 } & ({ kind: 'groups'; info: string; groups: PageGroup[] } | { kind: 'elements'; elements: PageElement[] });
 
+/**
+ * Regroupement d'une page ouvert dans un éditeur (P4-22) : un album, une série. `info` est l'info qui le forme
+ * (`album`, `series`) et `value` sa valeur (son nom) ; `elements` : tous ses éléments, quel que soit le nombre de
+ * niveaux en dessous (les épisodes de toutes les saisons d'une série).
+ */
+export interface CatalogGroup {
+  page: string;
+  path: PagePath;
+  info: string;
+  value: InfoScalar | null;
+  elements: Element[];
+}
+
+/** Modification d'un regroupement : elle vaut pour chacun de ses éléments. */
+export interface GroupEdit {
+  /** Nouveau nom : nouvelle valeur de l'info qui forme le regroupement (remplacée dans une liste, comme un genre). */
+  rename?: InfoScalar;
+  /** Autres infos (l'info qui forme le regroupement passe par `rename`). */
+  infos?: InfoChanges;
+  tags?: TagChanges;
+  /** Images qui reviennent à l'automatique. */
+  clearImages?: (keyof ElementImages)[];
+  /** Tags, infos et images de chaque élément reviennent à l'automatique. */
+  reset?: boolean;
+}
+
+/** Infos d'une fiche trouvée en ligne pour un regroupement, proposées dans l'éditeur avant d'être enregistrées. */
+export interface GroupFacts {
+  title: string;
+  year?: string;
+  genre?: string;
+  overview?: string;
+  artist?: string;
+}
+
+/** Réponse de `catalogGroupFetch` : la fiche (ses images sont déjà posées sur les éléments) et le regroupement. */
+export type GroupFetchResult = { ok: true; facts: GroupFacts; group: CatalogGroup | null } | { ok: false; error?: string };
+
 /** Réponse de `pages.save` : la page enregistrée, ou les endroits de la définition qui ne conviennent pas. */
 export type PageSaveResult = { ok: true; page: PageDefinition } | { ok: false; errors: string[] };
 
@@ -91,6 +129,16 @@ export interface PagesChange {
 }
 
 export { PAGE_ID_RE };
+
+/**
+ * Préfixe des éléments d'un tag dans `catalog.page` (`tag:<id>`, P4-08) : tous les éléments qui portent ce tag, triés
+ * par nom, sans regroupement. L'explorateur s'en sert pour sa colonne Tags ; ce n'est pas une cible.
+ */
+export const TAG_PAGE_PREFIX = 'tag:';
+export const tagPageId = (id: string): string => `${TAG_PAGE_PREFIX}${id}`;
+/** Identifiant du tag désigné par un `pageId`, ou `null` si ce n'en est pas un. */
+export const tagIdOfPage = (pageId: unknown): string | null =>
+  typeof pageId === 'string' && pageId.startsWith(TAG_PAGE_PREFIX) && pageId.length > TAG_PAGE_PREFIX.length ? pageId.slice(TAG_PAGE_PREFIX.length) : null;
 const INFO_RE = /^[a-z][a-zA-Z0-9]{0,63}$/;
 const TAG_RE = /^[^\s].{0,63}$/;
 export const PAGE_DISPLAYS: readonly PageDisplay[] = ['posters', 'thumbnails', 'list', 'rows'];

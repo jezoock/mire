@@ -48,8 +48,8 @@ describe('routeur de la coquille', () => {
     assert.equal(sameRoute({ target: 'series', path: ['A', 1] }, { target: 'series', path: ['A'] }), false);
   });
 
-  it('chaque page s’affiche dans la vue de page ; chaque écran du cœur sauf l’explorateur dans la sienne', () => {
-    for (const s of CORE_SCREENS) assert.equal(viewOf(`screen:${s}`) === null, s === 'explorer', s);
+  it('chaque page s’affiche dans la vue de page ; l’accueil dans la sienne ; chaque écran du cœur a une vue', () => {
+    for (const s of CORE_SCREENS) assert.notEqual(viewOf(`screen:${s}`), null, s);
     // L'accueil (P4-12) a quitté les vues historiques : sa vue est mire-home, dans la section qui garde son nom.
     assert.equal(viewOf('screen:home'), HOME_VIEW);
     // Les Réglages (P4-20) aussi : plus aucun écran ne s'affiche dans une vue historique.
@@ -79,7 +79,6 @@ describe('routeur de la coquille', () => {
     assert.equal(router.open('series', { path: ['Friends'] }), true);
     assert.deepEqual(router.current(), { target: 'series', path: ['Friends'] });
     assert.equal(router.open('films-annees-90'), true);
-    assert.equal(router.open('screen:explorer'), false);
     assert.equal(router.open('list:favoris'), false);
     assert.equal(router.open('pas une cible'), false);
     assert.equal(router.open('screen:settings', { focus: 'keep' }), true);
@@ -124,12 +123,13 @@ describe('entrées du menu', () => {
         ['tv', 'tv', false],
         ['games', 'games', false],
         ['screen:center', 'downloads', true],
+        ['screen:explorer', 'explorer', true],
         ['openFile', '', true],
         ['screen:settings', 'settings', true],
         ['quit', '', true],
       ],
     );
-    assert.equal(entries[10]?.label, '«shell.menu.openFile»');
+    assert.equal(entries[11]?.label, '«shell.menu.openFile»');
     assert.deepEqual(
       entries.filter((e) => e.sessions).map((e) => e.key),
       ['streaming', 'tv', 'games'],
@@ -143,7 +143,7 @@ describe('entrées du menu', () => {
       pinnedPages(pages).map((p) => p.id),
       ['games', 'series', 'mes-films', 'movies'],
     );
-    const entries = railEntries(pages, t).slice(2, -4);
+    const entries = railEntries(pages, t).slice(2, -5);
     assert.deepEqual(
       entries.map((e) => [e.key, e.label, e.view, e.color]),
       [

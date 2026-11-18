@@ -754,7 +754,8 @@
         "tv": "Télévision",
         "games": "Jeux",
         "downloads": "Centre",
-        "settings": "Réglages"
+        "settings": "Réglages",
+        "explorer": "Explorateur"
       },
       "menu": {
         "label": "Menu principal",
@@ -1085,6 +1086,7 @@
       },
       "fields": {
         "title": "Nom",
+        "artist": "Artiste",
         "year": "Année",
         "genres": "Genres",
         "genresHint": "Plusieurs : séparés par des virgules",
@@ -1118,6 +1120,20 @@
         "fetching": "Récupération de « {title} »…",
         "fetchFailed": "Impossible de récupérer cette fiche.",
         "fetched": "Fiche « {title} » récupérée : vérifiez les champs, puis enregistrez."
+      },
+      "group": {
+        "title": {
+          "album": "Modifier l’album",
+          "series": "Modifier la série",
+          "other": "Modifier le regroupement"
+        },
+        "help": {
+          "one": "Les modifications valent pour son élément.",
+          "other": "Les modifications valent pour ses {count} éléments."
+        },
+        "mixed": "Plusieurs valeurs",
+        "nameRequired": "Donnez un nom à ce regroupement.",
+        "gone": "Ce regroupement n’est plus dans la bibliothèque."
       }
     },
     "settingsView": {
@@ -1207,6 +1223,44 @@
         "moveBefore": "Placer {label} avant {other}",
         "moveAfter": "Placer {label} après {other}"
       }
+    },
+    "explorer": {
+      "heading": "Explorateur",
+      "sections": {
+        "pages": "Pages",
+        "lists": "Listes",
+        "tags": "Tags"
+      },
+      "columns": "Colonnes de l’explorateur",
+      "empty": "Rien ici pour l’instant.",
+      "unavailable": "Indisponible",
+      "preview": {
+        "label": "Aperçu",
+        "infos": "Infos",
+        "tags": "Tags",
+        "noTags": "Aucun tag.",
+        "source": "Source",
+        "location": "Emplacement"
+      },
+      "actions": {
+        "play": "Lire",
+        "edit": "Modifier les infos",
+        "tags": "Tags",
+        "addToList": "Ajouter à une liste"
+      },
+      "addToList": {
+        "title": "Ajouter à une liste",
+        "help": "« {name} » sera ajouté à la fin de la liste choisie.",
+        "list": "Liste",
+        "newList": "Ou une nouvelle liste",
+        "newListHint": "Nom de la nouvelle liste",
+        "add": "Ajouter",
+        "cancel": "Annuler",
+        "added": "Ajouté à « {list} ».",
+        "already": "Déjà dans « {list} ».",
+        "failed": "Impossible d’ajouter à cette liste."
+      },
+      "gone": "Cet élément n’est plus dans le catalogue."
     }
   }
 }

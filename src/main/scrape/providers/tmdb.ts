@@ -191,7 +191,8 @@ export function tmdbProvider(client: TmdbClient): MetadataProvider {
     },
 
     async candidates({ item, query, year }, ctx) {
-      const tvOnly = /S\d{1,2}\s*E\d{1,3}/i.test(item?.name || '');
+      // Une série (regroupement, P4-22) ou un épisode : seulement les séries.
+      const tvOnly = item?.tv === true || /S\d{1,2}\s*E\d{1,3}/i.test(item?.name || '');
       const data = await tmdb(tvOnly ? '/search/tv' : '/search/multi', { query, language: language(ctx) });
       const list = (data?.results || []).filter((r: any) => tvOnly || r.media_type === 'movie' || r.media_type === 'tv');
       const ranked = rankByTitle(

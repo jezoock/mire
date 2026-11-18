@@ -130,7 +130,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | faite | [#66](https://github.com/jezoock/mire/pull/66) |
 | P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | faite | [#68](https://github.com/jezoock/mire/pull/68) |
 | P4-07 | Coquille de l'application | L | P4-05, P4-06, P2-07 |  | faite | [#70](https://github.com/jezoock/mire/pull/70) |
-| P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | à faire | |
+| P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | en cours (partie 1 : [#79](https://github.com/jezoock/mire/pull/79)) | |
 | P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |
 | P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | à faire | |
 | P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | faite | [#73](https://github.com/jezoock/mire/pull/73) |
@@ -144,7 +144,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | à faire | |
 | P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | en cours (partie 1 : [#80](https://github.com/jezoock/mire/pull/80)) | |
 | P4-21 | Administration des tags, des pages et des listes | M | P4-20, P2-07, P2-08 |  | à faire | |
-| P4-22 | Éditeurs | M | P4-06, P4-11 |  | faite | [#78](https://github.com/jezoock/mire/pull/78) |
+| P4-22 | Éditeurs | M | P4-06, P4-11 |  | faite | [#78](https://github.com/jezoock/mire/pull/78), [#81](https://github.com/jezoock/mire/pull/81) |
 | P4-23 | Assistant du premier lancement | M | P4-19, P4-20 | 🧑 | à faire | |
 | P4-24 | Retrait de l'interface historique et audits | M | P4-08…P4-23 | 🧑 | à faire | |
 | P4-25 | Guide « Créer un thème » | S | P4-11, P4-24 |  | à faire | |
