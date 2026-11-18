@@ -101,7 +101,13 @@ const pages = createPages({
   raw: (key) => i18n.raw(key),
   onLanguageChange: (listener) => i18n.onChange(listener),
   themes: BUILTIN_THEMES,
-  onTitle: () => { if (S.section === PAGE_VIEW) render(); },
+  // Niveau rendu : titre de l'en-tête ; le focus, s'il était sur une carte retirée, va au premier élément du contenu.
+  onLoaded: () => {
+    if (S.section !== PAGE_VIEW) return;
+    render();
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) focusFirst();
+  },
 });
 
 function applyMenu() {

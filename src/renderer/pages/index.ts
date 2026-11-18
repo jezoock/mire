@@ -31,8 +31,11 @@ export interface PagesOptions {
   onLanguageChange(listener: () => void): unknown;
   /** Thèmes connus (le premier, ou `mire`, par défaut). */
   themes: readonly ThemeEntry[];
-  /** Le titre de la page affichée a changé (en-tête). */
-  onTitle(): void;
+  /**
+   * Le niveau demandé est chargé et rendu : titre de l'en-tête, et focus à rendre au contenu s'il s'est perdu (les
+   * cartes du niveau précédent ont été retirées).
+   */
+  onLoaded(): void;
 }
 
 export interface Pages {
@@ -118,26 +121,39 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
     Object.assign(view, { layout: layout.layout, card: layout.card, size: layout.size, background: layout.background });
   }
 
+  // Un niveau chargé n'est annoncé qu'une fois rendu par la vue.
+  let announce = false;
+  view.addEventListener('mirePageRender', (e) => {
+    if (!announce || (e as CustomEvent<{ loading: boolean }>).detail.loading) return;
+    announce = false;
+    opts.onLoaded();
+  });
+
   async function load() {
     const p = page();
     if (!p) return;
+    announce = false;
     await model.show(p, router.current().path);
-    opts.onTitle();
+    announce = true;
   }
 
   router.onChange(() => void load());
   view.addEventListener('mirePageMore', () => void model.more());
+  const refresh = async () => {
+    await model.refresh();
+    announce = true;
+  };
   opts.onPagesChange(({ pages }) => {
     const r = model.route();
-    if (r && pages.includes(r.page.id)) void model.refresh();
+    if (r && pages.includes(r.page.id)) void refresh();
   });
   // Changement de thème : la mise en page (rangées ou grille) peut demander d'autres données.
   engine.onChange(() => {
     applyTheme();
-    void model.refresh();
+    void refresh();
   });
   engine.set(undefined);
-  opts.onLanguageChange(() => void model.refresh());
+  opts.onLanguageChange(() => void refresh());
 
   const open = (path: PagePath) => router.open(router.current().target, { path, focus: 'content' });
 

@@ -82,8 +82,10 @@ export class MirePageView {
     this.observer = undefined;
   }
 
+  // Chaque rendu est signalé (`mirePageRender`) : la page sait ainsi quand le niveau chargé est à l'écran (focus).
   // À l'approche de la fin du niveau, la page demande la tranche suivante (`mirePageMore`).
   componentDidRender() {
+    this.host.dispatchEvent(new CustomEvent('mirePageRender', { detail: { loading: this.loading } }));
     const sentinel = this.host.querySelector('.mire-page-view__end');
     this.observer?.disconnect();
     if (!sentinel || !this.hasMore || this.loading || typeof IntersectionObserver === 'undefined') return;
