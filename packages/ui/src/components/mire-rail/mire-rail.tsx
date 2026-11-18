@@ -1,6 +1,6 @@
 import { Component, Element, Event, Host, Prop, State, Watch, h } from '@stencil/core';
 import type { EventEmitter } from '@stencil/core';
-import { RAIL_CLOSE_DELAY, badgeText, isCarousel, menuPosition, railStaysOpen, readProp } from '../../utils/shell.ts';
+import { RAIL_CLOSE_DELAY, badgeText, isCarousel, menuPosition, railStaysOpen, readProp, scrollBehavior } from '../../utils/shell.ts';
 import type { RailEntry, RailLabels, RailSession } from '../../utils/shell.ts';
 
 /**
@@ -51,6 +51,7 @@ export class MireRail {
   private items?: HTMLElement;
   private closeTimer: ReturnType<typeof setTimeout> | undefined;
   private centered = '';
+  private lastCenter = 0;
 
   @Watch('position')
   @Watch('autohide')
@@ -108,7 +109,9 @@ export class MireRail {
     // En carrousel, l'entrée sélectionnée vient au centre.
     const item = (e.target as HTMLElement).closest('.rail-item, .rail-sub');
     if (!item || !isCarousel(menuPosition(this.position))) return;
-    const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    const now = performance.now();
+    const behavior = scrollBehavior({ reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, sinceLast: now - this.lastCenter });
+    this.lastCenter = now;
     item.scrollIntoView({ block: 'nearest', inline: 'center', behavior });
   };
 

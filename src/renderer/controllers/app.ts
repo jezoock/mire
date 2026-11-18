@@ -9,6 +9,18 @@ export class AppController extends Controller {
     this.ctx.ui.go(section, { focus });
   }
 
+  /** Retour : ferme la console ouverte, quitte le site affiché, sinon revient à l'accueil. */
+  back(): void {
+    this.ctx.ui.back();
+  }
+
+  /** Écran suivant (`step: 1`) ou précédent (`-1`), depuis la manette ; depuis un site, on part de sa page d'origine. */
+  cycleSection({ step }: { step: number }): void {
+    const { S, ui } = this.ctx;
+    const next = ui.nextSection(S.section === 'web' ? ui.webHome() : S.section, step);
+    ui.go(next, { focus: next === 'search' ? 'keep' : 'content' });
+  }
+
   /**
    * Ouvre une cible (P4-07) : un écran du cœur (`screen:search`), une page (`movies`) ou une liste (`list:<id>`), et un
    * chemin dans ses regroupements. Le focus va au contenu, sauf `focus: 'keep'` (choix dans le menu). Faux si aucune
@@ -21,18 +33,6 @@ export class AppController extends Controller {
   /** Site ouvert, choisi dans le menu sous la page d'où il vient. */
   openSite({ id }: { id: string }): void {
     this.ctx.ui.openSite(String(id));
-  }
-
-  /** Retour : ferme la console ouverte, quitte le site affiché, sinon revient à l'accueil. */
-  back(): void {
-    this.ctx.ui.back();
-  }
-
-  /** Écran suivant (`step: 1`) ou précédent (`-1`), depuis la manette ; depuis un site, on part de sa page d'origine. */
-  cycleSection({ step }: { step: number }): void {
-    const { S, ui } = this.ctx;
-    const next = ui.nextSection(S.section === 'web' ? ui.webHome() : S.section, step);
-    ui.go(next, { focus: next === 'search' ? 'keep' : 'content' });
   }
 
   openFile(): void {

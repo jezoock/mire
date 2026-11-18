@@ -8,6 +8,7 @@
  */
 import { getTabbableElements, isTabbable } from 'dot-stash/dist/collection/utils/focus.js';
 import { $, $$ } from '../core/dom.ts';
+import { scrollBehavior } from '@mire/ui/utils';
 import { NAV_SELECTOR, focusSelectorOf, isShown, pickNeighbor, type Direction } from './spatial.ts';
 import {
   COLUMN_ATTR,
@@ -119,9 +120,13 @@ function whenViewHydrated(run: () => void): void {
 const columnMemory = new WeakMap<Element, HTMLElement>();
 
 /** Donne le focus et montre l'élément ; dans un `ds-scroller`, la rangée défile d'elle-même, la page montre la rangée. */
+// Une touche qui reste enfoncée défile sans animation (`scrollBehavior`), pour que la vue suive le focus.
+let lastReveal = 0;
 function reveal(el: HTMLElement): void {
   el.focus({ preventScroll: true });
-  const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  const now = performance.now();
+  const behavior = scrollBehavior({ reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, sinceLast: now - lastReveal });
+  lastReveal = now;
   (el.closest('ds-scroller') ?? el).scrollIntoView({ block: 'nearest', inline: 'nearest', behavior });
 }
 

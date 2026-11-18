@@ -83,3 +83,15 @@ export interface PadHint {
 
 /** Un libellé de bouton de plus de deux caractères (« Affichage ») prend une pastille allongée. */
 export const isLongGlyph = (glyph: string): boolean => glyph.length > 2;
+
+/** En dessous de cet écart entre deux déplacements (en ms), une touche reste enfoncée ou se répète. */
+export const RAPID_MOVE_MS = 200;
+
+/**
+ * Défilement qui montre l'élément sélectionné : en douceur pour un déplacement isolé, immédiat quand les
+ * déplacements se suivent de près (touche enfoncée, croix de la manette maintenue) — sinon chaque défilement en
+ * douceur repart du précédent et la vue prend du retard sur le focus — ou si le système demande moins d'animations.
+ */
+export function scrollBehavior({ reducedMotion, sinceLast }: { reducedMotion: boolean; sinceLast: number }): ScrollBehavior {
+  return reducedMotion || sinceLast < RAPID_MOVE_MS ? 'auto' : 'smooth';
+}
