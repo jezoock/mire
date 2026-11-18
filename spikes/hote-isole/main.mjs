@@ -183,8 +183,6 @@ async function creerHoteA(plugins, { journalReseau = null, parades = true, trava
       preload: path.join(ICI, 'hote-a', 'preload.js'),
       backgroundThrottling: false,
       spellcheck: false,
-      // WebTransport (QUIC) échappe à webRequest et au proxy (constaté) : retiré du moteur de cet hôte.
-      ...(parades ? { disableBlinkFeatures: 'WebTransport' } : {}),
     },
   });
   const wc = fenetre.webContents;

@@ -5,7 +5,7 @@ const ANNEE = /\b(19\d{2}|20\d{2})\b/;
 const HD = /\b(720p|1080p|2160p|4k)\b/i;
 
 /** @type {import('@mire/plugin-sdk').ContributionFactory<'taggers'>} */
-export default function creer(_ctx) {
+export default function creer() {
   return {
     id: 'essai-tags',
     compute(element) {

@@ -106,6 +106,14 @@ function essaisPage(cfg) {
     ],
     [
       'processus',
+      'contexte neuf (Worker imbriqué, où WebTransport reviendrait)',
+      async () => {
+        if (typeof Worker !== 'function') throw new Error('Worker absent');
+        return 'Worker disponible';
+      },
+    ],
+    [
+      'processus',
       'Node (require, process, Buffer, module)',
       async () => {
         const g = /** @type {Record<string, unknown>} */ (globalThis);
