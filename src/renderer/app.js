@@ -5,6 +5,7 @@ import { fmtSize, plural } from './core/format.ts';
 import { ICON } from './core/icons.ts';
 import { barFor, monogram, onColor, safeColor } from './core/colors.ts';
 import { toast } from './ui/toast.ts';
+import * as dialogs from './ui/dialogs.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
 import { fold, splitAlbumFolder } from '@mire/shared';
@@ -21,7 +22,7 @@ import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from
 import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
 import { createPaletteLoader } from '@mire/ui/palettes';
-import { DEMO_SECTION, demoTitle, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
+import { DEMO_SECTION, demoTitle, initDemoDialogs, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
 import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
@@ -1693,7 +1694,7 @@ function slotRect() {
   return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
 }
 function webShouldShow() {
-  return S.section === 'web' && !!S.webActive && !isVideoOpen() && !isImagesOpen();
+  return S.section === 'web' && !!S.webActive && !isVideoOpen() && !isImagesOpen() && !dialogs.dialogsOpen();
 }
 function showWebInSlot(focus = false) {
   if (!webShouldShow()) { api.webHide(); return; }
@@ -1707,7 +1708,8 @@ function attachWebSlot() {
   slotObserver = new ResizeObserver(() => { const rect = slotRect(); if (rect && webShouldShow()) api.webBounds(rect); });
   slotObserver.observe(slot);
 }
-// Une couche plein écran (vidéo locale, images) passe devant : la vue web se cache, puis revient.
+// Une couche plein écran (vidéo locale, images) ou une boîte sur les composants (P4-06) passe devant : la vue web se
+// cache, puis revient.
 function syncWeb() {
   if (webShouldShow()) showWebInSlot(false);
   else if (S.section === 'web') api.webHide();
@@ -2884,7 +2886,16 @@ const legacyUi = {
   },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange, afterAdblockChange, setCfg, saveUi, applyMenu,
 };
-const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE });
+// Boîtes de dialogue sur les composants (P4-06) : la vue web native se masque tant qu'une boîte est ouverte.
+dialogs.initDialogs({
+  t,
+  pickFile: () => api.pickFile('program'),
+  pickFolder: () => api.pickFolder(),
+  onOpenChange: () => syncWeb(),
+  toastWithAction: (message, opts) => toast(message, opts),
+});
+initDemoDialogs({ openForm });
+const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction } });
 setActionErrorHandler((error, { tag, method }) => {
   console.error(`Action ${tag}.${method} :`, error);
   toast(t('app.errors.actionFailed'), { duration: 6000 });

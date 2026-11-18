@@ -5,6 +5,7 @@
  */
 import { AppController } from './app.ts';
 import { CentreController } from './centre.ts';
+import { DialogsController } from './dialogs.ts';
 import { ExplorerController } from './explorer.ts';
 import { HomeController } from './home.ts';
 import { PageController } from './page.ts';
@@ -26,6 +27,7 @@ export const CONTROLLER_CLASSES = {
   'mire-settings': SettingsController,
   'mire-player': PlayerController,
   'mire-web': WebController,
+  'mire-dialogs': DialogsController,
 } as const;
 
 export type ControllerTag = keyof typeof CONTROLLER_CLASSES;
@@ -41,6 +43,7 @@ export interface Controllers {
   settings: SettingsController;
   player: PlayerController;
   web: WebController;
+  dialogs: DialogsController;
 }
 
 /** Crée les contrôleurs et les enregistre (les éléments `mire-*` de la page reçoivent leurs actions). */
@@ -55,6 +58,7 @@ export function createControllers(ctx: ControllerContext): Controllers {
     settings: new SettingsController(ctx),
     player: new PlayerController(ctx),
     web: new WebController(ctx),
+    dialogs: new DialogsController(ctx),
   };
   for (const [tag, Cls] of Object.entries(CONTROLLER_CLASSES)) {
     const instance = Object.values(c).find((x) => x instanceof Cls);
@@ -66,6 +70,7 @@ export function createControllers(ctx: ControllerContext): Controllers {
 export {
   AppController,
   CentreController,
+  DialogsController,
   ExplorerController,
   HomeController,
   PageController,

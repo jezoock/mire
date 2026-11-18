@@ -46,6 +46,59 @@
         "genre": "Comedy",
         "summary": "A summary a few lines long, shown by the info panel of the selected item.",
         "badge": "New"
+      },
+      "dialogs": {
+        "heading": "Dialog boxes",
+        "open": {
+          "form": "Open a form",
+          "confirm": "Ask for a confirmation",
+          "pick": "Choose a record",
+          "tabs": "Tabbed panel",
+          "notify": "Show a notification",
+          "legacy": "From a legacy box"
+        },
+        "result": "Result: {result}",
+        "cancelled": "closed without a choice",
+        "form": {
+          "title": "Edit the record",
+          "help": "The marked fields are required.",
+          "name": "Title",
+          "year": "Year",
+          "kind": "Type",
+          "film": "Film",
+          "series": "Series",
+          "summary": "Summary",
+          "poster": "Poster",
+          "program": "Program",
+          "subtitles": "Subtitles",
+          "sources": "Sources",
+          "sourcesHint": "A folder or an address",
+          "save": "Save",
+          "nested": "Open another window"
+        },
+        "confirm": {
+          "title": "Delete this film?",
+          "help": "The file will be removed from the list.",
+          "yes": "Delete"
+        },
+        "pick": {
+          "title": "Choose the right record",
+          "help": "Several records match: choose the right one."
+        },
+        "tabs": {
+          "title": "Page settings",
+          "general": "General",
+          "playback": "Playback",
+          "quality": "Quality",
+          "auto": "Automatic",
+          "high": "High"
+        },
+        "notice": "Demonstration notification.",
+        "legacy": {
+          "title": "Legacy box",
+          "help": "This box belongs to the legacy interface; it opens a component box on top of it.",
+          "ask": "Ask with the components"
+        }
       }
     },
     "elements": {
@@ -357,6 +410,21 @@
       "chooseBios": "Choose the BIOS file or files",
       "chooseTorrent": "Choose a .torrent file",
       "downloadFolder": "Download folder"
+    },
+    "forms": {
+      "browse": "Browse",
+      "pickImage": "Choose an image",
+      "removeImage": "Remove",
+      "noImage": "None",
+      "add": "Add",
+      "addFolder": "Choose a folder",
+      "remove": "Remove",
+      "emptyList": "No additional source.",
+      "required": "(required)",
+      "valueMissing": "Fill in this field.",
+      "tabs": "Tabs",
+      "cancel": "Cancel",
+      "no": "No"
     },
     "config": {
       "errors": {

@@ -36,6 +36,7 @@ function fakeContext(answers: Record<string, unknown> = {}) {
     toast: (message) => toasts.push(message),
     t: (key) => key,
     page: PAGE,
+    dialogs: record('dialogs.') as ControllerContext['dialogs'],
   };
   return { ctx, calls, toasts, c: createControllers(ctx) };
 }

@@ -51,6 +51,18 @@ export class MireDemo {
     this.pickEvent.emit(arg);
   }
 
+  /** Émis quand un bouton de la démonstration des boîtes (P4-06) demande une boîte : `form`, `confirm`, `pick`… */
+  @Event({ eventName: 'mireDemoDialog' }) dialogEvent!: EventEmitter<{ kind: string }>;
+
+  /**
+   * Action des boutons de la démonstration des boîtes de dialogue (P4-06) : `openDialog:[{"kind":"form"}]`. La page
+   * ouvre la boîte demandée (service des boîtes) ; le composant n'importe rien de l'interface.
+   */
+  @Method()
+  async openDialog(arg: { kind?: string } = {}): Promise<void> {
+    if (arg.kind) this.dialogEvent.emit({ kind: arg.kind });
+  }
+
   private countText(): string {
     const labels = parsePluralLabels(this.countLabels);
     const lang = this.host.closest('[lang]')?.getAttribute('lang') || 'fr';

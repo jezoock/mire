@@ -56,11 +56,15 @@ export function targetMethods(root = ROOT) {
 }
 
 // Valeur d'un attribut dans une balise ouvrante : "…", '…' ou {'…'} (JSX) ; `null` s'il est absent, `undefined` s'il
-// n'est pas une chaîne écrite telle quelle.
+// n'est pas une chaîne écrite telle quelle. Un gabarit dont le nom de l'action est écrit tel quel, suivi d'arguments
+// calculés ({`act:${…}`}, boîtes de dialogue, P4-06), donne `act:…` : seul le nom est vérifié.
 function attribute(tag, name) {
-  const m = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|\\{\\s*(?:'([^']*)'|"([^"]*)"|\`([^\`$]*)\`)\\s*\\}|(\\{))`).exec(tag);
+  const m = new RegExp(
+    `\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|\\{\\s*(?:'([^']*)'|"([^"]*)"|\`([^\`$]*)\`)\\s*\\}|\\{\\s*\`([A-Za-z_$][\\w$]*):\\$\\{|(\\{))`,
+  ).exec(tag);
   if (!m) return null;
-  if (m[6]) return undefined;
+  if (m[7]) return undefined;
+  if (m[6]) return `${m[6]}:…`;
   return m[1] ?? m[2] ?? m[3] ?? m[4] ?? m[5];
 }
 

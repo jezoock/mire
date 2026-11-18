@@ -8,6 +8,8 @@ import type { CardElement, GridGroup } from '@mire/ui/utils';
 import { esc } from '../core/dom.ts';
 import { i18n, t } from '../i18n/index.ts';
 import { S } from '../state/index.ts';
+import { confirmDialog, notify, openForm, pickCandidate } from '../ui/dialogs.ts';
+import type { FormOptions } from '../ui/dialogs.ts';
 
 export const DEMO_SECTION = 'demo';
 
@@ -133,11 +135,164 @@ function elementsDemo(): string {
   </section>`;
 }
 
+/* ------------------------------------------------------------------ */
+/* Boîtes de dialogue (P4-06)                                           */
+/* ------------------------------------------------------------------ */
+
+const DIALOG_KINDS = ['form', 'confirm', 'pick', 'tabs', 'notify', 'legacy'] as const;
+type DialogKind = (typeof DIALOG_KINDS)[number];
+
+/** Ce que l'interface historique prête à la démonstration : son `openForm` (boîte `#dlg`), pour la cohabitation. */
+export interface DemoLegacy {
+  openForm(opts: Omit<FormOptions, 'onAction'> & { onAction?(action: string): unknown }): Promise<unknown>;
+}
+
+let legacy: DemoLegacy | null = null;
+
+function showResult(result: unknown): void {
+  const el = document.querySelector('.mire-ui-demo__result');
+  const text = result === null || (result as { action?: string })?.action === 'cancel' ? t('demo.dialogs.cancelled') : JSON.stringify(result);
+  if (el) el.textContent = t('demo.dialogs.result', { result: text });
+}
+
+const d = (key: string) => t(`demo.dialogs.${key}`);
+const pictures = (): string[] => S.images.map((it) => String(it.path ?? '')).filter(Boolean);
+
+function demoForm(): Promise<unknown> {
+  return openForm({
+    title: d('form.title'),
+    help: d('form.help'),
+    fields: [
+      { id: 'name', label: d('form.name'), value: d('form.title'), required: true },
+      { id: 'year', label: d('form.year'), value: '1902', options: ['1902', '1903'] },
+      {
+        id: 'kind',
+        type: 'select',
+        label: d('form.kind'),
+        value: 'film',
+        options: [
+          ['film', d('form.film')],
+          ['series', d('form.series')],
+        ],
+      },
+      { id: 'summary', type: 'textarea', label: d('form.summary'), rows: 3 },
+      { id: 'poster', type: 'image', label: d('form.poster'), value: pictures()[0] ?? '' },
+      { id: 'program', label: d('form.program'), browse: 'file' },
+      { id: 'subtitles', type: 'toggle', label: d('form.subtitles'), value: true },
+      { id: 'sources', type: 'list', label: d('form.sources'), placeholder: d('form.sourcesHint'), value: ['/films'] },
+    ],
+    actions: [
+      { id: 'save', label: d('form.save'), kind: 'primary' },
+      { id: 'nested', label: d('form.nested') },
+      { id: 'cancel', label: t('common.cancel'), kind: 'ghost' },
+    ],
+    async onAction(action, form) {
+      if (action === 'nested') {
+        showResult({ nested: await confirmDialog(d('confirm.title'), d('confirm.help'), d('confirm.yes')) });
+        return true;
+      }
+      if (action === 'pick:poster') form.setImage('poster', pictures()[1] ?? pictures()[0] ?? '');
+      if (action === 'clear:poster') form.setImage('poster', '');
+      return action.includes(':');
+    },
+  });
+}
+
+function demoTabs(): Promise<unknown> {
+  return openForm({
+    title: d('tabs.title'),
+    tabs: [
+      { id: 'general', label: d('tabs.general'), fields: [{ id: 'name', label: d('form.name'), value: d('form.title') }] },
+      {
+        id: 'playback',
+        label: d('tabs.playback'),
+        fields: [
+          { id: 'subtitles', type: 'toggle', label: d('form.subtitles') },
+          {
+            id: 'quality',
+            type: 'select',
+            label: d('tabs.quality'),
+            options: [
+              ['auto', d('tabs.auto')],
+              ['high', d('tabs.high')],
+            ],
+          },
+        ],
+      },
+    ],
+    actions: [
+      { id: 'save', label: d('form.save'), kind: 'primary' },
+      { id: 'cancel', label: t('common.cancel'), kind: 'ghost' },
+    ],
+  });
+}
+
+// Fiches : une image qui ne se charge pas (la vignette de secours la remplace), une sans image (l'initiale), une image.
+function demoPick(): Promise<unknown> {
+  const [first, second] = pictures();
+  return pickCandidate(
+    [
+      { id: 'tmdb:1', title: d('form.title'), year: 1902, image: 'media://local/?p=%2Fintrouvable.jpg', fallback: first },
+      { id: 'tmdb:2', title: d('tabs.title'), year: 1903 },
+      { id: 'tmdb:3', title: d('form.film'), sub: d('form.series'), image: second },
+    ],
+    { title: d('pick.title'), help: d('pick.help') },
+  );
+}
+
+function demoLegacy(): Promise<unknown> {
+  return (
+    legacy?.openForm({
+      title: d('legacy.title'),
+      help: d('legacy.help'),
+      fields: [],
+      actions: [
+        { id: 'ask', label: d('legacy.ask'), kind: 'primary' },
+        { id: 'cancel', label: t('common.close'), kind: 'ghost' },
+      ],
+      async onAction(action) {
+        if (action !== 'ask') return false;
+        showResult({ legacy: await confirmDialog(d('confirm.title'), d('confirm.help'), d('confirm.yes')) });
+        return true;
+      },
+    }) ?? Promise.resolve(null)
+  );
+}
+
+const OPENERS: Record<DialogKind, () => Promise<unknown>> = {
+  form: demoForm,
+  confirm: () => confirmDialog(d('confirm.title'), d('confirm.help'), d('confirm.yes')),
+  pick: demoPick,
+  tabs: demoTabs,
+  notify: () => notify(d('notice')).then(() => ({ notice: true })),
+  legacy: demoLegacy,
+};
+
+/** Branche les boutons de la démonstration des boîtes (`mireDemoDialog` de `mire-demo`). */
+export function initDemoDialogs(lent: DemoLegacy): void {
+  legacy = lent;
+  document.addEventListener('mireDemoDialog', (e) => {
+    const kind = (e as CustomEvent<{ kind: string }>).detail?.kind as DialogKind;
+    if ((DIALOG_KINDS as readonly string[]).includes(kind)) void OPENERS[kind]().then(showResult);
+  });
+}
+
+function dialogsDemo(): string {
+  const button = (kind: DialogKind) =>
+    `<ds-trigger type="button" mods="stl-2" data-demo-dialog="${kind}" target="mire-demo" action='openDialog:[{"kind":"${kind}"}]'>${esc(d(`open.${kind}`))}</ds-trigger>`;
+  return `<section class="mire-ui-demo__dialogs" aria-labelledby="demo-dialogs">
+    <p class="mire-ui-demo__name" id="demo-dialogs">${esc(d('heading'))}</p>
+    <div class="mire-ui-demo__row">${DIALOG_KINDS.map(button).join('')}</div>
+    <p class="mire-ui-demo__result" role="status"></p>
+  </section>`;
+}
+
 /** Contenu de la page, inséré dans la vue de l'interface historique. */
 export function viewDemo(): string {
   return `<div class="mire-ui-demo" lang="${esc(i18n.language || 'fr')}">
     <mire-demo heading="${esc(t('demo.component.heading'))}" action-label="${esc(t('demo.component.action'))}" count-labels="${esc(countForms)}" picked-label="${esc(t('demo.elements.picked'))}"></mire-demo>
     ${elementsDemo()}
     <div class="mire-ui-demo__palettes">${PALETTES.map(palette).join('')}</div>
+    ${dialogsDemo()}
   </div>`;
 }

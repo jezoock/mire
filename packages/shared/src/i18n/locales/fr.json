@@ -46,6 +46,59 @@
         "genre": "Comédie",
         "summary": "Un résumé de quelques lignes, affiché par le panneau d’infos de l’élément sélectionné.",
         "badge": "Nouveau"
+      },
+      "dialogs": {
+        "heading": "Boîtes de dialogue",
+        "open": {
+          "form": "Ouvrir un formulaire",
+          "confirm": "Demander une confirmation",
+          "pick": "Choisir une fiche",
+          "tabs": "Panneau à onglets",
+          "notify": "Afficher une notification",
+          "legacy": "Depuis une boîte historique"
+        },
+        "result": "Résultat : {result}",
+        "cancelled": "fermée sans choix",
+        "form": {
+          "title": "Modifier la fiche",
+          "help": "Les champs marqués sont obligatoires.",
+          "name": "Titre",
+          "year": "Année",
+          "kind": "Type",
+          "film": "Film",
+          "series": "Série",
+          "summary": "Résumé",
+          "poster": "Affiche",
+          "program": "Programme",
+          "subtitles": "Sous-titres",
+          "sources": "Sources",
+          "sourcesHint": "Un dossier ou une adresse",
+          "save": "Enregistrer",
+          "nested": "Ouvrir une autre fenêtre"
+        },
+        "confirm": {
+          "title": "Supprimer ce film ?",
+          "help": "Le fichier sera retiré de la liste.",
+          "yes": "Supprimer"
+        },
+        "pick": {
+          "title": "Choisir la bonne fiche",
+          "help": "Plusieurs fiches correspondent : choisissez la bonne."
+        },
+        "tabs": {
+          "title": "Réglages de la page",
+          "general": "Général",
+          "playback": "Lecture",
+          "quality": "Qualité",
+          "auto": "Automatique",
+          "high": "Haute"
+        },
+        "notice": "Notification de démonstration.",
+        "legacy": {
+          "title": "Boîte historique",
+          "help": "Cette boîte est celle de l’interface historique ; elle ouvre une boîte sur les composants par-dessus.",
+          "ask": "Demander avec les composants"
+        }
       }
     },
     "elements": {
@@ -357,6 +410,21 @@
       "chooseBios": "Choisir le ou les fichiers BIOS",
       "chooseTorrent": "Choisir un fichier .torrent",
       "downloadFolder": "Dossier des téléchargements"
+    },
+    "forms": {
+      "browse": "Parcourir",
+      "pickImage": "Choisir une image",
+      "removeImage": "Retirer",
+      "noImage": "Aucune",
+      "add": "Ajouter",
+      "addFolder": "Choisir un dossier",
+      "remove": "Retirer",
+      "emptyList": "Aucune source supplémentaire.",
+      "required": "(obligatoire)",
+      "valueMissing": "Remplissez ce champ.",
+      "tabs": "Onglets",
+      "cancel": "Annuler",
+      "no": "Non"
     },
     "config": {
       "errors": {
