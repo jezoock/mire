@@ -1619,8 +1619,9 @@ describe('Test de fumée de Mire', () => {
         [VIEW, tab],
       );
     const openCentre = async (tab = 'downloads') => {
-      await page.evaluate((t) => document.querySelector('mire-centre').showTab({ tab: t }), tab);
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+      await page.waitForFunction(() => document.querySelector('#view mire-centre')?.showTab);
+      await page.evaluate((t) => document.querySelector('#view mire-centre').showTab({ tab: t }), tab);
       await centreReady(tab);
     };
     const active = () =>
@@ -1630,33 +1631,45 @@ describe('Test de fumée de Mire', () => {
       });
     // Téléchargement envoyé par le processus principal, comme le gestionnaire de téléchargements (canal `download`).
     const sendDownload = (item) => app.evaluate(({ BrowserWindow }, d) => BrowserWindow.getAllWindows()[0].webContents.send('download', d), item);
-    const PAUSED = {
+    const STOPPED = {
       id: 'demo-interrompu',
       kind: 'http',
       name: 'Course de karts (Europe).sfc',
       console: 0,
       consoleName: 'Super Nintendo',
       dir: '/jeux',
-      state: 'paused',
+      // Le gestionnaire passe au démarrage les téléchargements en pause de la démonstration à « interrompu ».
+      state: 'interrupted',
       received: 262144,
       total: 524288,
       error: '',
       installers: [],
     };
 
-    before(() => {
-      page.on('pageerror', onError);
-      page.on('console', onConsole);
-    });
-
-    after(async () => {
-      await page.evaluate(() => {
+    const disconnectPad = () =>
+      page.evaluate(() => {
         if (window.__pad) {
           navigator.getGamepads = () => [];
           window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
         }
       });
-      await page.evaluate(() => document.querySelector('mire-centre').showTab({ tab: 'downloads' }));
+    // Dossier des jeux dans le dossier du test, avant la première lecture du catalogue de la boutique : les consoles
+    // installées y créent leur dossier, et la capture montre un chemin qui ne dépend pas de la machine.
+    const roms = () => path.join(tmp, 'roms');
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      await page.evaluate(async (root) => {
+        const { config } = await window.api.getConfig();
+        await window.api.saveConfig({ ...config, store: { ...config.store, romsRoot: root } });
+      }, roms());
+    });
+
+    after(async () => {
+      await disconnectPad();
+      await page.evaluate(() => document.querySelector('mire-centre')?.showTab({ tab: 'downloads' }));
       page.off('pageerror', onError);
       page.off('console', onConsole);
     });
@@ -1679,18 +1692,21 @@ describe('Test de fumée de Mire', () => {
         v.addEventListener('mireCentreRender', () => window.__renders.view++);
         v.addEventListener('mireDownloadRowRender', (e) => (window.__renders.rows[e.detail.id] = (window.__renders.rows[e.detail.id] || 0) + 1));
       }, VIEW);
+      // Les rendus de l'ouverture terminés, on repart de zéro.
+      await settle();
+      await page.evaluate(() => (window.__renders = { view: 0, rows: {} }));
       const meta = `${VIEW} mire-download-row[data-key="demo-interrompu"] .mire-download-row__meta`;
-      await sendDownload({ ...PAUSED, received: 393216 });
+      await sendDownload({ ...STOPPED, received: 393216 });
       await page.waitForFunction((sel) => document.querySelector(sel)?.textContent.includes('384 Ko sur 512 Ko'), meta);
       assert.deepEqual(await page.evaluate(() => window.__renders), { view: 0, rows: { 'demo-interrompu': 1 } });
       assert.ok(
         await page.evaluate(() => window.__row.isConnected && window.__row.querySelector('[role="progressbar"]').getAttribute('aria-valuenow') === '75'),
       );
       // Autre état : la ligne change de groupe et de boutons, la liste est redessinée.
-      await sendDownload({ ...PAUSED, state: 'downloading', speed: 1024 });
+      await sendDownload({ ...STOPPED, state: 'downloading', speed: 1024 });
       await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="running"] mire-download-row[data-key="demo-interrompu"]`), VIEW);
       assert.ok((await page.evaluate(() => window.__renders.view)) >= 1);
-      await sendDownload(PAUSED);
+      await sendDownload(STOPPED);
       await page.waitForFunction((sel) => document.querySelector(`${sel} [data-group="others"] mire-download-row[data-key="demo-interrompu"]`), VIEW);
       assert.deepEqual(errors, []);
     });
@@ -1733,16 +1749,11 @@ describe('Test de fumée de Mire', () => {
       await openCentre('apps');
       await padPress('rb');
       await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
       assert.deepEqual(errors, []);
     });
 
     it('installation d’un émulateur suivie jusqu’au bout (source simulée), puis désinstallation', async () => {
-      // Dossier des jeux dans le dossier du test : les consoles installées y créent leur dossier.
-      const roms = path.join(tmp, 'roms');
-      await page.evaluate(async (root) => {
-        const { config } = await window.api.getConfig();
-        await window.api.saveConfig({ ...config, store: { ...config.store, romsRoot: root } });
-      }, roms);
       // Source simulée : le fetch du processus principal répond pour la dernière version de DuckStation sur GitHub
       // (redirection, page des fichiers, fichier de 512 Ko envoyé en huit morceaux) ; le reste passe au vrai fetch.
       await app.evaluate(() => {
@@ -1772,6 +1783,10 @@ describe('Test de fumée de Mire', () => {
       });
       try {
         await openCentre('apps');
+        // Capture sans le message de la manette débranchée, focus sur le premier onglet.
+        await page.evaluate(() => document.getElementById('toast').classList.remove('show'));
+        await page.locator(`${VIEW} .mire-centre-view__tab[data-tab="downloads"]`).focus();
+        await page.mouse.move(1, 1);
         await settle();
         await shot('centre-apps');
         const card = page.locator(`${VIEW} .mire-centre-view__card[data-key="duckstation"]`);
@@ -1797,7 +1812,7 @@ describe('Test de fumée de Mire', () => {
         await page.locator('#toast', { hasText: 'Installé. Les consoles sont prêtes dans « Ma ludothèque ».' }).waitFor();
         // Le programme est en place, la console PlayStation a son dossier, et la carte rappelle les BIOS.
         assert.ok(fs.existsSync(path.join(tmp, 'data', 'emulators', 'duckstation', 'DuckStation-x64.AppImage')));
-        assert.ok(fs.readdirSync(roms).length > 0);
+        assert.ok(fs.readdirSync(roms()).length > 0);
         await card.locator('.mire-centre-view__bios-files').waitFor();
         await card.locator('ds-trigger.hydrated', { hasText: 'Désinstaller' }).click();
         await card.locator('.mire-centre-view__state', { hasText: 'Non installé' }).waitFor();
