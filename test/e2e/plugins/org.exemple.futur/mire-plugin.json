@@ -1,0 +1,17 @@
+{
+  "id": "org.exemple.futur",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^9.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "palettes": [
+      {
+        "id": "futur",
+        "file": "futur.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

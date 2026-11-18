@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "en",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Future"
+    }
+  }
+}

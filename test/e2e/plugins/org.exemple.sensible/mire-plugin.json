@@ -1,0 +1,17 @@
+{
+  "id": "org.exemple.sensible",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "privileged",
+  "contributes": {
+    "downloaders": [
+      {
+        "id": "sensible",
+        "main": "sensible.mjs"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

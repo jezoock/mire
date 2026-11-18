@@ -1,0 +1,18 @@
+{
+  "id": "org.exemple.boucle",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "boucle",
+        "main": "boucle.mjs",
+        "tags": ["boucle"]
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

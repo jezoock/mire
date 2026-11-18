@@ -132,11 +132,12 @@ export function createPluginService(opts: PluginServiceOptions) {
     },
   });
 
+  /** Nom du plugin dans la langue de l'interface (ses textes, lus même s'il n'est pas actif), sinon en anglais. */
   const nameOf = (id: string): string => {
-    const k = known.get(id);
-    if (!k?.plugin) return id;
-    const n = translate(`${pluginTextPrefix(id)}plugin.name`);
-    return n.startsWith('pluginTexts.') ? id : n;
+    const texts = known.get(id)?.plugin?.texts;
+    const name = (lang: string) => (texts?.[lang]?.plugin as { name?: unknown } | undefined)?.name;
+    const n = name(opts.locale()) ?? name('en');
+    return typeof n === 'string' && n ? n : id;
   };
   const log = (id: string, level: 'info' | 'warn' | 'error', message: string) => journal.write(id, level, message);
 
