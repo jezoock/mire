@@ -416,3 +416,51 @@ test('marque-page : fiche en attente, puis lancée à la demande', async () => {
   await downloads.stop();
   await downloads.flush();
 });
+
+test('moteur d’un plugin inclus (P3-05) : branché, reçoit les fiches qu’il sait prendre ; absent, la fiche le dit', async () => {
+  const { downloads } = setup();
+  await downloads.start();
+  const seen: string[] = [];
+  let host: { kind: string; update(it: DownloadRecord, patch?: Partial<DownloadRecord>): void } | null = null;
+  const engine = {
+    id: 'ipfs',
+    attach: (h: typeof host) => void (host = h),
+    canHandle: (s: string) => s.startsWith('ipfs:'),
+    add(source: string, _req: unknown, item?: DownloadRecord | null) {
+      seen.push(`add ${source}`);
+      host!.update(item!, { state: 'downloading' });
+      return { ok: true as const, id: item?.id };
+    },
+    isLive: () => false,
+    pause: () => {},
+    resume: () => {},
+    cancel: async () => void seen.push('cancel'),
+    stop: async () => void seen.push('stop'),
+  };
+  assert.equal(downloads.addEngines([{ pluginId: 'mire.ipfs', engine: engine as never }]), 1);
+  assert.equal(host!.kind, 'plugin:mire.ipfs/ipfs');
+  const r = downloads.addPending('ipfs://bafy/jeu.zip');
+  assert.ok(r.ok);
+  const it = downloads.list().find((x) => x.id === r.id)!;
+  assert.equal(it.kind, 'plugin:mire.ipfs/ipfs');
+  downloads.startPending(it.id);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(seen, ['add ipfs://bafy/jeu.zip']);
+  assert.equal(downloads.list().find((x) => x.id === r.id)!.state, 'downloading');
+  // Un lien http reste au moteur HTTP.
+  const web = downloads.addPending('https://a.test/b.zip');
+  assert.equal(downloads.list().find((x) => web.ok && x.id === web.id)?.kind, 'http');
+  await downloads.cancel(it.id);
+  await downloads.stop();
+  assert.deepEqual(seen.slice(1), ['cancel', 'stop']);
+
+  // Lancement suivant sans le plugin : la fiche reste, son moteur absent ne fait rien.
+  const other = setup();
+  const fiche = { id: 'p1', kind: 'plugin:mire.ipfs/ipfs', createdAt: 1, name: 'jeu.zip', source: 'ipfs://bafy/jeu.zip' };
+  const rest = { dir: '/x', console: null, consoleName: '', state: 'paused', received: 0, total: 0, speed: 0, error: '', installers: [] };
+  fs.writeFileSync(dataPaths(other.dataDir).downloads, JSON.stringify({ items: [{ ...fiche, ...rest }] }));
+  await other.downloads.start();
+  await other.downloads.resume('p1');
+  await other.downloads.cancel('p1');
+  assert.equal(other.downloads.list()[0].state, 'cancelled');
+});

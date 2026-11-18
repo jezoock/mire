@@ -273,6 +273,22 @@ export interface DownloadItem {
 export type DownloadAddResult = { ok: true; id?: string; external?: boolean; duplicate?: boolean } | { ok: false; error: string };
 
 /**
+ * Ce que le gestionnaire de téléchargements donne au moteur d'un plugin (`attach`) : les fiches, de quoi les créer et
+ * les mettre à jour, la destination d'une demande, et le post-traitement d'un téléchargement terminé.
+ */
+export interface DownloaderHost<Item extends DownloadItem = DownloadItem, Request = unknown> {
+  /** Nature à donner aux fiches de ce moteur (champ `kind`), pour qu'elles lui reviennent après un redémarrage. */
+  readonly kind: string;
+  readonly items: Map<string, Item>;
+  /** Modifie une fiche (ou l'ajoute), l'enregistre et prévient l'interface. */
+  update(item: Item, patch?: Partial<Item>): void;
+  /** Dossier de destination d'une demande (dossier de la console, sinon celui des téléchargements). */
+  destFor(request?: Request): { dir: string; console: string | null; consoleName: string };
+  /** Téléchargement terminé : décompression, programme d'installation, fichiers compagnons. */
+  finish(item: Item, files: string[]): Promise<void>;
+}
+
+/**
  * Moteur de téléchargement (contribution `downloaders`). `Item` est la fiche d'un téléchargement, `Request` le
  * contexte d'une demande (destination, nom imposé…).
  */
@@ -287,6 +303,8 @@ export interface Downloader<Item extends DownloadItem = DownloadItem, Request = 
   resume(item: Item): void | Promise<void>;
   cancel(item: Item, removeFiles: boolean): Promise<void>;
   stop(): Promise<void>;
+  /** Moteur d'un plugin : reçoit le gestionnaire au démarrage, avant toute demande (les moteurs du cœur l'ont déjà). */
+  attach?(host: DownloaderHost<Item, Request>): void;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

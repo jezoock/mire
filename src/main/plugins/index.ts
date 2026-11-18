@@ -4,6 +4,7 @@
  * automatiques (`taggers.ts`), canal (`channel.ts`) et runtime (`runtime.ts`) d'un plugin, hôte isolé (`host.ts`,
  * page et Worker dans `host/`), plugins sensibles (`in-process.ts`), protocole `mire-plugin://` (`protocol.ts`).
  */
+import fs from 'node:fs';
 import { MessageChannelMain, type BrowserWindow, type Dialog, type SafeStorage } from 'electron';
 import { createIsolatedHost } from './host.ts';
 import { fileBase, startInProcess } from './in-process.ts';
@@ -30,6 +31,13 @@ export function pluginStorages(root: string) {
       return s;
     },
     flush: () => Promise.all([...open.values()].map((s) => s.flush())).then(() => {}),
+    /** Plugin désinstallé sans garder ses données : écriture en attente terminée, puis son dossier effacé. */
+    async drop(id: string): Promise<void> {
+      const s = open.get(id);
+      open.delete(id);
+      await s?.flush();
+      await fs.promises.rm(pluginDataDir(root, id), { recursive: true, force: true });
+    },
   };
 }
 

@@ -91,6 +91,12 @@
     "linux": {
       "target": "AppImage",
       "category": "AudioVideo"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "resources/plugins",
+        "to": "plugins"
+      }
+    ]
   }
 }

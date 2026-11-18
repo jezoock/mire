@@ -1,7 +1,8 @@
 /** Types partagés par le gestionnaire de téléchargements et ses moteurs (HTTP, torrent). */
 import type { DownloadAddResult, Downloader as SdkDownloader } from '@mire/plugin-sdk';
 
-export type DownloadKind = 'http' | 'torrent';
+/** Moteur d'une fiche : ceux du cœur, ou `plugin:<id du plugin>/<id du moteur>` (P3-05). */
+export type DownloadKind = 'http' | 'torrent' | `plugin:${string}`;
 
 /**
  * Fiche d'un téléchargement, affichée dans Téléchargements et enregistrée dans `telechargements.json`.

@@ -4,7 +4,10 @@
  * découverts, vérifiés, activés, utilisés et désactivés ; un plugin qui boucle et un plugin qui lève une exception
  * sont désactivés, et Mire continue. Contexte (P3-04) : un plugin de code limité lit le dossier accordé, se voit refuser
  * un hôte non déclaré et un fichier hors du dossier, reçoit son réglage secret, qui ne sort pas vers l'interface.
- * Plugins d'essai : test/e2e/plugins/.
+ * Plugins d'essai : test/e2e/plugins/. Plugins inclus (P3-05) : le plugin d'exemple de plugins/, copié dans
+ * resources/plugins/ par la construction, est installé au premier lancement ; avec un installateur décompressé
+ * (`npm run dist`, ou MIRE_E2E_PACKAGED=<exécutable de Mire empaqueté>), il est aussi cherché dans l'application
+ * empaquetée (process.resourcesPath/plugins), sinon cette partie est sautée.
  * Lancement : npm run test:e2e (après le test de fumée), ou seul : node --test test/e2e/plugins.e2e.js après
  * npm run build (sous Linux sans écran : xvfb-run -a -s "-screen 0 1920x1080x24" …).
  */
@@ -131,6 +134,22 @@ describe('Hôte de plugins', () => {
     assert.match(p['org.exemple.sensible'].message, /seuls les plugins livrés avec Mire/);
   });
 
+  it('installe le plugin d’exemple inclus au premier lancement', async () => {
+    const p = await until('plugin inclus actif', async () => {
+      const all = await byId();
+      return all['mire.exemple.inclus']?.status === 'active' ? all['mire.exemple.inclus'] : null;
+    });
+    assert.equal(p.origin, 'bundled');
+    assert.equal(p.level, 'data');
+    assert.equal(p.name, 'Exemple de plugin inclus');
+    assert.deepEqual(p.contributions, [{ kind: 'packs', id: 'vide' }]);
+    await until('installation mémorisée', async () => {
+      const state = JSON.parse(fs.readFileSync(path.join(data, 'plugins', 'state.json'), 'utf8'));
+      return state.plugins['mire.exemple.inclus']?.bundled === '1.0.0';
+    });
+    assert.match(journal('mire.exemple.inclus'), /Installé \(livré avec Mire\)/);
+  });
+
   it('charge les textes des plugins dans le moteur de traduction', async () => {
     const info = await page.evaluate(() => window.api.i18nGet());
     const texts = info.catalogs.fr.messages.pluginTexts;
@@ -211,3 +230,44 @@ describe('Hôte de plugins', () => {
     assert.ok(!JSON.stringify(config).includes('CLE-E2E'));
   });
 });
+
+// Application empaquetée : le plugin d'exemple doit être dans process.resourcesPath/plugins (`extraResources`).
+const PACKAGED =
+  process.env.MIRE_E2E_PACKAGED ||
+  { linux: path.join(ROOT, 'release', 'linux-unpacked', 'mire'), win32: path.join(ROOT, 'release', 'win-unpacked', 'Mire.exe') }[process.platform];
+
+describe(
+  'Plugins inclus dans l’application empaquetée',
+  { skip: !PACKAGED || !fs.existsSync(PACKAGED) ? 'pas d’application empaquetée (npm run dist)' : false },
+  () => {
+    let packaged;
+    let dir;
+
+    after(async () => {
+      await packaged?.close();
+      if (dir) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    it('le plugin d’exemple est livré et installé', async () => {
+      dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-e2e-paquet-'));
+      packaged = await electron.launch({
+        executablePath: PACKAGED,
+        args: ['--no-sandbox'],
+        env: { ...process.env, MIRE_USER_DATA: dir },
+        timeout: 60000,
+      });
+      const win = await packaged.firstWindow();
+      await win.waitForFunction(() => !!window.api);
+      const resources = await packaged.evaluate(() => process.resourcesPath);
+      assert.ok(fs.existsSync(path.join(resources, 'plugins', 'mire.exemple.inclus', 'mire-plugin.json')));
+      const end = Date.now() + 20000;
+      let p;
+      while (Date.now() < end && p?.status !== 'active') {
+        p = (await win.evaluate(() => window.api.pluginsList())).find((x) => x.id === 'mire.exemple.inclus');
+        if (p?.status !== 'active') await new Promise((r) => setTimeout(r, 100));
+      }
+      assert.equal(p?.status, 'active');
+      assert.equal(p.origin, 'bundled');
+    });
+  },
+);

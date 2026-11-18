@@ -215,6 +215,28 @@ de plugins : `packages/plugin-sdk/README.md`.
 composition après la recherche ; `start()` est lancé après l'ouverture de la fenêtre. Sans plugin, rien n'est créé :
 ni dossier, ni fichier, ni hôte.
 
+- **Plugins inclus** (P3-05) : leurs sources sont dans `plugins/<id>/` à la racine du dépôt ; `npm run build` les copie
+  dans `resources/plugins/` (non versionné), que l'hôte lit en développement et qu'electron-builder emporte dans
+  l'installateur (`extraResources` de `package.json`, lu une fois installé dans `process.resourcesPath/plugins`).
+  `test/plugins/bundled-sources.test.ts` les valide (plugin officiel, compatible, textes en français et en anglais).
+  Un plugin inclus est **installé au premier lancement** (et à chaque nouvelle version livrée avec Mire) : sa version
+  est notée dans l'état (`bundled`), son journal le dit ; il est actif, sauf si l'utilisateur l'avait désactivé. Il
+  se désactive comme les autres mais ne se désinstalle pas ; une version plus haute installée dans
+  `userData/plugins/` (mise à jour par le dépôt, P3-07) passe devant, et sa désinstallation lui rend la place.
+  Aujourd'hui, un seul : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni
+  jeu), qui ne change rien de visible ; la phase 5 le remplacera par les vrais plugins inclus.
+- **Dépendances** (D-19, `dependencies.ts`, plages de `semver.ts`) : au démarrage, un plugin dont une dépendance
+  manque, n'est pas dans une version qui convient, est refusée ou forme un cycle est refusé
+  (`plugins.refused.dependency`, `dependency-refused`, `cycle`), de proche en proche ; les autres sont activés dans
+  l'ordre (dépendances d'abord). Un plugin dont une dépendance est désactivée (ou en panne) s'arrête avec elle, reste
+  voulu actif et revient avec elle (`plugins.waiting`). `resolveInstall` choisit les versions à installer avec un
+  plugin (la version installée si elle convient, sinon la plus haute qui convient à toutes les demandes ; conflit,
+  dépendance introuvable, cycle) dans l'ordre d'installation : le client des dépôts (P3-07) s'en servira.
+- **Désinstallation** (`service.uninstall(id, { keepData })`, sans écran ni IPC : le Centre viendra avec P4-18) :
+  refusée si un plugin présent en a besoin (`plugins.uninstall.needed`, en le nommant) ou si le plugin est livré avec
+  Mire (`plugins.uninstall.bundled`). Sinon : arrêt, `userData/plugins/<id>/` effacé, `userData/plugin-data/<id>/`
+  gardé ou effacé (stockage écrit puis fermé d'abord), état oublié (sauf si la version incluse reprend la place).
+
 - **Découverte** (`discovery.ts`) : plugins inclus `resources/plugins/<id>/` (`process.resourcesPath` une fois
   empaqueté ; le dossier est construit par P3-05) et installés `userData/plugins/<id>/<version>/` (la version la plus
   haute ; à version égale, l'inclus). Le dossier d'un plugin et chaque fichier qu'il contient doivent rester sous leur
@@ -263,10 +285,18 @@ ni dossier, ni fichier, ni hôte.
   `pluginBridges.search(query)` interroge les fournisseurs de recherche (l'écran Recherche, P4-12, les affichera).
   Ce qu'un plugin rend y est vérifié d'après son niveau : un plugin de code limité ne fournit ni programme ni jeu à
   lancer, ni fichier local hors de ses dossiers accordés, et ses clés sont préfixées par `plugin:<id>|` ; une fiche
-  porte la source du plugin, une image seulement en `http(s)`. `webExtensions` et `downloaders` sont dans le registre
-  et appelables par messages (`service.call`) ; les
-  contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles, packs, sites) y sont exposées
-  par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec leur tâche.
+  porte la source du plugin, une image seulement en `http(s)`. `webExtensions` et `downloaders` (P3-05) : code sensible,
+  seulement d'un plugin `privileged` inclus, qui tourne dans le processus principal. Leur interface reçoit la session
+  des vues web et est appelée de façon synchrone à chaque requête : le runtime en processus principal les rend au cœur
+  par référence (`local`, `service.local(kind)`), au lieu de messages. Elles sont branchées une fois, après
+  `plugins.start()` : extensions ajoutées après le bloqueur et la connexion Google (`webLayer.addExtensions`,
+  `createWebExtensions().add`, écouteurs `webRequest` recomposés), moteurs ajoutés au gestionnaire de téléchargements
+  (`downloads.addEngines` : chacun reçoit le gestionnaire par `attach(host)` du SDK, ses fiches portent la nature
+  `plugin:<plugin>/<moteur>` ; il prend les marque-pages et `downloads.add` des liens qu'il sait prendre, avant HTTP ;
+  une fiche dont le moteur n'est plus là ne fait rien, `plugins.engineMissing`). Les changer demande de redémarrer
+  Mire (`restartRequired`). Les contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles,
+  packs, sites) sont exposées au registre par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec
+  leur tâche.
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 
@@ -530,7 +560,8 @@ port est attribué. Aucune vérification n'est laissée à l'hôte.
 - `media://` toujours derrière la politique d'accès, limitée aux dossiers autorisés ;
 - la séparation des sessions : les sites ne partagent ni la session ni le preload de l'interface ;
 - l'hôte des plugins : `mire-plugin://` seulement sur ses sessions, réseau refusé, un Worker et un port par plugin,
-  liste de retrait, plugins `privileged` réservés aux plugins inclus.
+  liste de retrait, plugins `privileged` réservés aux plugins inclus ; `webExtensions` et `downloaders` rendus par
+  référence seulement pour un plugin `privileged` inclus (`service.local`).
 
 ### Gestion des fichiers
 
@@ -588,7 +619,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
 | `cache/roms/` | Jeux en ligne téléchargés pour être lancés | jeux (`src/main/games/`) |
 | `plugins/<id>/<version>/` | Plugins installés (posés à la main pour l'instant ; installation par le Centre : P3-07) | — |
-| `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver, dossiers accordés (`{ version, plugins: { <id>: { enabled, fault?, folders? } } }`) ; absent tant que rien n'a changé | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
+| `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver, dossiers accordés, version d'un plugin inclus installée (`{ version, plugins: { <id>: { enabled, fault?, folders?, bundled? } } }`) ; absent tant que rien n'a changé et qu'aucun plugin n'est inclus | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
 | `plugin-data/<id>/storage.json` | Stockage d'un plugin (`ctx.storage`) : `{ version, values }` | `src/main/plugins/plugin-storage.ts`, stockage JSON (écriture différée) |
 | `plugins/logs/<id>.log` | Journal de chaque plugin (son `ctx.log`, refus, pannes), 256 Ko au plus puis `<id>.log.1` | `src/main/plugins/journal.ts` |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | service d'archives (`src/main/archive/`) |

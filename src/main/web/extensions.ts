@@ -81,13 +81,39 @@ export function createWebExtensions(list: readonly WebExtension[]) {
   const extensions = [...list];
   let session: ExtensionSession | null = null;
 
-  function attach(ses: ExtensionSession) {
-    session = ses;
+  function listen(ses: ExtensionSession) {
     for (const event of WEB_REQUEST_EVENTS) {
       const listener = composeWebRequest(extensions, event);
       if (listener) ses.webRequest[event](listener);
     }
+  }
+
+  function attach(ses: ExtensionSession) {
+    session = ses;
+    listen(ses);
     for (const e of extensions) e.attach(ses);
+  }
+
+  /**
+   * Extensions des plugins (P3-05), ajoutées après celles du cœur une fois les plugins démarrés : branchées aussitôt
+   * si la session l'est déjà (Electron remplace l'écouteur d'un événement par le nouvel écouteur composé). Une extension
+   * qui échoue à se brancher est écartée. Pas de retrait à chaud : il faut redémarrer Mire.
+   */
+  function add(more: readonly WebExtension[]) {
+    const added: WebExtension[] = [];
+    for (const e of more) {
+      if (extensions.some((x) => x.id === e.id)) continue;
+      try {
+        if (session) e.attach(session);
+      } catch (err) {
+        console.error(`Extension web ${e.id} :`, (err as Error)?.message || err);
+        continue;
+      }
+      extensions.push(e);
+      added.push(e);
+    }
+    if (session && added.length) listen(session);
+    return added.length;
   }
 
   function detach() {
@@ -101,6 +127,7 @@ export function createWebExtensions(list: readonly WebExtension[]) {
     get: (id: string) => extensions.find((e) => e.id === id) || null,
     attach,
     detach,
+    add,
     beforePageScript: (url: string, topUrl?: string) => beforePageScriptOf(extensions, url, topUrl),
     /** Une extension annule-t-elle cette navigation ? */
     guardNavigation: (url: string, from: string) => extensions.some((e) => !!e.guardNavigation?.(url, from)),

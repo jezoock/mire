@@ -7,7 +7,7 @@ import type { Config } from '@mire/shared';
 import type { ConfigService } from '../config/service.ts';
 import { createAdblock, type Adblock } from './adblock.ts';
 import { createDrm, type Components } from './drm.ts';
-import { createWebExtensions, type WebExtensions } from './extensions.ts';
+import { createWebExtensions, type WebExtension, type WebExtensions } from './extensions.ts';
 import { createGoogleSignin, type GoogleSigninDeps } from './google-signin.ts';
 import { createWebManager } from './manager.ts';
 import { setupWebSession, type WebSessionDeps } from './session.ts';
@@ -61,7 +61,7 @@ export function createWebLayer(deps: WebLayerDeps) {
       onCount: web.onBlockedCount,
     });
     adblock = blocker;
-    extensions = createWebExtensions([blocker, createGoogleSignin(deps.google)]);
+    extensions = createWebExtensions([blocker, createGoogleSignin(deps.google), ...pending]);
     setupWebSession({
       session: deps.session(),
       ipcMain: deps.ipcMain,
@@ -85,9 +85,18 @@ export function createWebLayer(deps: WebLayerDeps) {
     return blocker;
   }
 
+  // Extensions des plugins arrivées avant `start()` : branchées avec celles du cœur.
+  const pending: WebExtension[] = [];
+
   return {
     web,
     drm,
+    /** Extensions des vues web des plugins inclus (P3-05), après le bloqueur et la connexion Google. */
+    addExtensions(list: readonly WebExtension[]): number {
+      if (extensions) return extensions.add(list);
+      pending.push(...list);
+      return list.length;
+    },
     /** Le bloqueur, une fois `start()` appelé. */
     adblock: () => adblock,
     start,

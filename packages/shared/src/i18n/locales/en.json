@@ -520,7 +520,16 @@
         "outside": "“{name}” contains a link to a file outside its folder.",
         "data": "A file of “{name}” is unreadable or too large: {details}",
         "texts": "The texts of “{name}” are unreadable: {details}",
-        "too-big": "“{name}” contains too many files."
+        "too-big": "“{name}” contains too many files.",
+        "dependency": "“{name}” needs “{dependency}” ({range}), which is not installed or not in a suitable version.",
+        "dependency-refused": "“{name}” needs “{dependency}”, which could not be loaded.",
+        "cycle": "“{name}” depends on itself through other plugins: {details}."
+      },
+      "waiting": "“{name}” will start once “{dependency}” is turned on.",
+      "engineMissing": "The plugin that handled this download is no longer available.",
+      "uninstall": {
+        "needed": "“{name}” cannot be uninstalled: “{by}” needs it.",
+        "bundled": "“{name}” comes with Mire: it can be turned off, not uninstalled."
       }
     },
     "shell": {

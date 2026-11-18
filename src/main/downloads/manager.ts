@@ -22,6 +22,7 @@ import type {
   CacheResult,
   Destination,
   DownloadContext,
+  DownloadKind,
   Downloader,
   DownloaderHost,
   DownloadRecord,
@@ -143,7 +144,22 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
     },
   });
   const downloaders: Downloader[] = [torrent, http];
-  const engineOf = (it: DownloadRecord) => (it.kind === 'torrent' ? torrent : http);
+  // Moteurs des plugins inclus (P3-05) : consultés avant HTTP, qui prend tout lien http(s).
+  const pluginEngines: Downloader[] = [];
+  // Fiche d'un moteur de plugin absent (plugin désactivé ou retiré) : rien ne se passe, la fiche le dit.
+  const absent = (kind: DownloadKind): Downloader => ({
+    id: kind,
+    canHandle: () => false,
+    add: () => ({ ok: false, error: t('plugins.engineMissing') }),
+    isLive: () => false,
+    pause() {},
+    resume() {},
+    cancel: async () => {},
+    stop: async () => {},
+  });
+  const engineOf = (it: DownloadRecord): Downloader =>
+    it.kind === 'torrent' ? torrent : it.kind.startsWith('plugin:') ? (pluginEngines.find((e) => e.id === it.kind) ?? absent(it.kind)) : http;
+  const pluginEngineFor = (src: string) => pluginEngines.find((e) => e.canHandle(src)) ?? null;
   const isLive = (id: string) => downloaders.some((d) => d.isLive(id));
 
   /* ---------- Commandes ---------- */
@@ -162,7 +178,7 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
   // source : lien http direct, lien magnet, ou chemin d'un fichier .torrent.
   function addPending(source: unknown, ctx: DownloadContext = {}): AddResult {
     const src = String(source || '');
-    const kind = torrent.canHandle(src) ? 'torrent' : 'http';
+    const kind = torrent.canHandle(src) ? 'torrent' : (pluginEngineFor(src)?.id ?? 'http');
     const isMagnet = /^magnet:\?/i.test(src);
     const name = ctx.name || (isMagnet ? torrentLabel(src) : nameFromSource(src));
     const dest = destFor(ctx);
@@ -294,7 +310,26 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
   }
 
   async function stop() {
-    for (const d of [http, torrent]) await d.stop();
+    for (const d of [http, torrent, ...pluginEngines]) await d.stop();
+  }
+
+  /**
+   * Moteurs des plugins inclus, branchés au démarrage des plugins (P3-05). Chacun reçoit le gestionnaire (`attach`)
+   * et la nature de ses fiches, `plugin:<plugin>/<moteur>` ; un moteur qui échoue à se brancher est écarté.
+   */
+  function addEngines(list: readonly { pluginId: string; engine: PluginDownloader }[]): number {
+    for (const { pluginId, engine } of list) {
+      const kind = `plugin:${pluginId}/${engine.id}` as const;
+      if (pluginEngines.some((e) => e.id === kind)) continue;
+      try {
+        engine.attach?.({ ...host, kind });
+      } catch (err) {
+        console.error(`Téléchargements : moteur ${kind} écarté :`, (err as Error)?.message || err);
+        continue;
+      }
+      pluginEngines.push(pluginEngine(kind, engine));
+    }
+    return pluginEngines.length;
   }
 
   return {
@@ -302,6 +337,13 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
     stop,
     flush: () => listStore.flush(),
     addUrl: (url: string, ctx?: DownloadContext) => http.addUrl(url, ctx),
+    /** Nouveau téléchargement confié au moteur qui sait le prendre : torrent, moteur d'un plugin, sinon HTTP. */
+    add: async (source: string, ctx?: DownloadContext): Promise<AddResult> => {
+      if (torrent.canHandle(source)) return torrent.addTorrent(source, ctx);
+      const engine = pluginEngineFor(source);
+      return engine ? engine.add(source, ctx) : http.addUrl(source, ctx);
+    },
+    addEngines,
     addTorrent: (source: string, ctx?: DownloadContext) => torrent.addTorrent(source, ctx),
     addPending,
     startPending,
@@ -321,6 +363,39 @@ export function createDownloads({ dataDir, getConfig, getSession, extract, shell
 }
 
 export type Downloads = ReturnType<typeof createDownloads>;
+
+/** Moteur d'un plugin, tel que le SDK le décrit (fiches de Mire, contexte d'une demande). */
+export type PluginDownloader = Omit<Downloader, 'id'> & { readonly id: string };
+
+/** Moteur d'un plugin vu par le gestionnaire : sa nature de fiches pour identifiant ; ses erreurs ne remontent pas. */
+function pluginEngine(kind: DownloadKind, engine: PluginDownloader): Downloader {
+  const safe = <T>(f: () => T, fallback: T): T => {
+    try {
+      return f();
+    } catch (err) {
+      console.error(`Téléchargements : ${kind} :`, (err as Error)?.message || err);
+      return fallback;
+    }
+  };
+  const later = async <T>(f: () => T | Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await f();
+    } catch (err) {
+      console.error(`Téléchargements : ${kind} :`, (err as Error)?.message || err);
+      return fallback;
+    }
+  };
+  return {
+    id: kind,
+    canHandle: (source) => safe(() => engine.canHandle(source) === true, false),
+    add: (source, request, item) => later(() => engine.add(source, request, item), { ok: false, error: kind }),
+    isLive: (id) => safe(() => engine.isLive(id) === true, false),
+    pause: (item) => safe(() => engine.pause(item), undefined),
+    resume: (item) => later(() => engine.resume(item), undefined),
+    cancel: (item, removeFiles) => later(() => engine.cancel(item, removeFiles), undefined),
+    stop: () => later(() => engine.stop(), undefined),
+  };
+}
 
 function nameFromSource(src: string): string {
   try {

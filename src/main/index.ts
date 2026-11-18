@@ -39,7 +39,7 @@ import { createRegistry } from './catalog/tags/registry.ts';
 import { createTargetFinder } from './catalog/targets.ts';
 import { syncFeeds } from './catalog/sync.ts';
 import { createConfigService } from './config/index.ts';
-import { createDownloads } from './downloads/index.ts';
+import { createDownloads, type PluginDownloader } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { gameConfigFeed } from './games/element-sources.ts';
@@ -81,7 +81,7 @@ import { createTv } from './tv/index.ts';
 import { tvConfigFeed } from './tv/element-sources.ts';
 import { siteConfigFeed } from './web/element-sources.ts';
 import { createUsageService } from './usage/index.ts';
-import { chromeLikeUserAgent, createWebLayer, nativeUserAgent, WEB_PARTITION, type ViewLike, type WebManagerDeps } from './web/index.ts';
+import { chromeLikeUserAgent, createWebLayer, nativeUserAgent, WEB_PARTITION, type ViewLike, type WebExtension, type WebManagerDeps } from './web/index.ts';
 import { createDialogs } from './window/dialogs.ts';
 import { createMainWindow } from './window/main-window.ts';
 
@@ -270,6 +270,7 @@ function start(pending: PendingFiles): Running {
       box: safeStorageBox(safeStorage),
     }),
     flush: storages.flush,
+    dropData: storages.drop,
     tagRegistry: registry,
     setTexts: (key, texts) => i18n.setPluginTexts(key, texts),
     translate: t,
@@ -368,7 +369,15 @@ function start(pending: PendingFiles): Running {
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
-  plugins.start().catch((err: Error) => console.error('Plugins :', err.message));
+  // Code sensible des plugins inclus (P3-05) : extensions des vues web et moteurs de téléchargement, branchés une fois,
+  // après le démarrage des plugins (en changer demande de redémarrer Mire).
+  plugins
+    .start()
+    .then(() => {
+      webLayer.addExtensions(plugins.local('webExtensions').map((c) => c.instance as WebExtension));
+      downloads.addEngines(plugins.local('downloaders').map((c) => ({ pluginId: c.pluginId, engine: c.instance as PluginDownloader })));
+    })
+    .catch((err: Error) => console.error('Plugins :', err.message));
 
   return {
     async onSecondInstance(paths) {

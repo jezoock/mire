@@ -23,7 +23,20 @@ import { compareVersions, parseVersion, satisfies } from './semver.ts';
 export type PluginOrigin = 'bundled' | 'installed';
 
 /** Raison d'un refus, stable : le message affiché est `plugins.refused.<code>` dans les catalogues. */
-export type RefusalCode = 'invalid' | 'mismatch' | 'engine' | 'level' | 'privileged' | 'outside' | 'data' | 'texts' | 'too-big';
+export type RefusalCode =
+  | 'invalid'
+  | 'mismatch'
+  | 'engine'
+  | 'level'
+  | 'privileged'
+  | 'outside'
+  | 'data'
+  | 'texts'
+  | 'too-big'
+  // Dépendances (P3-05) : absente ou d'une version qui ne convient pas, refusée, circulaire.
+  | 'dependency'
+  | 'dependency-refused'
+  | 'cycle';
 
 export interface Refusal {
   code: RefusalCode;
