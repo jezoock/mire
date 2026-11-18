@@ -1,9 +1,18 @@
-// Explorateur (P4-08) : colonnes (Pages, Listes, Tags, regroupements, éléments), tranches, aperçu, relecture, et le
+// Explorateur (P4-08) : colonnes (Pages, Listes, Tags, Sources, Dossiers, regroupements, dossiers, éléments), tranches, aperçu, relecture, et le
 // contrôleur `mire-explorer` (ouvrir, montrer, lire, modifier, ajouter à une liste), en français et en anglais.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { Element, ListSummary, PageDefinition, PageLevel, PagePath, TagSummary } from '@mire/shared';
-import { createExplorerModel, elementPreview, levelNode, parseLevelNode, ROOT } from '../../src/renderer/explorer/index.ts';
+import type { CatalogSources, Element, FolderLevel, ListSummary, PageDefinition, PageLevel, PagePath, TagSummary } from '@mire/shared';
+import {
+  createExplorerModel,
+  elementPreview,
+  folderNode,
+  levelNode,
+  parseFolderNode,
+  parseLevelNode,
+  ROOT,
+  sourceLabel,
+} from '../../src/renderer/explorer/index.ts';
 import type { ExplorerSources, ExplorerState } from '../../src/renderer/explorer/index.ts';
 import { ExplorerController, NEW_LIST } from '../../src/renderer/controllers/explorer.ts';
 import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
@@ -86,6 +95,31 @@ function level(pageId: string, path: PagePath, cursor: string | null): Promise<P
   return Promise.resolve(null);
 }
 
+const SOURCES: CatalogSources = {
+  sources: [
+    { id: 's1', plugin: 'src-local', place: '/bib', count: 3 },
+    { id: 's2', plugin: 'web-perso', place: 'config', count: 2 },
+    { id: 's3', plugin: 'mon-plugin', place: 'compte', count: 1 },
+  ],
+  folders: [{ id: 'd1', place: '/bib', count: 3 }],
+};
+
+/** Faux `catalog.folder` : /bib → Films (Amélie) et un fichier à la racine ; /bib/Vide n'existe pas. */
+function folder(source: string, path: string, cursor: string | null): Promise<FolderLevel | null> {
+  if (!['s1', 'd1'].includes(source) || cursor) return Promise.resolve(null);
+  if (path === '')
+    return Promise.resolve({
+      source,
+      path,
+      total: 2,
+      next: null,
+      folders: [{ name: 'Films', path: 'Films', count: 1 }],
+      elements: [el('local:/bib/a.mkv', 'Racine')],
+    });
+  if (path === 'Films') return Promise.resolve({ source, path, total: 1, next: null, folders: [], elements: [el('local:/f/amelie.mkv', 'Amélie')] });
+  return Promise.resolve(null);
+}
+
 function setup(t = tFr, over: Partial<ExplorerSources> = {}) {
   const states: ExplorerState[] = [];
   const calls: string[] = [];
@@ -101,6 +135,11 @@ function setup(t = tFr, over: Partial<ExplorerSources> = {}) {
     },
     element: async (key) =>
       key === 'local:/f/amelie.mkv' ? el(key, 'Amélie', { infos: { year: 2001, genres: ['Comédie'] }, tags: ['video', 'a-revoir'] }) : null,
+    sources: async () => SOURCES,
+    folder: (source, path, cursor) => {
+      calls.push(`folder ${source} ${path} ${cursor}`);
+      return folder(source, path, cursor);
+    },
     ...over,
   };
   const model = createExplorerModel(src, (s) => states.push(s));
@@ -112,9 +151,9 @@ function setup(t = tFr, over: Partial<ExplorerSources> = {}) {
 }
 
 describe('Explorateur : colonnes', () => {
-  it('la première colonne propose Pages, Listes et Tags, en français et en anglais', () => {
-    assert.deepEqual(setup().labels(0), ['Pages', 'Listes', 'Tags']);
-    assert.deepEqual(setup(tEn).labels(0), ['Pages', 'Lists', 'Tags']);
+  it('la première colonne propose Pages, Listes, Tags, Sources et Dossiers, en français et en anglais', () => {
+    assert.deepEqual(setup().labels(0), ['Pages', 'Listes', 'Tags', 'Sources', 'Dossiers']);
+    assert.deepEqual(setup(tEn).labels(0), ['Pages', 'Lists', 'Tags', 'Sources', 'Folders']);
     assert.equal(setup().last().columns[0]?.node, ROOT);
   });
 
@@ -172,6 +211,54 @@ describe('Explorateur : colonnes', () => {
     assert.equal(last().preview, null);
   });
 
+  it('Sources → une source → ses dossiers → leurs éléments, désignés par la source et un chemin relatif', async () => {
+    const { model, last, headings, labels, calls } = setup();
+    assert.ok(await model.open('sources'));
+    assert.deepEqual(labels(1), ['Dossier · /bib', 'Sites ajoutés', 'mon-plugin · compte']);
+    assert.deepEqual(
+      last().columns[1]?.rows.map((r) => r.count),
+      [3, 2, 1],
+    );
+    assert.ok(await model.open(folderNode('s1', '')));
+    assert.deepEqual(labels(2), ['Films', 'Racine']);
+    assert.equal(last().columns[2]?.rows[1]?.key, 'local:/bib/a.mkv');
+    assert.ok(await model.open(folderNode('s1', 'Films')));
+    assert.deepEqual(headings(), ['Explorateur', 'Sources', 'Dossier · /bib', 'Films']);
+    assert.ok(await model.show('local:/f/amelie.mkv'));
+    assert.equal(last().preview?.name, 'Amélie');
+    // Aucun chemin absolu ne part vers le processus principal.
+    assert.deepEqual(
+      calls.filter((c) => c.startsWith('folder')),
+      ['folder s1  null', 'folder s1 Films null'],
+    );
+  });
+
+  it('Dossiers : les dossiers autorisés, puis leurs sous-dossiers ; un dossier refusé n’ouvre pas de colonne', async () => {
+    const { model, headings, labels } = setup(tEn);
+    assert.ok(await model.open('folders'));
+    assert.deepEqual(labels(1), ['/bib']);
+    assert.ok(await model.open(folderNode('d1', '')));
+    assert.deepEqual(labels(2), ['Films', 'Racine']);
+    assert.ok(await model.open(folderNode('d1', 'Films')));
+    assert.deepEqual(headings(), ['Explorer', 'Folders', '/bib', 'Films']);
+    // Le processus principal refuse (`null`) : la colonne ne s'ouvre pas.
+    const { model: m2, headings: h2 } = setup(tFr, { folder: async (src, p, c) => (p === 'Films' ? null : folder(src, p, c)) });
+    await m2.open('folders');
+    await m2.open(folderNode('d1', ''));
+    assert.equal(await m2.open(folderNode('d1', 'Films')), false);
+    assert.deepEqual(h2(), ['Explorateur', 'Dossiers', '/bib']);
+  });
+
+  it('nom des sources, en français et en anglais ; nœuds de dossier', () => {
+    assert.equal(sourceLabel('src-smb', '//nas/films', tFr), 'Partage réseau · //nas/films');
+    assert.equal(sourceLabel('jeux-roms', 'snes|/roms', tEn), 'Console games · /roms');
+    assert.equal(sourceLabel('web-bm', 'config', tEn), 'Bookmarks');
+    assert.deepEqual(parseFolderNode(folderNode('s1', 'a/b')), { source: 's1', path: 'a/b' });
+    assert.equal(parseFolderNode('folder:[1]'), null);
+    assert.equal(parseFolderNode('folder:pas du json'), null);
+    assert.equal(parseFolderNode(levelNode('series', [])), null);
+  });
+
   it('un nœud ou un élément qui n’est pas affiché ne s’ouvre pas', async () => {
     const { model } = setup();
     assert.equal(await model.open(levelNode('series', ['Friends'])), false);
@@ -206,7 +293,7 @@ describe('Explorateur : aperçu', () => {
       { label: 'Genres', value: 'Comédie' },
     ]);
     assert.deepEqual(p?.tags, ['Vidéo', 'À revoir']);
-    assert.equal(p?.source, 'src-local · /bib');
+    assert.equal(p?.source, 'Dossier · /bib');
     assert.equal(p?.location, '/f/amelie.mkv');
     assert.equal(last().columns[2]?.selected, 'local:/f/amelie.mkv');
   });

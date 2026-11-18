@@ -7,7 +7,19 @@
 import { createExplorerModel } from './model.ts';
 import type { ExplorerSources, ExplorerState } from './model.ts';
 
-export { createExplorerModel, elementPreview, levelNode, locationOf, parseLevelNode, PREVIEW_INFOS, ROOT, SECTIONS } from './model.ts';
+export {
+  createExplorerModel,
+  elementPreview,
+  folderNode,
+  levelNode,
+  locationOf,
+  parseFolderNode,
+  parseLevelNode,
+  PREVIEW_INFOS,
+  ROOT,
+  SECTIONS,
+  sourceLabel,
+} from './model.ts';
 export type { ExplorerModel, ExplorerSources, ExplorerState } from './model.ts';
 
 /** Pause après l'arrivée du focus sur une ligne avant de montrer ce qu'elle ouvre (parcours rapide au clavier). */

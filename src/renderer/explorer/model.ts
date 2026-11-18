@@ -1,11 +1,23 @@
 /**
- * Explorateur (P4-08), sans DOM : les colonnes et l'aperçu. La première colonne propose Pages, Listes et Tags ; chaque
- * choix ouvre la colonne suivante (pages, listes ou tags, puis les regroupements d'un niveau, puis ses éléments), et un
- * élément ouvre l'aperçu. Les niveaux viennent de `catalog.page` par tranches : une page, une liste (`list:<id>`) ou un
- * tag (`tag:<id>`). Les données arrivent par `ExplorerSources` ; l'affichage est rédigé ici, avec les catalogues.
+ * Explorateur (P4-08), sans DOM : les colonnes et l'aperçu. La première colonne propose Pages, Listes, Tags, Sources et
+ * Dossiers ; chaque choix ouvre la colonne suivante (pages, listes ou tags, puis les regroupements d'un niveau, puis ses
+ * éléments ; ou sources et dossiers autorisés, puis leurs sous-dossiers et leurs éléments), et un élément ouvre l'aperçu.
+ * Les niveaux viennent de `catalog.page` par tranches : une page, une liste (`list:<id>`) ou un tag (`tag:<id>`) ; les
+ * dossiers de `catalog.folder`, désignés par leur source et un chemin relatif. Les données arrivent par
+ * `ExplorerSources` ; l'affichage est rédigé ici, avec les catalogues.
  */
 import { listPageId, tagPageId } from '@mire/shared';
-import type { Element as CatalogElement, InfoValue, ListSummary, PageDefinition, PageLevel, PagePath, TagSummary } from '@mire/shared';
+import type {
+  CatalogSources,
+  Element as CatalogElement,
+  FolderLevel,
+  InfoValue,
+  ListSummary,
+  PageDefinition,
+  PageLevel,
+  PagePath,
+  TagSummary,
+} from '@mire/shared';
 import { mediaUrl } from '@mire/ui/utils';
 import type { ExplorerColumn, ExplorerPreview, ExplorerRow } from '@mire/ui/utils';
 import { groupFormatter, pageName } from '../pages/model.ts';
@@ -14,7 +26,7 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 /** Première colonne, et les branches qu'elle propose. */
 export const ROOT = 'root';
-export const SECTIONS = ['pages', 'lists', 'tags'] as const;
+export const SECTIONS = ['pages', 'lists', 'tags', 'sources', 'folders'] as const;
 export type Section = (typeof SECTIONS)[number];
 const isSection = (node: string): node is Section => (SECTIONS as readonly string[]).includes(node);
 
@@ -48,6 +60,44 @@ export function parseLevelNode(node: string): { pageId: string; path: PagePath }
   }
 }
 
+/** Nœud d'un dossier : `folder:` puis `[source, chemin relatif]` en JSON (`''` : la source elle-même). */
+export const folderNode = (source: string, path: string): string => `folder:${JSON.stringify([source, path])}`;
+
+/** Source et chemin d'un nœud de dossier ; `null` pour un autre nœud. */
+export function parseFolderNode(node: string): { source: string; path: string } | null {
+  if (!node.startsWith('folder:')) return null;
+  try {
+    const [source, path] = JSON.parse(node.slice('folder:'.length)) as [unknown, unknown];
+    return typeof source === 'string' && typeof path === 'string' ? { source, path } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sources qui ont un nom dans les catalogues (`explorer.sourceKinds`) ; les autres (plugins) gardent leur identifiant. */
+export const SOURCE_KINDS = [
+  'src-local',
+  'src-smb',
+  'src-http',
+  'src-m3u',
+  'tv-m3u',
+  'tv-web',
+  'jeux-roms',
+  'jeux-pc',
+  'jeux-pc-manuel',
+  'jeux-marque',
+  'web-perso',
+  'web-bm',
+] as const;
+
+/** Nom d'une source : sa sorte, puis où elle se trouve (sauf pour une source tirée de la configuration). */
+export function sourceLabel(plugin: string, place: string, t: Translate): string {
+  const kind = (SOURCE_KINDS as readonly string[]).includes(plugin) ? t(`explorer.sourceKinds.${plugin}`) : plugin;
+  // `console|chemin` (consoles) : seul le chemin se montre.
+  const where = place.slice(place.lastIndexOf('|') + 1);
+  return where && where !== 'config' ? t('explorer.sourceLabel', { kind, place: where }) : kind;
+}
+
 /** Ce dont l'explorateur a besoin : textes et données du catalogue. */
 export interface ExplorerSources {
   t: Translate;
@@ -58,6 +108,9 @@ export interface ExplorerSources {
   tags(): Promise<TagSummary[] | null>;
   level(pageId: string, path: PagePath, cursor: string | null): Promise<PageLevel | null>;
   element(key: string): Promise<CatalogElement | null>;
+  /** Sources du catalogue et dossiers autorisés. */
+  sources(): Promise<CatalogSources | null>;
+  folder(source: string, path: string, cursor: string | null): Promise<FolderLevel | null>;
 }
 
 export interface ExplorerState {
@@ -121,25 +174,46 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
         const node = levelNode(lvl.page, [...lvl.path, g.value]);
         return { id: node, node, label: formatGroup(lvl.info, g.value) ?? g.name, count: g.count };
       });
-    return lvl.elements.map((e) => ({ id: e.key, key: e.key, label: e.name, ...(e.unavailable ? { unavailable: true } : {}) }));
+    return elementRows(lvl.elements);
+  }
+
+  const elementRows = (els: readonly (CatalogElement & { unavailable?: true })[]): ExplorerRow[] =>
+    els.map((e) => ({ id: e.key, key: e.key, label: e.name, ...(e.unavailable ? { unavailable: true } : {}) }));
+
+  function folderRows(lvl: FolderLevel): ExplorerRow[] {
+    const folders = lvl.folders.map((f) => {
+      const node = folderNode(lvl.source, f.path);
+      return { id: node, node, label: f.name, count: f.count };
+    });
+    return [...folders, ...elementRows(lvl.elements)];
   }
 
   /** Colonne ouverte par une branche (première tranche) ; `null` si elle n'existe plus. */
   async function load(node: string, heading: string): Promise<Column | null> {
     if (node === ROOT) return rootColumn();
     if (isSection(node)) return column(node, heading, await sectionRows(node));
-    const lvl = parseLevelNode(node);
-    if (!lvl) return null;
-    const r = await src.level(lvl.pageId, lvl.path, null);
-    return r ? column(node, heading, levelRows(r), r.total, r.next) : null;
+    const r = await slice(node, null);
+    return r ? column(node, heading, r.rows, r.total, r.next) : null;
   }
 
-  /** Tranche suivante d'une colonne de niveau (sans la placer) ; `null` s'il n'y en a pas. */
+  /** Une tranche d'un niveau de page ou d'un dossier ; `null` s'il n'existe pas (ou plus). */
+  async function slice(node: string, cursor: string | null): Promise<{ rows: ExplorerRow[]; total: number; next: string | null } | null> {
+    const lvl = parseLevelNode(node);
+    if (lvl) {
+      const r = await src.level(lvl.pageId, lvl.path, cursor);
+      return r && { rows: levelRows(r), total: r.total, next: r.next };
+    }
+    const dir = parseFolderNode(node);
+    if (!dir) return null;
+    const r = await src.folder(dir.source, dir.path, cursor);
+    return r && { rows: folderRows(r), total: r.total, next: r.next };
+  }
+
+  /** Tranche suivante d'une colonne (sans la placer) ; `null` s'il n'y en a pas. */
   async function nextSlice(col: Column): Promise<Column | null> {
-    const lvl = parseLevelNode(col.node);
-    if (!col.next || !lvl) return null;
-    const r = await src.level(lvl.pageId, lvl.path, col.next);
-    return r ? { ...column(col.node, col.heading, [...col.rows, ...levelRows(r)], r.total, r.next), selected: col.selected } : null;
+    if (!col.next) return null;
+    const r = await slice(col.node, col.next);
+    return r ? { ...column(col.node, col.heading, [...col.rows, ...r.rows], r.total, r.next), selected: col.selected } : null;
   }
 
   async function sectionRows(section: Section): Promise<ExplorerRow[]> {
@@ -153,6 +227,13 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
         const node = levelNode(listPageId(l.id), []);
         return { id: node, node, label: typeof l.name === 'string' ? l.name : t(l.name.key), count: l.count };
       });
+    if (section === 'sources' || section === 'folders') {
+      const all = await src.sources();
+      return (all?.[section] ?? []).map((x) => {
+        const node = folderNode(x.id, '');
+        return { id: node, node, label: x.plugin ? sourceLabel(x.plugin, x.place, t) : x.place, count: x.count };
+      });
+    }
     const tags = ((await src.tags()) ?? []).filter((x) => x.count > 0);
     return tags
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -276,7 +357,7 @@ export function elementPreview(el: CatalogElement & { unavailable?: true }, know
     image: image ? mediaUrl(image) : '',
     facts,
     tags: el.tags.map((id) => names.get(id) ?? id),
-    source: instance && instance !== 'config' ? `${plugin} · ${instance}` : plugin,
+    source: sourceLabel(plugin, instance, t),
     location: locationOf(el),
     playable: !el.unavailable,
   };

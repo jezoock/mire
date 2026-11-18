@@ -958,8 +958,25 @@
       "sections": {
         "pages": "Pages",
         "lists": "Listes",
-        "tags": "Tags"
+        "tags": "Tags",
+        "sources": "Sources",
+        "folders": "Dossiers"
       },
+      "sourceKinds": {
+        "src-local": "Dossier",
+        "src-smb": "Partage réseau",
+        "src-http": "Serveur web",
+        "src-m3u": "Liste M3U",
+        "tv-m3u": "Télévision",
+        "tv-web": "Télévision sur le web",
+        "jeux-roms": "Jeux de console",
+        "jeux-pc": "Jeux PC",
+        "jeux-pc-manuel": "Jeux PC ajoutés à la main",
+        "jeux-marque": "Jeux à télécharger",
+        "web-perso": "Sites ajoutés",
+        "web-bm": "Marque-pages"
+      },
+      "sourceLabel": "{kind} · {place}",
       "columns": "Colonnes de l’explorateur",
       "empty": "Rien ici pour l’instant.",
       "unavailable": "Indisponible",

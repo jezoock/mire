@@ -83,6 +83,10 @@ export function createFolders({ catalog, engine, roots, platform = process.platf
 
   /** Chemin sous une forme comparable : séparateurs `/`, sans séparateur final ; sans casse sous Windows. */
   const slashed = (p: string) => {
+    const win = platform === 'win32';
+    const quick = win ? p.replace(/\\/g, '/') : p;
+    // Chemin déjà propre (cas courant : il vient d'une lecture de dossier) : pas de normalisation, coûteuse sur 20 000.
+    if (!/\/\.{1,2}(\/|$)|\/\/|\/$/.test(win ? quick.slice(2) : quick)) return quick;
     const n = m.normalize(p).replace(/\\/g, '/');
     return n.length > 1 && n.endsWith('/') ? n.slice(0, -1) : n;
   };
@@ -199,10 +203,11 @@ export function createFolders({ catalog, engine, roots, platform = process.platf
     for (const l of listeners) l();
   });
 
+  /** Nombre d'éléments d'une racine (l'arbre d'une source n'est pas calculé pour cela). */
   const count = (root: Root) => {
-    const tree = treeOf(root);
+    if (root.summary.plugin) return root.keys().length;
     let total = 0;
-    for (const n of tree.values()) total += n.keys.length;
+    for (const n of treeOf(root).values()) total += n.keys.length;
     return total;
   };
 
