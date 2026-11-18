@@ -1,0 +1,268 @@
+@use '../../theme/tokens' as *;
+
+// Vue du Centre : onglets, puis téléchargements ou apps. Habillage du cœur (palette des réglages, P4-02) ; l'allure
+// reprend celle des vues historiques Téléchargements et Boutique (.dl-*, .st-* de styles.css).
+.mire-centre-view {
+  display: grid;
+  gap: ds-spacing(5);
+  min-width: 0;
+  padding-top: 4px;
+
+  &__tabs,
+  &__buttons,
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+  }
+
+  &__panel {
+    display: grid;
+    gap: ds-spacing(5);
+    min-width: 0;
+  }
+
+  &__hint,
+  &__help {
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    line-height: 1.5;
+  }
+
+  &__add &__hint {
+    margin-top: ds-spacing(3);
+  }
+
+  &__group {
+    display: grid;
+    gap: ds-spacing(3);
+    min-width: 0;
+  }
+
+  &__heading-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: ds-spacing(3);
+  }
+
+  &__heading {
+    font-size: ds-token(font-size, 400);
+    font-weight: 800;
+  }
+
+  &__count {
+    margin-left: ds-spacing(1);
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: ds-spacing(2);
+  }
+
+  &__root {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(3);
+    color: var(--muted);
+
+    strong {
+      color: var(--text);
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: ds-spacing(3);
+    padding: ds-spacing(5);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, #{ds-radius(md)});
+    background: var(--surface);
+  }
+
+  &__card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: ds-spacing(1) ds-spacing(3);
+  }
+
+  &__card &__name {
+    font-size: ds-token(font-size, 500);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  &__state {
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    font-weight: 600;
+
+    &.--ok {
+      color: var(--ring);
+    }
+  }
+
+  &__desc {
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  &__systems {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(1) ds-spacing(2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__chip {
+    padding: ds-spacing(1) ds-spacing(3);
+    border-radius: ds-radius(pill);
+    background: var(--surface-2);
+    font-size: ds-token(font-size, 100);
+    font-weight: 600;
+  }
+
+  &__ok {
+    margin-left: ds-spacing(2);
+    font-size: ds-token(font-size, 100);
+    font-weight: 700;
+    opacity: 0.75;
+  }
+
+  &__card &__actions {
+    margin-top: auto;
+  }
+
+  &__progress {
+    width: 100%;
+  }
+
+  &__bar {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+
+    i {
+      display: block;
+      height: 100%;
+      background: var(--ring);
+      transition: width 0.2s ease;
+
+      @include ds-reduced-motion() {
+        transition: none;
+      }
+    }
+  }
+
+  &__status {
+    margin-top: ds-spacing(1);
+    color: var(--muted);
+    font-size: ds-token(font-size, 100);
+  }
+
+  &__bios {
+    padding-top: ds-spacing(3);
+    border-top: 1px solid var(--line);
+  }
+
+  &__bios-title {
+    margin-bottom: ds-spacing(1);
+    font-weight: 700;
+  }
+
+  &__bios-hint,
+  &__bios-files,
+  &__bios-dir {
+    color: var(--muted);
+    font-size: ds-token(font-size, 100);
+    line-height: 1.45;
+  }
+
+  &__bios-files {
+    color: var(--text);
+  }
+
+  &__bios-dir {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__bios &__actions {
+    margin-top: ds-spacing(2);
+  }
+
+  &__games {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: ds-spacing(4);
+  }
+
+  &__game {
+    display: flex;
+    gap: ds-spacing(4);
+    padding: ds-spacing(3);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, #{ds-radius(md)});
+    background: var(--surface);
+  }
+
+  &__art {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 96px;
+    height: 128px;
+    border-radius: var(--r-sm, #{ds-radius(sm)});
+    background: var(--mire-centre-art, var(--surface-2));
+    color: var(--bg);
+    font-size: ds-token(font-size, 600);
+    font-weight: 800;
+  }
+
+  &__game-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ds-spacing(1);
+    min-width: 0;
+  }
+
+  &__game &__name {
+    font-size: ds-token(font-size, 400);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  &__meta {
+    color: var(--muted);
+    font-size: ds-token(font-size, 100);
+    font-weight: 600;
+  }
+
+  &__game-text > ds-trigger,
+  &__game-text > &__state {
+    margin-top: auto;
+  }
+}

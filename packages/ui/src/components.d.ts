@@ -6,6 +6,7 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
+import { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
@@ -13,6 +14,7 @@ import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
+export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
@@ -101,6 +103,54 @@ export namespace Components {
         "variant": string;
     }
     /**
+     * Hôte du Centre (P4-18) : ses méthodes sont les actions du contrôleur `mire-centre` (téléchargements, apps, BIOS),
+     * qui vit avec l'état de l'interface (`src/renderer/controllers/centre.ts`). Il contient la vue du Centre
+     * (`mire-centre-view`, placée par la page). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans
+     * état, il ne se rend qu'une fois.
+     */
+    interface MireCentre {
+    }
+    /**
+     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
+     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
+     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
+     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
+     *   rappel des BIOS), jeux libres et import de ses propres jeux.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
+     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
+     * l'émulateur, de la console ou du jeu.
+     */
+    interface MireCentreView {
+        /**
+          * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
+          * @default null
+         */
+        "apps": AppsView | string | null;
+        /**
+          * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
+          * @default ''
+         */
+        "labels": CentreLabels | string;
+        /**
+          * @default []
+         */
+        "others": DownloadRow[] | string;
+        /**
+          * @default ''
+         */
+        "rowLabels": DownloadRowLabels | string;
+        /**
+          * Téléchargements en cours (actifs, en pause, en attente) puis les autres (voir `DownloadRow`).
+          * @default []
+         */
+        "running": DownloadRow[] | string;
+        /**
+          * Onglet affiché : `downloads` ou `apps`.
+          * @default 'downloads'
+         */
+        "tab": string;
+    }
+    /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
      * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
      * attributs, fournis par la page à partir des catalogues.
@@ -146,6 +196,24 @@ export namespace Components {
      * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
      */
     interface MireDialogs {
+    }
+    /**
+     * Une ligne de la liste des téléchargements (P4-18) : nature, nom, ligne d'infos, erreur, barre d'avancement et
+     * boutons selon l'état. La page change sa propriété `row` quand seul ce téléchargement avance : la ligne se met à
+     * jour sans redessiner le Centre. Les boutons appellent le contrôleur `mire-centre` avec l'identifiant du
+     * téléchargement (`pauseDownload:[{"id":"…"}]`).
+     */
+    interface MireDownloadRow {
+        /**
+          * Textes des boutons (JSON ou objet, voir `DownloadRowLabels`).
+          * @default ''
+         */
+        "labels": DownloadRowLabels | string;
+        /**
+          * La ligne, déjà rédigée (voir `DownloadRow`).
+          * @default null
+         */
+        "row": DownloadRow | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -791,6 +859,34 @@ declare global {
         prototype: HTMLMireCardElement;
         new (): HTMLMireCardElement;
     };
+    /**
+     * Hôte du Centre (P4-18) : ses méthodes sont les actions du contrôleur `mire-centre` (téléchargements, apps, BIOS),
+     * qui vit avec l'état de l'interface (`src/renderer/controllers/centre.ts`). Il contient la vue du Centre
+     * (`mire-centre-view`, placée par la page). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans
+     * état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireCentreElement extends Components.MireCentre, HTMLStencilElement {
+    }
+    var HTMLMireCentreElement: {
+        prototype: HTMLMireCentreElement;
+        new (): HTMLMireCentreElement;
+    };
+    /**
+     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
+     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
+     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
+     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
+     *   rappel des BIOS), jeux libres et import de ses propres jeux.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
+     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
+     * l'émulateur, de la console ou du jeu.
+     */
+    interface HTMLMireCentreViewElement extends Components.MireCentreView, HTMLStencilElement {
+    }
+    var HTMLMireCentreViewElement: {
+        prototype: HTMLMireCentreViewElement;
+        new (): HTMLMireCentreViewElement;
+    };
     interface HTMLMireDemoElementEventMap {
         "mireDemoChange": { count: number };
         "mireDemoPick": { key?: string; value?: unknown };
@@ -826,6 +922,18 @@ declare global {
     var HTMLMireDialogsElement: {
         prototype: HTMLMireDialogsElement;
         new (): HTMLMireDialogsElement;
+    };
+    /**
+     * Une ligne de la liste des téléchargements (P4-18) : nature, nom, ligne d'infos, erreur, barre d'avancement et
+     * boutons selon l'état. La page change sa propriété `row` quand seul ce téléchargement avance : la ligne se met à
+     * jour sans redessiner le Centre. Les boutons appellent le contrôleur `mire-centre` avec l'identifiant du
+     * téléchargement (`pauseDownload:[{"id":"…"}]`).
+     */
+    interface HTMLMireDownloadRowElement extends Components.MireDownloadRow, HTMLStencilElement {
+    }
+    var HTMLMireDownloadRowElement: {
+        prototype: HTMLMireDownloadRowElement;
+        new (): HTMLMireDownloadRowElement;
     };
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -1042,8 +1150,11 @@ declare global {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
         "mire-card": HTMLMireCardElement;
+        "mire-centre": HTMLMireCentreElement;
+        "mire-centre-view": HTMLMireCentreViewElement;
         "mire-demo": HTMLMireDemoElement;
         "mire-dialogs": HTMLMireDialogsElement;
+        "mire-download-row": HTMLMireDownloadRowElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
         "mire-form": HTMLMireFormElement;
         "mire-grid": HTMLMireGridElement;
@@ -1142,6 +1253,54 @@ declare namespace LocalJSX {
         "variant"?: string;
     }
     /**
+     * Hôte du Centre (P4-18) : ses méthodes sont les actions du contrôleur `mire-centre` (téléchargements, apps, BIOS),
+     * qui vit avec l'état de l'interface (`src/renderer/controllers/centre.ts`). Il contient la vue du Centre
+     * (`mire-centre-view`, placée par la page). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans
+     * état, il ne se rend qu'une fois.
+     */
+    interface MireCentre {
+    }
+    /**
+     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
+     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
+     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
+     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
+     *   rappel des BIOS), jeux libres et import de ses propres jeux.
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
+     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
+     * l'émulateur, de la console ou du jeu.
+     */
+    interface MireCentreView {
+        /**
+          * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
+          * @default null
+         */
+        "apps"?: AppsView | string | null;
+        /**
+          * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
+          * @default ''
+         */
+        "labels"?: CentreLabels | string;
+        /**
+          * @default []
+         */
+        "others"?: DownloadRow[] | string;
+        /**
+          * @default ''
+         */
+        "rowLabels"?: DownloadRowLabels | string;
+        /**
+          * Téléchargements en cours (actifs, en pause, en attente) puis les autres (voir `DownloadRow`).
+          * @default []
+         */
+        "running"?: DownloadRow[] | string;
+        /**
+          * Onglet affiché : `downloads` ou `apps`.
+          * @default 'downloads'
+         */
+        "tab"?: string;
+    }
+    /**
      * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
      * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
      * attributs, fournis par la page à partir des catalogues.
@@ -1187,6 +1346,24 @@ declare namespace LocalJSX {
      * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
      */
     interface MireDialogs {
+    }
+    /**
+     * Une ligne de la liste des téléchargements (P4-18) : nature, nom, ligne d'infos, erreur, barre d'avancement et
+     * boutons selon l'état. La page change sa propriété `row` quand seul ce téléchargement avance : la ligne se met à
+     * jour sans redessiner le Centre. Les boutons appellent le contrôleur `mire-centre` avec l'identifiant du
+     * téléchargement (`pauseDownload:[{"id":"…"}]`).
+     */
+    interface MireDownloadRow {
+        /**
+          * Textes des boutons (JSON ou objet, voir `DownloadRowLabels`).
+          * @default ''
+         */
+        "labels"?: DownloadRowLabels | string;
+        /**
+          * La ligne, déjà rédigée (voir `DownloadRow`).
+          * @default null
+         */
+        "row"?: DownloadRow | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -1786,11 +1963,22 @@ declare namespace LocalJSX {
         "labels": CardLabels | string;
         "eager": boolean;
     }
+    interface MireCentreViewAttributes {
+        "tab": string;
+        "running": DownloadRow[] | string;
+        "others": DownloadRow[] | string;
+        "apps": AppsView | string | null;
+        "labels": CentreLabels | string;
+        "rowLabels": DownloadRowLabels | string;
+    }
     interface MireDemoAttributes {
         "heading": string;
         "actionLabel": string;
         "countLabels": string;
         "pickedLabel": string;
+    }
+    interface MireDownloadRowAttributes {
+        "labels": DownloadRowLabels | string;
     }
     interface MireFocusInfoAttributes {
         "element": CardElement | string | null;
@@ -1917,8 +2105,11 @@ declare namespace LocalJSX {
         "mire-app": MireApp;
         "mire-backdrop": Omit<MireBackdrop, keyof MireBackdropAttributes> & { [K in keyof MireBackdrop & keyof MireBackdropAttributes]?: MireBackdrop[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `attr:${K}`]?: MireBackdropAttributes[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `prop:${K}`]?: MireBackdrop[K] };
         "mire-card": Omit<MireCard, keyof MireCardAttributes> & { [K in keyof MireCard & keyof MireCardAttributes]?: MireCard[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `attr:${K}`]?: MireCardAttributes[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `prop:${K}`]?: MireCard[K] };
+        "mire-centre": MireCentre;
+        "mire-centre-view": Omit<MireCentreView, keyof MireCentreViewAttributes> & { [K in keyof MireCentreView & keyof MireCentreViewAttributes]?: MireCentreView[K] } & { [K in keyof MireCentreView & keyof MireCentreViewAttributes as `attr:${K}`]?: MireCentreViewAttributes[K] } & { [K in keyof MireCentreView & keyof MireCentreViewAttributes as `prop:${K}`]?: MireCentreView[K] };
         "mire-demo": Omit<MireDemo, keyof MireDemoAttributes> & { [K in keyof MireDemo & keyof MireDemoAttributes]?: MireDemo[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `attr:${K}`]?: MireDemoAttributes[K] } & { [K in keyof MireDemo & keyof MireDemoAttributes as `prop:${K}`]?: MireDemo[K] };
         "mire-dialogs": MireDialogs;
+        "mire-download-row": Omit<MireDownloadRow, keyof MireDownloadRowAttributes> & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes]?: MireDownloadRow[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `attr:${K}`]?: MireDownloadRowAttributes[K] } & { [K in keyof MireDownloadRow & keyof MireDownloadRowAttributes as `prop:${K}`]?: MireDownloadRow[K] };
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
@@ -1962,6 +2153,24 @@ declare module "@stencil/core" {
              */
             "mire-card": LocalJSX.IntrinsicElements["mire-card"] & JSXBase.HTMLAttributes<HTMLMireCardElement>;
             /**
+             * Hôte du Centre (P4-18) : ses méthodes sont les actions du contrôleur `mire-centre` (téléchargements, apps, BIOS),
+             * qui vit avec l'état de l'interface (`src/renderer/controllers/centre.ts`). Il contient la vue du Centre
+             * (`mire-centre-view`, placée par la page). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans
+             * état, il ne se rend qu'une fois.
+             */
+            "mire-centre": LocalJSX.IntrinsicElements["mire-centre"] & JSXBase.HTMLAttributes<HTMLMireCentreElement>;
+            /**
+             * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
+             * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
+             *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
+             * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
+             *   rappel des BIOS), jeux libres et import de ses propres jeux.
+             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
+             * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
+             * l'émulateur, de la console ou du jeu.
+             */
+            "mire-centre-view": LocalJSX.IntrinsicElements["mire-centre-view"] & JSXBase.HTMLAttributes<HTMLMireCentreViewElement>;
+            /**
              * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
              * avec le moteur dot-stash et l'appel d'une méthode publique par un `ds-trigger`. Ses textes viennent des
              * attributs, fournis par la page à partir des catalogues.
@@ -1974,6 +2183,13 @@ declare module "@stencil/core" {
              * `ds-trigger` de toutes les boîtes la trouvent. Elle n'affiche rien elle-même.
              */
             "mire-dialogs": LocalJSX.IntrinsicElements["mire-dialogs"] & JSXBase.HTMLAttributes<HTMLMireDialogsElement>;
+            /**
+             * Une ligne de la liste des téléchargements (P4-18) : nature, nom, ligne d'infos, erreur, barre d'avancement et
+             * boutons selon l'état. La page change sa propriété `row` quand seul ce téléchargement avance : la ligne se met à
+             * jour sans redessiner le Centre. Les boutons appellent le contrôleur `mire-centre` avec l'identifiant du
+             * téléchargement (`pauseDownload:[{"id":"…"}]`).
+             */
+            "mire-download-row": LocalJSX.IntrinsicElements["mire-download-row"] & JSXBase.HTMLAttributes<HTMLMireDownloadRowElement>;
             /**
              * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
              * La page lui donne l'élément qui a le focus ; il n'affiche rien sans élément. Les infos montrées et leur ordre

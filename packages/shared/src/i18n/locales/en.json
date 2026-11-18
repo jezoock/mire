@@ -775,7 +775,7 @@
       },
       "apps": {
         "loading": "Loading apps…",
-        "root": "Games folder",
+        "root": "Games folder:",
         "changeRoot": "Change",
         "unavailable": "On this system, install emulators from their official site, then add them in Settings.",
         "emulators": "Emulators",

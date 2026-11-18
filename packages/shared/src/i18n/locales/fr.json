@@ -775,7 +775,7 @@
       },
       "apps": {
         "loading": "Chargement des apps…",
-        "root": "Dossier des jeux",
+        "root": "Dossier des jeux :",
         "changeRoot": "Changer",
         "unavailable": "Sur ce système, installez les émulateurs depuis leur site officiel, puis déclarez-les dans Réglages.",
         "emulators": "Émulateurs",
