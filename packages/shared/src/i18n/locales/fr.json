@@ -501,6 +501,10 @@
       }
     },
     "plugins": {
+      "folder": {
+        "title": "« {name} » demande l’accès à un dossier",
+        "button": "Autoriser ce dossier"
+      },
       "faults": {
         "exception": "« {name} » a rencontré une erreur et a été désactivé : {details}",
         "load": "« {name} » n’a pas pu démarrer et a été désactivé : {details}",

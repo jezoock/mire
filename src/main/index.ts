@@ -4,7 +4,7 @@
  * l'IPC et ouvre la fenêtre. La logique vit dans les modules ; ici, seulement le câblage.
  */
 import path from 'node:path';
-import { app, BrowserWindow, WebContentsView, components, dialog, ipcMain, Menu, nativeTheme, protocol, session, shell, webContents } from 'electron';
+import { app, BrowserWindow, WebContentsView, components, dialog, ipcMain, Menu, nativeTheme, protocol, safeStorage, session, shell, webContents } from 'electron';
 import { path7za } from '7zip-bin';
 import { MIME, type SystemHint } from '@mire/shared';
 import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
@@ -40,7 +40,19 @@ import { managedRoots } from './files/roots.ts';
 import { createFilesService } from './files/service.ts';
 import { registerMediaProtocol, registerMediaScheme } from './media-protocol/index.ts';
 import { createUserMeta } from './meta/user-meta.ts';
-import { createJournal, createPluginService, createPluginState, electronRunners, PLUGIN_SCHEME_PRIVILEGES } from './plugins/index.ts';
+import {
+  createContextHandler,
+  createJournal,
+  createPluginBridges,
+  createPluginService,
+  createPluginSettings,
+  createPluginState,
+  electronRunners,
+  folderPicker,
+  PLUGIN_SCHEME_PRIVILEGES,
+  pluginStorages,
+  safeStorageBox,
+} from './plugins/index.ts';
 import * as http from './net/http.ts';
 import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers } from './platform/index.ts';
@@ -219,7 +231,15 @@ function start(pending: PendingFiles): Running {
   const search = createSearch({ engine: tags, catalog, pages: catalogPages, registry, translate: t });
   // Hôte de plugins (P3-03) : plugins inclus (resources/plugins/) et installés (userData/plugins/). Leurs tags et
   // infos vont au registre, leurs textes au moteur de traduction, leurs tags automatiques au moteur de tags. Sans
-  // plugin, rien n'est créé ni démarré.
+  // plugin, rien n'est créé ni démarré. Leur contexte (P3-04) : client HTTP du cœur limité aux hôtes déclarés,
+  // dossiers accordés par l'utilisateur (mémorisés dans l'état), stockage dans userData/plugin-data/<id>/, réglages
+  // sous `plugins.<id>` dans la configuration (secrets chiffrés par safeStorage quand le système le permet).
+  const pluginState = createPluginState(files.pluginState);
+  const storages = pluginStorages(files.pluginData);
+  const pickFolder = folderPicker(dialog, window.get, (id) => ({
+    title: t('plugins.folder.title', { name: plugins.list().find((p) => p.id === id)?.name ?? id }),
+    button: t('plugins.folder.button'),
+  }));
   const plugins = createPluginService({
     roots: {
       bundled: app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(__dirname, '..', '..', 'resources', 'plugins'),
@@ -227,8 +247,15 @@ function start(pending: PendingFiles): Running {
     },
     appVersion: app.getVersion(),
     languages: Object.keys(BUILTIN_CATALOGS),
-    state: createPluginState(files.pluginState),
+    state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
+    context: createContextHandler({ pickFolder, folders: { list: pluginState.folders, add: pluginState.addFolder }, storage: storages.of }),
+    settings: createPluginSettings({
+      read: () => config.get().plugins,
+      write: (id, values) => config.update((d) => void (d.plugins = { ...(d.plugins ?? {}), [id]: values })),
+      box: safeStorageBox(safeStorage),
+    }),
+    flush: storages.flush,
     tagRegistry: registry,
     setTexts: (key, texts) => i18n.setPluginTexts(key, texts),
     translate: t,
@@ -238,6 +265,8 @@ function start(pending: PendingFiles): Running {
     refresh: (keys) => tags.refresh(keys),
   });
   pluginTaggers = plugins.taggerContributors;
+  // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
+  const pluginBridges = createPluginBridges({ service: plugins, catalog });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
@@ -264,6 +293,7 @@ function start(pending: PendingFiles): Running {
     listRoms: games.listRoms,
     onProgress: (p) => toUi('scrape-progress', p),
     store: metadata.scrapeStore,
+    extraProviders: pluginBridges.metadataProviders,
   });
   // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
   access.invalidate();

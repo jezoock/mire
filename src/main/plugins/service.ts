@@ -17,10 +17,12 @@ import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
 import { CHANNEL_ERRORS, ChannelError, type Channel, type RequestHandler } from './channel.ts';
 import { checkPlugin, declaredKinds, discoverPlugins, type CheckedPlugin, type DiscoveryRoots, type PluginOrigin, type Refusal } from './discovery.ts';
+import type { createContextHandler } from './context.ts';
 import type { PluginEndpoint } from './host.ts';
 import type { Journal } from './journal.ts';
 import { contributionEntries, createContributionRegistry, declaredTagsAndInfos, RESTART_KINDS, type ContributionEntry } from './registry.ts';
 import type { RuntimePlugin } from './runtime.ts';
+import type { PluginSettingsStore } from './settings.ts';
 import type { FaultCode, PluginState } from './state.ts';
 import { createPluginTaggers } from './taggers.ts';
 
@@ -75,6 +77,12 @@ export interface PluginServiceOptions {
   onTaggersChange(): void;
   /** Éléments à recalculer après un lot de tags automatiques. */
   refresh(keys: string[]): void;
+  /** Contexte des plugins (`ctx.http`, `ctx.files`, `ctx.storage`), P3-04 ; sans lui, ces appels sont refusés. */
+  context?: ReturnType<typeof createContextHandler>;
+  /** Réglages des plugins (`plugins.<id>` de la configuration) ; sans eux, les valeurs par défaut du manifeste. */
+  settings?: PluginSettingsStore;
+  /** Fermeture de Mire : écrire ce qui attend (stockage des plugins). */
+  flush?: () => Promise<void>;
   /** Délai d'une requête à un plugin (ms). */
   requestTimeout?: number;
   /** Chien de garde : intervalle des pings et délai de réponse (ms). 0 : pas de chien de garde. */
@@ -169,12 +177,12 @@ export function createPluginService(opts: PluginServiceOptions) {
   // Exécution
 
   /** Requête à un plugin : comptée (pour désigner un fautif), et toute erreur du plugin le désactive. */
-  async function call<T>(id: string, target: string, method: string, args: unknown[] = []): Promise<T> {
+  async function call<T>(id: string, target: string, method: string, args: unknown[] = [], options: { timeout?: number } = {}): Promise<T> {
     const a = active.get(id);
     if (!a?.runner) throw new ChannelError(CHANNEL_ERRORS.notFound, `${id} is not active.`);
     a.busy++;
     try {
-      return await a.runner.channel.request<T>(target, method, args);
+      return await a.runner.channel.request<T>(target, method, args, options);
     } catch (err) {
       const code = (err as { code?: string })?.code;
       // Une annulation ou une méthode absente vient de l'appelant, pas du plugin.
@@ -185,12 +193,17 @@ export function createPluginService(opts: PluginServiceOptions) {
     }
   }
 
-  /** Ce que le plugin demande au processus principal. Le plugin est celui du port : `id` vient d'ici, jamais du message. */
-  function endpoint(id: string): PluginEndpoint {
-    const handle: RequestHandler = (target, method) => {
+  /**
+   * Ce que le plugin demande au processus principal. Le plugin est celui du port : `p` vient d'ici, jamais du message,
+   * et ses permissions sont celles de son manifeste vérifié (ADR 0002).
+   */
+  function endpoint(p: CheckedPlugin): PluginEndpoint {
+    const id = p.id;
+    const ctx = opts.context?.({ id, manifest: p.manifest }) ?? null;
+    const handle: RequestHandler = (target, method, args, signal) => {
       if (target !== 'ctx') throw new ChannelError(CHANNEL_ERRORS.notFound, `${target}.${method}`);
-      // Le contexte relayé (http, files, storage, settings) arrive avec P3-04.
-      throw new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${method} is not available to plugins yet (P3-04).`);
+      if (!ctx) throw new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${method} is not available.`);
+      return ctx.handle(method, args, signal);
     };
     return {
       handle,
@@ -208,14 +221,16 @@ export function createPluginService(opts: PluginServiceOptions) {
     const contributions = declaredKinds(p.manifest).flatMap((kind) =>
       ((p.manifest.contributes[kind] ?? []) as { id: string; main?: string }[]).filter((c) => c.main).map((c) => ({ kind, id: c.id, main: c.main! })),
     );
-    const settings = Object.fromEntries((p.manifest.settings ?? []).filter((s) => s.default !== undefined).map((s) => [s.key, s.default]));
+    const settings =
+      opts.settings?.values(p.id, p.manifest.settings) ??
+      Object.fromEntries((p.manifest.settings ?? []).filter((s) => s.default !== undefined).map((s) => [s.key, s.default]));
     return { id: p.id, version: p.version, locale, base: runners.base(p), contributions, settings };
   }
 
   async function startCode(p: CheckedPlugin): Promise<RunnerHandle> {
     const start = p.manifest.level === 'privileged' ? runners.inProcess : runners.isolated;
     const t0 = performance.now();
-    const handle = await start(p, endpoint(p.id), timeout);
+    const handle = await start(p, endpoint(p), timeout);
     try {
       await handle.channel.request('runtime', 'load', [runtimePlugin(p, opts.locale())]);
     } catch (err) {
@@ -383,9 +398,12 @@ export function createPluginService(opts: PluginServiceOptions) {
      * Appelle une méthode d'une contribution de code active (« même API par messages ») : sources, infos en ligne,
      * recherche… Une erreur du plugin le désactive.
      */
-    call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args: unknown[] = []): Promise<unknown> {
-      return call(pluginId, `${kind}/${contributionId}`, method, args);
+    call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args: unknown[] = [], options: { timeout?: number } = {}): Promise<unknown> {
+      return call(pluginId, `${kind}/${contributionId}`, method, args, options);
     },
+
+    /** Niveau d'un plugin actif (`null` sinon) : les ponts appliquent ses règles aux résultats qu'il rend. */
+    levelOf: (id: string) => active.get(id)?.plugin.manifest.level ?? null,
 
     /** Tags automatiques des plugins actifs, pour le moteur de tags. */
     taggerContributors: (): Contributor[] => taggers.contributors(),
@@ -395,14 +413,32 @@ export function createPluginService(opts: PluginServiceOptions) {
       for (const a of active.values()) a.runner?.channel.event('event', { name, payload });
     },
 
-    /** Fermeture de Mire : tout s'arrête, l'état est écrit. */
+    /**
+     * Change un réglage déclaré d'un plugin (`null` : valeur par défaut) ; le plugin actif le voit aussitôt
+     * (`ctx.settings.get`, `onChange`). Pour les réglages des plugins (P4-20). Une erreur ne cite jamais la valeur.
+     */
+    setSetting(id: string, key: string, value: unknown): void {
+      const p = known.get(id)?.plugin;
+      if (!p || !opts.settings) throw new ChannelError(CHANNEL_ERRORS.notFound, `${id} has no settings.`);
+      opts.settings.set(id, p.manifest.settings ?? [], key, value);
+      const v = opts.settings.values(id, p.manifest.settings)[key];
+      active.get(id)?.runner?.channel.event('settings', { key, value: v });
+    },
+
+    /** Dossiers accordés à un plugin (`ctx.files`). */
+    folders: (id: string): string[] => state.folders(id),
+    /** Accorde un dossier à un plugin, comme s'il l'avait demandé (`ctx.files.requestFolder`) et que l'utilisateur l'avait choisi. */
+    grantFolder: (id: string, dir: string): void => state.addFolder(id, path.resolve(dir)),
+    revokeFolder: (id: string, dir: string): void => state.removeFolder(id, dir),
+
+    /** Fermeture de Mire : tout s'arrête, l'état et le stockage des plugins sont écrits. */
     async stop(): Promise<void> {
       stopped = true;
       if (watchdogTimer) clearInterval(watchdogTimer);
       for (const a of active.values()) a.runner?.stop();
       active.clear();
       runners.shutdown();
-      await state.flush();
+      await Promise.all([state.flush(), opts.flush?.()]);
     },
   };
 }

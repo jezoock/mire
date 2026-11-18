@@ -501,6 +501,10 @@
       }
     },
     "plugins": {
+      "folder": {
+        "title": "“{name}” asks for access to a folder",
+        "button": "Allow this folder"
+      },
       "faults": {
         "exception": "“{name}” ran into an error and was turned off: {details}",
         "load": "“{name}” could not start and was turned off: {details}",

@@ -46,6 +46,8 @@ export interface ScrapeEngineDeps {
   onProgress: (p: ScrapeProgress) => void;
   /** Sources, dans l'ordre où `run` les traite. */
   providers: MetadataProvider[];
+  /** Fournisseurs des plugins actifs (contribution `metadata`, P3-04), après les autres ; relus à chaque usage. */
+  extraProviders?: () => MetadataProvider[];
   /** Fetch des fournisseurs (tests) ; par défaut le fetch global. */
   fetch?: FetchLike;
   /** Horloge (tests). */
@@ -122,7 +124,8 @@ async function pool<T>(items: T[], limit: number, go: () => boolean, fn: (it: T)
 }
 
 export function createScrapeEngine(deps: ScrapeEngineDeps) {
-  const { getConfig, listRoms, onProgress, providers } = deps;
+  const { getConfig, listRoms, onProgress } = deps;
+  const all = (): MetadataProvider[] => [...deps.providers, ...(deps.extraProviders?.() ?? [])];
   const now = deps.now || Date.now;
   const { scrapeImg: imgDir, scrapeDb: dbFile, scrapeCache: cacheDir } = dataPaths(deps.dataDir);
   fs.mkdirSync(imgDir, { recursive: true });
@@ -153,7 +156,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     return !m || now() - m > MISS_RETRY_MS;
   }
 
-  const providerFor = (kind: string) => providers.find((p) => p.kinds.includes(kind as never));
+  const providerFor = (kind: string) => all().find((p) => p.kinds.includes(kind as never));
 
   // Récupère et enregistre une fiche ; rend vrai si une fiche a été enregistrée.
   async function scrapeOne(provider: MetadataProvider, item: ScrapeItem, override: ScrapeOverride | undefined, key: string): Promise<boolean> {
@@ -169,7 +172,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
 
   async function collect(opts: RunOptions, kinds: string[], stats: { skipped: string[] }): Promise<Task[]> {
     const tasks: Task[] = [];
-    for (const provider of providers) {
+    for (const provider of all()) {
       if (!kinds.includes(provider.group)) continue;
       const missing = provider.requires?.(ctx);
       if (missing) {
@@ -195,7 +198,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     let done = 0;
     onProgress({ running: true, done, total });
     // Chaque source a sa propre cadence : on traite les fournisseurs l'un après l'autre.
-    for (const provider of providers) {
+    for (const provider of new Set(tasks.map((t) => t.provider))) {
       const group = tasks.filter((t) => t.provider === provider);
       if (!group.length) continue;
       await pool(

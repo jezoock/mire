@@ -5,7 +5,8 @@
  * les appels du contexte au processus principal. Repris de `spikes/hote-isole/runtime.mjs` (ADR 0002).
  *
  * Cibles reçues : `runtime` (`ping`, `load`, `computeBatch`) et `<nature>/<idContribution>` pour une méthode d'une
- * contribution. Dans l'autre sens : `ctx` (appels du contexte). Intégré au runtime de l'hôte (navigateur) : rien de
+ * contribution. Dans l'autre sens : `ctx` (appels du contexte : `http.*`, `files.*`, `storage.*`). Événements reçus :
+ * `event` (événements de Mire), `settings` (réglage changé). Intégré au runtime de l'hôte (navigateur) : rien de
  * Node ni d'Electron.
  */
 import { callableMethod, ChannelError, CHANNEL_ERRORS, createChannel, type Channel, type PortLike } from './channel.ts';
@@ -18,22 +19,29 @@ export interface RuntimePlugin {
   /** Adresse du dossier du plugin, terminée par `/` (`mire-plugin://<id>/`, ou `file:///…/` en processus principal). */
   base: string;
   contributions: { kind: string; id: string; main: string }[];
-  /** Valeurs par défaut des réglages du manifeste (les réglages eux-mêmes viennent avec P3-04). */
+  /** Réglages du plugin : valeurs changées, sinon celles par défaut du manifeste (secrets compris, en clair). */
   settings: Record<string, unknown>;
 }
 
 /** Charge un module d'après son adresse : `import()` dans le Worker, `import()` de Node en processus principal. */
 export type ModuleLoader = (url: string) => Promise<{ default?: unknown }>;
 
-const unavailable = (what: string) => () =>
-  Promise.reject(new ChannelError(CHANNEL_ERRORS.unavailable, `ctx.${what} is not available to plugins yet (P3-04).`));
-
 /**
- * Contexte du plugin. `log` et `events` fonctionnent ; `settings.get` rend la valeur par défaut du manifeste ; `http`,
- * `files` et `storage` refusent avec une erreur claire jusqu'à P3-04, qui les relaiera au processus principal (cible
- * `ctx`) où les permissions s'appliquent.
+ * Contexte du plugin. `log` et `events` restent ici ; `settings.get` lit les valeurs reçues au chargement, tenues à
+ * jour par l'événement `settings` ; `http`, `files` et `storage` sont relayés au processus principal (cible `ctx`),
+ * où s'appliquent les permissions (P3-04). Le relais ne porte que la méthode et ses arguments : le processus principal
+ * sait de quel plugin il s'agit par le port.
  */
-function createContext(channel: Channel, plugin: RuntimePlugin, listeners: Map<string, Set<(p: unknown) => void>>) {
+function createContext(
+  channel: Channel,
+  plugin: RuntimePlugin,
+  listeners: Map<string, Set<(p: unknown) => void>>,
+  settingListeners: Set<(key: string) => void>,
+) {
+  const relay =
+    (method: string) =>
+    (...args: unknown[]) =>
+      channel.request('ctx', method, args, { timeout: 0 });
   const log =
     (level: 'info' | 'warn' | 'error') =>
     (message: unknown, ...details: unknown[]) => {
@@ -49,18 +57,22 @@ function createContext(channel: Channel, plugin: RuntimePlugin, listeners: Map<s
     id: plugin.id,
     version: plugin.version,
     locale: plugin.locale,
-    http: Object.freeze({ request: unavailable('http'), getJson: unavailable('http'), getText: unavailable('http') }),
+    http: Object.freeze({ request: relay('http.request'), getJson: relay('http.getJson'), getText: relay('http.getText') }),
     files: Object.freeze({
-      requestFolder: unavailable('files'),
-      readText: unavailable('files'),
-      readBytes: unavailable('files'),
-      exists: unavailable('files'),
-      walk: unavailable('files'),
+      requestFolder: relay('files.requestFolder'),
+      readText: relay('files.readText'),
+      readBytes: relay('files.readBytes'),
+      exists: relay('files.exists'),
+      walk: relay('files.walk'),
     }),
-    storage: Object.freeze({ get: unavailable('storage'), set: unavailable('storage'), delete: unavailable('storage'), keys: unavailable('storage') }),
+    storage: Object.freeze({ get: relay('storage.get'), set: relay('storage.set'), delete: relay('storage.delete'), keys: relay('storage.keys') }),
     settings: Object.freeze({
-      get: (key: string) => (Object.hasOwn(plugin.settings, key) ? plugin.settings[key] : undefined),
-      onChange: () => () => {},
+      get: (key: string) => (Object.hasOwn(plugin.settings, key) ? structuredClone(plugin.settings[key]) : undefined),
+      onChange(listener: (key: string) => void) {
+        if (typeof listener !== 'function') return () => {};
+        settingListeners.add(listener);
+        return () => settingListeners.delete(listener);
+      },
     }),
     log: Object.freeze({ info: log('info'), warn: log('warn'), error: log('error') }),
     events: Object.freeze({
@@ -79,13 +91,14 @@ function createContext(channel: Channel, plugin: RuntimePlugin, listeners: Map<s
 export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
   const contributions = new Map<string, Record<string, unknown>>();
   const listeners = new Map<string, Set<(p: unknown) => void>>();
+  const settingListeners = new Set<(key: string) => void>();
   let plugin: RuntimePlugin | null = null;
   let context: ReturnType<typeof createContext> | null = null;
 
   async function loadPlugin(p: RuntimePlugin): Promise<string[]> {
     if (plugin) throw new ChannelError(CHANNEL_ERRORS.plugin, 'Plugin already loaded.');
-    plugin = p;
-    context = createContext(channel, p, listeners);
+    plugin = { ...p, settings: { ...p.settings } };
+    context = createContext(channel, plugin, listeners, settingListeners);
     const loaded: string[] = [];
     for (const c of p.contributions) {
       const module = await load(new URL(c.main, p.base).href);
@@ -129,8 +142,24 @@ export function startRuntime(port: PortLike, load: ModuleLoader): Channel {
     return f.apply(instance, [...withContext, context]);
   }
 
+  /** Réglage changé (processus principal) : nouvelle valeur, ou `undefined` pour celle par défaut sans valeur. */
+  function onSetting(data: { key?: unknown; value?: unknown }): void {
+    if (!plugin || typeof data.key !== 'string') return;
+    if (data.value === undefined) delete plugin.settings[data.key];
+    else plugin.settings[data.key] = data.value;
+    for (const listener of settingListeners) {
+      try {
+        listener(data.key);
+      } catch (err) {
+        channel.event('log', { level: 'error', message: `settings.onChange : ${(err as Error)?.message ?? err}`, details: [] });
+      }
+    }
+  }
+
   function onEvent(name: string, data: unknown): void {
-    if (name !== 'event' || !data || typeof data !== 'object') return;
+    if (!data || typeof data !== 'object') return;
+    if (name === 'settings') return onSetting(data as { key?: unknown; value?: unknown });
+    if (name !== 'event') return;
     const { name: event, payload } = data as { name?: unknown; payload?: unknown };
     for (const listener of listeners.get(String(event)) ?? []) {
       try {
