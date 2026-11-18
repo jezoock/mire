@@ -197,11 +197,14 @@ export function moveFocus(dir: Direction, scope: ParentNode = document): void {
 
 function focusFirstNow(): void {
   const all = navTargets(viewEl());
-  const el = all.find((x) => !x.closest('.focus-info, .tabs')) || all[0] || $('.rail-item[aria-current]');
+  const el = all.find((x) => !x.closest('.focus-info, .tabs, [data-focus-last]')) || all[0] || $('.rail-item[aria-current]');
   el?.focus();
 }
 
-/** Premier élément du contenu ; le panneau d'infos et les onglets ne passent qu'en dernier recours. */
+/**
+ * Premier élément du contenu ; le panneau d'infos, les onglets et ce qui porte `data-focus-last` (chemin parcouru de
+ * la vue de page) ne passent qu'en dernier recours.
+ */
 export function focusFirst(): void {
   if (hasPending(viewEl())) whenViewHydrated(focusFirstNow);
   else {

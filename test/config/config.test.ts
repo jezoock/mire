@@ -85,6 +85,12 @@ test.describe('normalizeConfig', () => {
     assert.deepEqual(c.ui.menu, { position: 'left', autohide: false });
   });
 
+  test('thème des pages (P4-11) : un identifiant, sinon le thème Mire', () => {
+    assert.equal(normalizeConfig({}).ui.pageTheme, 'mire');
+    assert.equal(normalizeConfig({ ui: { pageTheme: 'essai-papier' } }).ui.pageTheme, 'essai-papier');
+    for (const v of ['../mire', 'Mire', 3, null]) assert.equal(normalizeConfig({ ui: { pageTheme: v } }).ui.pageTheme, 'mire');
+  });
+
   test('accueil : barres inconnues, doublons et services absents retirés', () => {
     const c = normalizeConfig({
       web: [{ id: 'yt', url: 'https://youtube.com' }],

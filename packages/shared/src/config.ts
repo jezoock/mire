@@ -105,6 +105,8 @@ export type HomeRow =
 export interface UiSettings {
   fullscreen: boolean;
   theme: Theme;
+  /** Thème des pages et de l'accueil (P4-11, `theme.json`) ; le réglage `theme` est la palette. */
+  pageTheme: string;
   backdrop: boolean;
   /** Menu principal : à gauche ou à droite (barre latérale), en haut ou en bas (carrousel) ; rétractable ou non. */
   menu: { position: MenuPosition; autohide: boolean };

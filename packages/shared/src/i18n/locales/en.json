@@ -574,6 +574,32 @@
         "confirm": "OK",
         "cancel": "Cancel"
       }
+    },
+    "themes": {
+      "setting": {
+        "title": "Page theme",
+        "help": "The theme draws the pages: layout, cards, fonts and background. It applies right away."
+      },
+      "mire": {
+        "name": "Mire",
+        "description": "The usual look of Mire, with the chosen palette."
+      },
+      "papier": {
+        "name": "Paper",
+        "description": "Test theme: light page, rows of thumbnails and the menu at the top."
+      }
+    },
+    "pageView": {
+      "path": "Path",
+      "season": "Season {value}",
+      "loading": "Loading…",
+      "empty": "Nothing to show here yet.",
+      "missing": "This page no longer exists.",
+      "legacy": "Previous view",
+      "more": {
+        "one": "Show more ({count} left)",
+        "other": "Show more ({count} left)"
+      }
     }
   }
 }

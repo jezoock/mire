@@ -30,6 +30,8 @@ const SECTIONS = [
   ['downloads', 'Téléchargements'],
   ['settings', 'Réglages'],
 ];
+// Sections historiques des pages (P4-11) : le menu ouvre la vue de page, « Ancienne vue » la section historique.
+const LEGACY_PAGES = new Set(['videos', 'music', 'images', 'streaming', 'tv', 'games']);
 // Contenu attendu dans chaque section : la capture ne doit pas montrer un état vide.
 const FILLED = {
   search: 'Amélie',
@@ -118,6 +120,15 @@ async function goByKeyboard(section) {
   await page.keyboard.press('Enter');
 }
 
+// Depuis la vue de page qu'ouvre le menu, passe à la section historique de la page (« Ancienne vue »).
+async function openLegacy(section) {
+  if (!LEGACY_PAGES.has(section)) return;
+  await page.waitForFunction(() => document.body.dataset.section === 'page');
+  const link = page.locator('#view mire-page-view .mire-page-view__legacy.hydrated');
+  await link.waitFor();
+  await link.click();
+}
+
 async function expectSection(section, title) {
   await page.waitForFunction((s) => document.body.dataset.section === s, section);
   // Le titre est rendu par mire-header (P4-07), à l'image suivante : on l'attend un peu avant de le comparer.
@@ -177,6 +188,7 @@ describe('Test de fumée de Mire', () => {
     await page.keyboard.press('ArrowLeft');
     for (const [section, title] of SECTIONS) {
       await goByKeyboard(section);
+      await openLegacy(section);
       if (section === 'search') await page.keyboard.type('Amélie');
       await expectSection(section, title);
       await settle();
@@ -186,6 +198,7 @@ describe('Test de fumée de Mire', () => {
 
   it("le rouage ouvre les réglages d'une page", async () => {
     await goByKeyboard('videos');
+    await openLegacy('videos');
     await expectSection('videos', 'Vidéos');
     await page.locator('#page-gear').click();
     await page.locator('#panel[open]').waitFor();
@@ -1061,6 +1074,7 @@ describe('Test de fumée de Mire', () => {
       'screen:search',
       'screen:home',
       'movies',
+      'series',
       'music',
       'images',
       'streaming',
@@ -1201,13 +1215,207 @@ describe('Test de fumée de Mire', () => {
         }
         assert.deepEqual(seen, KEYS, position);
       }
-      // A ouvre l'entrée choisie ; Affichage ramène au menu, sur l'entrée affichée.
+      // A ouvre l'entrée choisie (la vue de page, P4-11) ; Affichage ramène au menu, sur l'entrée affichée.
       await page.locator('#rail [data-key="music"]').focus();
       await padPress('a');
-      await page.waitForFunction(() => document.body.dataset.section === 'music');
-      await page.locator('#view .focusable').first().focus();
+      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title').textContent === 'Musique');
+      await page.locator('#view mire-group-card ds-trigger.hydrated').first().focus();
       await padPress('select');
       assert.equal(await focusedKey(), 'music');
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('vue de page et thèmes (P4-11)', () => {
+    // Les sept pages prêtes à l'emploi et leur nom, dans l'ordre du menu.
+    const PAGES = [
+      ['movies', 'Films'],
+      ['series', 'Séries'],
+      ['music', 'Musique'],
+      ['images', 'Images'],
+      ['streaming', 'Streaming'],
+      ['tv', 'Télévision'],
+      ['games', 'Jeux'],
+    ];
+    const PAD = { a: 0, b: 1, right: 15 };
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await settle();
+    };
+    // Vue de page chargée et rendue : la vue, et chaque composant qu'elle contient, ont la classe hydrated.
+    const viewReady = () =>
+      page.waitForFunction(() => {
+        const v = document.querySelector('#view mire-page-view');
+        if (!v?.classList.contains('hydrated') || v.loading) return false;
+        // Rendu à jour (il suit les propriétés, à l'image suivante) : le chemin parcouru, et le niveau chargé.
+        if (v.querySelectorAll('.mire-page-view__crumb').length !== v.crumbs.length) return false;
+        const grid = v.querySelector('mire-grid');
+        const rendered =
+          v.kind === 'elements' ? grid?.elements === v.elements : v.querySelectorAll('mire-group-card, .mire-page-view__row').length === v.groups.length;
+        if (!rendered) return false;
+        return [...v.querySelectorAll('mire-card, mire-group-card, mire-row, mire-grid, ds-trigger, ds-thumb, ds-scroller')].every((c) =>
+          c.classList.contains('hydrated'),
+        );
+      });
+    // Ce que la vue montre : chemin parcouru, regroupements (ou rangées), éléments, message.
+    const shown = () =>
+      page.evaluate(() => {
+        const v = document.querySelector('#view mire-page-view');
+        const texts = (sel) => [...v.querySelectorAll(sel)].map((x) => x.textContent.trim());
+        return {
+          crumbs: texts('.mire-page-view__crumbs:not([hidden]) .mire-page-view__crumb'),
+          groups: texts('.mire-group-card__title, .mire-page-view__row-name'),
+          cards: texts('mire-card .mire-card__title'),
+          status: texts('.mire-page-view__status'),
+        };
+      });
+    const activeKey = () => page.evaluate(() => document.activeElement?.closest('[data-key]')?.getAttribute('data-key') ?? null);
+    async function openPage(target, title, path = []) {
+      await page.evaluate(([t, p]) => document.querySelector('mire-app').open({ target: t, path: p }), [target, path]);
+      await page.waitForFunction((t) => document.body.dataset.section === 'page' && document.getElementById('title').textContent === t, title);
+      await viewReady();
+    }
+    // Thème des pages, choisi dans les réglages : appliqué sans redémarrage.
+    async function setTheme(id) {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.waitForFunction(
+        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        id,
+      );
+    }
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+
+    after(async () => {
+      await page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+        }
+      });
+      await setTheme('mire');
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('les sept pages s’affichent avec le thème Mire, puis avec Papier, sans redémarrage', async () => {
+      const seen = {};
+      for (const theme of ['mire', 'papier']) {
+        await setTheme(theme);
+        for (const [id, title] of PAGES) {
+          await openPage(id, title);
+          const s = await shown();
+          // Une page vide l'affiche ; les autres montrent leurs regroupements (« Autres » compris) ou leurs éléments.
+          assert.ok(s.groups.length + s.cards.length > 0 || s.status.length > 0, `${theme} ${id} : ${JSON.stringify(s)}`);
+          seen[`${theme}:${id}`] = s.groups.length ? s.groups : s.cards;
+          assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), id);
+        }
+        assert.equal(await page.evaluate(() => document.querySelector('mire-page').dataset.theme), theme);
+        const look = await page.evaluate(() => {
+          const host = document.querySelector('mire-page');
+          const view = host.querySelector('mire-page-view');
+          return {
+            palette: host.dataset.palette ?? null,
+            bg: getComputedStyle(host).backgroundColor,
+            font: getComputedStyle(view).fontFamily,
+            rows: view.classList.contains('--layout-rows'),
+            menuTop: document.body.classList.contains('menu-top'),
+          };
+        });
+        if (theme === 'mire') assert.deepEqual([look.palette, look.menuTop, look.rows], [null, false, false]);
+        else {
+          // Papier : palette claire sur les pages seulement, polices à empattements, rangées, menu en haut.
+          assert.deepEqual([look.palette, look.menuTop, look.rows], ['jour', true, true]);
+          assert.match(look.font, /Georgia/);
+          assert.equal(look.bg, hexToRgb('#f1efe8'));
+          assert.notEqual(await page.evaluate(() => getComputedStyle(document.querySelector('.rail')).backgroundColor), look.bg);
+        }
+        // Séries › Série : le niveau des saisons (grille de regroupements, ou rangées de leurs épisodes).
+        await openPage('series', 'Séries', ['Série']);
+        // Pas de message en cours (« Manette déconnectée », laissé par le bloc précédent) sur la capture.
+        await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
+        await settle();
+        await shot(`page-${theme}-series`);
+      }
+      // Les mêmes pages, les mêmes contenus, quel que soit le thème.
+      for (const [id] of PAGES) assert.deepEqual(seen[`papier:${id}`].length > 0, seen[`mire:${id}`].length > 0, id);
+      assert.deepEqual(errors, []);
+    });
+
+    it('regroupements au clavier : Séries › Série › Saison 1, puis retour d’un niveau', async () => {
+      await setTheme('mire');
+      await openPage('series', 'Séries');
+      await page.locator('#view mire-group-card ds-trigger.hydrated').first().focus();
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.depth === 1);
+      await viewReady();
+      assert.deepEqual((await shown()).crumbs, ['Séries', 'Série']);
+      assert.deepEqual((await shown()).groups, ['Saison 1']);
+      await settle();
+      assert.ok(await page.evaluate(() => !!document.activeElement?.closest('#view mire-group-card')), 'focus sur le contenu');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.kind === 'elements');
+      await viewReady();
+      const s = await shown();
+      assert.deepEqual(s.crumbs, ['Séries', 'Série', 'Saison 1']);
+      assert.equal(s.cards.length, 2);
+      // Échap remonte d'un niveau ; l'étape « Séries » du chemin ramène à la page.
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.depth === 1);
+      await viewReady();
+      await page.locator('#view .mire-page-view__crumb-link.hydrated', { hasText: 'Séries' }).click();
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.depth === 0);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt les regroupements, A ouvre, puis A ouvre un élément par sa clé', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await openPage('games', 'Jeux');
+      await page.locator('#view mire-group-card ds-trigger.hydrated').first().focus();
+      await padPress('right');
+      assert.ok(await page.evaluate(() => document.activeElement?.closest('mire-group-card') === document.querySelectorAll('#view mire-group-card')[1]));
+      await openPage('images', 'Images');
+      await page.locator('#view mire-group-card ds-trigger.hydrated').first().focus();
+      await padPress('a');
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.kind === 'elements');
+      await viewReady();
+      await page.locator('#view mire-card ds-trigger.hydrated').first().focus();
+      const key = await activeKey();
+      assert.match(key, /^local:.*Montagne/);
+      // A ouvre l'image dans la visionneuse ; B la ferme.
+      await padPress('a');
+      await page.waitForFunction(() => !document.getElementById('image-layer').hidden);
+      await padPress('b');
+      await page.waitForFunction(() => document.getElementById('image-layer').hidden);
+      assert.deepEqual(errors, []);
+    });
+
+    it('« Ancienne vue » ouvre la section historique ; le menu garde la page', async () => {
+      await openPage('series', 'Séries');
+      await openLegacy('videos');
+      await page.waitForFunction(() => document.body.dataset.section === 'videos');
+      assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'series');
       assert.deepEqual(errors, []);
     });
   });

@@ -14,17 +14,15 @@ export class AppController extends Controller {
     this.ctx.ui.back();
   }
 
-  /** Écran suivant (`step: 1`) ou précédent (`-1`), depuis la manette ; depuis un site, on part de sa page d'origine. */
+  /** Écran ou page suivant (`step: 1`) ou précédent (`-1`) du menu, depuis la manette ; depuis un site, sa page d'origine. */
   cycleSection({ step }: { step: number }): void {
-    const { S, ui } = this.ctx;
-    const next = ui.nextSection(S.section === 'web' ? ui.webHome() : S.section, step);
-    ui.go(next, { focus: next === 'search' ? 'keep' : 'content' });
+    this.ctx.ui.cycle(step);
   }
 
   /**
    * Ouvre une cible (P4-07) : un écran du cœur (`screen:search`), une page (`movies`) ou une liste (`list:<id>`), et un
    * chemin dans ses regroupements. Le focus va au contenu, sauf `focus: 'keep'` (choix dans le menu). Faux si aucune
-   * vue ne l'affiche encore (explorateur, page créée par l'utilisateur).
+   * vue ne l'affiche encore (explorateur, liste).
    */
   open({ target, path, focus = 'content' }: { target: string; path?: PagePath; focus?: string }): boolean {
     return this.ctx.ui.open(target, { path: path ?? [], focus });

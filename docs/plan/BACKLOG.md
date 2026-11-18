@@ -133,7 +133,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | à faire | |
 | P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |
 | P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | à faire | |
-| P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | à faire | |
+| P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | faite | [#73](https://github.com/jezoock/mire/pull/73) |
 | P4-12 | Accueil | M | P4-11 |  | à faire | |
 | P4-13 | Recherche | M | P4-11, P2-09 |  | à faire | |
 | P4-14 | Lecteur vidéo | M | P4-07 | 🧑 | à faire | |

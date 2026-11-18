@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- Fond du thème d'essai « Papier » (P4-11) : les lignes d'un cahier, discrètes. -->
+  <rect width="40" height="40" fill="#f6f1e4"/>
+  <path d="M0 39.5H40" stroke="#d5deea" stroke-width="1"/>
+</svg>

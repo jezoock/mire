@@ -10,11 +10,13 @@ import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./uti
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
+import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
+export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -409,6 +411,108 @@ export namespace Components {
         "hints": PadHint[] | string;
     }
     /**
+     * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
+     * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
+     */
+    interface MirePage {
+    }
+    /**
+     * Vue de page (P4-11) : une page du catalogue et ses regroupements, dessinée selon le thème choisi. Elle montre le
+     * chemin parcouru (Séries › Friends › Saison 1), puis le niveau affiché : les regroupements (en cartes, ou en rangées
+     * de leurs premiers éléments), « Autres » compris, ou les éléments (`mire-grid`). Les tranches suivantes se chargent
+     * à l'approche de la fin et par « Afficher la suite ».
+     * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
+     * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
+     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface MirePageView {
+        /**
+          * @default 'none'
+         */
+        "background": string;
+        /**
+          * @default 'auto'
+         */
+        "card": string;
+        /**
+          * @default ''
+         */
+        "cardLabels": string;
+        /**
+          * Chemin parcouru, la page d'abord (JSON ou propriété).
+          * @default []
+         */
+        "crumbs": PageCrumb[] | string;
+        /**
+          * Rang du niveau dans les regroupements de la page (`path.length`), et nombre de niveaux (`groupBy.length`).
+          * @default 0
+         */
+        "depth": number;
+        /**
+          * Indication de la page pour le thème : `posters`, `thumbnails`, `list`, `rows`.
+          * @default ''
+         */
+        "display": string;
+        /**
+          * Éléments du niveau.
+          * @default []
+         */
+        "elements": CardElement[] | string;
+        /**
+          * Regroupements du niveau (avec leurs premiers éléments en mise en page en rangées).
+          * @default []
+         */
+        "groups": PageViewGroup[] | string;
+        /**
+          * @default false
+         */
+        "hasMore": boolean;
+        /**
+          * Niveau affiché : `groups` (regroupements) ou `elements`.
+          * @default 'elements'
+         */
+        "kind": string;
+        /**
+          * Textes (JSON, voir `PageViewLabels`) et ceux des cartes et de la grille (JSON, voir `mire-card`, `mire-grid`).
+          * @default ''
+         */
+        "labels": PageViewLabels | string;
+        /**
+          * Mise en page du thème : `layout` (`grid`, `rows`), `card` (`auto`…), `size` (`s`, `m`, `l`), `background`.
+          * @default 'grid'
+         */
+        "layout": string;
+        /**
+          * @default 0
+         */
+        "levels": number;
+        /**
+          * @default false
+         */
+        "loading": boolean;
+        /**
+          * @default ''
+         */
+        "moreLabels": string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON).
+          * @default ''
+         */
+        "progress": Record<string, number> | string;
+        /**
+          * @default 'm'
+         */
+        "size": string;
+        /**
+          * Nombre total de regroupements ou d'éléments du niveau, et s'il reste des tranches à charger.
+          * @default 0
+         */
+        "total": number;
+    }
+    /**
      * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
      * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
      * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
@@ -738,6 +842,34 @@ declare global {
         prototype: HTMLMirePadbarElement;
         new (): HTMLMirePadbarElement;
     };
+    /**
+     * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
+     * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
+     */
+    interface HTMLMirePageElement extends Components.MirePage, HTMLStencilElement {
+    }
+    var HTMLMirePageElement: {
+        prototype: HTMLMirePageElement;
+        new (): HTMLMirePageElement;
+    };
+    /**
+     * Vue de page (P4-11) : une page du catalogue et ses regroupements, dessinée selon le thème choisi. Elle montre le
+     * chemin parcouru (Séries › Friends › Saison 1), puis le niveau affiché : les regroupements (en cartes, ou en rangées
+     * de leurs premiers éléments), « Autres » compris, ou les éléments (`mire-grid`). Les tranches suivantes se chargent
+     * à l'approche de la fin et par « Afficher la suite ».
+     * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
+     * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
+     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface HTMLMirePageViewElement extends Components.MirePageView, HTMLStencilElement {
+    }
+    var HTMLMirePageViewElement: {
+        prototype: HTMLMirePageViewElement;
+        new (): HTMLMirePageViewElement;
+    };
     interface HTMLMirePickElementEventMap {
         "mireDialogOpen": DialogEventDetail;
         "mireDialogClose": DialogEventDetail;
@@ -811,6 +943,8 @@ declare global {
         "mire-header": HTMLMireHeaderElement;
         "mire-legacy-view": HTMLMireLegacyViewElement;
         "mire-padbar": HTMLMirePadbarElement;
+        "mire-page": HTMLMirePageElement;
+        "mire-page-view": HTMLMirePageViewElement;
         "mire-pick": HTMLMirePickElement;
         "mire-rail": HTMLMireRailElement;
         "mire-row": HTMLMireRowElement;
@@ -1201,6 +1335,108 @@ declare namespace LocalJSX {
         "hints"?: PadHint[] | string;
     }
     /**
+     * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
+     * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
+     * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+     * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+     * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
+     */
+    interface MirePage {
+    }
+    /**
+     * Vue de page (P4-11) : une page du catalogue et ses regroupements, dessinée selon le thème choisi. Elle montre le
+     * chemin parcouru (Séries › Friends › Saison 1), puis le niveau affiché : les regroupements (en cartes, ou en rangées
+     * de leurs premiers éléments), « Autres » compris, ou les éléments (`mire-grid`). Les tranches suivantes se chargent
+     * à l'approche de la fin et par « Afficher la suite ».
+     * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
+     * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
+     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     */
+    interface MirePageView {
+        /**
+          * @default 'none'
+         */
+        "background"?: string;
+        /**
+          * @default 'auto'
+         */
+        "card"?: string;
+        /**
+          * @default ''
+         */
+        "cardLabels"?: string;
+        /**
+          * Chemin parcouru, la page d'abord (JSON ou propriété).
+          * @default []
+         */
+        "crumbs"?: PageCrumb[] | string;
+        /**
+          * Rang du niveau dans les regroupements de la page (`path.length`), et nombre de niveaux (`groupBy.length`).
+          * @default 0
+         */
+        "depth"?: number;
+        /**
+          * Indication de la page pour le thème : `posters`, `thumbnails`, `list`, `rows`.
+          * @default ''
+         */
+        "display"?: string;
+        /**
+          * Éléments du niveau.
+          * @default []
+         */
+        "elements"?: CardElement[] | string;
+        /**
+          * Regroupements du niveau (avec leurs premiers éléments en mise en page en rangées).
+          * @default []
+         */
+        "groups"?: PageViewGroup[] | string;
+        /**
+          * @default false
+         */
+        "hasMore"?: boolean;
+        /**
+          * Niveau affiché : `groups` (regroupements) ou `elements`.
+          * @default 'elements'
+         */
+        "kind"?: string;
+        /**
+          * Textes (JSON, voir `PageViewLabels`) et ceux des cartes et de la grille (JSON, voir `mire-card`, `mire-grid`).
+          * @default ''
+         */
+        "labels"?: PageViewLabels | string;
+        /**
+          * Mise en page du thème : `layout` (`grid`, `rows`), `card` (`auto`…), `size` (`s`, `m`, `l`), `background`.
+          * @default 'grid'
+         */
+        "layout"?: string;
+        /**
+          * @default 0
+         */
+        "levels"?: number;
+        /**
+          * @default false
+         */
+        "loading"?: boolean;
+        /**
+          * @default ''
+         */
+        "moreLabels"?: string;
+        /**
+          * Avancement de la reprise par clé d'élément (JSON).
+          * @default ''
+         */
+        "progress"?: Record<string, number> | string;
+        /**
+          * @default 'm'
+         */
+        "size"?: string;
+        /**
+          * Nombre total de regroupements ou d'éléments du niveau, et s'il reste des tranches à charger.
+          * @default 0
+         */
+        "total"?: number;
+    }
+    /**
      * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
      * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,
      * puis l'initiale du titre (`ds-thumb`). Chaque carte appelle l'action `act` du contrôleur `mire-dialogs` avec la clé
@@ -1422,6 +1658,26 @@ declare namespace LocalJSX {
     interface MirePadbarAttributes {
         "hints": PadHint[] | string;
     }
+    interface MirePageViewAttributes {
+        "crumbs": PageCrumb[] | string;
+        "kind": string;
+        "groups": PageViewGroup[] | string;
+        "elements": CardElement[] | string;
+        "total": number;
+        "hasMore": boolean;
+        "loading": boolean;
+        "depth": number;
+        "levels": number;
+        "display": string;
+        "layout": string;
+        "card": string;
+        "size": string;
+        "background": string;
+        "progress": Record<string, number> | string;
+        "labels": PageViewLabels | string;
+        "cardLabels": string;
+        "moreLabels": string;
+    }
     interface MirePickAttributes {
         "dialog": string;
         "heading": string;
@@ -1467,6 +1723,8 @@ declare namespace LocalJSX {
         "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
         "mire-legacy-view": MireLegacyView;
         "mire-padbar": Omit<MirePadbar, keyof MirePadbarAttributes> & { [K in keyof MirePadbar & keyof MirePadbarAttributes]?: MirePadbar[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `attr:${K}`]?: MirePadbarAttributes[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `prop:${K}`]?: MirePadbar[K] };
+        "mire-page": MirePage;
+        "mire-page-view": Omit<MirePageView, keyof MirePageViewAttributes> & { [K in keyof MirePageView & keyof MirePageViewAttributes]?: MirePageView[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `attr:${K}`]?: MirePageViewAttributes[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `prop:${K}`]?: MirePageView[K] };
         "mire-pick": Omit<MirePick, keyof MirePickAttributes> & { [K in keyof MirePick & keyof MirePickAttributes]?: MirePick[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `attr:${K}`]?: MirePickAttributes[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `prop:${K}`]?: MirePick[K] };
         "mire-rail": Omit<MireRail, keyof MireRailAttributes> & { [K in keyof MireRail & keyof MireRailAttributes]?: MireRail[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `attr:${K}`]?: MireRailAttributes[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `prop:${K}`]?: MireRail[K] };
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
@@ -1558,6 +1816,24 @@ declare module "@stencil/core" {
              * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.
              */
             "mire-padbar": LocalJSX.IntrinsicElements["mire-padbar"] & JSXBase.HTMLAttributes<HTMLMirePadbarElement>;
+            /**
+             * Hôte des pages (P4-11) : ses méthodes sont les actions du contrôleur `mire-page` (ouvrir un regroupement, une étape
+             * du chemin, un élément ; tranche suivante), qui vit avec l'état de l'interface (`src/renderer/controllers/`). Il
+             * contient la vue de page (`mire-page-view`, placée par la page) et porte le thème des pages (palette, polices, fond :
+             * moteur de thèmes, `src/renderer/themes/`). Une seule balise dans la page, pour que les `ds-trigger` la trouvent ;
+             * sans état, il ne se rend qu'une fois : ce que la page y place n'est jamais touché.
+             */
+            "mire-page": LocalJSX.IntrinsicElements["mire-page"] & JSXBase.HTMLAttributes<HTMLMirePageElement>;
+            /**
+             * Vue de page (P4-11) : une page du catalogue et ses regroupements, dessinée selon le thème choisi. Elle montre le
+             * chemin parcouru (Séries › Friends › Saison 1), puis le niveau affiché : les regroupements (en cartes, ou en rangées
+             * de leurs premiers éléments), « Autres » compris, ou les éléments (`mire-grid`). Les tranches suivantes se chargent
+             * à l'approche de la fin et par « Afficher la suite ».
+             * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
+             * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
+             * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+             */
+            "mire-page-view": LocalJSX.IntrinsicElements["mire-page-view"] & JSXBase.HTMLAttributes<HTMLMirePageViewElement>;
             /**
              * Choisir la bonne fiche parmi celles trouvées en ligne (P4-06), équivalent de `pickCandidate` de l'interface
              * historique : une carte par fiche (image, titre, année), l'image de secours essayée si la première ne se charge pas,

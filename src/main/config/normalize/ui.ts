@@ -1,6 +1,6 @@
 /** Interface : thème, menu, vue de départ, accueil et langue. */
 import { normalizeLanguageSetting } from '@mire/shared/i18n';
-import { isTarget, listPageId, parseTarget } from '@mire/shared';
+import { DEFAULT_THEME, isTarget, isThemeId, listPageId, parseTarget } from '@mire/shared';
 import type { HomeRow, HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
 import { homeRowsFromV8 } from '../migrations/v9.ts';
 import { DEFAULT_CONFIG, HOME_BARS, THEMES } from '../defaults.ts';
@@ -71,6 +71,8 @@ export function normalizeUi(ui: Loose, srcUi: unknown, web: WebSite[]): UiSettin
   const out: Loose = { ...ui };
   out.home = normalizeHome(src?.home, web);
   if (!THEMES.includes(out.theme)) out.theme = 'ecran';
+  // Un thème inconnu de l'interface y retombe sur le thème par défaut : seul l'identifiant est vérifié ici.
+  if (!isThemeId(out.pageTheme)) out.pageTheme = DEFAULT_THEME;
   if (typeof out.start !== 'string') out.start = 'home';
   out.backdrop = out.backdrop !== false;
   out.menu = normalizeMenu(src?.menu);

@@ -111,13 +111,53 @@ describe('contrôleurs', () => {
     assert.deepEqual(toasts, ['Collez d’abord un lien (https://… ou magnet:?…).', 'Téléchargement ajouté.']);
   });
 
-  it('la manette passe à l’écran suivant (depuis un site, à partir de sa page d’origine)', () => {
-    const { calls: log, c: ctl } = fakeContext({ 'ui.nextSection': () => 'search', 'ui.webHome': () => 'games' });
-    S.section = 'web';
-    ctl.app.cycleSection({ step: 1 });
-    assert.deepEqual(named(log, 'ui.nextSection')[0], ['ui.nextSection', 'games', 1]);
-    assert.deepEqual(named(log, 'ui.go')[0], ['ui.go', 'search', { focus: 'keep' }]);
-    S.section = 'home';
+  it('la manette passe à l’écran ou à la page suivante du menu (P4-11 : la coquille choisit)', () => {
+    const { calls: log, c: ctl } = fakeContext();
+    ctl.app.cycleSection({ step: -1 });
+    assert.deepEqual(named(log, 'ui.cycle'), [['ui.cycle', -1]]);
+  });
+
+  it('vue de page : regroupements, chemin, tranches et ancienne vue', async () => {
+    const { calls: log, c: ctl } = fakeContext({ 'ui.openPageGroup': () => true, 'ui.pageLegacySection': () => 'videos' });
+    assert.equal(ctl.page.openGroup({ value: null }), true);
+    ctl.page.openPath({ path: ['Friends'] });
+    ctl.page.openPath({ path: 'pas un chemin' as never });
+    await ctl.page.loadMore();
+    ctl.page.openLegacy();
+    assert.deepEqual(
+      log.filter((c) => c[0] !== 'ui.pageLegacySection'),
+      [['ui.openPageGroup', null], ['ui.openPagePath', ['Friends']], ['ui.openPagePath', []], ['ui.loadMorePage'], ['ui.go', 'videos', { focus: 'content' }]],
+    );
+  });
+
+  it('openElement : chaque façon de s’ouvrir, l’élément désigné par sa clé', async () => {
+    const elements: Record<string, unknown> = {
+      'local:/v/a.mkv': { key: 'local:/v/a.mkv', name: 'A', tags: ['video'], open: { kind: 'file', path: '/v/a.mkv' } },
+      'local:/n.mp3': { key: 'local:/n.mp3', name: 'N', tags: ['audio'], open: { kind: 'file', path: '/n.mp3' } },
+      'web:arte': { key: 'web:arte', name: 'Arte', tags: ['stream'], open: { kind: 'site', url: 'https://arte.tv', site: 'arte' } },
+      'rom:3|/r/z.sfc': { key: 'rom:3|/r/z.sfc', name: 'Zelda', tags: ['game'], open: { kind: 'game', console: '3', path: '/r/z.sfc' } },
+      'pc:/g/a.exe': { key: 'pc:/g/a.exe', name: 'Jeu', tags: ['game'], open: { kind: 'program', path: '/g/a.exe' } },
+      'tv:x|1': { key: 'tv:x|1', name: 'Une', tags: ['tv'], open: { kind: 'stream', url: 'http://box/1' } },
+    };
+    const { calls: log, c: ctl } = fakeContext({ 'api.catalogElement': async (k: string) => elements[k] ?? null });
+    S.videos = [{ path: '/v/a.mkv', name: 'A', dir: '/v', kind: 'video' }];
+    S.tracks = [];
+    S.images = [];
+    S.channels = [];
+    for (const key of Object.keys(elements)) await ctl.page.openElement({ key });
+    await assert.rejects(ctl.page.openElement({ key: 'local:/absent' }), /introuvable/);
+    assert.deepEqual(
+      log.filter((c) => !c[0].startsWith('api.')),
+      [
+        ['ui.playInContext', { path: '/v/a.mkv', name: 'A', dir: '/v', kind: 'video' }],
+        ['ui.playInContext', { path: '/n.mp3', name: 'N', kind: 'audio' }],
+        ['ui.openWeb', 'arte', 'https://arte.tv'],
+        ['ui.launchRom', { path: '/r/z.sfc', displayName: 'Zelda' }, '3'],
+        ['ui.launchEntry', { name: 'Jeu', path: '/g/a.exe' }],
+        ['ui.playChannel', { name: 'Une', variants: [{ q: 'hd', url: 'http://box/1' }] }],
+      ],
+    );
+    S.videos = [];
   });
 });
 

@@ -2,15 +2,16 @@
  * Entrées du menu principal (P4-07) : les écrans du cœur et les pages épinglées (`pages.list`, `menu.pinned`, dans
  * l'ordre de `menu.order`), puis le Centre, les Réglages et les outils. Sans DOM.
  *
- * Tant qu'une page s'affiche dans une vue historique (`LEGACY_VIEWS`), son entrée est celle de cette vue : même nom,
- * même couleur, et une seule entrée pour les pages qu'une même vue affiche (Films et Séries → Vidéos). Une page sans
- * vue (créée par l'utilisateur) et l'explorateur n'apparaissent qu'avec la leur (P4-11, P4-08).
+ * Chaque page épinglée a son entrée, avec le nom de la page (P4-11) : Films et Séries ont chacune la leur, une page
+ * créée par l'utilisateur aussi. Une page prête à l'emploi garde la couleur et les sites ouverts de son ancienne vue
+ * (`LEGACY_PAGE_SECTIONS`). L'explorateur n'apparaît qu'avec sa vue (P4-08).
  */
 import type { PageDefinition } from '@mire/shared';
 import type { RailEntry, RailSession } from '@mire/ui/utils';
-import { legacyViewOf } from './router.ts';
+import { PAGE_VIEW, legacySectionOf } from './router.ts';
+import { pageName } from '../pages/model.ts';
 
-type Translate = (key: string) => string;
+type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** Couleur de chaque vue historique dans le menu (celles des barres de la mire). */
 const VIEW_COLORS: Readonly<Record<string, string>> = {
@@ -56,23 +57,19 @@ const screen = (t: Translate, name: string, view: string, icon: string, color: s
  * si elle manque (pages prêtes à l'emploi épinglées par défaut).
  */
 export function railEntries(pages: readonly PageDefinition[] | null, t: Translate): RailEntry[] {
-  const ids = pages ? pinnedPages(pages).map((p) => p.id) : DEFAULT_PINNED;
-  const seen = new Set<string>();
-  const pageEntries: RailEntry[] = [];
-  for (const id of ids) {
-    const view = legacyViewOf(id);
-    if (!view || seen.has(view)) continue;
-    seen.add(view);
-    pageEntries.push({
-      key: id,
+  const pinned = pages ? pinnedPages(pages) : DEFAULT_PINNED.map((id): PageDefinition => ({ id, name: { key: `pages.${id}` }, require: [] }));
+  const pageEntries = pinned.map((p): RailEntry => {
+    const legacy = legacySectionOf(p.id);
+    return {
+      key: p.id,
       kind: 'page',
-      target: id,
-      view,
-      label: t(`shell.views.${view}`),
-      color: VIEW_COLORS[view] ?? MUTED,
-      ...((SESSION_VIEWS as readonly string[]).includes(view) ? { sessions: true } : {}),
-    });
-  }
+      target: p.id,
+      view: legacy ?? PAGE_VIEW,
+      label: pageName(p, t),
+      color: (legacy && VIEW_COLORS[legacy]) || MUTED,
+      ...(legacy && (SESSION_VIEWS as readonly string[]).includes(legacy) ? { sessions: true } : {}),
+    };
+  });
   return [
     screen(t, 'search', 'search', 'search', VIEW_COLORS.search as string),
     screen(t, 'home', 'home', '', VIEW_COLORS.home as string),
@@ -84,9 +81,27 @@ export function railEntries(pages: readonly PageDefinition[] | null, t: Translat
   ];
 }
 
-/** Entrée affichée pour une section historique (un site ouvert compte pour la page d'où il vient). */
-export function currentEntry(entries: readonly RailEntry[], section: string): string {
+/**
+ * Entrée affichée pour une section : la page de la route dans la vue de page ou dans son ancienne vue, sinon l'entrée
+ * de la section (un site ouvert compte pour la page d'où il vient).
+ */
+export function currentEntry(entries: readonly RailEntry[], section: string, target = ''): string {
+  const page = entries.find((e) => e.kind === 'page' && e.target === target);
+  if (page && (section === PAGE_VIEW || page.view === section)) return page.key;
+  if (section === PAGE_VIEW) return '';
   return entries.find((e) => e.view === section)?.key ?? '';
+}
+
+/** Cibles que parcourent les boutons LB et RB de la manette : les écrans et pages du haut du menu, dans l'ordre. */
+export function cycleTargets(entries: readonly RailEntry[]): string[] {
+  return entries.filter((e) => !e.bottom && e.target).map((e) => e.target as string);
+}
+
+/** Cible suivante (`step` 1) ou précédente (-1), en boucle ; une cible hors de la liste compte comme la première. */
+export function nextTarget(targets: readonly string[], current: string, step: number): string | null {
+  if (!targets.length) return null;
+  const i = Math.max(0, targets.indexOf(current));
+  return targets[(i + step + targets.length) % targets.length] ?? null;
 }
 
 /** Site ouvert tel que le processus principal le décrit (`web.sessions`). */
