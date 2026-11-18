@@ -1085,6 +1085,7 @@ describe('Test de fumée de Mire', () => {
       'tv',
       'games',
       'screen:center',
+      'screen:explorer',
       'openFile',
       'screen:settings',
       'quit',
@@ -2143,6 +2144,149 @@ describe('Test de fumée de Mire', () => {
       await formClosed();
       await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-card`), VIEW);
       assert.deepEqual(await element(key), before);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Explorateur (P4-08)', () => {
+    const PAD = { a: 0, b: 1, down: 13, right: 15 };
+    const VIEW = '#view mire-explorer mire-explorer-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Titres des colonnes affichées, et une ligne rendue (classe hydrated) d'une colonne, par son texte.
+    const headings = () =>
+      page.$$eval(`${VIEW} .mire-explorer-view__column:not(.mire-explorer-view__preview)`, (cols) => cols.map((c) => c.getAttribute('aria-label')));
+    const columns = (n) =>
+      page.waitForFunction(
+        ([sel, k]) => document.querySelectorAll(`${sel} .mire-explorer-view__column:not(.mire-explorer-view__preview)`).length === k,
+        [VIEW, n],
+      );
+    const row = (col, text) =>
+      page.locator(`${VIEW} .mire-explorer-view__column:nth-child(${col + 1}) .mire-explorer-view__row.hydrated`, { hasText: text }).first();
+    // Ligne qui a le focus : sa colonne (à partir de 0) et son texte.
+    const focusedRow = () =>
+      page.evaluate((sel) => {
+        const r = document.activeElement?.closest('.mire-explorer-view__row');
+        if (!r) return null;
+        const cols = [...document.querySelectorAll(`${sel} .mire-explorer-view__column`)];
+        return [cols.indexOf(r.closest('.mire-explorer-view__column')), r.querySelector('.mire-explorer-view__label')?.textContent];
+      }, VIEW);
+    const openExplorer = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:explorer' }));
+      await page.waitForFunction(
+        (sel) => document.body.dataset.section === 'explorer' && document.querySelector(`${sel} .mire-explorer-view__row.hydrated`),
+        VIEW,
+      );
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('trois colonnes à la souris (Pages › Images › un dossier), l’aperçu d’une image, puis « Lire »', async () => {
+      await openExplorer();
+      await page.waitForFunction(() => document.getElementById('title').textContent === 'Explorateur');
+      assert.equal(await page.evaluate(() => document.querySelector('#rail .rail-item[aria-current="page"]')?.dataset.key), 'screen:explorer');
+      assert.deepEqual(await headings(), ['Explorateur']);
+      await row(0, 'Pages').click();
+      await columns(2);
+      await row(1, 'Images').click();
+      await columns(3);
+      // Un dossier d'images : ses éléments dans la quatrième colonne.
+      await page.locator(`${VIEW} .mire-explorer-view__column:nth-child(3) .mire-explorer-view__row.hydrated`).first().click();
+      await columns(4);
+      const titles = await headings();
+      assert.deepEqual(titles.slice(0, 3), ['Explorateur', 'Pages', 'Images']);
+      await page.locator(`${VIEW} .mire-explorer-view__column:nth-child(4) .mire-explorer-view__row.hydrated`).first().click();
+      // L'aperçu : image, nom, tags (dont « Image »), emplacement, et les quatre actions.
+      await page.locator(`${VIEW} .mire-explorer-view__preview .mire-explorer-view__action.hydrated`, { hasText: 'Lire' }).waitFor();
+      const preview = await page.$eval(`${VIEW} .mire-explorer-view__preview`, (p) => ({
+        image: !!p.querySelector('ds-thumb'),
+        tags: [...p.querySelectorAll('.mire-explorer-view__tags li')].map((li) => li.textContent),
+        location: p.querySelector('.mire-explorer-view__location')?.textContent ?? '',
+        actions: [...p.querySelectorAll('.mire-explorer-view__action')].map((a) => a.textContent.trim()),
+      }));
+      assert.ok(preview.image);
+      assert.ok(preview.tags.includes('Image'), preview.tags.join(', '));
+      assert.ok(preview.location.length > 0);
+      assert.deepEqual(preview.actions, ['Lire', 'Modifier les infos', 'Tags', 'Ajouter à une liste']);
+      // Le focus est sur « Lire » ; Entrée ouvre l'image, Échap la ferme et l'explorateur est toujours là.
+      await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
+      await shot('section-explorer');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => !document.getElementById('image-layer').hidden);
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => document.getElementById('image-layer').hidden);
+      assert.equal(await page.evaluate(() => document.body.dataset.section), 'explorer');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt une colonne et passe à la suivante, A ouvre, B revient d’une colonne', async () => {
+      await connectPad();
+      await openExplorer();
+      await row(0, 'Pages').focus();
+      // A sur Pages : la colonne des pages s'ouvre et reçoit le focus.
+      await padPress('a');
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-explorer-view__column:nth-child(2)'));
+      assert.deepEqual(await focusedRow(), [1, 'Films']);
+      // La croix descend dans la colonne : la colonne suivante montre la ligne qui a le focus.
+      await padPress('down');
+      await page.waitForFunction(() => document.activeElement?.textContent?.includes('Séries'));
+      await page.waitForFunction(
+        (sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(3)`)?.getAttribute('aria-label') === 'Séries',
+        VIEW,
+      );
+      // Croix à droite : on passe à la colonne de Séries.
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(3) .mire-explorer-view__row.hydrated`), VIEW);
+      await padPress('right');
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-explorer-view__column:nth-child(3)'));
+      // B : retour à la ligne choisie de la colonne précédente ; B encore : retour à la colonne de départ.
+      await padPress('b');
+      await page.waitForFunction(() => document.activeElement?.closest('.mire-explorer-view__column:nth-child(2)'));
+      assert.deepEqual(await focusedRow(), [1, 'Séries']);
+      await padPress('b');
+      assert.deepEqual(await focusedRow(), [0, 'Pages']);
+      // Depuis la première colonne, B quitte l'explorateur pour l'accueil.
+      await padPress('b');
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
       await disconnectPad();
       assert.deepEqual(errors, []);
     });

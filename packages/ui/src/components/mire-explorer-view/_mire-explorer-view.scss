@@ -20,7 +20,7 @@
 
   &__column {
     display: flex;
-    flex: 0 0 320px;
+    flex: 0 0 280px;
     flex-direction: column;
     min-width: 0;
     overflow-y: auto;
@@ -52,6 +52,7 @@
     font-size: ds-token(font-size, 300);
     border-radius: var(--r-sm, 8px);
     cursor: pointer;
+    user-select: none;
 
     &:hover {
       background: color-mix(in srgb, var(--text) 8%, transparent);
@@ -99,7 +100,7 @@
   }
 
   &__preview {
-    flex: 0 0 420px;
+    flex: 0 0 400px;
     gap: ds-spacing(3);
     padding: ds-spacing(4);
     border-right: 0;

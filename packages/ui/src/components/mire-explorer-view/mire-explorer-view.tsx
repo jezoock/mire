@@ -89,7 +89,7 @@ export class MireExplorerView {
         <div class="mire-explorer-view__rows" role="list">
           {c.rows.length ? c.rows.map((r) => this.renderRow(r, r.id === c.selected, l)) : <p class="mire-explorer-view__empty">{l.empty}</p>}
           {c.more && (
-            <ds-trigger class="mire-explorer-view__more" mods="stl-3" target="mire-explorer" action={`more:${explorerArgs({ node: c.node })}`}>
+            <ds-trigger class="mire-explorer-view__more" type="button" mods="stl-3,sm" target="mire-explorer" action={`more:${explorerArgs({ node: c.node })}`}>
               {c.more}
             </ds-trigger>
           )}
@@ -106,17 +106,31 @@ export class MireExplorerView {
         <h2 class="mire-explorer-view__name">{p.name}</h2>
         <div class="mire-explorer-view__actions">
           {p.playable && (
-            <ds-trigger class="mire-explorer-view__action" mods="stl-1" target="mire-explorer" action={`play:${args}`} data-preview-action="play">
+            <ds-trigger class="mire-explorer-view__action" type="button" mods="stl-1" target="mire-explorer" action={`play:${args}`} data-preview-action="play">
               {l.play}
             </ds-trigger>
           )}
-          <ds-trigger class="mire-explorer-view__action" mods="stl-2" target="mire-explorer" action={`edit:${args}`} data-preview-action="edit">
+          <ds-trigger class="mire-explorer-view__action" type="button" mods="stl-2" target="mire-explorer" action={`edit:${args}`} data-preview-action="edit">
             {l.edit}
           </ds-trigger>
-          <ds-trigger class="mire-explorer-view__action" mods="stl-2" target="mire-explorer" action={`editTags:${args}`} data-preview-action="tags">
+          <ds-trigger
+            class="mire-explorer-view__action"
+            type="button"
+            mods="stl-2"
+            target="mire-explorer"
+            action={`editTags:${args}`}
+            data-preview-action="tags"
+          >
             {l.editTags}
           </ds-trigger>
-          <ds-trigger class="mire-explorer-view__action" mods="stl-2" target="mire-explorer" action={`addToList:${args}`} data-preview-action="list">
+          <ds-trigger
+            class="mire-explorer-view__action"
+            type="button"
+            mods="stl-2"
+            target="mire-explorer"
+            action={`addToList:${args}`}
+            data-preview-action="list"
+          >
             {l.addToList}
           </ds-trigger>
         </div>
