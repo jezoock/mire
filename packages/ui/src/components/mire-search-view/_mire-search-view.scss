@@ -89,6 +89,11 @@
     justify-self: start;
   }
 
+  // Le titre du groupe (lien vers la page) suffit : celui de la rangée ne reste que pour les lecteurs d'écran.
+  .mire-row__heading {
+    display: none;
+  }
+
   &__count {
     margin-inline-start: ds-spacing(2);
     color: var(--muted);

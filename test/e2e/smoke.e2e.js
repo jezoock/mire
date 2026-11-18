@@ -189,7 +189,11 @@ describe('Test de fumée de Mire', () => {
     for (const [section, title] of SECTIONS) {
       await goByKeyboard(section);
       await openLegacy(section);
-      if (section === 'search') await page.keyboard.type('Amélie');
+      if (section === 'search') {
+        // La Recherche (P4-13) est rendue à son premier affichage : on tape une fois le champ prêt.
+        await page.waitForFunction(() => document.activeElement?.classList.contains('mire-search-view__input'));
+        await page.keyboard.type('Amélie');
+      }
       await expectSection(section, title);
       await settle();
       await shot(`section-${section}`);
@@ -1918,7 +1922,8 @@ describe('Test de fumée de Mire', () => {
 
     it('une recherche : le catalogue groupé par page, « Où regarder » et les sites ; la frappe ne redessine pas les rangées', async () => {
       await openSearch();
-      assert.equal(await page.locator('#title').textContent(), 'Rechercher');
+      // Le titre est rendu par mire-header à l'image suivante.
+      await page.waitForFunction(() => document.getElementById('title').textContent === 'Rechercher');
       await searchFor('démonstration', 'games');
       assert.deepEqual(await shown(), [
         ['games', ['Aventure de démonstration', 'Puzzle de démonstration']],

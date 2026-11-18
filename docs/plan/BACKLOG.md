@@ -135,7 +135,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | à faire | |
 | P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | faite | [#73](https://github.com/jezoock/mire/pull/73) |
 | P4-12 | Accueil | M | P4-11 |  | faite | [#74](https://github.com/jezoock/mire/pull/74) |
-| P4-13 | Recherche | M | P4-11, P2-09 |  | à faire | |
+| P4-13 | Recherche | M | P4-11, P2-09 |  | faite | |
 | P4-14 | Lecteur vidéo | M | P4-07 | 🧑 | à faire | |
 | P4-15 | Lecteurs de musique et d'images | M | P4-14 |  | à faire | |
 | P4-16 | Vue web et télévision | M | P4-11 | 🧑 | à faire | |
