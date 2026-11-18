@@ -14,6 +14,7 @@ import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from
 import type { CatalogGroup, GroupEdit, GroupFetchResult, PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
+import type { CatalogSources, FolderLevel } from './browse.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -341,6 +342,11 @@ export interface IpcMethods {
   // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08) ; `tag:<id>` : les éléments d'un tag, par
   // nom (explorateur, P4-08).
   catalogPage(pageId: string, path?: PagePath, cursor?: string | null): PageLevel | null;
+  // Parcours par source et par dossier (explorateur, P4-08) : les sources du catalogue et les dossiers autorisés ;
+  // un dossier désigné par sa source (identifiant de `catalogSources`) et un chemin relatif (`''` : la source), par
+  // tranches. `null` : source inconnue, chemin refusé (`..`, lien qui sort de la source) ou dossier sans élément.
+  catalogSources(): CatalogSources;
+  catalogFolder(source: string, path?: string, cursor?: string | null): FolderLevel | null;
   // Listes (P2-08) : `lists.*` de l'architecture cible. `null` / `false` : liste inconnue ou valeur invalide.
   listsList(): ListSummary[];
   listsGet(id: string): ListView | null;
@@ -500,6 +506,8 @@ export const IPC_METHODS = {
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
   catalogPage: 'catalog:page',
+  catalogSources: 'catalog:sources',
+  catalogFolder: 'catalog:folder',
   listsList: 'lists:list',
   listsGet: 'lists:get',
   listsCreate: 'lists:create',
@@ -564,6 +572,8 @@ export interface IpcEvents {
   onPagesChange: PagesChange;
   /** Ces listes ont changé (définition, éléments, élément disparu, revenu ou changé) : à redemander. */
   onListsChange: ListsChange;
+  /** Les sources, les dossiers autorisés ou leur contenu ont pu changer : à redemander (explorateur). */
+  onFoldersChange: undefined;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -590,6 +600,7 @@ export const IPC_EVENTS = {
   onLanguageChange: 'i18n:changed',
   onPagesChange: 'pages:changed',
   onListsChange: 'lists:changed',
+  onFoldersChange: 'folders:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

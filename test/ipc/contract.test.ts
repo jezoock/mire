@@ -155,6 +155,9 @@ const ADDED_METHODS: Record<string, string> = {
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
   catalogPage: 'catalog:page',
+  // P4-08 : parcours par source et par dossier (explorateur)
+  catalogSources: 'catalog:sources',
+  catalogFolder: 'catalog:folder',
   // P2-08 : listes
   listsList: 'lists:list',
   listsGet: 'lists:get',
@@ -179,6 +182,7 @@ const ADDED_EVENTS: Record<string, string> = {
   onLanguageChange: 'i18n:changed', // P1-28 : changement de langue à chaud
   onPagesChange: 'pages:changed', // P2-07 : contenu d'une page changé
   onListsChange: 'lists:changed', // P2-08 : liste changée
+  onFoldersChange: 'folders:changed', // P4-08 : sources ou dossiers changés (explorateur)
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.
