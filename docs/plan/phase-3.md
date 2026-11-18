@@ -94,7 +94,7 @@ chaîne de publication.
   - `settings` : réglages sous `plugins.<id>` dans la configuration, décrits par le schéma de P1-26 ; réglages
     `secret` chiffrés par `safeStorage` quand le système le permet, jamais exportés en clair ;
   - permissions sensibles (réseau local, programmes, vues web, suppression) refusées à un plugin qui n'a pas le
-    niveau code sensible.
+    niveau code sensible ;
   - brancher au registre les contributions `sources` (catalogue), `metadata` (infos en ligne) et `search`
     (recherche), qui ont besoin du contexte (reporté de P3-03, PR #69).
 - **Critères d'acceptation** : tests : hôte non déclaré refusé, dossier non accordé refusé, réglage secret absent de
@@ -111,7 +111,7 @@ chaîne de publication.
     lancement ; un plugin inclus se met à jour par le dépôt comme les autres, et peut être désactivé ;
   - résolution des dépendances (plages de versions semver) : installation dans l'ordre, refus d'une dépendance
     circulaire ou introuvable, refus de désinstaller un plugin dont un autre a besoin (en disant lequel) ;
-  - à la désinstallation, choix de garder ou non `userData/plugin-data/<id>/`.
+  - à la désinstallation, choix de garder ou non `userData/plugin-data/<id>/` ;
   - brancher `webExtensions` (vues web) et `downloaders` (téléchargements), contributions de code sensible des
     plugins inclus (reporté de P3-03, PR #69) ;
   - copier `resources/plugins/` dans l'installateur (`extraResources` d'electron-builder) : sinon
