@@ -145,6 +145,8 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
   let preview: ExplorerPreview | null = null;
   // Une demande plus récente l'emporte : la réponse d'une demande dépassée est ignorée.
   let seq = 0;
+  // Ouverture en cours : une seconde demande du même nœud la rejoint au lieu de la dépasser.
+  let opening: { node: string; id: number; done: Promise<boolean> } | null = null;
   const formatGroup = groupFormatter(t);
 
   const state = (): ExplorerState => ({ columns: columns.map(view), preview });
@@ -267,19 +269,24 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
       preview = null;
       emit();
     },
-    async open(node) {
+    open(node) {
       // Déjà ouverte (focus puis clic sur la même ligne) : rien à relire.
       const at = columns.findIndex((c) => c.selected === node);
-      if (at >= 0 && columns[at + 1]?.node === node) return true;
+      if (at >= 0 && columns[at + 1]?.node === node) return Promise.resolve(true);
+      // Déjà demandée (A, puis la pause du focus sur la même ligne) : la même demande, qui n'est pas dépassée.
+      if (opening?.node === node && opening.id === seq) return opening.done;
       const hit = choose((r) => r.node === node);
-      if (!hit) return false;
+      if (!hit) return Promise.resolve(false);
       const id = ++seq;
       emit();
-      const next = await load(node, hit.row.label);
-      if (id !== seq || !next) return false;
-      columns = [...columns, next];
-      emit();
-      return true;
+      const done = load(node, hit.row.label).then((next) => {
+        if (id !== seq || !next) return false;
+        columns = [...columns, next];
+        emit();
+        return true;
+      });
+      opening = { node, id, done };
+      return done;
     },
     async show(key) {
       if (preview?.key === key) return true;

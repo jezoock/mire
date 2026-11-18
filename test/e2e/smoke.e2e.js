@@ -2546,6 +2546,12 @@ describe('Test de fumée de Mire', () => {
       for (let i = 0; i < 4; i++) await padPress('down');
       await page.waitForFunction(() => document.activeElement?.textContent?.includes('Dossiers'));
       // A sur Dossiers : les dossiers autorisés, le focus sur le premier (Vidéos, premier de la configuration).
+      // La colonne des dossiers autorisés s'affiche dès que le focus s'arrête sur Dossiers ; A y entre.
+      await page.waitForFunction(
+        (sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(2)`)?.getAttribute('aria-label') === 'Dossiers',
+        VIEW,
+      );
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(2) .mire-explorer-view__row.hydrated`), VIEW);
       await padPress('a');
       await inColumn(1);
       const [, first] = await focusedRow();

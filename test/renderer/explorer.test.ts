@@ -268,6 +268,19 @@ describe('Explorateur : colonnes', () => {
     assert.deepEqual(parseLevelNode(levelNode('list:a', [null, 2])), { pageId: 'list:a', path: [null, 2] });
   });
 
+  it('deux demandes de la même colonne (A, puis la pause du focus) n’en font qu’une, qui aboutit', async () => {
+    let release: () => void = () => {};
+    const slow = new Promise<void>((r) => (release = r));
+    let calls = 0;
+    const { model, headings } = setup(tFr, { sources: async () => (calls++, await slow, SOURCES) });
+    const first = model.open('sources');
+    const second = model.open('sources');
+    release();
+    assert.deepEqual([await first, await second], [true, true]);
+    assert.equal(calls, 1);
+    assert.deepEqual(headings(), ['Explorateur', 'Sources']);
+  });
+
   it('une réponse dépassée par un autre choix est ignorée', async () => {
     let release: () => void = () => {};
     const slow = new Promise<void>((r) => (release = r));
