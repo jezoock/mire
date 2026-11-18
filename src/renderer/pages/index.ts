@@ -139,6 +139,10 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
 
   router.onChange(() => void load());
   view.addEventListener('mirePageMore', () => void model.more());
+  // Sons du thème : le passage d'une carte à l'autre.
+  view.addEventListener('focusin', (e) => {
+    if ((e.target as Element).closest('mire-card, mire-group-card, .mire-page-view__row-title')) engine.play('move');
+  });
   const refresh = async () => {
     await model.refresh();
     announce = true;
@@ -162,13 +166,17 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
     engine,
     openGroup(value) {
       const r = model.route();
-      return !!r && open([...r.path, value]);
+      if (!r) return false;
+      engine.play('select');
+      return open([...r.path, value]);
     },
     openPath: (path) => open(path),
     back() {
       const r = model.route();
       const up = r && parentPath(r.path);
-      return !!up && open(up);
+      if (!up) return false;
+      engine.play('back');
+      return open(up);
     },
     loadMore: () => model.more(),
     title() {

@@ -1,8 +1,10 @@
 # Habillage du cœur et palettes
 
 L'interface de Mire est habillée par l'**habillage du cœur** (`packages/ui/src/theme/`), écrit sur le moteur SCSS de
-dot-stash. Ses couleurs viennent d'une **palette** : un simple fichier de jetons, sans code (D-17, P4-02). Les thèmes
-(`theme.json`, P4-11) choisiront une palette ; ce document décrit les palettes et la façon dont l'habillage les lit.
+dot-stash. Ses couleurs viennent d'une **palette** : un simple fichier de jetons, sans code (D-17, P4-02). Les
+**thèmes des pages** (`theme.json`, P4-11) dessinent les pages : ils choisissent une palette, des polices, un fond et
+une mise en page parmi les composants de Mire. Ce document décrit les deux, et la façon dont l'habillage lit une
+palette.
 
 ## Une palette
 
@@ -127,3 +129,63 @@ L'interface historique (`styles.css`) lit directement les jetons des palettes.
 - bordures sur le fond et les surfaces : au moins 3:1 (4,61:1 au plus bas) ;
 - couleurs des sections, en texte sur le fond et les surfaces, et sous l'encre des barres : au moins 4,5:1 (5,19:1
   au plus bas).
+
+## Thèmes des pages (`theme.json`)
+
+Un thème sans code (D-17) dessine les pages : la vue de page (`mire-page-view`) avec ses cartes, ses rangées et ses
+grilles. Les écrans du cœur (Centre, Réglages, explorateur, lecteurs) et le menu gardent l'habillage du cœur et la
+palette des réglages. L'accueil suivra avec P4-12 ; les thèmes avec leur propre code, avec P4-27 (D-23).
+
+Un thème est un dossier `<id>/` : son `theme.json`, et ses fichiers (polices, images, sons), désignés par des chemins
+relatifs à ce dossier. Le schéma (`THEME_SCHEMA`) et la lecture (`validateTheme`, `parseTheme`) sont dans
+`@mire/shared` (`theme.ts`).
+
+```json
+{
+  "format": 1,
+  "id": "papier",
+  "name": { "key": "themes.papier.name" },
+  "description": { "key": "themes.papier.description" },
+  "palette": "jour",
+  "fonts": { "body": { "family": "Georgia, serif" }, "heading": { "file": "fonts/titre.woff2", "family": "serif" } },
+  "images": { "background": "images/fond.svg" },
+  "sounds": { "move": "sons/deplacement.wav" },
+  "menu": { "position": "top" },
+  "home": { "layout": "grid" },
+  "page": { "layout": "rows", "card": "thumbnail", "size": "l", "background": "image" }
+}
+```
+
+| Champ | Rôle |
+| --- | --- |
+| `format` | Version du format : `1`. |
+| `id` | Identifiant (minuscules, chiffres, tirets) : le nom du dossier. |
+| `name`, `description` | Un texte, ou une clé des catalogues de textes (`{ "key": "themes.<id>.name" }`). |
+| `palette` | Palette posée sur les pages seulement (`data-palette` de `<mire-page>`). Sans elle, les pages suivent la palette des réglages. |
+| `fonts.body`, `fonts.heading` | Police du texte et des titres : un fichier du thème (`woff2`, `woff`, `ttf`, `otf`), chargé par `FontFace`, et des familles de repli (`family`), ou seulement des familles du système. |
+| `images.background`, `images.logo` | Images du thème (`svg`, `png`, `jpg`, `webp`, `avif`, `gif`). |
+| `sounds.move`, `sounds.select`, `sounds.back` | Sons (`ogg`, `opus`, `wav`, `mp3`, `m4a`) : `move` quand le focus passe d'une carte à l'autre, `select` à l'ouverture d'un regroupement, `back` au retour d'un niveau. |
+| `menu.position` | Place du menu (`left`, `right`, `top`, `bottom`) ; elle l'emporte sur celle des réglages tant que le thème est choisi. |
+| `home.layout` | Mise en page de l'accueil (`rows` ou `grid`), lue par l'accueil de P4-12. |
+| `page.layout` | `grid` : grilles de cartes ; `rows` : chaque regroupement du dernier niveau devient une rangée de ses premiers éléments. Une page dont le `display` vaut `rows` est toujours en rangées. |
+| `page.card` | `auto` (la carte qu'indique le `display` de la page : affiches, vignettes, lignes), ou `poster`, `thumbnail`, `line`. |
+| `page.size` | Taille des cartes : `s`, `m`, `l`. |
+| `page.background` | `none`, `backdrop` (l'image de fond de l'élément sélectionné, en fondu) ou `image` (`images.background`, répétée). |
+
+Un chemin qui sortirait du dossier du thème (`..`, chemin absolu, adresse, lecteur Windows, `\`) est refusé, comme
+une extension qui ne correspond pas au rôle du fichier. Les familles de polices n'admettent que des lettres, chiffres,
+espaces, virgules, tirets et guillemets.
+
+### Thèmes intégrés
+
+`src/renderer/themes/`, copiés dans `dist/renderer/themes/` : leurs fichiers sont des fichiers de la page (`'self'`
+dans la CSP, qui ne change pas).
+
+| Id | Nom | Rôle |
+| --- | --- | --- |
+| `mire` | Mire (par défaut) | L'apparence de Mire : grilles, carte indiquée par la page, palette des réglages, fond de l'élément sélectionné. Deviendra un plugin inclus (P5-10). |
+| `papier` | Papier | Thème d'essai, très différent : palette claire, polices à empattements, rangées de vignettes, grandes cartes, menu en haut, fond dessiné, son de déplacement. |
+
+Le réglage `ui.pageTheme` (Réglages, Apparence, « Thème des pages ») contient l'identifiant du thème ; un identifiant
+inconnu revient au thème Mire. Le changement s'applique sans redémarrage.
+
