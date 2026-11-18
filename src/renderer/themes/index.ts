@@ -10,10 +10,11 @@ import { validateTheme } from '@mire/shared';
 import { documentHost, paletteHref } from '@mire/ui/palettes';
 import mire from './mire/theme.json' with { type: 'json' };
 import papier from './papier/theme.json' with { type: 'json' };
+import { sharedScope } from './engine.ts';
 import type { ThemeEntry, ThemeHost } from './engine.ts';
 
-export { createThemeEngine, activeTheme, DEFAULT_PAGE_LAYOUT } from './engine.ts';
-export type { ActiveTheme, ThemeEngine, ThemeEntry, ThemeHost } from './engine.ts';
+export { createThemeEngine, activeTheme, sharedScope, DEFAULT_PAGE_LAYOUT } from './engine.ts';
+export type { ActiveTheme, ThemeEngine, ThemeEntry, ThemeHost, ThemeScope } from './engine.ts';
 
 /** Lit les `theme.json` intégrés ; un thème invalide est écarté (avec un message dans la console). */
 export function readThemes(sources: Readonly<Record<string, unknown>>, base = 'themes'): ThemeEntry[] {
@@ -28,11 +29,15 @@ export function readThemes(sources: Readonly<Record<string, unknown>>, base = 't
 
 export const BUILTIN_THEMES: readonly ThemeEntry[] = readThemes({ mire, papier });
 
-/** La page réelle : la portée habillée, les feuilles de palettes du `<head>`, `FontFace` et `Audio`. */
-export function documentThemeHost(scope: HTMLElement, doc: Document = document): ThemeHost {
+/**
+ * La page réelle : les portées habillées (l'hôte des pages et celui de l'accueil, P4-12), les feuilles de palettes du
+ * `<head>`, `FontFace` et `Audio`.
+ */
+export function documentThemeHost(scopes: HTMLElement | readonly HTMLElement[], doc: Document = document): ThemeHost {
   const palettes = documentHost(doc);
+  const list = Array.isArray(scopes) ? scopes : [scopes as HTMLElement];
   return {
-    scope,
+    scope: list.length === 1 ? (list[0] as HTMLElement) : sharedScope(list),
     hasTokens: (id) => palettes.hasTokens(id),
     addTokens: (id, onReady) => palettes.addTokens(id, paletteHref(id), onReady),
     async loadFont(family, url) {

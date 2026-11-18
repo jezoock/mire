@@ -609,6 +609,68 @@
         "one": "Show more ({count} left)",
         "other": "Show more ({count} left)"
       }
+    },
+    "home": {
+      "bars": {
+        "label": "Test card",
+        "searchMeta": "Everywhere, streaming included",
+        "empty": "Nothing yet",
+        "count": {
+          "elements": {
+            "one": "{count} item",
+            "other": "{count} items"
+          },
+          "groups": {
+            "one": "{count} group",
+            "other": "{count} groups"
+          },
+          "genres": {
+            "one": "{count} genre",
+            "other": "{count} genres"
+          },
+          "series": {
+            "one": "{count} series",
+            "other": "{count} series"
+          },
+          "artist": {
+            "one": "{count} artist",
+            "other": "{count} artists"
+          },
+          "folder": {
+            "one": "{count} folder",
+            "other": "{count} folders"
+          },
+          "category": {
+            "one": "{count} category",
+            "other": "{count} categories"
+          },
+          "system": {
+            "one": "{count} console",
+            "other": "{count} consoles"
+          }
+        }
+      },
+      "rows": {
+        "bars": "Test card bars",
+        "sites": "Pinned sites",
+        "recent": "Continue",
+        "page": "“{name}” row",
+        "list": "“{name}” list",
+        "seeAll": "See all"
+      },
+      "sites": {
+        "open": "Open"
+      },
+      "empty": "Everything on the home screen is hidden. Choose what should appear here.",
+      "customize": "Customize home",
+      "settings": {
+        "clock": "Show the time and date",
+        "rows": "Home rows",
+        "bars": "Test card bars",
+        "sites": "Pinned sites",
+        "up": "Move {name} up",
+        "down": "Move {name} down"
+      }
     }
   }
 }

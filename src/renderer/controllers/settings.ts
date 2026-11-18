@@ -1,5 +1,6 @@
 import { parseSites } from '../domain/index.ts';
 import { plural } from '../core/format.ts';
+import { isHomeList, moveChosen, toggleChosen } from '../home/settings.ts';
 import { Controller } from './base.ts';
 import type { Data } from './types.ts';
 
@@ -28,15 +29,29 @@ export class SettingsController extends Controller {
     this.ctx.ui.applyMenu();
   }
 
-  /** Déplace un élément de l'accueil (`kind` : liste de l'accueil, `dir` : -1 vers le haut, 1 vers le bas). */
+  /**
+   * Déplace une valeur d'une liste de l'accueil (P4-12) : `kind` `rows` (rangées), `bars` (barres de la mire) ou
+   * `sites` (sites épinglés) ; `dir` : -1 vers le haut, 1 vers le bas.
+   */
   async moveHomeItem({ kind, id, dir }: { kind: string; id: string; dir: number }): Promise<void> {
+    if (!isHomeList(kind)) throw new Error(`Liste de l'accueil inconnue : ${kind}`);
     await this.ctx.ui.saveUi((ui) => {
-      const list = [...ui.home[kind]];
-      const k = list.indexOf(id);
-      const j = k + Number(dir);
-      if (k < 0 || j < 0 || j >= list.length) return;
-      [list[k], list[j]] = [list[j], list[k]];
-      ui.home[kind] = list;
+      ui.home = moveChosen(ui.home, kind, String(id), Number(dir));
+    });
+  }
+
+  /** Montre (`on`) ou cache une valeur d'une liste de l'accueil (voir `moveHomeItem`). */
+  async toggleHomeItem({ kind, id, on }: { kind: string; id: string; on: boolean }): Promise<void> {
+    if (!isHomeList(kind)) throw new Error(`Liste de l'accueil inconnue : ${kind}`);
+    await this.ctx.ui.saveUi((ui) => {
+      ui.home = toggleChosen(ui.home, kind, String(id), !!on);
+    });
+  }
+
+  /** Horloge de l'accueil : affichée ou non. */
+  async setHomeClock({ on }: { on: boolean }): Promise<void> {
+    await this.ctx.ui.saveUi((ui) => {
+      ui.home = { ...ui.home, clock: !!on };
     });
   }
 

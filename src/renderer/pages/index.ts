@@ -31,6 +31,8 @@ export interface PagesOptions {
   onLanguageChange(listener: () => void): unknown;
   /** Thèmes connus (le premier, ou `mire`, par défaut). */
   themes: readonly ThemeEntry[];
+  /** Autres hôtes habillés par le même thème que les pages : l'accueil (`<mire-home>`, P4-12). */
+  themed?: readonly HTMLElement[];
   /**
    * Le niveau demandé est chargé et rendu : titre de l'en-tête, et focus à rendre au contenu s'il s'est perdu (les
    * cartes du niveau précédent ont été retirées).
@@ -41,7 +43,7 @@ export interface PagesOptions {
 export interface Pages {
   /** Hôte des pages, à placer dans la vue des écrans. */
   readonly host: HTMLElement;
-  /** Moteur de thèmes, qui habille l'hôte (palette, polices, fond) et donne la mise en page à la vue. */
+  /** Moteur de thèmes, qui habille l'hôte et ceux de `themed` (palette, polices, fond) et donne la mise en page à la vue. */
   readonly engine: ThemeEngine;
   /** Ouvre un regroupement du niveau affiché, désigné par sa valeur. */
   openGroup(value: InfoScalar | null): boolean;
@@ -64,8 +66,9 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
   const host = doc.createElement('mire-page');
   const view = doc.createElement('mire-page-view') as ViewEl;
   host.append(view);
-  // La palette, les polices et le fond du thème habillent l'hôte, jamais les écrans du cœur.
-  const engine = createThemeEngine(opts.themes, documentThemeHost(host, doc));
+  // La palette, les polices et le fond du thème habillent l'hôte des pages et celui de l'accueil, jamais les écrans
+  // du cœur.
+  const engine = createThemeEngine(opts.themes, documentThemeHost([host, ...(opts.themed ?? [])], doc));
 
   const json = (key: string) => {
     const v = opts.raw(key);

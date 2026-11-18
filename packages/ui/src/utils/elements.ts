@@ -130,7 +130,8 @@ export function cardTexts(
 export const keyAction = (method: string, key: string): string => `${method}:${JSON.stringify([{ key }])}`;
 
 /** Argument d'une action sur un regroupement : sa valeur dans le niveau (`null` : « Autres »), jamais son rang. */
-export const groupAction = (method: string, value: PageGroup['value']): string => `${method}:${JSON.stringify([{ value }])}`;
+export const groupAction = (method: string, value: PageGroup['value'], args: Record<string, unknown> = {}): string =>
+  `${method}:${JSON.stringify([{ ...args, value }])}`;
 
 /* ------------------------------------------------------------------ */
 /* Grille : groupes et « Afficher plus »                                */

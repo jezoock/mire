@@ -609,6 +609,68 @@
         "one": "Afficher la suite ({count} restant)",
         "other": "Afficher la suite ({count} restants)"
       }
+    },
+    "home": {
+      "bars": {
+        "label": "Mire",
+        "searchMeta": "Partout, streaming compris",
+        "empty": "Rien pour le moment",
+        "count": {
+          "elements": {
+            "one": "{count} élément",
+            "other": "{count} éléments"
+          },
+          "groups": {
+            "one": "{count} groupe",
+            "other": "{count} groupes"
+          },
+          "genres": {
+            "one": "{count} genre",
+            "other": "{count} genres"
+          },
+          "series": {
+            "one": "{count} série",
+            "other": "{count} séries"
+          },
+          "artist": {
+            "one": "{count} artiste",
+            "other": "{count} artistes"
+          },
+          "folder": {
+            "one": "{count} dossier",
+            "other": "{count} dossiers"
+          },
+          "category": {
+            "one": "{count} catégorie",
+            "other": "{count} catégories"
+          },
+          "system": {
+            "one": "{count} console",
+            "other": "{count} consoles"
+          }
+        }
+      },
+      "rows": {
+        "bars": "Barres de la mire",
+        "sites": "Sites épinglés",
+        "recent": "Reprendre",
+        "page": "Rangée « {name} »",
+        "list": "Liste « {name} »",
+        "seeAll": "Tout voir"
+      },
+      "sites": {
+        "open": "Ouvert"
+      },
+      "empty": "Tous les éléments de l’accueil sont masqués. Choisissez ce qui doit apparaître ici.",
+      "customize": "Personnaliser l’accueil",
+      "settings": {
+        "clock": "Afficher l’heure et la date",
+        "rows": "Rangées de l’accueil",
+        "bars": "Barres de la mire",
+        "sites": "Sites épinglés",
+        "up": "Monter {name}",
+        "down": "Descendre {name}"
+      }
     }
   }
 }

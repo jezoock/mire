@@ -1,6 +1,6 @@
 /**
  * Moteur de thèmes (P4-11, D-17) : applique le thème choisi (`theme.json`, `@mire/shared`) à la partie de la page
- * qu'il dessine (les pages, puis l'accueil en P4-12), sans recharger la fenêtre.
+ * qu'il dessine (les pages et l'accueil : `<mire-page>` et `<mire-home>`, P4-12), sans recharger la fenêtre.
  *
  * - **palette** : celle du thème, posée sur la portée (`data-palette`) ; sans elle, la portée suit la palette des
  *   réglages. Les écrans du cœur gardent toujours la palette des réglages ;
@@ -35,9 +35,15 @@ export interface ActiveTheme {
 }
 
 /** Ce que le moteur utilise de la page, remplaçable en test. */
+/** Ce que le thème habille : `data-palette`, `data-theme`, propriétés CSS. */
+export interface ThemeScope {
+  dataset: Record<string, string | undefined>;
+  style: { setProperty(name: string, value: string): void; removeProperty(name: string): void };
+}
+
 export interface ThemeHost {
-  /** Élément que le thème habille (`data-palette`, `data-theme`, propriétés CSS). */
-  scope: { dataset: Record<string, string | undefined>; style: { setProperty(name: string, value: string): void; removeProperty(name: string): void } };
+  /** Élément que le thème habille (ou plusieurs, réunis par `sharedScope`). */
+  scope: ThemeScope;
   /** Feuille de la palette déjà liée ? Sinon `addTokens` la lie et appelle `onReady` une fois chargée. */
   hasTokens(id: string): boolean;
   addTokens(id: string, onReady: () => void): void;
@@ -61,6 +67,31 @@ export interface ThemeEngine {
   /** Joue un son du thème (`move`, `select`, `back`), s'il en a un. */
   play(sound: 'move' | 'select' | 'back'): void;
   onChange(listener: (active: ActiveTheme) => void): () => void;
+}
+
+/**
+ * Plusieurs éléments habillés comme un seul (P4-12 : l'hôte des pages et celui de l'accueil). Chaque écriture va à
+ * tous ; une lecture se fait sur le premier. Les écrans du cœur n'en font jamais partie.
+ */
+export function sharedScope(scopes: readonly ThemeScope[]): ThemeScope {
+  const dataset = new Proxy({} as Record<string, string | undefined>, {
+    get: (_t, k) => (typeof k === 'string' ? scopes[0]?.dataset[k] : undefined),
+    set(_t, k, v) {
+      if (typeof k === 'string') for (const s of scopes) s.dataset[k] = v;
+      return true;
+    },
+    deleteProperty(_t, k) {
+      if (typeof k === 'string') for (const s of scopes) delete s.dataset[k];
+      return true;
+    },
+  });
+  return {
+    dataset,
+    style: {
+      setProperty: (name, value) => scopes.forEach((s) => s.style.setProperty(name, value)),
+      removeProperty: (name) => scopes.forEach((s) => s.style.removeProperty(name)),
+    },
+  };
 }
 
 /** Mise en page des pages quand le thème ne dit rien : celle du thème Mire. */

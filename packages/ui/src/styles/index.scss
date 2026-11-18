@@ -22,6 +22,7 @@
 @use '../components/mire-pick/mire-pick';
 @use '../components/mire-app/mire-app';
 @use '../components/mire-page-view/mire-page-view';
+@use '../components/mire-home-view/mire-home-view';
 @use './demo-page';
 
 // Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var(), et les icônes qu'ils

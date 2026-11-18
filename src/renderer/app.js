@@ -27,8 +27,10 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { HOME_VIEW, PAGE_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
 import { createPages } from './pages/index.ts';
+import { createHome, homeOptions } from './home/index.ts';
+import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
 import { activeDownloads } from './shell/menu.ts';
 
@@ -58,16 +60,6 @@ const THEMES = [
   { id: 'contraste', name: 'Contraste élevé', desc: 'Noir et blanc, lisible de loin' },
 ];
 
-const HOME_BARS = {
-  search: { c: 'white', label: 'Rechercher' },
-  videos: { c: 'yellow', label: 'Vidéos' },
-  music: { c: 'cyan', label: 'Musique' },
-  images: { c: 'green', label: 'Images' },
-  streaming: { c: 'magenta', label: 'Streaming' },
-  tv: { c: 'red', label: 'Télé' },
-  games: { c: 'blue', label: 'Jeux' },
-};
-
 // Le réglage « thème » désigne une palette (P4-02) ; le chargeur suit aussi le mode du système (« Automatique »).
 const palette = createPaletteLoader();
 function applyTheme() {
@@ -91,6 +83,37 @@ const shell = createShell({
   onLayout: () => { if (S.section === 'web') syncWeb(); },
 });
 
+// Accueil (P4-12) : ses rangées, tirées des réglages de l'accueil, du catalogue et de « Reprendre ».
+const home = createHome({
+  t,
+  plural: (key, count) => {
+    const forms = i18n.raw(key);
+    return forms && typeof forms === 'object' ? pluralLabel(forms, count, i18n.language || 'fr') : '';
+  },
+  raw: (key) => i18n.raw(key),
+  language: () => i18n.language,
+  settings: () => S.config?.ui?.home,
+  pages: () => shell.pages(),
+  lists: () => api.listsList(),
+  level: (id, path) => api.catalogPage(id, path, null),
+  element: (key) => api.catalogElement(key),
+  // « Reprendre » : la copie locale de la liste, que le contrôleur `mire-home` relit pour reprendre une lecture.
+  recent: () => (S.recent = getRecent()),
+  sites: () => S.config?.web ?? [],
+  openSites: () => new Set(S.webSessions.map((x) => x.id)),
+  color: safeColor,
+  ink: onColor,
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  onPagesChange: (listener) => api.onPagesChange(listener),
+  // Rangées rendues : le focus va au contenu s'il était demandé, ou s'il s'est perdu.
+  onRendered: () => {
+    if (S.section !== HOME_VIEW) return;
+    const a = document.activeElement;
+    if (S.pendingFocus || !a || a === document.body || !a.isConnected) focusFirst();
+    S.pendingFocus = false;
+  },
+});
+
 // Pages de la coquille (P4-11) : la vue de page, remplie d'après la route et le thème choisi.
 const pages = createPages({
   router: shell.router,
@@ -101,6 +124,8 @@ const pages = createPages({
   raw: (key) => i18n.raw(key),
   onLanguageChange: (listener) => i18n.onChange(listener),
   themes: BUILTIN_THEMES,
+  // Le thème des pages habille aussi l'accueil (P4-12) : même palette, mêmes polices, même fond.
+  themed: [home.host],
   // Niveau rendu : titre de l'en-tête ; le focus, s'il était sur une carte retirée, va au premier élément du contenu.
   onLoaded: () => {
     if (S.section !== PAGE_VIEW) return;
@@ -109,6 +134,8 @@ const pages = createPages({
     if (!a || a === document.body || !a.isConnected) focusFirst();
   },
 });
+
+home.attach(pages.engine);
 
 function applyMenu() {
   // La place du menu voulue par le thème des pages l'emporte sur celle des réglages.
@@ -212,10 +239,7 @@ function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
   if (S.section === PAGE_VIEW && pages.back()) return;
   if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
-  if (S.section !== 'home') {
-    go('home');
-    $('.mire-bar')?.focus();
-  }
+  if (S.section !== HOME_VIEW) go(HOME_VIEW, { focus: 'content' });
 }
 
 // Outils placés dans l'en-tête, à gauche de la recherche : filtres et actions propres à la section.
@@ -312,10 +336,13 @@ function render({ resetScroll = false } = {}) {
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { home: viewHome, search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings, [DEMO_SECTION]: viewDemo };
+  const views = { search: viewSearch, videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, downloads: viewDownloads, settings: viewSettings, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
-  if (sec === PAGE_VIEW) { if (viewEl.firstElementChild !== pages.host || viewEl.childElementCount !== 1) viewEl.replaceChildren(pages.host); }
+  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage.
+  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : null;
+  if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
   else viewEl.innerHTML = views[sec]();
+  if (sec === HOME_VIEW) home.refresh();
   if (resetScroll) viewEl.scrollTop = 0;
 
   if (hadFocus) {
@@ -412,60 +439,6 @@ function noResults(kindEmptyText) {
 /* ------------------------------------------------------------------ */
 /* Vues                                                                */
 /* ------------------------------------------------------------------ */
-
-function viewHome() {
-  const c = S.config;
-  const home = c.ui.home;
-  const count = (k) => S.library.filter((x) => x.kind === k).length;
-  const libMeta = (k, one, many) => {
-    if (!hasSources(k)) return 'Aucune source';
-    if (!S.scanned) return 'Analyse en cours';
-    return plural(count(k), one, many);
-  };
-  const g = c.games.length + S.autoGames.length;
-  const e = c.emulators.length;
-  const meta = {
-    search: 'Partout, streaming compris',
-    videos: libMeta('video', 'vidéo'),
-    music: libMeta('audio', 'morceau', 'morceaux'),
-    images: libMeta('image', 'image'),
-    streaming: plural(c.web.length, 'service'),
-    tv: (c.tv.services.find((t) => t.id === c.tv.active)?.name) || 'À détecter',
-    games: g || e ? `${plural(g, 'jeu', 'jeux')}, ${plural(e, 'console')}` : 'À configurer',
-  };
-  const bars = home.bars.filter((id) => HOME_BARS[id]);
-  const mire = bars.length
-    ? `<nav class="mire" aria-label="Menu principal">${bars.map((id) => `<button class="mire-bar focusable" data-action="go" data-go="${id}" style="--c:var(--bar-${HOME_BARS[id].c})"><span class="mire-label">${HOME_BARS[id].label}</span><span class="mire-meta">${esc(meta[id])}</span></button>`).join('')}</nav>`
-    : '';
-
-  const services = home.services.map((id) => c.web.find((w) => w.id === id)).filter(Boolean);
-  const open = new Set(S.webSessions.map((x) => x.id));
-  const servicesRow = services.length
-    ? `<section class="row"><h2 class="row-h">Vos services</h2><div class="fav-grid">${services.map((w) => {
-      const color = safeColor(w.color);
-      return `<button class="fav focusable" data-action="open-web" data-id="${esc(w.id)}" style="--brand:${color};--on:${onColor(color)}"><span class="fav-name">${esc(w.name)}</span>${open.has(w.id) ? '<span class="fav-open">Ouvert</span>' : ''}</button>`;
-    }).join('')}</div></section>`
-    : '';
-
-  S.recent = home.recent ? getRecent().map(withScrape) : [];
-  const recentRow = S.recent.length
-    ? `<section class="row"><h2 class="row-h">Reprendre</h2><div class="strip">${S.recent.map((it, i) => tile(it, i, 'play-recent', it.kind === 'video' ? 'r-poster' : 'r-square', { sub: folderText(it) })).join('')}</div></section>`
-    : '';
-
-  const clock = home.clock ? '<time class="home-clock" id="home-clock"></time><p class="home-date" id="home-date"></p>' : '';
-  const empty = !clock && !mire && !servicesRow && !recentRow
-    ? emptyBlock('Accueil vide', 'Tous les éléments de l’accueil sont masqués. Choisissez ce qui doit apparaître ici.')
-    : '';
-
-  return `<section class="home${home.clock ? '' : ' no-clock'}">
-    ${clock}
-    ${mire}
-    ${servicesRow}
-    ${recentRow}
-    ${empty}
-    <div class="home-foot"><button class="btn btn-ghost btn-sm focusable" data-action="personalize">Personnaliser l’accueil</button></div>
-  </section>`;
-}
 
 function viewVideos() {
   const gate = libraryGate('video');
@@ -1007,30 +980,28 @@ function startOptions() {
     <optgroup label="Directement sur un service">${S.config.web.map((w) => opt(`web:${w.id}`, w.name)).join('')}</optgroup>`;
 }
 
-// Liste ordonnable : éléments affichés dans l'ordre choisi, puis éléments masqués.
-function orderItems(kind) {
-  const chosen = S.config.ui.home[kind];
-  if (kind === 'bars') {
-    const all = Object.keys(HOME_BARS);
-    return [...chosen, ...all.filter((id) => !chosen.includes(id))].map((id) => ({ id, label: HOME_BARS[id].label, color: `var(--bar-${HOME_BARS[id].c})`, on: chosen.includes(id) }));
-  }
-  const all = S.config.web.map((w) => w.id);
-  return [...chosen, ...all.filter((id) => !chosen.includes(id))]
-    .map((id) => S.config.web.find((w) => w.id === id))
-    .filter(Boolean)
-    .map((w) => ({ id: w.id, label: w.name, color: safeColor(w.color), on: chosen.includes(w.id) }));
-}
-
+// Listes ordonnables de l'accueil (P4-12, home/settings.ts) : rangées, barres de la mire, sites épinglés ; valeurs
+// affichées dans l'ordre choisi, puis valeurs masquées. Textes tirés des catalogues (section `home`).
 function orderList(kind) {
-  const items = orderItems(kind);
+  const items = homeOptions(S.config.ui.home, kind, { t, pages: shell.pages(), lists: home.lists(), sites: S.config.web, color: safeColor });
   const visible = items.filter((x) => x.on).length;
   return items.map((x, i) => `<li class="${x.on ? '' : 'off'}">
     <label class="check"><input type="checkbox" class="focusable" data-order="${kind}" data-id="${esc(x.id)}"${x.on ? ' checked' : ''}><span class="ol-chip" style="background:${x.color}"></span>${esc(x.label)}</label>
     <span class="ol-moves">
-      <button type="button" class="icon-btn focusable" data-action="order-move" data-kind="${kind}" data-id="${esc(x.id)}" data-dir="-1" aria-label="Monter ${esc(x.label)}"${x.on && i > 0 ? '' : ' disabled'}>${ICON.chevU}</button>
-      <button type="button" class="icon-btn focusable" data-action="order-move" data-kind="${kind}" data-id="${esc(x.id)}" data-dir="1" aria-label="Descendre ${esc(x.label)}"${x.on && i < visible - 1 ? '' : ' disabled'}>${ICON.chevD}</button>
+      <button type="button" class="icon-btn focusable" data-action="order-move" data-kind="${kind}" data-id="${esc(x.id)}" data-dir="-1" aria-label="${esc(t('home.settings.up', { name: x.label }))}"${x.on && i > 0 ? '' : ' disabled'}>${ICON.chevU}</button>
+      <button type="button" class="icon-btn focusable" data-action="order-move" data-kind="${kind}" data-id="${esc(x.id)}" data-dir="1" aria-label="${esc(t('home.settings.down', { name: x.label }))}"${x.on && i < visible - 1 ? '' : ' disabled'}>${ICON.chevD}</button>
     </span>
   </li>`).join('');
+}
+
+// Réglages de l'accueil (P4-12) : horloge, rangées et leur ordre, barres de la mire, sites épinglés. Le bloc porte la
+// langue de l'interface ; P4-20 le reprendra dans les nouveaux Réglages.
+function homeSettingsBlock() {
+  const lang = esc(document.documentElement.lang || 'fr');
+  const list = (kind) => `<h3 class="set-sub">${esc(t(`home.settings.${kind}`))}</h3><ul class="order-list" id="order-${kind}">${orderList(kind)}</ul>`;
+  return `<div class="home-settings" lang="${lang}">
+    <label class="check"><input type="checkbox" class="focusable" data-ui="clock"${S.config.ui.home.clock ? ' checked' : ''}> ${esc(t('home.settings.clock'))}</label>
+    ${list('rows')}${list('bars')}${list('sites')}</div>`;
 }
 
 // Enregistre tout de suite une modification de l'apparence ou de l'accueil.
@@ -1040,6 +1011,8 @@ async function saveUi(mutate) {
   const saved = await api.saveConfig(next);
   if (saved && saved.ui) S.config = saved;
   applyTheme();
+  // Réglages de l'accueil changés depuis le rouage de l'accueil : ses rangées suivent.
+  if (S.section === HOME_VIEW) home.refresh();
 }
 
 function refreshOrderList(kind, focusId, dir) {
@@ -1057,16 +1030,11 @@ function onUiChange(e) {
   const t = e.target;
   if (t.dataset.order) {
     const { order: kind, id } = t.dataset;
-    const on = t.checked;
-    saveUi((ui) => {
-      const list = ui.home[kind].filter((x) => x !== id);
-      ui.home[kind] = on ? [...list, id] : list;
-    }).then(() => refreshOrderList(kind, id));
+    C.settings.toggleHomeItem({ kind, id, on: t.checked }).then(() => refreshOrderList(kind, id));
     return;
   }
-  if (t.dataset.ui === 'clock' || t.dataset.ui === 'recent') {
-    const key = t.dataset.ui;
-    saveUi((ui) => { ui.home[key] = t.checked; });
+  if (t.dataset.ui === 'clock') {
+    C.settings.setHomeClock({ on: t.checked });
     return;
   }
   if (t.dataset.ui === 'adblock') {
@@ -1103,12 +1071,7 @@ function viewSettings() {
       <h2>Page d’accueil</h2>
       <p class="set-help">Les changements s’appliquent tout de suite. Les flèches changent l’ordre d’affichage.</p>
       <div class="field"><label for="set-start">Au démarrage, ouvrir</label><select class="input focusable" id="set-start" data-ui="start">${startOptions()}</select></div>
-      <label class="check"><input type="checkbox" class="focusable" data-ui="clock"${c.ui.home.clock ? ' checked' : ''}> Afficher l’heure et la date</label>
-      <label class="check"><input type="checkbox" class="focusable" data-ui="recent"${c.ui.home.recent ? ' checked' : ''}> Afficher « Reprendre »</label>
-      <h3 class="set-sub">Barres de la mire</h3>
-      <ul class="order-list" id="order-bars">${orderList('bars')}</ul>
-      <h3 class="set-sub">Services affichés sur l’accueil</h3>
-      <ul class="order-list" id="order-services">${orderList('services')}</ul>
+      ${homeSettingsBlock()}
     </section>
 
     <section class="set-block" id="set-sources">
@@ -2095,10 +2058,7 @@ function panelSpec(section) {
       return [
         { id: 'home', label: 'Accueil', html: () => `<section class="pset"><h3 class="pset-h">Page d’accueil</h3>
           <div class="field"><label for="set-start">Au démarrage, ouvrir</label><select class="input focusable" id="set-start" data-ui="start">${startOptions()}</select></div>
-          <label class="check"><input type="checkbox" class="focusable" data-ui="clock"${c.ui.home.clock ? ' checked' : ''}> Afficher l’heure et la date</label>
-          <label class="check"><input type="checkbox" class="focusable" data-ui="recent"${c.ui.home.recent ? ' checked' : ''}> Afficher « Reprendre »</label>
-          <h3 class="set-sub">Barres de la mire</h3><ul class="order-list" id="order-bars">${orderList('bars')}</ul>
-          <h3 class="set-sub">Services affichés sur l’accueil</h3><ul class="order-list" id="order-services">${orderList('services')}</ul></section>` },
+          ${homeSettingsBlock()}</section>` },
         { id: 'menu', label: 'Menu', html: menuBlock },
       ];
     case 'search':
@@ -3023,14 +2983,8 @@ document.addEventListener('error', (e) => {
 
 function tick() {
   const now = new Date();
-  const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   shell.tick(now);
-  const hc = $('#home-clock');
-  if (hc) {
-    hc.textContent = time;
-    hc.dateTime = now.toISOString();
-    $('#home-date').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-  }
+  home.tick(now);
 }
 
 /* ------------------------------------------------------------------ */
@@ -3061,8 +3015,7 @@ function tick() {
   await loadUsage();
   setVolume(S.usage.volume);
 
-  go('home');
-  $('.mire-bar')?.focus();
+  go(HOME_VIEW, { focus: 'content' });
   tick();
   setInterval(tick, 5000);
 

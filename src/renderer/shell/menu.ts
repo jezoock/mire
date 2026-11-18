@@ -14,7 +14,7 @@ import { pageName } from '../pages/model.ts';
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** Couleur de chaque vue historique dans le menu (celles des barres de la mire). */
-const VIEW_COLORS: Readonly<Record<string, string>> = {
+export const VIEW_COLORS: Readonly<Record<string, string>> = {
   search: 'var(--text)',
   home: 'var(--bar-white)',
   videos: 'var(--bar-yellow)',
