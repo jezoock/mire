@@ -27,6 +27,8 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
+import { createShell, targetOfLegacyView } from './shell/index.ts';
+import { activeDownloads } from './shell/menu.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
@@ -70,82 +72,30 @@ function applyTheme() {
   palette.set(S.config?.ui?.theme);
 }
 
-/* ---------- Menu principal : barre latérale (gauche, droite) ou carrousel (haut, bas), rétractable ou non ---------- */
-
-const rail = $('#rail');
-const railItems = $('#rail-items');
-const railHandle = $('#rail-handle');
-let railCloseTimer = 0;
+/* ---------- Coquille (P4-07) : menu, en-tête et aide de la manette, dans <mire-app> (shell/) ---------- */
 
 function menuSettings() { return S.config?.ui?.menu || { position: 'left', autohide: false }; }
-const isCarousel = () => ['top', 'bottom'].includes(menuSettings().position);
+
+const shell = createShell({
+  t,
+  language: () => i18n.language,
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  show: (section, { focus }) => go(section, { focus }),
+  // Le menu rétractable s'ouvre ou se ferme : la vue web se replace.
+  onLayout: () => { if (S.section === 'web') syncWeb(); },
+});
 
 function applyMenu() {
-  const m = menuSettings();
-  const body = document.body;
-  for (const p of ['left', 'right', 'top', 'bottom']) body.classList.toggle(`menu-${p}`, m.position === p);
-  body.classList.toggle('menu-auto', !!m.autohide);
-  body.classList.remove('menu-open');
-  updateRailArrows();
-  const cur = railItems.querySelector('[aria-current="page"]');
-  if (cur && isCarousel()) cur.scrollIntoView({ block: 'nearest', inline: 'center' });
+  shell.setMenu(menuSettings());
   if (S.section === 'web') setTimeout(syncWeb, 300);
 }
 
-function openRail() {
-  if (!menuSettings().autohide) return;
-  clearTimeout(railCloseTimer);
-  if (document.body.classList.contains('menu-open')) return;
-  document.body.classList.add('menu-open');
-  if (S.section === 'web') setTimeout(syncWeb, 260);
-}
-function closeRailSoon(delay = 450) {
-  if (!menuSettings().autohide) return;
-  clearTimeout(railCloseTimer);
-  railCloseTimer = setTimeout(() => {
-    if (rail.contains(document.activeElement) || rail.matches(':hover')) return;
-    document.body.classList.remove('menu-open');
-    if (S.section === 'web') setTimeout(syncWeb, 260);
-  }, delay);
-}
-railHandle.addEventListener('mouseenter', openRail);
-rail.addEventListener('mouseenter', openRail);
-rail.addEventListener('mouseleave', () => closeRailSoon());
-rail.addEventListener('focusin', (e) => {
-  openRail();
-  // En carrousel, l'élément sélectionné vient au centre.
-  const item = e.target.closest('.rail-item, .rail-sub');
-  if (item && isCarousel()) item.scrollIntoView({ block: 'nearest', inline: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-});
-rail.addEventListener('focusout', () => setTimeout(() => { if (!rail.contains(document.activeElement)) closeRailSoon(150); }, 0));
-
-// Carrousel : flèches de défilement, et la molette fait défiler horizontalement.
-function updateRailArrows() {
-  const overflow = isCarousel() && railItems.scrollWidth > railItems.clientWidth + 4;
-  rail.classList.toggle('has-overflow', overflow);
-  rail.classList.toggle('at-start', railItems.scrollLeft < 4);
-  rail.classList.toggle('at-end', railItems.scrollLeft + railItems.clientWidth > railItems.scrollWidth - 4);
-}
-railItems.addEventListener('scroll', updateRailArrows, { passive: true });
-window.addEventListener('resize', updateRailArrows);
-railItems.addEventListener('wheel', (e) => {
-  if (!isCarousel() || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
-  e.preventDefault();
-  railItems.scrollBy({ left: e.deltaY });
-}, { passive: false });
-for (const b of $$('[data-rail-scroll]')) {
-  b.addEventListener('click', () => railItems.scrollBy({ left: Number(b.dataset.railScroll) * railItems.clientWidth * 0.7, behavior: 'smooth' }));
-}
-
-const TITLES = { home: 'Accueil', search: 'Rechercher', videos: 'Vidéos', music: 'Musique', images: 'Images', streaming: 'Streaming', web: 'Streaming', tv: 'Télévision', games: 'Jeux', downloads: 'Téléchargements', settings: 'Réglages' };
 const SEARCHABLE = new Set(['videos', 'music', 'images', 'tv', 'games']);
 
 const viewEl = $('#view');
-const titleEl = $('#title');
 const searchEl = $('#search');
 const headerToolsEl = $('#header-tools');
 const headerToolsRightEl = $('#header-tools-right');
-const clockEl = $('#clock');
 
 /* ------------------------------------------------------------------ */
 /* Historique « Reprendre »                                            */
@@ -207,15 +157,10 @@ function go(section, { focus = 'keep' } = {}) {
   }
   S.section = section;
   document.body.dataset.section = section;
-  const railKey = section === 'web' ? webHome() : section;
-  for (const b of $$('#rail [data-go]')) {
-    if (b.dataset.go === railKey) b.setAttribute('aria-current', 'page');
-    else b.removeAttribute('aria-current');
-  }
+  shell.setSection(section, webHome());
   renderRailSessions();
   render({ resetScroll: changed });
   updateScrapeButton();
-  if (isCarousel()) railItems.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (section === 'search') {
     $('#gsearch')?.focus();
     ensureSearchSources();
@@ -333,9 +278,8 @@ function render({ resetScroll = false } = {}) {
   const selector = hadFocus ? focusSelectorOf(active) : null;
 
   const sec = S.section;
-  titleEl.textContent = sec === 'games' && S.romsOf != null ? (consoleOf(S.romsOf)?.name || 'Jeux') : sec === DEMO_SECTION ? demoTitle() : TITLES[sec];
-  searchEl.hidden = !SEARCHABLE.has(sec);
-  searchEl.placeholder = sec === 'tv' ? 'Rechercher une chaîne' : 'Rechercher';
+  const title = sec === 'games' && S.romsOf != null ? consoleOf(S.romsOf)?.name : sec === DEMO_SECTION ? demoTitle() : undefined;
+  shell.setHeader({ view: sec, title, searchable: SEARCHABLE.has(sec), search: sec === 'tv' ? 'channel' : 'section' });
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
@@ -901,9 +845,7 @@ function viewDownloads() {
 }
 
 function updateDlBadge() {
-  const n = S.downloads.filter((d) => D.DL_ACTIVE.has(d.state)).length;
-  const badge = $('#dl-badge');
-  if (badge) { badge.hidden = !n; badge.textContent = String(n); }
+  shell.setDownloads(activeDownloads(S.downloads, D.DL_ACTIVE));
 }
 
 async function loadDownloads() {
@@ -1626,14 +1568,7 @@ async function saveSettings() {
 // Sites ouverts dans le menu, sous leur page d'origine : les services sous Streaming, les portails TV sous
 // Télévision, les sites de jeux d'une console sous Jeux.
 function renderRailSessions() {
-  const item = (x) => {
-    const current = S.section === 'web' && S.webActive === x.id;
-    return `<button class="rail-sub focusable" data-web="${esc(x.id)}" style="--c:${safeColor(x.color)}"${current ? ' aria-current="page"' : ''} title="${esc(x.name)}"><span class="dot"></span><span class="lbl">${esc(x.name)}</span></button>`;
-  };
-  const boxes = { streaming: $('#rail-sessions'), tv: $('#rail-sessions-tv'), games: $('#rail-sessions-games') };
-  for (const [home, box] of Object.entries(boxes)) {
-    if (box) box.innerHTML = S.webSessions.filter((x) => webHome(x.id) === home).map(item).join('');
-  }
+  shell.setSessions(S.webSessions, S.webActive, webHome, safeColor);
 }
 
 // Page d'où vient une vue web : Jeux pour les sites de jeux, Télévision pour les portails TV, sinon Streaming.
@@ -1684,7 +1619,7 @@ function slotRect() {
   if (!r) return null;
   let { left, top, right, bottom } = r;
   if (document.body.classList.contains('menu-auto') && document.body.classList.contains('menu-open')) {
-    const m = rail.getBoundingClientRect();
+    const m = $('#rail').getBoundingClientRect();
     const pos = menuSettings().position;
     if (pos === 'left') left = Math.max(left, m.right);
     if (pos === 'right') right = Math.min(right, m.left);
@@ -2006,15 +1941,12 @@ async function fillDrmStatus() {
 /* Infos et images en ligne                                            */
 /* ------------------------------------------------------------------ */
 
-const gearBtn = $('#page-gear');
 const SCRAPE_KIND = { videos: 'videos', music: 'music', games: 'games' };
 
 // Le rouage de l'en-tête ouvre les réglages de la page ; il signale aussi une récupération d'infos en cours.
 function updateScrapeButton() {
-  gearBtn.hidden = S.section === 'settings';
+  shell.setGear({ hidden: S.section === 'settings', scrape: S.scraping });
   const p = S.scraping;
-  gearBtn.classList.toggle('is-busy', !!p?.running);
-  gearBtn.title = p?.running ? (p.total ? `Récupération des infos : ${p.done} sur ${p.total}` : 'Récupération des infos…') : 'Réglages de cette page';
   const st = $('#scrape-state');
   if (st) st.textContent = scrapeStateText();
   const runBtn = $('#scrape-run');
@@ -2084,7 +2016,6 @@ api.onScrapeProgress((p) => {
   }
 });
 
-gearBtn.addEventListener('click', () => openPageSettings());
 
 /* ---------- Réglages de la page (rouage de l'en-tête) ---------- */
 
@@ -2262,7 +2193,7 @@ function refreshPanel() { if (panel.open) renderPanel(); }
 panel.addEventListener('close', () => {
   if (S.section === 'web') syncWeb();
   if (['videos', 'music', 'images', 'games', 'home', 'tv', 'streaming', 'downloads'].includes(S.section)) render();
-  gearBtn.focus({ preventScroll: true });
+  $('#page-gear')?.focus({ preventScroll: true });
 });
 panelBody.addEventListener('change', (e) => onUiChange(e));
 panel.addEventListener('click', (e) => {
@@ -2885,6 +2816,14 @@ const legacyUi = {
     refreshSearch();
   },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange, afterAdblockChange, setCfg, saveUi, applyMenu,
+  open: (target, opts) => shell.open(target, opts),
+  // Site ouvert, choisi dans le menu : un portail de télévision, les sites d'une console, un marque-page ou un service.
+  openSite(id) {
+    if (id.startsWith('tv:')) callAction('mire-web', 'openPortal', { id: id.slice(3) });
+    else if (id.startsWith('rom:')) callAction('mire-page', 'openRomSites', { consoleId: id.slice(4) });
+    else if (id.startsWith('bm:')) callAction('mire-web', 'openBookmark', { id: id.slice(3) });
+    else callAction('mire-web', 'open', { id });
+  },
 };
 // Boîtes de dialogue sur les composants (P4-06) : la vue web native se masque tant qu'une boîte est ouverte.
 dialogs.initDialogs({
@@ -2912,23 +2851,6 @@ function onActionClick(e) {
 viewEl.addEventListener('click', onActionClick);
 panelBody.addEventListener('click', onActionClick);
 viewEl.addEventListener('submit', (e) => { e.preventDefault(); saveSettings(); });
-
-$('#rail').addEventListener('click', (e) => {
-  const sub = e.target.closest('.rail-sub');
-  if (sub) {
-    const id = sub.dataset.web;
-    if (id.startsWith('tv:')) callAction('mire-web', 'openPortal', { id: id.slice(3) });
-    else if (id.startsWith('rom:')) callAction('mire-page', 'openRomSites', { consoleId: id.slice(4) });
-    else if (id.startsWith('bm:')) callAction('mire-web', 'openBookmark', { id: id.slice(3) });
-    else callAction('mire-web', 'open', { id });
-    return;
-  }
-  const b = e.target.closest('.rail-item');
-  if (!b) return;
-  if (b.hasAttribute('data-quit')) { callAction('mire-app', 'quit'); return; }
-  if (b.hasAttribute('data-open-file')) { callAction('mire-app', 'openFile'); return; }
-  callAction('mire-app', 'go', { section: b.dataset.go, focus: 'keep' });
-});
 
 let searchTimer = 0;
 // Menus déroulants de l'en-tête (filtres Jeux, service de télé).
@@ -3054,7 +2976,7 @@ document.addEventListener('error', (e) => {
 function tick() {
   const now = new Date();
   const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  clockEl.textContent = time;
+  shell.tick(now);
   const hc = $('#home-clock');
   if (hc) {
     hc.textContent = time;
@@ -3069,7 +2991,8 @@ function tick() {
 
 (async function init() {
   // Traduction : catalogues demandés pendant le reste du démarrage (lang du document, textes des contrôleurs).
-  i18n.start(api);
+  const i18nReady = i18n.start(api);
+  const pages = api.pagesList().catch(() => null);
   for (const el of $$('[data-icon]')) el.innerHTML = ICON[el.dataset.icon] || '';
   const res = await api.getConfig();
   S.config = res.config;
@@ -3077,6 +3000,10 @@ function tick() {
   S.platform = res.platform;
   applyTheme();
   applyMenu();
+  // Textes de la coquille et pages épinglées au menu avant le premier écran.
+  await i18nReady;
+  const list = await pages;
+  shell.setPages(Array.isArray(list) ? list : null);
   S.scrape = (await api.scrapeData()) || {};
   S.meta = (await api.metaAll()) || {};
   S.adblock = await api.adblockStatus();
@@ -3104,6 +3031,6 @@ function tick() {
   const start = S.config.ui.start || 'home';
   if (!pending?.length) {
     if (start.startsWith('web:')) openWeb(start.slice(4));
-    else if (start !== 'home' && TITLES[start]) go(start, { focus: 'content' });
+    else if (start !== 'home' && targetOfLegacyView(start)) go(start, { focus: 'content' });
   }
 })();

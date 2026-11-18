@@ -1,0 +1,13 @@
+// Coquille (P4-07) : les hôtes s'effacent de la mise en page, qui reste celle de l'interface historique (.app, .rail,
+// .main, .topbar, .view, .padbar, dans styles.css) tant que ses vues ne sont pas remplacées.
+.mire-app,
+.mire-rail,
+.mire-rail__trigger,
+.mire-header__gear,
+.mire-legacy-view--layers {
+  display: contents;
+}
+
+.mire-legacy-view.view {
+  display: block;
+}

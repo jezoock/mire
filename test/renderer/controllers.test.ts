@@ -87,6 +87,17 @@ describe('contrôleurs', () => {
     assert.equal(named(calls, 'ui.playRecent').length, 1);
   });
 
+  it('la coquille ouvre une cible et un site par leur clé (P4-07)', () => {
+    c.app.open({ target: 'movies', path: ['Friends', 1], focus: 'keep' });
+    c.app.open({ target: 'screen:search' });
+    c.app.openSite({ id: 'tv:sfr' });
+    assert.deepEqual(named(calls, 'ui.open'), [
+      ['ui.open', 'movies', { path: ['Friends', 1], focus: 'keep' }],
+      ['ui.open', 'screen:search', { path: [], focus: 'content' }],
+    ]);
+    assert.deepEqual(named(calls, 'ui.openSite'), [['ui.openSite', 'tv:sfr']]);
+  });
+
   it('« Afficher plus » rend la position du premier élément ajouté', () => {
     assert.equal(c.app.showMore(), PAGE);
     assert.equal(S.limit, PAGE * 2);

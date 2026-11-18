@@ -3,8 +3,6 @@
  * et correspondance bouton → touche selon le contexte. Sans DOM : testé tel quel.
  * Croix ou stick gauche, A valider, B retour, Start lecture/pause, LB/RB précédent/suivant.
  */
-import { esc } from '../core/dom.ts';
-
 export type PadFamily = 'xbox' | 'ps' | 'nintendo';
 export type PadButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select' | 'start' | 'home';
 export type PadContext = 'dialog' | 'video' | 'image' | 'web' | 'list' | 'columns';
@@ -35,50 +33,48 @@ export const PAD_GLYPHS: Readonly<Record<PadFamily, Readonly<Record<GlyphButton,
 };
 
 const LIST_HINTS: ReadonlyArray<readonly [string, string]> = [
-  ['a', 'Ouvrir'],
-  ['b', 'Retour'],
-  ['x', 'Modifier'],
-  ['y', 'Rechercher'],
-  ['lb rb', 'Section'],
+  ['a', 'open'],
+  ['b', 'back'],
+  ['x', 'edit'],
+  ['y', 'search'],
+  ['lb rb', 'section'],
 ];
 
-/** Rappel des commandes en bas de l'écran : boutons (séparés par une espace) et ce qu'ils font. */
+/**
+ * Rappel des commandes en bas de l'écran (`mire-padbar`) : boutons (séparés par une espace) et ce qu'ils font, clé
+ * des catalogues sous `shell.pad`.
+ */
 export const PAD_HINTS: Readonly<Partial<Record<PadContext, ReadonlyArray<readonly [string, string]>>>> = {
   list: LIST_HINTS,
   // Colonnes (explorateur) : mêmes commandes que les listes ; la croix change de ligne et de colonne.
   columns: LIST_HINTS,
   video: [
-    ['a', 'Pause'],
-    ['lt rt', '1 min'],
-    ['lb rb', 'Autre vidéo'],
-    ['y', 'Sous-titres'],
-    ['b', 'Fermer'],
+    ['a', 'pause'],
+    ['lt rt', 'minute'],
+    ['lb rb', 'otherVideo'],
+    ['y', 'subtitles'],
+    ['b', 'close'],
   ],
   image: [
-    ['a', 'Diaporama'],
-    ['lb rb', 'Image'],
-    ['b', 'Fermer'],
+    ['a', 'slideshow'],
+    ['lb rb', 'image'],
+    ['b', 'close'],
   ],
   dialog: [
-    ['a', 'Valider'],
-    ['b', 'Annuler'],
+    ['a', 'confirm'],
+    ['b', 'cancel'],
   ],
 };
 
-/** Contenu de la barre de rappel pour ce contexte et cette famille ; `null` si le contexte n'a pas de rappel. */
-export function padHintsHtml(ctx: string, family: PadFamily): string | null {
+/**
+ * Aide de la manette pour ce contexte et cette famille : libellés des boutons et clé du texte (`shell.pad.<clé>`),
+ * à traduire ; `null` si le contexte n'a pas de rappel.
+ */
+export function padHints(ctx: string, family: PadFamily): { glyphs: string[]; key: string }[] | null {
   const hints = PAD_HINTS[ctx as PadContext];
   if (!hints) return null;
   const g = PAD_GLYPHS[family] as Record<string, string>;
-  return hints
-    .map(
-      ([btns, label]) =>
-        `<span class="ph">${btns
-          .split(' ')
-          .map((b) => `<span class="pb${(g[b] as string).length > 2 ? ' long' : ''}">${esc(g[b])}</span>`)
-          .join('')}${esc(label)}</span>`,
-    )
-    .join('');
+  return hints.map(([btns, key]) => ({ glyphs: btns.split(' ').map((b) => g[b] as string), key: `shell.pad.${key}` }));
 }
 
 type PadKeys = Readonly<Partial<Record<PadButton, string>>>;
