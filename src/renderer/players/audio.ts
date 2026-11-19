@@ -1,29 +1,57 @@
-/** Musique : file de lecture et mini-lecteur en bas de l'écran. */
+/** Musique : file de lecture et mini-lecteur en bas de l'écran (`mire-mini-player`, P4-15). Règles sans DOM : `music-model.ts`. */
 import { $, $$ } from '../core/dom.ts';
 import { fmtTime } from '../core/format.ts';
 import { ICON } from '../core/icons.ts';
 import { mediaUrl } from '../core/media.ts';
 import { toast } from '../ui/toast.ts';
+import { i18n, t } from '../i18n/index.ts';
 import { Q, S } from '../state/index.ts';
 import { api } from '../api/index.ts';
 import { cleanTrack, folderText } from '../domain/index.ts';
 import type { MediaItem } from '@mire/shared/ipc';
 import type { Playable } from './types.ts';
 import type { Controllers } from '../controllers/index.ts';
+import type { MusicUi } from '../controllers/types.ts';
 import { focusFirst } from '../nav/focus.ts';
-import { audio, setRangeFill, setVolume } from './volume.ts';
+import { audio, setVolume } from './volume.ts';
+import { stepInQueue, trackSubheading } from './music-model.ts';
+import { playedRatio } from './video-model.ts';
 
 export { audio };
 
 /** Contrôleurs appelés par le lecteur de musique : lecteur externe (formats non lus ici), « Reprendre ». */
 export type AudioControllers = Pick<Controllers, 'player' | 'home'>;
 
+/** Propriétés de `mire-mini-player` (voir le composant). */
+type MiniEl = HTMLElement & {
+  heading: string;
+  subheading: string;
+  cover: string;
+  current: string;
+  duration: string;
+  position: number;
+  playing: boolean;
+  labels: string;
+  icons: string;
+};
+
 let ctrl: AudioControllers;
 const viewEl = $('#view') as HTMLElement;
-const mini = $('#mini') as HTMLElement;
-const miniPlay = $('#mini-play') as HTMLButtonElement;
-const miniRange = $('#mini-range') as HTMLInputElement;
-let miniSeeking = false;
+const mini = $('mire-mini-player') as MiniEl;
+let seeking = false;
+
+const current = () => Q.list[Q.i] as Playable | undefined;
+
+function labels(): string {
+  const k = (key: string) => t(`player.music.${key}`);
+  return JSON.stringify({ prev: k('prev'), play: k('play'), next: k('next'), seek: k('seek'), volume: k('volume'), stop: k('stop') });
+}
+
+/** Sous-titre du mini-lecteur, rédigé dans la langue de l'interface. */
+function showSubheading(): void {
+  const tr = current();
+  if (tr) mini.subheading = trackSubheading(folderText(tr) as string, Q.i, Q.list.length, t);
+}
 
 export function playQueue(list: MediaItem[], i: number): void {
   Q.list = list;
@@ -32,54 +60,39 @@ export function playQueue(list: MediaItem[], i: number): void {
 }
 
 function loadTrack(): void {
-  const t = Q.list[Q.i] as Playable | undefined;
-  if (!t) return;
-  if (!t.native) {
-    ctrl.player.openExternal({ path: t.path, name: t.name });
+  const tr = current();
+  if (!tr) return;
+  if (!tr.native) {
+    ctrl.player.openExternal({ path: tr.path, name: tr.name });
     return;
   }
-  audio.src = mediaUrl(t.path);
+  audio.src = mediaUrl(tr.path);
   audio.play().catch(() => {
     /* lecture bloquée */
   });
-  ctrl.home.addRecent(t);
+  ctrl.home.addRecent(tr);
 
   mini.hidden = false;
   document.body.classList.add('has-mini');
-  ($('#mini-title') as HTMLElement).textContent = cleanTrack(t.name);
-  ($('#mini-sub') as HTMLElement).textContent = (Q.list.length > 1 ? `${folderText(t)}, ${Q.i + 1} sur ${Q.list.length}` : folderText(t)) as string;
-  const cover = $('#mini-cover') as HTMLImageElement;
-  const coverPath = (t.cover || S.scrape[`a:${t.dir}`]?.image) as string | undefined;
-  if (coverPath) {
-    cover.hidden = false;
-    cover.src = mediaUrl(coverPath);
-  } else {
-    cover.hidden = true;
-    cover.removeAttribute('src');
-  }
+  mini.heading = cleanTrack(tr.name);
+  showSubheading();
+  const coverPath = (tr.cover || S.scrape[`a:${tr.dir}`]?.image) as string | undefined;
+  mini.cover = coverPath ? mediaUrl(coverPath) : '';
   markPlaying();
-  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: cleanTrack(t.name), album: t.folder });
+  if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: cleanTrack(tr.name), album: tr.folder });
 }
 
 /** Morceau suivant (1) ou précédent (-1) ; « précédent » après 3 s revient au début du morceau. */
 export function stepTrack(d: number): void {
-  if (!Q.list.length) return;
-  if (d < 0 && audio.currentTime > 3) {
-    audio.currentTime = 0;
+  const step = stepInQueue(Q.i, Q.list.length, d, audio.currentTime);
+  if (!step) return;
+  if (step.kind === 'play') {
+    Q.i = step.index;
+    loadTrack();
     return;
   }
-  const j = Q.i + d;
-  if (j < 0) {
-    audio.currentTime = 0;
-    return;
-  }
-  if (j >= Q.list.length) {
-    audio.pause();
-    audio.currentTime = 0;
-    return;
-  }
-  Q.i = j;
-  loadTrack();
+  if (step.kind === 'stop') audio.pause();
+  audio.currentTime = 0;
 }
 
 export function toggleAudio(): void {
@@ -103,50 +116,47 @@ export function stopMusic(): void {
 /** Signale le morceau en cours dans la liste de la section Musique. */
 export function markPlaying(): void {
   if (S.section !== 'music') return;
-  const cur = Q.list[Q.i]?.path;
+  const cur = current()?.path;
   for (const el of $$('.track', viewEl)) el.classList.toggle('is-playing', !!cur && (S.list[Number(el.dataset.index)] as Playable | undefined)?.path === cur);
 }
 
-/** Branche le mini-lecteur. */
+/** Commandes du mini-lecteur, appelées par son contrôleur (`mire-mini-player`). */
+export const musicUi: MusicUi = { togglePlay: toggleAudio, step: stepTrack, stop: stopMusic };
+
+/** Branche le mini-lecteur : événements de l'élément audio, réglettes, textes et icônes. */
 export function initAudio(controllers: AudioControllers): void {
   ctrl = controllers;
+  mini.icons = JSON.stringify(ICON);
+  mini.labels = labels();
+  i18n.onChange(() => {
+    mini.labels = labels();
+    showSubheading();
+  });
   audio.addEventListener('ended', () => stepTrack(1));
-  audio.addEventListener('play', () => {
-    miniPlay.innerHTML = ICON.pause;
-  });
-  audio.addEventListener('pause', () => {
-    miniPlay.innerHTML = ICON.play;
-  });
+  audio.addEventListener('play', () => (mini.playing = true));
+  audio.addEventListener('pause', () => (mini.playing = false));
   audio.addEventListener('timeupdate', () => {
-    if (miniSeeking) return;
-    const d = audio.duration;
-    const r = Number.isFinite(d) && d > 0 ? audio.currentTime / d : 0;
-    miniRange.value = String(Math.round(r * 1000));
-    setRangeFill(miniRange, r);
-    ($('#mini-cur') as HTMLElement).textContent = fmtTime(audio.currentTime);
-    ($('#mini-dur') as HTMLElement).textContent = fmtTime(d);
+    if (seeking) return;
+    mini.position = playedRatio(audio.currentTime, audio.duration);
+    mini.current = fmtTime(audio.currentTime);
+    mini.duration = fmtTime(audio.duration);
   });
   audio.addEventListener('error', () => {
     if (!audio.getAttribute('src')) return;
-    const t = Q.list[Q.i] as Playable | undefined;
-    if (!t) return;
-    toast(`${t.name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe`, { duration: 5000 });
-    api.playExternal(t.path, t.name, 0);
+    const tr = current();
+    if (!tr) return;
+    toast(t('player.music.unsupported', { name: tr.name }), { duration: 5000 });
+    api.playExternal(tr.path, tr.name, 0);
   });
-
-  miniPlay.addEventListener('click', toggleAudio);
-  ($('#mini-prev') as HTMLElement).addEventListener('click', () => stepTrack(-1));
-  ($('#mini-next') as HTMLElement).addEventListener('click', () => stepTrack(1));
-  ($('#mini-close') as HTMLElement).addEventListener('click', stopMusic);
-  miniRange.addEventListener('input', () => {
-    miniSeeking = true;
-    const r = Number(miniRange.value) / 1000;
-    setRangeFill(miniRange, r);
-    ($('#mini-cur') as HTMLElement).textContent = fmtTime(r * (audio.duration || 0));
+  mini.addEventListener('mireMusicSeek', (e) => {
+    const { ratio, commit } = (e as CustomEvent<{ ratio: number; commit: boolean }>).detail;
+    if (!commit) {
+      seeking = true;
+      mini.current = fmtTime(ratio * (audio.duration || 0));
+      return;
+    }
+    if (Number.isFinite(audio.duration)) audio.currentTime = ratio * audio.duration;
+    seeking = false;
   });
-  miniRange.addEventListener('change', () => {
-    if (Number.isFinite(audio.duration)) audio.currentTime = (Number(miniRange.value) / 1000) * audio.duration;
-    miniSeeking = false;
-  });
-  ($('#mini-vol') as HTMLInputElement).addEventListener('input', (e) => setVolume(Number((e.target as HTMLInputElement).value)));
+  mini.addEventListener('mireMusicVolume', (e) => setVolume((e as CustomEvent<{ value: number }>).detail.value));
 }

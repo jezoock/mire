@@ -1,4 +1,4 @@
-import { Component, Element, Event, Host, Prop, Watch, h } from '@stencil/core';
+import { Component, Element, Event, Host, Prop, State, Watch, h } from '@stencil/core';
 import type { EventEmitter } from '@stencil/core';
 import { readJson, readRecord } from '../../utils/elements.ts';
 import { SEEK_STEPS, seekValue } from '../../utils/video.ts';
@@ -25,8 +25,9 @@ export class MireMiniPlayer {
   @Prop() heading = '';
   @Prop() subheading = '';
 
-  /** Adresse de la pochette ; vide : pas de pochette. */
+  /** Adresse de la pochette ; vide : pas de pochette. Une pochette illisible est cachée. */
   @Prop() cover = '';
+  @State() coverFailed = false;
 
   /** Temps écoulé et durée, écrits (« 1:23 »), et proportion lue, de 0 à 1. */
   @Prop() current = '0:00';
@@ -61,6 +62,11 @@ export class MireMiniPlayer {
     this.syncVolume();
   }
 
+  @Watch('cover')
+  resetCover() {
+    this.coverFailed = false;
+  }
+
   @Watch('position')
   syncSeek() {
     const input = this.seekInput;
@@ -87,12 +93,8 @@ export class MireMiniPlayer {
   };
 
   /** Bouton rond à icône, dans le `ds-trigger` d'une action du mini-lecteur. */
-  private button(action: string, icon: string | undefined, label: string, big = false) {
-    return (
-      <ds-trigger class="mire-mini-player__trigger" target="mire-mini-player" action={action}>
-        <button type="button" class={{ 'mire-mini-player__icon': true, 'mire-mini-player__icon--big': big }} aria-label={label} innerHTML={icon ?? ''} />
-      </ds-trigger>
-    );
+  private iconButton(icon: string | undefined, label: string, big = false) {
+    return <button type="button" class={{ 'mire-mini-player__icon': true, 'mire-mini-player__icon--big': big }} aria-label={label} innerHTML={icon ?? ''} />;
   }
 
   render() {
@@ -101,16 +103,28 @@ export class MireMiniPlayer {
     return (
       <Host class="mire-mini-player">
         <div class="mire-mini-player__meta">
-          <img class="mire-mini-player__cover" alt="" src={this.cover || undefined} hidden={!this.cover} />
+          <img
+            class="mire-mini-player__cover"
+            alt=""
+            src={this.cover || undefined}
+            hidden={!this.cover || this.coverFailed}
+            onError={() => (this.coverFailed = true)}
+          />
           <div class="mire-mini-player__text">
             <div class="mire-mini-player__title">{this.heading}</div>
             <div class="mire-mini-player__sub">{this.subheading}</div>
           </div>
         </div>
         <div class="mire-mini-player__controls">
-          {this.button('previous', icons.prev, l.prev)}
-          {this.button('togglePlay', this.playing ? icons.pause : icons.play, l.play, true)}
-          {this.button('next', icons.next, l.next)}
+          <ds-trigger class="mire-mini-player__trigger" target="mire-mini-player" action="previous">
+            {this.iconButton(icons.prev, l.prev)}
+          </ds-trigger>
+          <ds-trigger class="mire-mini-player__trigger" target="mire-mini-player" action="togglePlay">
+            {this.iconButton(this.playing ? icons.pause : icons.play, l.play, true)}
+          </ds-trigger>
+          <ds-trigger class="mire-mini-player__trigger" target="mire-mini-player" action="next">
+            {this.iconButton(icons.next, l.next)}
+          </ds-trigger>
         </div>
         <div class="mire-mini-player__seek">
           <span class="mire-mini-player__current">{this.current}</span>
@@ -144,7 +158,9 @@ export class MireMiniPlayer {
             />
           </ds-range>
         </div>
-        {this.button('stop', icons.close, l.stop)}
+        <ds-trigger class="mire-mini-player__trigger" target="mire-mini-player" action="stop">
+          {this.iconButton(icons.close, l.stop)}
+        </ds-trigger>
       </Host>
     );
   }

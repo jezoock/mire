@@ -680,7 +680,7 @@ export namespace Components {
      */
     interface MireMiniPlayer {
         /**
-          * Adresse de la pochette ; vide : pas de pochette.
+          * Adresse de la pochette ; vide : pas de pochette. Une pochette illisible est cachée.
           * @default ''
          */
         "cover": string;
@@ -2584,7 +2584,7 @@ declare namespace LocalJSX {
      */
     interface MireMiniPlayer {
         /**
-          * Adresse de la pochette ; vide : pas de pochette.
+          * Adresse de la pochette ; vide : pas de pochette. Une pochette illisible est cachée.
           * @default ''
          */
         "cover"?: string;

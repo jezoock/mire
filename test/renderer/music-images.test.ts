@@ -4,6 +4,10 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { RESTART_AFTER, stepInQueue, trackSubheading } from '../../src/renderer/players/music-model.ts';
 import { imageSubheading, preloadPath, viewerList, wrapStep } from '../../src/renderer/players/images-model.ts';
+import { ImagesController } from '../../src/renderer/controllers/images.ts';
+import { MusicController } from '../../src/renderer/controllers/music.ts';
+import { CONTROLLER_CLASSES } from '../../src/renderer/controllers/index.ts';
+import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
 
@@ -71,5 +75,44 @@ describe('visionneuse d’images', () => {
   it('texte : place de l’image et dossier', () => {
     assert.equal(imageSubheading(0, 2, 'Vacances', tFr), '1 sur 2, Vacances');
     assert.equal(imageSubheading(1, 2, 'Holidays', tEn), '2 of 2, Holidays');
+  });
+});
+
+describe('contrôleurs des lecteurs de musique et d’images', () => {
+  function setup() {
+    const calls: string[] = [];
+    const ctx = {
+      ui: {
+        music: {
+          togglePlay: () => calls.push('music play'),
+          step: (d: number) => calls.push(`music ${d}`),
+          stop: () => calls.push('music stop'),
+        },
+        images: {
+          close: () => calls.push('images close'),
+          step: (d: number) => calls.push(`images ${d}`),
+          toggleSlideshow: () => calls.push('images slideshow'),
+        },
+      },
+    } as unknown as ControllerContext;
+    return { calls, music: new MusicController(ctx), images: new ImagesController(ctx) };
+  }
+
+  it('chaque lecteur a sa balise', () => {
+    assert.equal(CONTROLLER_CLASSES['mire-mini-player'], MusicController);
+    assert.equal(CONTROLLER_CLASSES['mire-image-viewer'], ImagesController);
+  });
+
+  it('chaque action appelle le lecteur', () => {
+    const { calls, music, images } = setup();
+    music.previous();
+    music.togglePlay();
+    music.next();
+    music.stop();
+    images.previous();
+    images.next();
+    images.toggleSlideshow();
+    images.close();
+    assert.deepEqual(calls, ['music -1', 'music play', 'music 1', 'music stop', 'images -1', 'images 1', 'images slideshow', 'images close']);
   });
 });

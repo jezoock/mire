@@ -23,6 +23,23 @@ export interface VideoUi {
   openExternally(): void;
 }
 
+/** Mini-lecteur de musique (`src/renderer/players/audio.ts`, P4-15) : ce que ses commandes font. */
+export interface MusicUi {
+  togglePlay(): void;
+  /** Morceau suivant (1) ou précédent (-1) de la file. */
+  step(d: number): void;
+  /** Arrête la musique et vide la file. */
+  stop(): void;
+}
+
+/** Visionneuse d'images (`src/renderer/players/images.ts`, P4-15) : ce que ses commandes font. */
+export interface ImagesUi {
+  close(): void;
+  /** Image suivante (1) ou précédente (-1), en boucle. */
+  step(d: number): void;
+  toggleSlideshow(): void;
+}
+
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
 
@@ -100,6 +117,9 @@ export interface LegacyUi {
   toggleAudio(): void;
   /** Commandes du lecteur vidéo (P4-14). */
   video: VideoUi;
+  /** Commandes du mini-lecteur de musique et de la visionneuse d'images (P4-15). */
+  music: MusicUi;
+  images: ImagesUi;
   openExternal(item: { path: string; name: string }, start?: number): void;
   addRecent(item: Data): void;
   // Télévision

@@ -52,14 +52,6 @@ export class MireImageViewer {
     if (this.src) this.mireImageError.emit({ src: this.src });
   };
 
-  private trigger(action: string, child: unknown, extra = '') {
-    return (
-      <ds-trigger class={`mire-image-viewer__trigger ${extra}`.trim()} target="mire-image-viewer" action={action}>
-        {child}
-      </ds-trigger>
-    );
-  }
-
   render() {
     const l = readJson<ImageViewerLabels>(this.labels) ?? ({} as ImageViewerLabels);
     const icons = readRecord<string>(this.icons as Record<string, string> | string) as ImageViewerIcons;
@@ -68,27 +60,26 @@ export class MireImageViewer {
         <img class="mire-image-viewer__img" alt="" src={this.src || undefined} onError={this.onError} />
         <div class="mire-image-viewer__ui">
           <div class="mire-image-viewer__top">
-            {this.trigger('close', <button type="button" class="mire-image-viewer__icon" aria-label={l.close} innerHTML={icons.close ?? ''} />)}
+            <ds-trigger class="mire-image-viewer__trigger" target="mire-image-viewer" action="close">
+              <button type="button" class="mire-image-viewer__icon" aria-label={l.close} innerHTML={icons.close ?? ''} />
+            </ds-trigger>
             <div class="mire-image-viewer__heading">
               <div class="mire-image-viewer__title">{this.heading}</div>
               <div class="mire-image-viewer__sub">{this.subheading}</div>
             </div>
-            {this.trigger(
-              'toggleSlideshow',
+            <ds-trigger class="mire-image-viewer__trigger" target="mire-image-viewer" action="toggleSlideshow">
               <button type="button" class="mire-image-viewer__text-btn">
                 <span class="mire-image-viewer__text-icon" aria-hidden="true" innerHTML={(this.slideshow ? icons.pause : icons.play) ?? ''} />
                 <span>{this.slideshow ? l.slideshowStop : l.slideshow}</span>
-              </button>,
-            )}
+              </button>
+            </ds-trigger>
           </div>
-          {this.trigger(
-            'previous',
-            <button type="button" class="mire-image-viewer__nav mire-image-viewer__nav--prev" aria-label={l.prev} innerHTML={icons.chevL ?? ''} />,
-          )}
-          {this.trigger(
-            'next',
-            <button type="button" class="mire-image-viewer__nav mire-image-viewer__nav--next" aria-label={l.next} innerHTML={icons.chevR ?? ''} />,
-          )}
+          <ds-trigger class="mire-image-viewer__trigger" target="mire-image-viewer" action="previous">
+            <button type="button" class="mire-image-viewer__nav mire-image-viewer__nav--prev" aria-label={l.prev} innerHTML={icons.chevL ?? ''} />
+          </ds-trigger>
+          <ds-trigger class="mire-image-viewer__trigger" target="mire-image-viewer" action="next">
+            <button type="button" class="mire-image-viewer__nav mire-image-viewer__nav--next" aria-label={l.next} innerHTML={icons.chevR ?? ''} />
+          </ds-trigger>
         </div>
       </Host>
     );
