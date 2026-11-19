@@ -435,6 +435,7 @@ export function createPluginService(opts: PluginServiceOptions) {
       trust: trustOf(k),
       level: p?.manifest.level ?? null,
       permissions: structuredClone({ ...(p?.manifest.permissions ?? {}) }),
+      dependencies: { ...(p?.manifest.dependencies ?? {}) },
       name: nameOf(k.id),
       enabled: s.enabled,
       status,

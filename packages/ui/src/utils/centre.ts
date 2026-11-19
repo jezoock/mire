@@ -4,7 +4,7 @@
  */
 
 /** Onglets du Centre. */
-export const CENTRE_TABS = ['downloads', 'apps', 'consoles'] as const;
+export const CENTRE_TABS = ['downloads', 'apps', 'consoles', 'plugins', 'repos'] as const;
 export type CentreTab = (typeof CENTRE_TABS)[number];
 
 /** Onglet connu, sinon les téléchargements. */

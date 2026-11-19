@@ -120,6 +120,29 @@ describe('service des plugins', () => {
     assert.match(readFileSync(path.join(t.installed, 'logs', 'org.exemple.annees.log'), 'utf8'), /INFO Activé : taggers\/annee/);
   });
 
+  it('rend les dépendances déclarées par le manifeste (Centre, P4-19)', async () => {
+    const t = setup();
+    opened.push(t);
+    write(path.join(t.installed, 'org.exemple.suite', '1.0.0'), {
+      'mire-plugin.json': {
+        id: 'org.exemple.suite',
+        version: '1.0.0',
+        engines: { mire: '^1.0.0' },
+        level: 'data',
+        contributes: { palettes: [{ id: 's', file: 's.json' }] },
+        dependencies: { 'org.exemple.couleurs': '^1.0.0' },
+        i18n: 'i18n/',
+      },
+      's.json': '{}',
+      'i18n/en.json': catalog('en', { plugin: { name: 'Suite' } }),
+    });
+    await t.service.start();
+    const info = Object.fromEntries(t.service.list().map((p) => [p.id, p]));
+    assert.equal(info['org.exemple.suite'].status, 'active', String(info['org.exemple.suite'].message));
+    assert.deepEqual(info['org.exemple.suite'].dependencies, { 'org.exemple.couleurs': '^1.0.0' });
+    assert.deepEqual(info['org.exemple.annees'].dependencies, {});
+  });
+
   it('fournisseurs d’infos des plugins actifs (P4-20) : identifiant, nom du plugin, natures', async () => {
     const t = setup();
     opened.push(t);
