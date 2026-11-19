@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   componentOf,
   deferredFocusStands,
+  pendingFocusDue,
   isComponentTag,
   isDisabled,
   isSelectedRow,
@@ -140,5 +141,17 @@ describe('nav/targets : navigation par colonnes', () => {
     assert.equal(deferredFocusStands(req, 3, null, body), true);
     assert.equal(deferredFocusStands(req, 4, start, body), false, 'une flèche est venue après');
     assert.equal(deferredFocusStands(req, 3, other, body), false, 'le focus a été placé ailleurs');
+  });
+
+  it('un focus demandé au contenu en chargement cède à un focus placé ailleurs ; un focus perdu y va toujours', () => {
+    const [body, bar, heading] = ['body', 'bar', 'heading'];
+    assert.equal(pendingFocusDue(true, bar, bar, body, true), true, 'le focus est resté où la demande l’a trouvé');
+    assert.equal(pendingFocusDue(true, bar, heading, body, true), false, 'placé ailleurs entre-temps (souris, script)');
+    assert.equal(pendingFocusDue(false, bar, bar, body, true), false, 'pas de demande : rien ne bouge');
+    for (const pending of [true, false]) {
+      assert.equal(pendingFocusDue(pending, bar, body, body, true), true, 'perdu sur body');
+      assert.equal(pendingFocusDue(pending, bar, null, body, true), true, 'aucun élément');
+      assert.equal(pendingFocusDue(pending, bar, heading, body, false), true, 'élément retiré par le nouvel affichage');
+    }
   });
 });

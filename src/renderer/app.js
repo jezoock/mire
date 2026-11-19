@@ -14,6 +14,7 @@ import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaK
 import { mediaUrl } from './core/media.ts';
 import { focusSelectorOf, isShown } from './nav/spatial.ts';
 import { focusFirst } from './nav/focus.ts';
+import { pendingFocusDue } from './nav/targets.ts';
 import { initKeyboard } from './nav/keyboard.ts';
 import { initGamepad, startGamepad } from './nav/gamepad.ts';
 import { nextSection } from './nav/gamepad-data.ts';
@@ -105,9 +106,7 @@ const home = createHome({
   // Rangées rendues : le focus va au contenu s'il était demandé, ou s'il s'est perdu.
   onRendered: () => {
     if (S.section !== HOME_VIEW) return;
-    const a = document.activeElement;
-    if (S.pendingFocus || !a || a === document.body || !a.isConnected) focusFirst();
-    S.pendingFocus = false;
+    if (takePendingFocus()) focusFirst();
   },
 });
 
@@ -290,6 +289,17 @@ async function loadUsage() {
 /* Navigation entre sections                                           */
 /* ------------------------------------------------------------------ */
 
+// Focus demandé au contenu par go() avant qu'il soit chargé (accueil, télévision) : donné une fois le contenu rendu,
+// sauf si le focus a été placé ailleurs entre-temps (pendingFocusDue).
+let pendingFocusFrom = null;
+function takePendingFocus() {
+  const a = document.activeElement;
+  const due = pendingFocusDue(S.pendingFocus, pendingFocusFrom, a, document.body, !!a?.isConnected);
+  S.pendingFocus = false;
+  pendingFocusFrom = null;
+  return due;
+}
+
 function go(section, { focus = 'keep' } = {}) {
   const changed = section !== S.section;
   if (changed && S.section === 'web') api.webHide();
@@ -321,6 +331,7 @@ function go(section, { focus = 'keep' } = {}) {
     // Vue encore en chargement (télé) : le focus ira au contenu dès qu'il arrive.
     // L'accueil rend ses rangées après avoir lu le catalogue : le focus ira à la première barre une fois rendues.
     S.pendingFocus = section === HOME_VIEW || !viewEl.contains(document.activeElement);
+    pendingFocusFrom = document.activeElement;
   }
   if (section === 'tv' && !S.channels && !S.tvLoading) loadChannels();
 }
@@ -1347,8 +1358,7 @@ async function loadChannels() {
   else { S.channels = null; S.tvError = r?.error || 'Erreur inconnue.'; }
   if (S.section === 'tv') {
     render();
-    if (S.pendingFocus || document.activeElement === document.body) focusFirst();
-    S.pendingFocus = false;
+    if (takePendingFocus()) focusFirst();
   }
   if (S.section === SEARCH_VIEW) search.refresh();
 }
