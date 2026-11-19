@@ -64,6 +64,8 @@ export interface LegacyUi {
   /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
   afterEdit?(): void;
   editConsole(consoleId: unknown): void;
+  /** Consoles changées par `mire-games` (P4-17) : nouvelle configuration, Centre et vues redessinés. */
+  afterConsolesChange?(config: Data): void;
   deletableGame(ref: ItemRef | null): boolean;
   deleteGameRef(ref: ItemRef): void;
   consoleName(consoleId: unknown): string | undefined;
@@ -120,7 +122,7 @@ export interface LegacyUi {
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;
   loadCatalog(): Promise<void>;
-  /** Centre (P4-18) : affiche l'onglet `downloads` ou `apps`. */
+  /** Centre (P4-18) : affiche l'onglet `downloads`, `apps` ou `consoles`. */
   showCentreTab(tab: string): void;
   afterStoreChange(result: unknown, message: string): Promise<void>;
   afterAdblockChange(state: unknown): Promise<void>;

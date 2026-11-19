@@ -57,7 +57,13 @@ export function gamesHandlers(ctx: MainContext) {
       const rom = romOf(key);
       return rom ? games.launchRom(rom.console, rom.path, emulator) : gameGone();
     },
-    gameDeleteElement: (key) => games.deleteGameElement((k) => ctx.tags.element(k), key),
+    gameDeleteElement: async (key) => {
+      const rom = romOf(key);
+      const r = await games.deleteGameElement((k) => ctx.tags.element(k), key);
+      // La liste relue met le catalogue à jour : la carte du jeu supprimé disparaît des pages.
+      if (r.ok && rom) await games.listRoms(rom.console).catch(() => null);
+      return r;
+    },
     romListSource: (consoleId, only) => games.listRoms(consoleId, { online: true, only }),
     gameDelete: (ref) => games.deleteGame(ref),
     gamesCleanup: (online) => games.cleanup(online),

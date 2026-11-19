@@ -33,6 +33,7 @@ import { createHome, homeOptions } from './home/index.ts';
 import { createSearch } from './search/index.ts';
 import { createExplorer } from './explorer/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
+import { consoleCards, isGameBookmarkKey, isGameKey } from './games/model.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -127,6 +128,7 @@ const centre = createCentre({
   catalog: () => S.catalog,
   loadCatalog: () => loadCatalog(),
   apps: () => ({ picks: S.raPick, progress: S.storeProgress, consoles: S.config?.emulators ?? [] }),
+  consoles: () => consoleCards(S.config?.emulators, t),
   onLanguageChange: (listener) => i18n.onChange(listener),
   // Centre redessiné : le focus, s'il était sur un bouton retiré, va au premier élément du contenu.
   onRendered: () => {
@@ -2576,6 +2578,14 @@ const legacyUi = {
   afterEdit: () => { if (S.section === SEARCH_VIEW) search.refresh(); },
   firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
   editRef, editConsole, deletableGame, deleteGameRef,
+  afterConsolesChange(config) {
+    S.config = config;
+    S.romsCache = {};
+    S.romSites = {};
+    refreshPanel();
+    if (S.section === CENTRE_VIEW) centre.refresh();
+    else if (!panel.open) render();
+  },
   consoleName: (id) => consoleOf(id)?.name,
   openFileDialog, scan, addSourceFolder, askSourceAddress, removeSource, startScrape, updateScrapeButton, reloadScrape,
   playInContext, playRecent, openVideo, playQueue, openImages,
@@ -2611,7 +2621,9 @@ dialogs.initDialogs({
 });
 initDemoDialogs({ openForm });
 const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
-initEditors(document, (key) => C.editor.edit({ key }), (node) => {
+// Jeux (P4-17) : hôte des actions de `mire-games` ; un jeu ouvre sa boîte (émulateur, lancer, infos, supprimer).
+document.body.appendChild(document.createElement('mire-games'));
+initEditors(document, (key) => (isGameKey(key) || isGameBookmarkKey(key) ? C.games.gameOptions({ key }) : C.editor.edit({ key })), (node) => {
   const ref = groupRefOf(node, pages.route());
   if (ref) C.editor.editGroup(ref);
   return ref;
