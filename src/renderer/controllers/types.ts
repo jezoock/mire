@@ -107,7 +107,8 @@ export interface LegacyUi {
   bookmarkCurrentGame(): void;
   learnSearch(): void;
   syncWeb(): void;
-  setAdButton(state: Data): void;
+  /** Barre du site redessinée d'après le dernier état publié (P4-16). */
+  refreshWebBar(): void;
   // Recherche (P4-13)
   getQueries(): string[];
   rememberQuery(query: string): void;

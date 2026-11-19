@@ -991,6 +991,45 @@
         "failed": "Couldn't add to this list."
       },
       "gone": "This item is no longer in the catalog."
+    },
+    "webView": {
+      "bar": {
+        "label": "Site bar",
+        "back": "Previous page",
+        "forward": "Next page",
+        "reload": "Reload the page",
+        "site": "Site",
+        "siteChoice": "Site to look for games",
+        "learn": "Remember the search",
+        "learnTitle": "Remember the search: search for the word “mire” on the site, then press here.",
+        "learned": "Search remembered",
+        "learnedTitle": "Search remembered: this site appears in Search. To do it again, search for the word “mire” on the site, then press here.",
+        "adOff": "Ad blocker turned off on this site",
+        "adBlocked": {
+          "one": "{count} ad blocked on this page",
+          "other": "{count} ads blocked on this page"
+        },
+        "adHint": "{state}. Press to turn the blocker off or on for this site.",
+        "bookmarkPage": "Add this page to videos",
+        "bookmarkPageTitle": "Add this page to videos (movie or series)",
+        "bookmarkGame": "Add this game (to download)",
+        "bookmarkGameTitle": "Add this game to the list, to download later",
+        "immersive": "Full screen",
+        "immersiveTitle": "Full screen (F11)",
+        "browser": "Open in the browser",
+        "browserTitle": "Open this page in your usual browser, if the site does not work in Mire",
+        "close": "Close the site",
+        "closeTitle": "Close the site (Ctrl+W)"
+      },
+      "loading": "Loading {name}…",
+      "opening": "Opening {name}…",
+      "inBrowser": "{name} opens in the browser",
+      "openFailed": "Could not open it.",
+      "learnFailed": "Could not remember the search.",
+      "learned": "Search remembered: this site will appear in Search results.",
+      "adblockOn": "Ad blocker turned back on for this site. The page reloads.",
+      "adblockOff": "Ad blocker turned off for this site. The page reloads.",
+      "channelOpening": "Opening {name}…"
     }
   }
 }

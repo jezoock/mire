@@ -74,6 +74,8 @@ export function createTv(deps: TvDeps) {
     return services.find((t) => t.id === id) || null;
   }
 
+  const keyOf = (service: string, c: Channel) => tvChannelKey(service, { number: c.number, urls: c.variants.map((v) => v.url) });
+
   // Dernières chaînes lues, et leur service : `watch` y retrouve une chaîne par sa clé sans relire la liste.
   let last: { service: string; channels: Channel[] } | null = null;
 
@@ -83,11 +85,11 @@ export function createTv(deps: TvDeps) {
     // Un service d'un autre genre que « web » est lu comme une playlist, comme avant l'introduction des fournisseurs.
     const provider = providers.find((p) => p.kind === svc.kind) || playlistProvider;
     const r = await provider.channels(svc, ctx);
-    if (r.ok && 'channels' in r) {
-      last = { service: svc.id, channels: r.channels };
-      if (deps.catalog) feed(deps.catalog, svc, r.channels);
-    }
-    return r;
+    if (!r.ok || !('channels' in r)) return r;
+    last = { service: svc.id, channels: r.channels };
+    if (deps.catalog) feed(deps.catalog, svc, r.channels);
+    // Chaque chaîne porte sa clé d'élément : l'interface la donne à `watch` pour la regarder.
+    return { ok: true, channels: r.channels.map((c) => (c.variants.length ? { ...c, key: keyOf(svc.id, c) } : c)) };
   }
 
   /**
@@ -102,8 +104,7 @@ export function createTv(deps: TvDeps) {
       const r = await channels();
       if (!r.ok) return r;
     }
-    const keyOf = (c: Channel) => tvChannelKey(svc.id, { number: c.number, urls: c.variants.map((v) => v.url) });
-    const ch = last?.service === svc.id ? last.channels.find((c) => c.variants.length && keyOf(c) === key) : undefined;
+    const ch = last?.service === svc.id ? last.channels.find((c) => c.variants.length && keyOf(svc.id, c) === key) : undefined;
     const v = ch && pickVariant(ch.variants, svc.quality);
     if (!ch || !v) return { ok: false, error: t('tv.errors.channelGone') };
     return { ok: true, url: v.url, title: ch.number != null ? `${ch.number}. ${ch.name}` : ch.name };

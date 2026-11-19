@@ -1,0 +1,13 @@
+// Place de la vue native d'un site (P4-16) : fond noir sous la page, texte de chargement au centre.
+.mire-web-slot {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 0;
+  background: #000;
+
+  &__text {
+    color: var(--muted);
+  }
+}

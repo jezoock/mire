@@ -991,6 +991,45 @@
         "failed": "Impossible d’ajouter à cette liste."
       },
       "gone": "Cet élément n’est plus dans le catalogue."
+    },
+    "webView": {
+      "bar": {
+        "label": "Barre du site",
+        "back": "Page précédente",
+        "forward": "Page suivante",
+        "reload": "Recharger la page",
+        "site": "Site",
+        "siteChoice": "Site où chercher des jeux",
+        "learn": "Mémoriser la recherche",
+        "learnTitle": "Mémoriser la recherche : cherchez le mot « mire » sur le site, puis appuyez ici.",
+        "learned": "Recherche mémorisée",
+        "learnedTitle": "Recherche mémorisée : ce site apparaît dans Rechercher. Pour la refaire, cherchez le mot « mire » sur le site puis appuyez ici.",
+        "adOff": "Bloqueur désactivé sur ce site",
+        "adBlocked": {
+          "one": "{count} publicité bloquée sur cette page",
+          "other": "{count} publicités bloquées sur cette page"
+        },
+        "adHint": "{state}. Appuyez pour désactiver ou réactiver le bloqueur sur ce site.",
+        "bookmarkPage": "Ajouter cette page aux vidéos",
+        "bookmarkPageTitle": "Ajouter cette page aux vidéos (film ou série)",
+        "bookmarkGame": "Ajouter ce jeu (à télécharger)",
+        "bookmarkGameTitle": "Ajouter ce jeu à la liste, à télécharger plus tard",
+        "immersive": "Plein écran",
+        "immersiveTitle": "Plein écran (F11)",
+        "browser": "Ouvrir dans le navigateur",
+        "browserTitle": "Ouvrir cette page dans votre navigateur habituel, si le site refuse de fonctionner dans Mire",
+        "close": "Fermer le site",
+        "closeTitle": "Fermer le site (Ctrl+W)"
+      },
+      "loading": "Chargement de {name}…",
+      "opening": "Ouverture de {name}…",
+      "inBrowser": "{name} s’ouvre dans le navigateur",
+      "openFailed": "Ouverture impossible.",
+      "learnFailed": "Impossible de mémoriser la recherche.",
+      "learned": "Recherche mémorisée : ce site apparaîtra dans les résultats de Rechercher.",
+      "adblockOn": "Bloqueur réactivé sur ce site. La page se recharge.",
+      "adblockOff": "Bloqueur désactivé sur ce site. La page se recharge.",
+      "channelOpening": "Ouverture de {name}…"
     }
   }
 }

@@ -15,6 +15,7 @@ import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+import { Box, WebBarIcons, WebBarLabels, WebBarView } from "./utils/web";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
@@ -25,6 +26,7 @@ export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+export { Box, WebBarIcons, WebBarLabels, WebBarView } from "./utils/web";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -906,6 +908,51 @@ export namespace Components {
          */
         "watch": WatchView | string | null;
     }
+    /**
+     * Hôte de la vue web (P4-16) : ses méthodes sont les actions du contrôleur `mire-web` (navigation, fermeture, bloqueur,
+     * étoile, recherche mémorisée, focus du site), qui vit avec l'état de l'interface (`src/renderer/controllers/web.ts`).
+     * Il contient la barre du site (`mire-webbar`) et la place de la vue native (`mire-web-slot`), placées par la page.
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireWeb {
+    }
+    /**
+     * Place réservée à la page d'un site (P4-16) : Electron pose la vue native du site par-dessus. À chaque changement de
+     * taille (`ResizeObserver`), la zone occupée part en événement (`mireWebSlotResize`) ; la page en déduit la position de
+     * la vue native (`slotBounds`) et la transmet au processus principal, qui la contrôle. Le texte de chargement se voit
+     * tant que la vue native n'est pas posée.
+     */
+    interface MireWebSlot {
+        /**
+          * Texte affiché sous la vue native (« Chargement de Netflix… »).
+          * @default ''
+         */
+        "loadingLabel": string;
+    }
+    /**
+     * Barre d'un site ouvert dans Mire (P4-16) : page précédente et suivante, rechargement, nom et couleur du site (publiés
+     * par le processus principal), titre de la page ou choix du site de jeux, puis mémoriser la recherche, bloqueur de
+     * publicités, étoile, plein écran, navigateur et fermeture.
+     * Sans état ni accès au processus principal : la page (`src/renderer/web/`) lui donne la barre déjà rédigée
+     * (`WebBarView`), ses textes et ses icônes. Les boutons appellent le contrôleur `mire-web` ; le choix d'un site de jeux
+     * part en événement (`mireWebSite`), la page le transmet au contrôleur.
+     */
+    interface MireWebbar {
+        /**
+          * La barre (voir `WebBarView`) ; `null` : aucun site ouvert.
+          * @default null
+         */
+        "bar": WebBarView | string | null;
+        /**
+          * @default ''
+         */
+        "icons": WebBarIcons | string;
+        /**
+          * Textes fixes (voir `WebBarLabels`) et icônes SVG (voir `WebBarIcons`), en JSON ou en objet.
+          * @default ''
+         */
+        "labels": WebBarLabels | string;
+    }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -930,6 +977,14 @@ export interface MireRailCustomEvent<T> extends CustomEvent<T> {
 export interface MireSearchViewCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireSearchViewElement;
+}
+export interface MireWebSlotCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireWebSlotElement;
+}
+export interface MireWebbarCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireWebbarElement;
 }
 declare global {
     /**
@@ -1344,6 +1399,66 @@ declare global {
         prototype: HTMLMireSearchViewElement;
         new (): HTMLMireSearchViewElement;
     };
+    /**
+     * Hôte de la vue web (P4-16) : ses méthodes sont les actions du contrôleur `mire-web` (navigation, fermeture, bloqueur,
+     * étoile, recherche mémorisée, focus du site), qui vit avec l'état de l'interface (`src/renderer/controllers/web.ts`).
+     * Il contient la barre du site (`mire-webbar`) et la place de la vue native (`mire-web-slot`), placées par la page.
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireWebElement extends Components.MireWeb, HTMLStencilElement {
+    }
+    var HTMLMireWebElement: {
+        prototype: HTMLMireWebElement;
+        new (): HTMLMireWebElement;
+    };
+    interface HTMLMireWebSlotElementEventMap {
+        "mireWebSlotResize": Box;
+    }
+    /**
+     * Place réservée à la page d'un site (P4-16) : Electron pose la vue native du site par-dessus. À chaque changement de
+     * taille (`ResizeObserver`), la zone occupée part en événement (`mireWebSlotResize`) ; la page en déduit la position de
+     * la vue native (`slotBounds`) et la transmet au processus principal, qui la contrôle. Le texte de chargement se voit
+     * tant que la vue native n'est pas posée.
+     */
+    interface HTMLMireWebSlotElement extends Components.MireWebSlot, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireWebSlotElementEventMap>(type: K, listener: (this: HTMLMireWebSlotElement, ev: MireWebSlotCustomEvent<HTMLMireWebSlotElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireWebSlotElementEventMap>(type: K, listener: (this: HTMLMireWebSlotElement, ev: MireWebSlotCustomEvent<HTMLMireWebSlotElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireWebSlotElement: {
+        prototype: HTMLMireWebSlotElement;
+        new (): HTMLMireWebSlotElement;
+    };
+    interface HTMLMireWebbarElementEventMap {
+        "mireWebSite": { site: number };
+    }
+    /**
+     * Barre d'un site ouvert dans Mire (P4-16) : page précédente et suivante, rechargement, nom et couleur du site (publiés
+     * par le processus principal), titre de la page ou choix du site de jeux, puis mémoriser la recherche, bloqueur de
+     * publicités, étoile, plein écran, navigateur et fermeture.
+     * Sans état ni accès au processus principal : la page (`src/renderer/web/`) lui donne la barre déjà rédigée
+     * (`WebBarView`), ses textes et ses icônes. Les boutons appellent le contrôleur `mire-web` ; le choix d'un site de jeux
+     * part en événement (`mireWebSite`), la page le transmet au contrôleur.
+     */
+    interface HTMLMireWebbarElement extends Components.MireWebbar, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireWebbarElementEventMap>(type: K, listener: (this: HTMLMireWebbarElement, ev: MireWebbarCustomEvent<HTMLMireWebbarElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireWebbarElementEventMap>(type: K, listener: (this: HTMLMireWebbarElement, ev: MireWebbarCustomEvent<HTMLMireWebbarElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireWebbarElement: {
+        prototype: HTMLMireWebbarElement;
+        new (): HTMLMireWebbarElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
@@ -1372,6 +1487,9 @@ declare global {
         "mire-row": HTMLMireRowElement;
         "mire-search": HTMLMireSearchElement;
         "mire-search-view": HTMLMireSearchViewElement;
+        "mire-web": HTMLMireWebElement;
+        "mire-web-slot": HTMLMireWebSlotElement;
+        "mire-webbar": HTMLMireWebbarElement;
     }
 }
 declare namespace LocalJSX {
@@ -2257,6 +2375,56 @@ declare namespace LocalJSX {
          */
         "watch"?: WatchView | string | null;
     }
+    /**
+     * Hôte de la vue web (P4-16) : ses méthodes sont les actions du contrôleur `mire-web` (navigation, fermeture, bloqueur,
+     * étoile, recherche mémorisée, focus du site), qui vit avec l'état de l'interface (`src/renderer/controllers/web.ts`).
+     * Il contient la barre du site (`mire-webbar`) et la place de la vue native (`mire-web-slot`), placées par la page.
+     * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireWeb {
+    }
+    /**
+     * Place réservée à la page d'un site (P4-16) : Electron pose la vue native du site par-dessus. À chaque changement de
+     * taille (`ResizeObserver`), la zone occupée part en événement (`mireWebSlotResize`) ; la page en déduit la position de
+     * la vue native (`slotBounds`) et la transmet au processus principal, qui la contrôle. Le texte de chargement se voit
+     * tant que la vue native n'est pas posée.
+     */
+    interface MireWebSlot {
+        /**
+          * Texte affiché sous la vue native (« Chargement de Netflix… »).
+          * @default ''
+         */
+        "loadingLabel"?: string;
+        "onMireWebSlotResize"?: (event: MireWebSlotCustomEvent<Box>) => void;
+    }
+    /**
+     * Barre d'un site ouvert dans Mire (P4-16) : page précédente et suivante, rechargement, nom et couleur du site (publiés
+     * par le processus principal), titre de la page ou choix du site de jeux, puis mémoriser la recherche, bloqueur de
+     * publicités, étoile, plein écran, navigateur et fermeture.
+     * Sans état ni accès au processus principal : la page (`src/renderer/web/`) lui donne la barre déjà rédigée
+     * (`WebBarView`), ses textes et ses icônes. Les boutons appellent le contrôleur `mire-web` ; le choix d'un site de jeux
+     * part en événement (`mireWebSite`), la page le transmet au contrôleur.
+     */
+    interface MireWebbar {
+        /**
+          * La barre (voir `WebBarView`) ; `null` : aucun site ouvert.
+          * @default null
+         */
+        "bar"?: WebBarView | string | null;
+        /**
+          * @default ''
+         */
+        "icons"?: WebBarIcons | string;
+        /**
+          * Textes fixes (voir `WebBarLabels`) et icônes SVG (voir `WebBarIcons`), en JSON ou en objet.
+          * @default ''
+         */
+        "labels"?: WebBarLabels | string;
+        /**
+          * Site de jeux choisi dans la liste (sa position).
+         */
+        "onMireWebSite"?: (event: MireWebbarCustomEvent<{ site: number }>) => void;
+    }
 
     interface MireBackdropAttributes {
         "src": string;
@@ -2425,6 +2593,14 @@ declare namespace LocalJSX {
         "cardLabels": string;
         "scrollerLabels": string;
     }
+    interface MireWebSlotAttributes {
+        "loadingLabel": string;
+    }
+    interface MireWebbarAttributes {
+        "bar": WebBarView | string | null;
+        "labels": WebBarLabels | string;
+        "icons": WebBarIcons | string;
+    }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
@@ -2454,6 +2630,9 @@ declare namespace LocalJSX {
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
         "mire-search": MireSearch;
         "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
+        "mire-web": MireWeb;
+        "mire-web-slot": Omit<MireWebSlot, keyof MireWebSlotAttributes> & { [K in keyof MireWebSlot & keyof MireWebSlotAttributes]?: MireWebSlot[K] } & { [K in keyof MireWebSlot & keyof MireWebSlotAttributes as `attr:${K}`]?: MireWebSlotAttributes[K] } & { [K in keyof MireWebSlot & keyof MireWebSlotAttributes as `prop:${K}`]?: MireWebSlot[K] };
+        "mire-webbar": Omit<MireWebbar, keyof MireWebbarAttributes> & { [K in keyof MireWebbar & keyof MireWebbarAttributes]?: MireWebbar[K] } & { [K in keyof MireWebbar & keyof MireWebbarAttributes as `attr:${K}`]?: MireWebbarAttributes[K] } & { [K in keyof MireWebbar & keyof MireWebbarAttributes as `prop:${K}`]?: MireWebbar[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2665,6 +2844,29 @@ declare module "@stencil/core" {
              * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
              */
             "mire-search-view": LocalJSX.IntrinsicElements["mire-search-view"] & JSXBase.HTMLAttributes<HTMLMireSearchViewElement>;
+            /**
+             * Hôte de la vue web (P4-16) : ses méthodes sont les actions du contrôleur `mire-web` (navigation, fermeture, bloqueur,
+             * étoile, recherche mémorisée, focus du site), qui vit avec l'état de l'interface (`src/renderer/controllers/web.ts`).
+             * Il contient la barre du site (`mire-webbar`) et la place de la vue native (`mire-web-slot`), placées par la page.
+             * Une seule balise dans la page, pour que les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-web": LocalJSX.IntrinsicElements["mire-web"] & JSXBase.HTMLAttributes<HTMLMireWebElement>;
+            /**
+             * Place réservée à la page d'un site (P4-16) : Electron pose la vue native du site par-dessus. À chaque changement de
+             * taille (`ResizeObserver`), la zone occupée part en événement (`mireWebSlotResize`) ; la page en déduit la position de
+             * la vue native (`slotBounds`) et la transmet au processus principal, qui la contrôle. Le texte de chargement se voit
+             * tant que la vue native n'est pas posée.
+             */
+            "mire-web-slot": LocalJSX.IntrinsicElements["mire-web-slot"] & JSXBase.HTMLAttributes<HTMLMireWebSlotElement>;
+            /**
+             * Barre d'un site ouvert dans Mire (P4-16) : page précédente et suivante, rechargement, nom et couleur du site (publiés
+             * par le processus principal), titre de la page ou choix du site de jeux, puis mémoriser la recherche, bloqueur de
+             * publicités, étoile, plein écran, navigateur et fermeture.
+             * Sans état ni accès au processus principal : la page (`src/renderer/web/`) lui donne la barre déjà rédigée
+             * (`WebBarView`), ses textes et ses icônes. Les boutons appellent le contrôleur `mire-web` ; le choix d'un site de jeux
+             * part en événement (`mireWebSite`), la page le transmet au contrôleur.
+             */
+            "mire-webbar": LocalJSX.IntrinsicElements["mire-webbar"] & JSXBase.HTMLAttributes<HTMLMireWebbarElement>;
         }
     }
 }

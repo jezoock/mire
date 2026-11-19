@@ -28,6 +28,8 @@ export interface Channel {
   logo: string;
   group: string;
   variants: ChannelVariant[];
+  /** Clé d'élément (`tv:<service>|<numéro>`), donnée à l'interface avec la liste. */
+  key?: string;
 }
 
 /** Réponse de `tvChannels` : les chaînes d'une playlist, le portail d'un service web, ou une erreur à afficher. */
