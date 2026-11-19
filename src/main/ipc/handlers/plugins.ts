@@ -2,7 +2,7 @@
  * Plugins (P3-03) : liste et activation (Centre, P4-18) ; réglages déclarés par les manifestes (Réglages, P4-20) ;
  * dépôts, installation, mise à jour et désinstallation (P3-07). Les arguments venus de l'interface sont vérifiés ici :
  * identifiant de plugin bien formé et connu (des dépôts pour installer, des plugins présents pour désinstaller),
- * version semver, booléen.
+ * version semver, booléen. Continuité (P5-01) : récapitulatif, sans argument.
  */
 import { isVersion } from '../../../../packages/plugin-sdk/src/semver.ts';
 import { PLUGIN_ID_RE } from '../../../../packages/plugin-sdk/src/validate.ts';
@@ -16,12 +16,20 @@ export function pluginsHandlers(ctx: MainContext) {
   const known = (id: unknown): id is string => isId(id) && ctx.repos.knows(id);
   return {
     reposList: () => ctx.repos.repositories(),
-    reposRefresh: () => ctx.repos.refresh(),
+    reposRefresh: async () => {
+      const status = await ctx.repos.refresh();
+      // Installations de la continuité en attente (P5-01) : retentées avec ces index, sans retarder la réponse.
+      void ctx.continuity.afterRefresh(status);
+      return status;
+    },
     reposPlugins: () => ctx.repos.available(),
     pluginsInstall: (id, version?: string) => (known(id) && (version === undefined || isVersion(version)) ? ctx.repos.install(id, version) : null),
     pluginsUpdate: (id) => (known(id) ? ctx.repos.update(id) : null),
     pluginsUninstall: (id, keepData) => (isId(id) && typeof keepData === 'boolean' ? ctx.plugins.uninstall(id, { keepData }) : null),
     pluginsList: () => ctx.plugins.list(),
+    // Sans argument : rien à vérifier.
+    pluginsContinuity: () => ctx.continuity.summary(),
+    pluginsContinuitySeen: () => ctx.continuity.seen(),
     pluginsSetEnabled: (id, enabled) => ctx.plugins.setEnabled(id, enabled),
     pluginsSettings: () => ctx.plugins.settingsList(),
     pluginsMetadataProviders: () => ctx.plugins.metadataProviders(),

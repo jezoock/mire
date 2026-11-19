@@ -2644,6 +2644,14 @@ function tick() {
   go(HOME_VIEW, { focus: 'content' });
   // Mode secours (P4-10) : premier écran demandé (option, touche maintenue, plantages) ou thème déjà en échec.
   rescue.start(await api.rescueStart().catch(() => null));
+  // Continuité (P5-01) : fonctions devenues des plugins ; message rédigé par le processus principal, montré une fois.
+  const continuityNotice = (s) => {
+    if (!s?.notice) return;
+    toast(s.notice, { duration: 9000 });
+    api.pluginsContinuitySeen().catch(() => {});
+  };
+  api.onPluginsContinuity(continuityNotice);
+  api.pluginsContinuity().then(continuityNotice).catch(() => {});
   tick();
   setInterval(tick, 5000);
 

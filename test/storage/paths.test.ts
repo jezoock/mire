@@ -37,6 +37,7 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     sevenZip: at('bin', '7za'),
     plugins: at('plugins'),
     pluginState: at('plugins', 'state.json'),
+    pluginContinuity: at('plugins', 'continuity.json'),
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),

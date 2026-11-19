@@ -49,6 +49,8 @@ export interface DataPaths {
   /** Plugins installés (`<id>/<version>/`), leur état et leurs journaux (P3-03). */
   plugins: string;
   pluginState: string;
+  /** Continuité (P5-01) : plugins activés, installés, en attente ou impossibles pour une installation existante. */
+  pluginContinuity: string;
   pluginLogs: string;
   /** Données des plugins (`ctx.storage`, P3-04) : un dossier par plugin. */
   pluginData: string;
@@ -87,6 +89,7 @@ export function dataPaths(root: string): DataPaths {
     sevenZip: at('bin', '7za'),
     plugins: at('plugins'),
     pluginState: at('plugins', 'state.json'),
+    pluginContinuity: at('plugins', 'continuity.json'),
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),

@@ -843,6 +843,22 @@
         "disk": "“{name}” could not be written to disk; the previous version was kept."
       }
     },
+    "continuity": {
+      "notice": {
+        "installed": {
+          "one": "{count} feature you were using is now a plugin: Mire turned it on for you.",
+          "other": "{count} features you were using are now plugins: Mire turned them on for you."
+        },
+        "pending": {
+          "one": "{count} feature you were using is now a plugin to install: Mire will install it as soon as it can connect.",
+          "other": "{count} features you were using are now plugins to install: Mire will install them as soon as it can connect."
+        },
+        "failed": "The feature provided by “{name}” could not be kept. {reason}"
+      },
+      "reasons": {
+        "missing": "“{name}” does not come with this version of Mire."
+      }
+    },
     "shell": {
       "brand": "Mire",
       "views": {

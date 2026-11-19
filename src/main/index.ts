@@ -72,6 +72,7 @@ import {
 } from './plugins/index.ts';
 import { createInstaller } from './repos/installer.ts';
 import { createRepoClient } from './repos/client.ts';
+import { createContinuity } from './plugins/continuity.ts';
 import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import * as http from './net/http.ts';
@@ -307,6 +308,18 @@ function start(pending: PendingFiles): Running {
     translate: t,
     onProgress: (p) => toUi('plugins:progress', p),
   });
+  // Continuité (P5-01) : fonctions devenues des plugins pour une installation existante (règles de la migration v10).
+  // Plugins inclus activés après le démarrage des plugins ; plugins à installer installés depuis le dépôt officiel
+  // dès que son index se lit en ligne. C'est le seul accès réseau aux dépôts sans demande de l'interface, et seulement
+  // s'il reste une installation en attente.
+  const continuity = createContinuity({
+    file: files.pluginContinuity,
+    config,
+    plugins,
+    repos,
+    translate: t,
+    onChange: (summary) => toUi('plugins:continuity-changed', summary),
+  });
   pluginTaggers = plugins.taggerContributors;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
   plugins.onContributionsChange((kinds) => {
@@ -386,6 +399,7 @@ function start(pending: PendingFiles): Running {
     fileManager,
     plugins,
     repos,
+    continuity,
     access,
     window,
     pending,
@@ -410,6 +424,8 @@ function start(pending: PendingFiles): Running {
     .then(() => {
       webLayer.addExtensions(plugins.local('webExtensions').map((c) => c.instance as WebExtension));
       downloads.addEngines(plugins.local('downloaders').map((c) => ({ pluginId: c.pluginId, engine: c.instance as PluginDownloader })));
+      // Sans attendre : les installations en attente dépendent du réseau.
+      void continuity.start();
     })
     .catch((err: Error) => console.error('Plugins :', err.message));
 

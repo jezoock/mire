@@ -208,6 +208,9 @@ const ADDED_METHODS: Record<string, string> = {
   pluginsInstall: 'plugins:install',
   pluginsUpdate: 'plugins:update',
   pluginsUninstall: 'plugins:uninstall',
+  // P5-01 : continuité pour les installations existantes
+  pluginsContinuity: 'plugins:continuity',
+  pluginsContinuitySeen: 'plugins:continuitySeen',
 };
 
 // Événements ajoutés après P1-08.
@@ -218,6 +221,7 @@ const ADDED_EVENTS: Record<string, string> = {
   onFoldersChange: 'folders:changed', // P4-08 : sources ou dossiers changés (explorateur)
   onRescue: 'rescue:open', // P4-10 : ouvrir l'explorateur en mode secours
   onPluginsProgress: 'plugins:progress', // P3-07 : avancement d'une installation depuis un dépôt
+  onPluginsContinuity: 'plugins:continuity-changed', // P5-01 : récapitulatif de la continuité changé
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

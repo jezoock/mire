@@ -41,6 +41,7 @@ export interface MainServices {
   fileManager: FilesService;
   plugins: MainContext['plugins'];
   repos: MainContext['repos'];
+  continuity: MainContext['continuity'];
   access: AccessPolicy;
   window: Pick<MainWindow, 'get' | 'themeBackground'>;
   pending: PendingFiles;
@@ -76,6 +77,7 @@ export function mainContext(s: MainServices): MainContext {
     fileManager: s.fileManager,
     plugins: s.plugins,
     repos: s.repos,
+    continuity: s.continuity,
     access: s.access,
     get mainWindow() {
       return s.window.get();

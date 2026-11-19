@@ -47,10 +47,15 @@ export function createRepoClient(opts: RepoClientOptions) {
   const pick = (texts: Localized | undefined): string | null => texts?.[opts.locale()] ?? texts?.en ?? null;
   const compatible = (e: IndexVersion) => satisfies(opts.appVersion, e.engines.mire);
 
-  /** Versions publiées d'un plugin, tous dépôts confondus (dépôt officiel d'abord), de la plus récente à la plus ancienne. */
-  function offers(id: string): Offer[] {
+  /**
+   * Versions publiées d'un plugin, tous dépôts confondus (dépôt officiel d'abord), de la plus récente à la plus ancienne ;
+   * `officialOnly` : celles du dépôt officiel seulement (installations de la continuité, P5-01).
+   */
+  function offers(id: string, officialOnly = false): Offer[] {
     const out: Offer[] = [];
-    const indexes = [...opts.repositories.indexes()].sort((a, b) => Number(b.config.official) - Number(a.config.official));
+    const indexes = [...opts.repositories.indexes()]
+      .filter((x) => !officialOnly || x.config.official)
+      .sort((a, b) => Number(b.config.official) - Number(a.config.official));
     for (const { config, index } of indexes) {
       const p = index.plugins.find((x) => x.id === id);
       for (const entry of p?.versions ?? [])
@@ -110,9 +115,9 @@ export function createRepoClient(opts: RepoClientOptions) {
   }
 
   /** Plugins à installer pour `id` (dans la plage `range`), dépendances d'abord ; ceux déjà présents sont omis. */
-  function plan(id: string, range: string): (InstallItem & { version: string })[] {
+  function plan(id: string, range: string, officialOnly: boolean): (InstallItem & { version: string })[] {
     const list = opts.plugins.list();
-    const all = offers(id);
+    const all = offers(id, officialOnly);
     if (!all.length) throw new RepoError('unknown', `${id}: not in the repositories.`);
     if (!all.some((o) => compatible(o.entry) && satisfies(o.entry.version, range))) {
       if (all.some((o) => satisfies(o.entry.version, range)))
@@ -121,7 +126,7 @@ export function createRepoClient(opts: RepoClientOptions) {
     }
     const result = resolveInstall(id, range, {
       available: (x) => {
-        const fromRepos: DependencyNode[] = offers(x)
+        const fromRepos: DependencyNode[] = offers(x, officialOnly)
           .filter((o) => compatible(o.entry))
           .map((o) => ({ id: x, version: o.entry.version, dependencies: o.entry.dependencies }));
         const here = installedOf(list, x);
@@ -137,20 +142,20 @@ export function createRepoClient(opts: RepoClientOptions) {
     return result.order
       .filter((n) => installedOf(list, n.id)?.version !== n.version)
       .map((n) => {
-        const o = offers(n.id).find((x) => x.entry.version === n.version)!;
+        const o = offers(n.id, officialOnly).find((x) => x.entry.version === n.version)!;
         return { id: n.id, version: n.version, entry: o.entry, repository: o.repository, official: o.official };
       });
   }
 
   /** Installe `id` (dans la plage `range`) et ses dépendances, en transaction. */
-  async function run(id: string, range: string): Promise<PluginsOutcome> {
+  async function run(id: string, range: string, officialOnly = false): Promise<PluginsOutcome> {
     if (busy) return failure(new RepoError('busy', 'An installation is already running.'), id);
     busy = true;
     const prepared: { item: InstallItem; staging: string }[] = [];
     const committed: Committed[] = [];
     try {
       progress({ id, phase: 'resolve' });
-      const items = plan(id, range);
+      const items = plan(id, range, officialOnly);
       for (const item of items) {
         const staging = await opts.installer.prepare(item, (phase, received, total) =>
           progress({ id, plugin: item.id, version: item.entry.version, phase, received, total }),
@@ -219,6 +224,12 @@ export function createRepoClient(opts: RepoClientOptions) {
 
     /** Installe un plugin (une version précise, ou la plus récente compatible) avec ses dépendances. */
     install: (id: string, version?: string): Promise<PluginsOutcome> => run(id, version ?? '*'),
+
+    /**
+     * Installe un plugin et ses dépendances depuis le dépôt officiel seulement (continuité, P5-01) : même transaction,
+     * mêmes vérifications que `install`.
+     */
+    installOfficial: (id: string): Promise<PluginsOutcome> => run(id, '*', true),
 
     /** Met à jour un plugin installé vers la plus récente version compatible. */
     async update(id: string): Promise<PluginsOutcome> {
