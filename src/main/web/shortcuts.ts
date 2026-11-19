@@ -2,9 +2,10 @@
  * Touches dans une vue web (fonctions pures) : raccourcis clavier gérés par Mire avant la page, et touches que la
  * manette envoie à la page.
  */
+import { isRescueShortcut } from '@mire/shared';
 import type { KeyInput } from './types.ts';
 
-export type ShortcutAction = 'toggle-immersive' | 'leave-immersive' | 'mire' | 'reload' | 'close' | 'back' | 'forward';
+export type ShortcutAction = 'explorer' | 'toggle-immersive' | 'leave-immersive' | 'mire' | 'reload' | 'close' | 'back' | 'forward';
 
 /**
  * Action d'une touche enfoncée dans une vue, ou null si la page la reçoit. Échap ne quitte le mode immersif que
@@ -14,6 +15,8 @@ export function shortcutAction(input: KeyInput, state: { immersive: boolean; htm
   const { key } = input;
   const ctrl = !!(input.control || input.meta);
   const lower = String(key || '').toLowerCase();
+  // Mode secours (P4-10) : l'explorateur s'ouvre aussi depuis un site.
+  if (isRescueShortcut(input)) return 'explorer';
   if (key === 'F11') return 'toggle-immersive';
   if (key === 'Escape' && state.immersive && !state.html) return 'leave-immersive';
   if (key === 'F9') return 'mire';

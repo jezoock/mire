@@ -460,6 +460,10 @@ Dès qu’une manette est branchée (et qu’on a appuyé sur un de ses boutons)
 | **Dans un site** | | |
 | Revenir aux menus de Mire | F9 | Affichage ou bouton central |
 | Entrer dans la page | ↓ depuis la barre du site | |
+| **Partout** | | |
+| Mode secours : ouvrir l’explorateur | Ctrl+Maj+E (⌘+Maj+E sur Mac) | Affichage + Menu ensemble |
+
+**Mode secours.** L’explorateur reste toujours accessible, quel que soit le thème choisi : par le raccourci <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>E</kbd> (<kbd>⌘</kbd>+<kbd>Maj</kbd>+<kbd>E</kbd> sur Mac), y compris dans un site, ou en appuyant ensemble sur Affichage et Menu de la manette. Au démarrage, maintenez <kbd>Maj</kbd> pendant le lancement de Mire, ou lancez-le avec l’option `--explorateur`, pour arriver directement sur l’explorateur. Si le thème ne se charge pas, met trop de temps ou si l’affichage s’arrête deux fois de suite, Mire revient seul à l’explorateur et dit pourquoi ; vous pouvez y choisir un autre thème.
 
 Dans un site, la manette pilote la page : croix pour les flèches, A pour Entrée, X ou Menu pour Espace (lecture ou pause sur la plupart des lecteurs), B pour la page précédente, Y pour Échap, LB et RB pour passer d’un élément cliquable à l’autre. Selon le modèle de manette, Windows peut ne pas transmettre la manette quand la page a le focus : utilisez alors F9 ou la souris.
 

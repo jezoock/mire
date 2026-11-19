@@ -193,7 +193,10 @@ export function createWebManager(deps: WebManagerDeps) {
     if (action === 'toggle-immersive') setImmersive(!state.immersive);
     else if (action === 'leave-immersive') setImmersive(false);
     else if (action === 'mire') focusMire();
-    else if (action === 'reload') wc.reload();
+    else if (action === 'explorer') {
+      focusMire();
+      toUi('rescue:open', { reason: 'shortcut' });
+    } else if (action === 'reload') wc.reload();
     else if (action === 'close') close(id);
     else if (action === 'back') goBack(wc);
     else if (action === 'forward') goForward(wc);

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as shared from '@mire/shared';
 
 describe('@mire/shared', () => {
-  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les thèmes, les pages, les listes et les cibles', () => {
+  it('expose les utilitaires de texte, de dossier, d’adresse et d’identifiant, les formats, les systèmes, les palettes, les thèmes, les pages, les listes, les cibles et le mode secours', () => {
     const exported: string[] = Object.keys(shared).sort();
     assert.deepEqual(exported, [
       'ART_RE',
@@ -29,6 +29,9 @@ describe('@mire/shared', () => {
       'PALETTE_AUTO',
       'PALETTE_OPTIONAL_TOKENS',
       'PALETTE_TOKENS',
+      'RESCUE_ARGS',
+      'RESCUE_PAD_BUTTONS',
+      'RESCUE_REASONS',
       'SCREEN_PREFIX',
       'SYSTEMS',
       'TAG_PAGE_PREFIX',
@@ -53,6 +56,11 @@ describe('@mire/shared', () => {
       'isHttpUrl',
       'isListName',
       'isPaletteId',
+      'isRescueCombo',
+      'isRescueFailure',
+      'isRescueHeldKey',
+      'isRescueReason',
+      'isRescueShortcut',
       'isTarget',
       'isThemeId',
       'isThemePath',
@@ -83,6 +91,7 @@ describe('@mire/shared', () => {
       'validateList',
       'validatePage',
       'validateTheme',
+      'wantsExplorer',
     ]);
   });
 

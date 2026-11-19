@@ -12,8 +12,11 @@ export interface PaletteHost {
   root: { dataset: Record<string, string | undefined> };
   /** Feuille de la palette déjà liée à la page ? */
   hasTokens(id: string): boolean;
-  /** Lie la feuille de la palette ; `onReady` est appelé quand elle est chargée (pas si elle est introuvable). */
-  addTokens(id: string, href: string, onReady: () => void): void;
+  /**
+   * Lie la feuille de la palette ; `onReady` est appelé quand elle est chargée (pas si elle est introuvable :
+   * `onError` l'est alors, s'il est donné).
+   */
+  addTokens(id: string, href: string, onReady: () => void, onError?: () => void): void;
   /** Mode clair du système. */
   light: { readonly matches: boolean; addEventListener(type: 'change', listener: () => void): void };
 }
@@ -62,12 +65,13 @@ export function documentHost(doc: Document = document): PaletteHost {
   return {
     root: doc.documentElement,
     hasTokens: linked,
-    addTokens(id, href, onReady) {
+    addTokens(id, href, onReady, onError) {
       const link = doc.createElement('link');
       link.rel = 'stylesheet';
       link.href = href;
       link.dataset.paletteTokens = id;
       link.addEventListener('load', onReady, { once: true });
+      if (onError) link.addEventListener('error', onError, { once: true });
       doc.head.append(link);
     },
     light: doc.defaultView!.matchMedia('(prefers-color-scheme: light)'),

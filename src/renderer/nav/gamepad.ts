@@ -23,6 +23,7 @@ import {
   padKey,
   padPresses,
   readPad,
+  rescueCombo,
   type PadContext,
   type PadFamily,
   type PadMemory,
@@ -34,6 +35,8 @@ export interface GamepadHooks {
   context(): PadContext;
   /** Boîte de dialogue au premier plan, ou `null`. */
   dialog(): HTMLElement | null;
+  /** Combinaison du mode secours (Affichage + Menu) : ouvrir l'explorateur (P4-10). */
+  rescue?(): void;
 }
 
 /** Contrôleurs appelés par la manette : LB / RB (écran précédent ou suivant), X (modifier), site affiché, Y (choisir). */
@@ -137,7 +140,9 @@ function pollPads(now: number): void {
   if (pads.length && !S.pad) setPad(pads[0] as Gamepad);
   if (pads.length && usable) {
     const gp = pads[0] as Gamepad;
-    for (const { button, first } of padPresses(readPad(gp), mem, now)) {
+    const state = readPad(gp);
+    if (rescueCombo(state, mem)) hooks.rescue?.();
+    for (const { button, first } of padPresses(state, mem, now)) {
       if (first) {
         document.body.classList.remove('mouse');
         S.pendingFocus = false;

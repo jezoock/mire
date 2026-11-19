@@ -9,6 +9,10 @@ import path from 'node:path';
 import { DEFAULT_PALETTE, parsePaletteMeta, resolvePalette } from '@mire/shared';
 import type { Config, PaletteMeta, Theme } from '@mire/shared';
 import type { WebManager } from '../web/index.ts';
+import type { Rescue } from '../app/rescue.ts';
+
+/** Canal du message qui demande à l'interface d'ouvrir l'explorateur en mode secours (P4-10). */
+export const RESCUE_CHANNEL = 'rescue:open';
 
 // Fond de repli si aucune palette n'est lisible (installation abîmée) : noir, plutôt que le blanc d'Electron.
 const FALLBACK_BACKGROUND = '#000000';
@@ -42,6 +46,8 @@ export interface MainWindowDeps {
   web: () => Pick<WebManager, 'onWindowResize' | 'onAppCommand' | 'onWindowClosed'>;
   /** Fenêtre fermée (l'application se ferme, sauf sous macOS). */
   onClosed: () => void;
+  /** Mode secours (P4-10) : raccourci et touche maintenue lus avant la page, plantages de l'interface. */
+  rescue?: Pick<Rescue, 'windowOpened' | 'onInput' | 'onCrash'>;
 }
 
 export function createMainWindow(deps: MainWindowDeps) {
@@ -71,8 +77,18 @@ export function createMainWindow(deps: MainWindowDeps) {
       return { action: 'deny' };
     });
     w.webContents.on('will-navigate', (e) => e.preventDefault());
+    deps.rescue?.windowOpened();
     w.webContents.on('before-input-event', (e, input) => {
       if (input.type !== 'keyDown') return;
+      // Mode secours : lu ici, avant la page, pour qu'un thème ne puisse pas le bloquer.
+      const reason = deps.rescue?.onInput(input);
+      if (reason) {
+        w.webContents.send(RESCUE_CHANNEL, { reason });
+        if (reason === 'shortcut') {
+          e.preventDefault();
+          return;
+        }
+      }
       if (input.key === 'F11') {
         w.setFullScreen(!w.isFullScreen());
         e.preventDefault();
@@ -81,6 +97,11 @@ export function createMainWindow(deps: MainWindowDeps) {
         w.webContents.toggleDevTools();
         e.preventDefault();
       }
+    });
+    // Interface plantée : rechargée ; deux fois de suite, elle repart sur l'explorateur (mode secours).
+    w.webContents.on('render-process-gone', (_e, details) => {
+      if (!deps.rescue || details?.reason === 'clean-exit') return;
+      if (deps.rescue.onCrash() !== 'give-up' && !w.isDestroyed()) w.webContents.reload();
     });
     w.on('resize', () => deps.web().onWindowResize());
     // Bouton « précédent » de la souris (Windows) dans un site.

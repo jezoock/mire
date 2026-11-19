@@ -7,6 +7,7 @@ export * from './media-formats.ts';
 export * from './systems.ts';
 export * from './palette.ts';
 export * from './theme.ts';
+export * from './rescue.ts';
 export type * from './config.ts';
 export type * from './element.ts';
 export * from './pages.ts';

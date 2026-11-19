@@ -13,6 +13,7 @@ import type { Search } from '../catalog/search/index.ts';
 import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
+import type { RescueRequest } from '@mire/shared';
 import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
@@ -101,4 +102,6 @@ export interface MainContext {
 
   // Jeux (src/main/games) ; les sites de jeux d'une console sont donnés par le gestionnaire des vues web.
   readonly games: Games;
+  /** Mode secours (P4-10) : premier écran demandé, thème affiché sans souci. */
+  readonly rescue: { takeStart(): RescueRequest | null; themeOk(): void };
 }

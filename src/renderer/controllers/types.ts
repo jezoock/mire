@@ -146,6 +146,8 @@ export interface LegacyUi {
   setCfg(path: string, value: unknown): Promise<void>;
   saveUi(mutate: (ui: Data) => void): Promise<void>;
   applyMenu(): void;
+  /** Mode secours (P4-10) : thèmes proposés, bandeau redessiné. */
+  rescue: { themes(): { id: string; name: string }[]; refresh(): void };
 }
 
 export interface ControllerContext {
