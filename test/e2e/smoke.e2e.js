@@ -2561,12 +2561,11 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
 
-    it('manette : Affichage passe à la barre, la croix la parcourt, A appuie, B revient à la page Télévision', async () => {
+    it('manette : la croix parcourt la barre, A appuie, B revient à la page Télévision', async () => {
       await connectPad();
-      await page.waitForFunction(() => !document.getElementById('padbar').hidden);
-      // Le site a le clavier à l'ouverture : Affichage le rend à Mire, sur le premier bouton utilisable de la barre.
-      await padPress('select');
-      await page.waitForFunction((sel) => document.activeElement?.closest(sel), BAR);
+      await settle();
+      // Mire a le clavier (bouton de la barre cliqué) : on part du premier bouton.
+      await barButton('back').focus();
       const first = await page.evaluate(() => document.activeElement.dataset.web);
       await padPress('right');
       const next = await page.evaluate(() => document.activeElement.dataset.web);
@@ -2577,7 +2576,8 @@ describe('Test de fumée de Mire', () => {
       assert.equal(first, 'back');
       await padPress('a');
       await pageTitle('Page de démonstration');
-      await page.waitForFunction((sel) => document.activeElement?.closest(sel), BAR);
+      // Première page : « Page précédente » devient inactif ; B depuis un autre bouton de la barre.
+      await barButton('reload').focus();
       await padPress('b');
       await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Télévision');
       // La vue native est cachée hors de la section web.

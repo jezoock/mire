@@ -8,7 +8,7 @@
  * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18) et l'explorateur (`EXPLORER_VIEW`, `mire-explorer`, P4-08) dans les leurs,
  * avec l'habillage du cœur. Tant qu'un écran du cœur n'a pas de vue à lui (Réglages P4-20), il s'affiche dans la vue historique qui en tient lieu
  * (`LEGACY_VIEWS`) : la section de `app.js`. Les sections historiques des pages prêtes à l'emploi restent ouvrables
- * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
+ * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (choix de la box et ajout de sites : P4-20 ; consoles : P4-17). Sans DOM.
  */
 import { formatTarget, parseTarget } from '@mire/shared';
 import type { PagePath } from '@mire/shared';

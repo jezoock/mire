@@ -223,6 +223,9 @@ const web = createWeb({
   onLanguageChange: (listener) => i18n.onChange(listener),
 });
 
+// Le focus arrive dans la barre (clic, flèches) : Mire a le clavier, la manette pilote la barre et non plus le site.
+web.host.addEventListener('focusin', () => { S.webFocused = false; });
+
 // La page Télévision affiche les chaînes du catalogue : elles y entrent quand leur liste est lue.
 function loadChannelsForPage() {
   if (shell.router.current().target !== 'tv' || S.channels || S.tvWeb || S.tvLoading || S.tvError) return;
