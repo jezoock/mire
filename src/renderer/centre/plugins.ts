@@ -8,7 +8,7 @@
  * les interprète jamais comme du HTML) et aucun n'est rendu en lien ni en image.
  */
 import type { AvailablePlugin, PluginConsentRequest, PluginSummary, PluginsProgress, RepositoryInfo } from '@mire/shared/ipc';
-import type { AppProgress, PluginButton, PluginCard, PluginLine, PluginSheet, PluginsView, RepoCard, ReposView } from '@mire/ui/utils';
+import type { AppProgress, PluginAction, PluginButton, PluginCard, PluginLine, PluginSheet, PluginsView, RepoCard, ReposView } from '@mire/ui/utils';
 import { actionArgs, groupFingerprint, offerKey } from '@mire/ui/utils';
 import { formatBytes } from './model.ts';
 import type { Translate, Writer } from './model.ts';
@@ -117,9 +117,9 @@ export function pluginProgress(p: PluginsProgress | undefined, names: (id: strin
   return { text: k(w.t, `progress.${p.phase}`, { name }), percent: null };
 }
 
-const button = (action: string, label: string, style: PluginButton['style'], arg: Record<string, string> | null, disabled = false): PluginButton => ({
+const button = (action: PluginAction, label: string, style: PluginButton['style'], arg: Record<string, string>, disabled = false): PluginButton => ({
   action,
-  args: arg ? actionArgs(arg) : '',
+  args: actionArgs(arg),
   label,
   style,
   disabled,

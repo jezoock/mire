@@ -11,8 +11,11 @@ import type { CentreLabels, CentreTab, ConsoleCard, DownloadRow, DownloadRowLabe
 import { centreTab } from '@mire/ui/utils';
 import { appsView, downloadGroups, downloadRow, downloadsHint } from './model.ts';
 import type { AppsState, Translate, Writer } from './model.ts';
+import { pluginsView, reposView } from './plugins.ts';
+import type { PluginsState } from './plugins.ts';
 
 export * from './model.ts';
+export * from './plugins.ts';
 
 export interface CentreOptions {
   t: Translate;
@@ -28,6 +31,9 @@ export interface CentreOptions {
   apps(): AppsState;
   /** Cartes de l'onglet des consoles (P4-17, `src/renderer/games/`). */
   consoles?(): ConsoleCard[];
+  /** Plugins et dépôts (P4-19) : `null` tant que les listes ne sont pas lues (`loadPlugins` les lit, sans réseau). */
+  plugins?(): PluginsState | null;
+  loadPlugins?(): Promise<void>;
   onLanguageChange(listener: () => void): unknown;
   /** Le Centre a été redessiné (focus à rendre au contenu s'il s'est perdu). */
   onRendered(): void;
@@ -42,6 +48,10 @@ export interface Centre {
   refresh(): void;
   /** Un téléchargement a avancé sans changer d'état : seule sa ligne change. Faux si la ligne n'est pas affichée. */
   updateDownload(item: Record<string, any>): boolean;
+  /** Élément à focaliser après le prochain rendu (sélecteur dans la vue), demandé par une action. */
+  focusAfterRender(selector: string): void;
+  /** Le sélecteur demandé, une seule fois (la page le focalise après le rendu). */
+  takeFocus(): string | null;
 }
 
 type ViewEl = HTMLElement & { running?: DownloadRow[]; others?: DownloadRow[]; [prop: string]: unknown };
@@ -51,6 +61,32 @@ const LABEL_KEYS: Record<keyof CentreLabels, string> = {
   tabDownloads: 'tabs.downloads',
   tabApps: 'tabs.apps',
   tabConsoles: 'tabs.consoles',
+  tabPlugins: 'tabs.plugins',
+  tabRepos: 'tabs.repos',
+  pluginsIntro: 'plugins.intro',
+  pluginsRefresh: 'plugins.refresh',
+  pluginsLoading: 'plugins.loading',
+  updates: 'plugins.updates',
+  installed: 'plugins.installed',
+  available: 'plugins.available',
+  noInstalled: 'plugins.noInstalled',
+  noAvailable: 'plugins.noAvailable',
+  back: 'plugins.actions.back',
+  sheetLabel: 'plugins.sheet.label',
+  sheetPermissions: 'plugins.sheet.permissions',
+  noPermissions: 'plugins.sheet.noPermissions',
+  sheetContributes: 'plugins.sheet.contributes',
+  noContributes: 'plugins.sheet.noContributes',
+  sheetDependencies: 'plugins.sheet.dependencies',
+  noDependencies: 'plugins.sheet.noDependencies',
+  reposIntro: 'repos.intro',
+  reposAdd: 'repos.addButton',
+  reposRefresh: 'repos.refresh',
+  reposIndex: 'repos.index',
+  reposFingerprint: 'repos.fingerprint',
+  reposRemove: 'repos.remove',
+  reposNone: 'repos.none',
+  reposLoading: 'repos.loading',
   consolesHelp: 'consoles.help',
   newConsole: 'consoles.new',
   noConsoles: 'consoles.none',
@@ -101,12 +137,19 @@ export function createCentre(opts: CentreOptions, doc: Document = document): Cen
   const view = doc.createElement('mire-centre-view') as ViewEl;
   host.append(view);
   let tab: CentreTab = 'downloads';
+  let loadingPlugins = false;
+  let pendingFocus: string | null = null;
   const writer = (): Writer => ({ t: opts.t, lang: opts.language() || 'fr' });
 
   function refresh() {
     const w = writer();
     const catalog = opts.catalog();
     if (tab === 'apps' && !catalog) void opts.loadCatalog().then(() => tab === 'apps' && refresh());
+    const plugins = opts.plugins?.() ?? null;
+    if ((tab === 'plugins' || tab === 'repos') && !plugins && opts.loadPlugins && !loadingPlugins) {
+      loadingPlugins = true;
+      void opts.loadPlugins().finally(() => (loadingPlugins = false));
+    }
     Object.assign(view, {
       tab,
       labels: centreLabels(w.t, opts.torrentClient()),
@@ -114,6 +157,8 @@ export function createCentre(opts: CentreOptions, doc: Document = document): Cen
       ...downloadGroups(opts.downloads(), w),
       apps: appsView(catalog, opts.apps(), w),
       consoles: opts.consoles?.() ?? [],
+      plugins: pluginsView(plugins, w),
+      repos: reposView(plugins?.repos ?? null, w),
     });
   }
 
@@ -142,5 +187,13 @@ export function createCentre(opts: CentreOptions, doc: Document = document): Cen
     },
     refresh,
     updateDownload,
+    focusAfterRender(selector) {
+      pendingFocus = selector;
+    },
+    takeFocus() {
+      const sel = pendingFocus;
+      pendingFocus = null;
+      return sel;
+    },
   };
 }

@@ -112,8 +112,8 @@ describe('Jeux : modèle (P4-17)', () => {
     assert.deepEqual(emulatorOptions(choices, 'duck', tEn, { consoleDefault: null })[0], ['', "The console's (DuckStation)"]);
   });
 
-  it('le Centre a un onglet des consoles', () => {
-    assert.deepEqual([...CENTRE_TABS], ['downloads', 'apps', 'consoles']);
+  it('le Centre a un onglet des consoles (puis ceux des plugins et des dépôts, P4-19)', () => {
+    assert.deepEqual([...CENTRE_TABS], ['downloads', 'apps', 'consoles', 'plugins', 'repos']);
     assert.equal(centreTab('consoles'), 'consoles');
   });
 });

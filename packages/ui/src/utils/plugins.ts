@@ -11,9 +11,12 @@ export interface PluginLine {
   sensitive: boolean;
 }
 
+/** Actions des boutons d'une carte ou d'une fiche de plugin (méthodes du contrôleur `mire-centre`). */
+export type PluginAction = 'openPlugin' | 'installPlugin' | 'updatePlugin' | 'enablePlugin' | 'disablePlugin' | 'uninstallPlugin';
+
 /** Un bouton d'une carte ou d'une fiche : l'action du contrôleur `mire-centre` et ses arguments (JSON). */
 export interface PluginButton {
-  action: string;
+  action: PluginAction;
   args: string;
   label: string;
   /** Style : `stl-1` (principal), `stl-2`, `stl-3` (discret). */

@@ -5,7 +5,18 @@
  * Chaque champ est déclaré ici avec sa valeur de départ, même ceux que les vues ne remplissent qu'en cours de route.
  * Les types restent larges tant que les données du processus principal ne sont pas décrites (`@mire/shared/ipc`).
  */
-import type { DownloadItem, MediaItem, MireConfig, StoreProgress, UsageSnapshot, WebSession } from '@mire/shared/ipc';
+import type {
+  AvailablePlugin,
+  DownloadItem,
+  MediaItem,
+  MireConfig,
+  PluginSummary,
+  PluginsProgress,
+  RepositoryInfo,
+  StoreProgress,
+  UsageSnapshot,
+  WebSession,
+} from '@mire/shared/ipc';
 
 type Data = Record<string, unknown>;
 type Dict<T = unknown> = Record<string, T>;
@@ -76,6 +87,12 @@ export interface State {
   /** Avancement des installations de la boutique (P4-18), par émulateur ou jeu libre (`game:<id>`). */
   storeProgress: Dict<StoreProgress>;
   raPick: Set<string>;
+  /** Plugins et dépôts du Centre (P4-19) : copies des listes du processus principal, `null` tant qu'elles ne sont pas lues. */
+  plugins: { installed: PluginSummary[]; available: AvailablePlugin[]; repos: RepositoryInfo[] } | null;
+  /** Avancement des installations de plugins, par plugin demandé. */
+  pluginProgress: Dict<PluginsProgress>;
+  /** Fiche de plugin ouverte dans le Centre : sa clé, ou `null` (les listes). */
+  pluginSheet: string | null;
   romSites: Dict;
   localRoms: Dict<Data[]>;
   videoSeries: string | null;
@@ -139,6 +156,9 @@ export const S: State = {
   catalog: null,
   storeProgress: {},
   raPick: new Set(),
+  plugins: null,
+  pluginProgress: {},
+  pluginSheet: null,
   romSites: {},
   localRoms: {},
   videoSeries: null,

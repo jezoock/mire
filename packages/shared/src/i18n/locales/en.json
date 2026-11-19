@@ -1213,7 +1213,6 @@
         "updates": "Updates",
         "installed": "Installed",
         "available": "Available",
-        "noUpdates": "Everything is up to date.",
         "noInstalled": "No plugins.",
         "noAvailable": "Your repositories offer no other plugin for now.",
         "version": "Version {version}",

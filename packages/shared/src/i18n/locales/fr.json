@@ -1213,7 +1213,6 @@
         "updates": "Mises à jour",
         "installed": "Installés",
         "available": "Disponibles",
-        "noUpdates": "Tout est à jour.",
         "noInstalled": "Aucun plugin.",
         "noAvailable": "Vos dépôts ne proposent pas d’autre plugin pour l’instant.",
         "version": "Version {version}",
