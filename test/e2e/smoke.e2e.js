@@ -1575,9 +1575,24 @@ describe('Test de fumée de Mire', () => {
       await homeReady(['bars']);
       await page.waitForFunction(() => document.activeElement?.closest('.mire-home-view__bar'));
       // Le titre d'une rangée ouvre sa page.
+      await page.evaluate(() => {
+        const t0 = performance.now();
+        const log = (window.__diag = []);
+        const desc = (e) => (e ? `${e.tagName}.${e.className}[${e.getAttribute?.('action') ?? ''}${e.dataset?.key ?? ''}]` : 'null');
+        document.addEventListener('focusin', (e) => log.push(`${(performance.now() - t0).toFixed(0)} focusin ${desc(e.target)}`), true);
+        document.addEventListener('keydown', (e) => log.push(`${(performance.now() - t0).toFixed(0)} keydown ${e.key} sur ${desc(e.target)}`), true);
+        document.querySelector('#view mire-home-view')?.addEventListener('mireHomeRender', () => log.push(`${(performance.now() - t0).toFixed(0)} render`));
+        new MutationObserver(() => log.push(`${(performance.now() - t0).toFixed(0)} section ${document.body.dataset.section}`)).observe(document.body, { attributes: true, attributeFilter: ['data-section'] });
+      });
       await page.locator('#view .mire-home-view__heading-link.hydrated').first().focus();
       await page.keyboard.press('Enter');
-      await page.waitForFunction(() => document.body.dataset.section === 'page');
+      try {
+        await page.waitForFunction(() => document.body.dataset.section === 'page', null, { timeout: 8000 });
+      } catch (err) {
+        const d = await page.evaluate(() => ({ log: window.__diag, section: document.body.dataset.section, active: document.activeElement?.outerHTML?.slice(0, 300) }));
+        console.log('DIAG', JSON.stringify(d, null, 1));
+        throw err;
+      }
       assert.deepEqual(errors, []);
     });
 
