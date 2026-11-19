@@ -59,10 +59,28 @@ describe('lecteur vidéo : reprise', () => {
 
 describe('lecteur vidéo : sous-titres', () => {
   it('les premiers sous-titres en français sont activés d’office, sinon aucun', () => {
-    assert.equal(defaultSubtitle([{ label: 'en', lang: 'en' }, { label: 'fr', lang: 'fr' }]), 1);
+    assert.equal(
+      defaultSubtitle([
+        { label: 'en', lang: 'en' },
+        { label: 'fr', lang: 'fr' },
+      ]),
+      1,
+    );
     assert.equal(defaultSubtitle([{ label: 'fre', lang: 'fre' }]), 0);
-    assert.equal(defaultSubtitle([{ label: 'Anglais', lang: 'en' }, { label: 'Français', lang: '' }]), 1);
-    assert.equal(defaultSubtitle([{ label: 'en', lang: 'en' }, { label: 'de', lang: 'de' }]), -1);
+    assert.equal(
+      defaultSubtitle([
+        { label: 'Anglais', lang: 'en' },
+        { label: 'Français', lang: '' },
+      ]),
+      1,
+    );
+    assert.equal(
+      defaultSubtitle([
+        { label: 'en', lang: 'en' },
+        { label: 'de', lang: 'de' },
+      ]),
+      -1,
+    );
     assert.equal(defaultSubtitle([]), -1);
   });
 

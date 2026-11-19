@@ -2502,8 +2502,17 @@ describe('Test de fumée de Mire', () => {
       await app.evaluate(({ app: a }, f) => a.emit('second-instance', {}, ['electron', '.', f]), file);
       await ready();
     };
+    // La réglette du volume montre le volume de la vidéo (rendu à l'image suivante).
+    const rangeFollows = () =>
+      page.waitForFunction(
+        (sel) => Number(document.querySelector(`${sel} .mire-video-player__volume input`).value) === document.querySelector(`${sel} video`).volume,
+        PLAYER,
+      );
+    // Message au centre de l'écran, rendu à l'image suivante.
+    const osdShows = (re) =>
+      page.waitForFunction(([sel, r]) => new RegExp(r).test(document.querySelector(`${sel} .mire-video-player__osd`)?.textContent ?? ''), [PLAYER, re]);
     const pause = async () => {
-      await page.waitForFunction((sel) => !document.querySelector(`${sel} video`).paused, PLAYER);
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} video`).paused && document.activeElement === document.querySelector(sel), PLAYER);
       await page.keyboard.press(' ');
       await page.waitForFunction((sel) => document.querySelector(`${sel} video`).paused, PLAYER);
     };
@@ -2533,8 +2542,10 @@ describe('Test de fumée de Mire', () => {
       // Pause (Espace) : l'affichage reste ; le message au centre s'efface avant la capture.
       await pause();
       await page.waitForFunction((sel) => !document.querySelector(`${sel} .mire-video-player__osd`).classList.contains('is-shown'), PLAYER);
-      await page.evaluate((sel) => (document.querySelector(`${sel} video`).currentTime = 30), PLAYER);
-      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__time`)?.textContent === '0:30 / 6:00', PLAYER);
+      await page.evaluate((sel) => (document.querySelector(`${sel} video`).currentTime = 45), PLAYER);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__time`)?.textContent === '0:45 / 6:00', PLAYER);
+      // Pas de message en cours (« Manette déconnectée », laissé par un bloc précédent) sur la capture.
+      await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
       await settle();
       await shot('lecteur-video');
       // Échap ferme et rend le focus là où il était.
@@ -2546,27 +2557,27 @@ describe('Test de fumée de Mire', () => {
 
     it('clavier : les flèches règlent la position et le volume, S change les sous-titres', async () => {
       await openDemo();
-      // Position gardée en fermant (30 s) : la vidéo reprend là, avec un message.
-      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 30) < 2, PLAYER);
-      await page.locator('#toast').getByText('Reprise à 0:30').waitFor();
+      // Position gardée en fermant (45 s) : la vidéo reprend là, avec un message.
+      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 45) < 2, PLAYER);
+      await page.waitForFunction(() => document.getElementById('toast')?.textContent.startsWith('Reprise à 0:45'));
       await pause();
       const start = await state();
       await page.keyboard.press('ArrowRight');
       await page.waitForFunction(([sel, t]) => document.querySelector(`${sel} video`).currentTime > t + 9, [PLAYER, start.time]);
-      assert.match(await text('osd'), /^\+10 s {2}0:4\d$/);
-      const after = await state();
-      assert.ok(after.seek > start.seek, 'la réglette de position suit');
+      await osdShows(/^\+10 s {2}0:5\d$/.source);
+      await page.waitForFunction(([sel, v]) => Number(document.querySelector(`${sel} .mire-video-player__seek input`).value) > v, [PLAYER, start.seek]);
       await page.keyboard.press('ArrowUp');
       await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
       const louder = await state();
-      assert.equal(louder.volumeRange, louder.volume, 'la réglette du volume suit');
-      assert.equal(await text('osd'), `Volume ${Math.round(louder.volume * 100)} %`);
+      // La réglette du volume suit.
+      await rangeFollows();
+      await osdShows(`^Volume ${Math.round(louder.volume * 100)} %$`);
       await page.keyboard.press('ArrowDown');
       await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
       // S : sous-titres suivants (après le français, aucun).
       await page.keyboard.press('s');
       await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__subs`)?.textContent === 'Sous-titres : non', PLAYER);
-      assert.equal(await text('osd'), 'Sous-titres désactivés');
+      await osdShows('^Sous-titres désactivés$');
       // La réglette de position, à la souris : la vidéo va au milieu.
       await page.evaluate((sel) => {
         const input = document.querySelector(`${sel} .mire-video-player__seek input`);
@@ -2594,7 +2605,7 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(([sel, t]) => Math.abs(document.querySelector(`${sel} video`).currentTime - t) < 1, [PLAYER, start.time]);
       await padPress('up');
       await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
-      assert.equal((await state()).volumeRange, (await state()).volume);
+      await rangeFollows();
       await padPress('down');
       await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
       await padPress('b');

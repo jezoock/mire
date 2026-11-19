@@ -135,11 +135,16 @@ function clearSubtitleTracks(): void {
   player.subtitles = '';
 }
 
+/** Montre la piste choisie et éteint les autres. */
+function applySubtitle(): void {
+  [...video.textTracks].forEach((tr, j) => {
+    tr.mode = j === V.subIndex ? 'showing' : 'disabled';
+  });
+}
+
 function setSubtitle(k: number): void {
   V.subIndex = k;
-  [...video.textTracks].forEach((tr, j) => {
-    tr.mode = j === k ? 'showing' : 'disabled';
-  });
+  applySubtitle();
   player.subtitles = subtitleLabel(V.subLabels, k, t);
 }
 
@@ -167,6 +172,8 @@ async function loadSubtitles(it: Playable): Promise<void> {
     if (s.lang) tr.srclang = s.lang;
     tr.src = url;
     tr.addEventListener('load', () => {
+      // Chromium allume au chargement la piste de la langue du système (anglais) : on remet le choix de Mire.
+      applySubtitle();
       const up = V.cuesUp;
       V.cuesUp = null;
       liftCues(!!up);
