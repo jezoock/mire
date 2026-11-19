@@ -154,6 +154,9 @@ const ADDED_METHODS: Record<string, string> = {
   pagesGet: 'pages:get',
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
+  pagesOverview: 'pages:overview',
+  pagesPreview: 'pages:preview',
+  pagesReset: 'pages:reset',
   catalogPage: 'catalog:page',
   // P4-08 : parcours par source et par dossier (explorateur)
   catalogSources: 'catalog:sources',

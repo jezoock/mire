@@ -92,6 +92,8 @@ export interface LegacyUi {
   selectedGroup?(): { page: string; path: PagePath } | null;
   /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
   afterEdit?(): void;
+  /** Relit les pages (P4-21) : le menu suit une page créée, modifiée ou supprimée. */
+  reloadPages?(): Promise<void>;
   editConsole(consoleId: unknown): void;
   /** Consoles changées par `mire-games` (P4-17) : nouvelle configuration, Centre et vues redessinés. */
   afterConsolesChange?(config: Data): void;

@@ -3667,6 +3667,166 @@ describe('Test de fumée de Mire', () => {
     });
   });
 
+  describe('Réglages : pages (P4-21)', () => {
+    const VIEW = '#view mire-settings mire-settings-view';
+    const ID = 'films-des-annees-90';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const group = () => page.locator(`${VIEW} .mire-settings-view__group[data-list="pages"]`);
+    const row = (id) => group().locator(`li.mire-settings-view__entry[data-key="${id}"]`);
+    // Écran Réglages et liste des pages rendus (classe hydrated) : attendus avant chaque touche.
+    const hydrated = () =>
+      page.waitForFunction(
+        (sel) =>
+          document.body.dataset.section === 'settings' &&
+          document.querySelector(`${sel}.hydrated .mire-settings-view__group[data-list="pages"] li`) &&
+          [...document.querySelectorAll(`${sel} [data-list="pages"] ds-trigger`)].every((e) => e.classList.contains('hydrated')),
+        VIEW,
+      );
+    const openSettings = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await hydrated();
+    };
+    // Dernière boîte ouverte, ses composants rendus, le focus dedans.
+    const boxOpen = () =>
+      page.waitForFunction(() => {
+        const b = [...document.querySelectorAll('mire-form')].at(-1);
+        return (
+          b?.classList.contains('hydrated') &&
+          b.querySelector('ds-modal')?.shown &&
+          [...b.querySelectorAll('ds-trigger, ds-select, ds-field')].every((d) => d.classList.contains('hydrated')) &&
+          document.activeElement?.closest('mire-form') === b
+        );
+      });
+    const boxClosed = () => page.waitForFunction(() => !document.querySelector('mire-form'));
+    const button = (re) => page.locator('mire-form ds-trigger', { hasText: re });
+    const tab = (i) => page.locator('mire-form [role="tab"]').nth(i);
+    const help = () => page.locator('mire-form .mire-form__help');
+    const overview = () => page.evaluate(() => window.api.pagesOverview());
+    // Confirmation : la boîte oui / non de l'interface (encore celle de l'interface historique, comme dans le Centre).
+    const confirmYes = async (re) => {
+      const yes = page.locator('#dlg[open] [data-dlg="yes"]');
+      await yes.waitFor();
+      assert.match(await yes.textContent(), re);
+      await yes.click();
+      await page.waitForFunction(() => !document.querySelector('#dlg[open]'));
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(() => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('créer « Films des années 90 » : nom, tag Films, année entre 1990 et 1999, compter, enregistrer ; le menu suit', async () => {
+      await openSettings();
+      // Pages prêtes à l'emploi : nombre d'éléments et origine.
+      assert.match(await row('movies').locator('.mire-settings-view__detail').textContent(), /^\d+ éléments? · Prête à l’emploi · Dans le menu$/);
+      // « Créer une page » au clavier.
+      await group().locator('ds-trigger[action^="createEntry"]').focus();
+      await page.keyboard.press('Enter');
+      await boxOpen();
+      assert.match(await page.locator('mire-form').textContent(), /Nouvelle page/);
+      await page.locator('mire-form input[name="name"]').fill('Films des années 90');
+      // Onglet « Éléments » : le tag Films (désigné par son nom), puis la condition sur l'année.
+      await tab(1).click();
+      await settle();
+      const require = page.locator('mire-form .mire-form__list', { has: page.locator('input[name="require-new"]') });
+      await require.locator('input[name="require-new"]').fill('Films');
+      await require.locator('ds-trigger', { hasText: /^Ajouter$/ }).click();
+      await page.waitForFunction(() => [...document.querySelectorAll('mire-form .mire-form__value')].some((e) => e.textContent === 'Films'));
+      await page.locator('mire-form select[name="where0.info"]').selectOption('year');
+      await page.locator('mire-form input[name="where0.value"]').fill('1990');
+      await page.locator('mire-form input[name="where0.to"]').fill('1999');
+      // Aperçu : la bibliothèque d'essai n'a pas de film des années 90 ; avec 1900, Le Voyage dans la Lune (1902) compte.
+      await button(/^Compter les éléments$/).click();
+      await page.waitForFunction(() => /contiendrait 0 élément\./.test(document.querySelector('mire-form .mire-form__help')?.textContent ?? ''));
+      await page.locator('mire-form input[name="where0.value"]').fill('1900');
+      await button(/^Compter les éléments$/).click();
+      await page.waitForFunction(() => /contiendrait 1 élément\./.test(document.querySelector('mire-form .mire-form__help')?.textContent ?? ''));
+      await page.locator('mire-form input[name="where0.value"]').fill('1990');
+      // Onglet « Rangement » : tri par année.
+      await tab(2).click();
+      await settle();
+      await page.locator('mire-form select[name="sort0.by"]').selectOption('year');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      const saved = (await overview()).find((o) => o.page.id === ID);
+      assert.deepEqual(saved, {
+        page: {
+          id: ID,
+          name: 'Films des années 90',
+          require: ['movie'],
+          where: [{ info: 'year', between: [1990, 1999] }],
+          sort: [{ by: 'year' }],
+          display: 'posters',
+          menu: { pinned: true },
+        },
+        origin: 'user',
+        count: 0,
+      });
+      await row(ID).waitFor();
+      await hydrated();
+      assert.equal(await row(ID).locator('.mire-settings-view__detail').textContent(), '0 élément · Créée par vous · Dans le menu');
+      // La page rejoint le menu et s'ouvre.
+      await page.locator(`#rail .rail-item[data-key="${ID}"]`).click();
+      await page.waitForFunction(
+        () => document.body.dataset.section === 'page' && /Films des années 90/.test(document.querySelector('#view mire-page-view')?.textContent ?? ''),
+      );
+      assert.deepEqual(errors, []);
+    });
+
+    it('une condition incomplète garde la boîte ouverte et dit pourquoi', async () => {
+      await openSettings();
+      await row(ID).locator('ds-trigger[action^="editEntry"]').click();
+      await boxOpen();
+      await tab(1).click();
+      await settle();
+      await page.locator('mire-form input[name="where0.value"]').fill('');
+      await button(/^Enregistrer$/).click();
+      await settle();
+      await page.waitForFunction(() => /condition n’est pas complète/.test(document.querySelector('mire-form .mire-form__help')?.textContent ?? ''));
+      assert.match(await help().textContent(), /condition n’est pas complète/);
+      await button(/^Annuler$/).click();
+      await boxClosed();
+      assert.deepEqual((await overview()).find((o) => o.page.id === ID).page.where, [{ info: 'year', between: [1990, 1999] }]);
+      assert.deepEqual(errors, []);
+    });
+
+    it('modifier une page prête à l’emploi, puis revenir à l’origine ; supprimer la page créée', async () => {
+      await openSettings();
+      await row('music').locator('ds-trigger[action^="editEntry"]').click();
+      await boxOpen();
+      await page.locator('mire-form select[name="display"]').selectOption('rows');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      await row('music').locator('ds-trigger[action^="restoreEntry"]').waitFor();
+      await hydrated();
+      assert.match(await row('music').locator('.mire-settings-view__detail').textContent(), /Prête à l’emploi, modifiée/);
+      await page.locator(`${VIEW} [data-panel="pages"]`).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+      await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
+      await settle();
+      await shot('settings-pages');
+      // Revenir à l'origine : confirmation, puis la page prête à l'emploi revient telle qu'elle était.
+      await row('music').locator('ds-trigger[action^="restoreEntry"]').click();
+      await confirmYes(/^Revenir à l’origine$/);
+      await row('music').locator('ds-trigger[action^="restoreEntry"]').waitFor({ state: 'detached' });
+      const music = (await overview()).find((o) => o.page.id === 'music');
+      assert.deepEqual([music.origin, music.page.display], ['builtin', 'list']);
+      // Supprimer la page créée : confirmation, puis elle quitte la liste et le menu.
+      await hydrated();
+      await row(ID).locator('ds-trigger[action^="removeEntry"]').click();
+      await confirmYes(/^Supprimer la page$/);
+      await row(ID).waitFor({ state: 'detached' });
+      await page.locator(`#rail .rail-item[data-key="${ID}"]`).waitFor({ state: 'detached' });
+      assert.deepEqual(errors, []);
+    });
+  });
+
   describe('Lecteurs de musique et d’images (P4-15)', () => {
     const PAD = { a: 0, b: 1, lb: 4, rb: 5, start: 9, right: 15 };
     const MINI = 'mire-mini-player';

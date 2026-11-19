@@ -3,6 +3,7 @@
  * d'après le schéma des réglages et les manifestes des plugins (`model.ts`). Chaque champ changé est enregistré aussitôt
  * (`onChange`) ; le texte à ajouter à une liste et celui de l'éditeur JSON sont gardés ici (`draft`) jusqu'au bouton.
  */
+import type { PageOverview } from '@mire/shared';
 import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
 import { settingsDomId } from '@mire/ui/utils';
 import { settingsLabels, settingsPanels } from './model.ts';
@@ -33,6 +34,8 @@ export interface SettingsOptions {
   /** Ce que les panneaux affichent (configuration, langues, listes de l'accueil, informations) ; les plugins à part. */
   sources(): Omit<PanelSources, 't' | 'plugins' | 'providers'>;
   plugins(): Promise<PluginSettingsInfo[]>;
+  /** Pages, leur origine et leur nombre d'éléments (`pages.overview`, P4-21), relues à chaque affichage. */
+  pages?(): Promise<PageOverview[]>;
   /** Fournisseurs d'infos des plugins actifs (relus avec les réglages des plugins). */
   providers(): Promise<PluginMetadataProvider[]>;
   /** Un champ a changé (clé : chemin de la configuration ou `plugin:<id>:<réglage>`). */
@@ -64,6 +67,7 @@ export function createSettings(opts: SettingsOptions, doc: Document = document):
   const drafts = new Map<string, string>();
   let plugins: PluginSettingsInfo[] = [];
   let providers: PluginMetadataProvider[] = [];
+  let pages: PageOverview[] = [];
   let loaded = false;
   let seq = 0;
 
@@ -73,8 +77,9 @@ export function createSettings(opts: SettingsOptions, doc: Document = document):
       [plugins, providers] = await Promise.all([opts.plugins().catch(() => plugins), opts.providers().catch(() => providers)]);
       loaded = true;
     }
+    if (opts.pages) pages = await opts.pages().catch(() => pages);
     if (id !== seq) return;
-    const panels = settingsPanels({ ...opts.sources(), t: opts.t, plugins, providers });
+    const panels = settingsPanels({ ...opts.sources(), t: opts.t, plugins, providers, pages });
     Object.assign(view, { panels, labels: JSON.stringify(settingsLabels(opts.t)) });
     // Le texte de l'éditeur JSON suit la configuration enregistrée.
     drafts.delete('advanced');

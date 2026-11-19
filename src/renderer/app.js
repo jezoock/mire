@@ -202,6 +202,7 @@ const settings = createSettings({
     scanning: !!S.scanning,
   }),
   plugins: () => api.pluginsSettings(),
+  pages: () => api.pagesOverview(),
   providers: () => api.pluginsMetadataProviders(),
   onChange: (key, value) => C.settings.setValue({ key, value }).catch((err) => toast(err.message, { duration: 6000 })),
   onOrder: (kind, keys) => C.settings.setOrder({ kind, keys }).catch((err) => toast(err.message, { duration: 6000 })),
@@ -2407,6 +2408,11 @@ const legacyUi = {
   selectedKey: () => cardKeyOf() ?? (S.section === EXPLORER_VIEW ? explorer.selectedKey() : null),
   selectedGroup: () => groupRefOf(document.activeElement, pages.route()),
   afterEdit: () => { if (S.section === SEARCH_VIEW) search.refresh(); },
+  // Pages créées, modifiées ou supprimées (P4-21) : le menu suit.
+  async reloadPages() {
+    const list = await api.pagesList().catch(() => null);
+    if (Array.isArray(list)) shell.setPages(list);
+  },
   firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
   editRef, editConsole, deletableGame, deleteGameRef,
   afterConsolesChange(config) {
