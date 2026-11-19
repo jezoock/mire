@@ -10,6 +10,7 @@ import type { CandidateSpec, FormResult } from '@mire/ui/utils';
 import type { FormOptions } from '../ui/dialogs.ts';
 import type { Search } from '../search/index.ts';
 import type { Explorer } from '../explorer/index.ts';
+import type { Settings } from '../settings/index.ts';
 
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
@@ -112,10 +113,12 @@ export interface LegacyUi {
   getQueries(): string[];
   rememberQuery(query: string): void;
   /** Écran de la Recherche (`src/renderer/search/`). */
-  search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult'>;
+  search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult' | 'resetWatch'>;
   // Explorateur (P4-08)
   /** Écran de l'explorateur (`src/renderer/explorer/`). */
   explorer: Pick<Explorer, 'open' | 'show' | 'more'>;
+  /** Écran des Réglages (`src/renderer/settings/`, P4-20). */
+  settings: Pick<Settings, 'refresh' | 'draft' | 'clearDraft' | 'focus'>;
   // Téléchargements, boutique, réglages
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;

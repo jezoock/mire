@@ -57,7 +57,7 @@ export interface MainContext {
   /** Renommer, déplacer, supprimer sous les dossiers locaux de la configuration (P2-10). */
   readonly fileManager: FilesService;
   /** Hôte de plugins (P3-03). */
-  readonly plugins: Pick<PluginService, 'list' | 'setEnabled'>;
+  readonly plugins: Pick<PluginService, 'list' | 'setEnabled' | 'settingsList' | 'setSetting'>;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;

@@ -175,6 +175,8 @@ const ADDED_METHODS: Record<string, string> = {
   // P3-03 : plugins
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  pluginsSettings: 'plugins:settings',
+  pluginsSetSetting: 'plugins:setSetting',
 };
 
 // Événements ajoutés après P1-08.

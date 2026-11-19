@@ -15,6 +15,7 @@ import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+import { SettingsLabels, SettingsPanelView } from "./utils/settings";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
@@ -25,6 +26,7 @@ export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
+export { SettingsLabels, SettingsPanelView } from "./utils/settings";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -906,6 +908,35 @@ export namespace Components {
          */
         "watch": WatchView | string | null;
     }
+    /**
+     * Hôte des Réglages (P4-20) : ses méthodes sont les actions du contrôleur `mire-settings` (palette, thème des pages,
+     * listes, chemins, plugins, configuration…), qui vit avec l'état de l'interface (`src/renderer/controllers/settings.ts`).
+     * Il contient la vue des Réglages (`mire-settings-view`, placée par la page). Une seule balise dans la page, pour que
+     * les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireSettings {
+    }
+    /**
+     * Vue des Réglages (P4-20) : un panneau par bloc du schéma des réglages, puis un par plugin qui déclare des réglages.
+     * Champs de dot-stash (`ds-field`, `ds-select`, `ds-toggle`), palettes avec leur aperçu (dessiné avec leurs propres
+     * jetons), thèmes des pages, listes ordonnables (`ds-sortable`).
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/settings/`) lui donne les panneaux déjà
+     * rédigés, et reçoit chaque changement (`mireSettingChange`, enregistré aussitôt), chaque brouillon (`mireSettingDraft` :
+     * texte à ajouter à une liste, éditeur JSON) et chaque nouvel ordre (`mireSettingOrder`). Les boutons vont au
+     * contrôleur `mire-settings` par `ds-trigger`, avec la clé du champ, l'identifiant de la palette ou de la liste.
+     */
+    interface MireSettingsView {
+        /**
+          * Textes (voir `SettingsLabels`).
+          * @default ''
+         */
+        "labels": SettingsLabels | string;
+        /**
+          * Panneaux (voir `SettingsPanelView`).
+          * @default []
+         */
+        "panels": SettingsPanelView[] | string;
+    }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -930,6 +961,10 @@ export interface MireRailCustomEvent<T> extends CustomEvent<T> {
 export interface MireSearchViewCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireSearchViewElement;
+}
+export interface MireSettingsViewCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireSettingsViewElement;
 }
 declare global {
     /**
@@ -1344,6 +1379,46 @@ declare global {
         prototype: HTMLMireSearchViewElement;
         new (): HTMLMireSearchViewElement;
     };
+    /**
+     * Hôte des Réglages (P4-20) : ses méthodes sont les actions du contrôleur `mire-settings` (palette, thème des pages,
+     * listes, chemins, plugins, configuration…), qui vit avec l'état de l'interface (`src/renderer/controllers/settings.ts`).
+     * Il contient la vue des Réglages (`mire-settings-view`, placée par la page). Une seule balise dans la page, pour que
+     * les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireSettingsElement extends Components.MireSettings, HTMLStencilElement {
+    }
+    var HTMLMireSettingsElement: {
+        prototype: HTMLMireSettingsElement;
+        new (): HTMLMireSettingsElement;
+    };
+    interface HTMLMireSettingsViewElementEventMap {
+        "mireSettingChange": { key: string; value: string | boolean };
+        "mireSettingDraft": { key: string; value: string };
+        "mireSettingOrder": { kind: string; keys: string[] };
+    }
+    /**
+     * Vue des Réglages (P4-20) : un panneau par bloc du schéma des réglages, puis un par plugin qui déclare des réglages.
+     * Champs de dot-stash (`ds-field`, `ds-select`, `ds-toggle`), palettes avec leur aperçu (dessiné avec leurs propres
+     * jetons), thèmes des pages, listes ordonnables (`ds-sortable`).
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/settings/`) lui donne les panneaux déjà
+     * rédigés, et reçoit chaque changement (`mireSettingChange`, enregistré aussitôt), chaque brouillon (`mireSettingDraft` :
+     * texte à ajouter à une liste, éditeur JSON) et chaque nouvel ordre (`mireSettingOrder`). Les boutons vont au
+     * contrôleur `mire-settings` par `ds-trigger`, avec la clé du champ, l'identifiant de la palette ou de la liste.
+     */
+    interface HTMLMireSettingsViewElement extends Components.MireSettingsView, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireSettingsViewElementEventMap>(type: K, listener: (this: HTMLMireSettingsViewElement, ev: MireSettingsViewCustomEvent<HTMLMireSettingsViewElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireSettingsViewElementEventMap>(type: K, listener: (this: HTMLMireSettingsViewElement, ev: MireSettingsViewCustomEvent<HTMLMireSettingsViewElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireSettingsViewElement: {
+        prototype: HTMLMireSettingsViewElement;
+        new (): HTMLMireSettingsViewElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
@@ -1372,6 +1447,8 @@ declare global {
         "mire-row": HTMLMireRowElement;
         "mire-search": HTMLMireSearchElement;
         "mire-search-view": HTMLMireSearchViewElement;
+        "mire-settings": HTMLMireSettingsElement;
+        "mire-settings-view": HTMLMireSettingsViewElement;
     }
 }
 declare namespace LocalJSX {
@@ -2257,6 +2334,38 @@ declare namespace LocalJSX {
          */
         "watch"?: WatchView | string | null;
     }
+    /**
+     * Hôte des Réglages (P4-20) : ses méthodes sont les actions du contrôleur `mire-settings` (palette, thème des pages,
+     * listes, chemins, plugins, configuration…), qui vit avec l'état de l'interface (`src/renderer/controllers/settings.ts`).
+     * Il contient la vue des Réglages (`mire-settings-view`, placée par la page). Une seule balise dans la page, pour que
+     * les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireSettings {
+    }
+    /**
+     * Vue des Réglages (P4-20) : un panneau par bloc du schéma des réglages, puis un par plugin qui déclare des réglages.
+     * Champs de dot-stash (`ds-field`, `ds-select`, `ds-toggle`), palettes avec leur aperçu (dessiné avec leurs propres
+     * jetons), thèmes des pages, listes ordonnables (`ds-sortable`).
+     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/settings/`) lui donne les panneaux déjà
+     * rédigés, et reçoit chaque changement (`mireSettingChange`, enregistré aussitôt), chaque brouillon (`mireSettingDraft` :
+     * texte à ajouter à une liste, éditeur JSON) et chaque nouvel ordre (`mireSettingOrder`). Les boutons vont au
+     * contrôleur `mire-settings` par `ds-trigger`, avec la clé du champ, l'identifiant de la palette ou de la liste.
+     */
+    interface MireSettingsView {
+        /**
+          * Textes (voir `SettingsLabels`).
+          * @default ''
+         */
+        "labels"?: SettingsLabels | string;
+        "onMireSettingChange"?: (event: MireSettingsViewCustomEvent<{ key: string; value: string | boolean }>) => void;
+        "onMireSettingDraft"?: (event: MireSettingsViewCustomEvent<{ key: string; value: string }>) => void;
+        "onMireSettingOrder"?: (event: MireSettingsViewCustomEvent<{ kind: string; keys: string[] }>) => void;
+        /**
+          * Panneaux (voir `SettingsPanelView`).
+          * @default []
+         */
+        "panels"?: SettingsPanelView[] | string;
+    }
 
     interface MireBackdropAttributes {
         "src": string;
@@ -2425,6 +2534,10 @@ declare namespace LocalJSX {
         "cardLabels": string;
         "scrollerLabels": string;
     }
+    interface MireSettingsViewAttributes {
+        "panels": SettingsPanelView[] | string;
+        "labels": SettingsLabels | string;
+    }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
@@ -2454,6 +2567,8 @@ declare namespace LocalJSX {
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
         "mire-search": MireSearch;
         "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
+        "mire-settings": MireSettings;
+        "mire-settings-view": Omit<MireSettingsView, keyof MireSettingsViewAttributes> & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes]?: MireSettingsView[K] } & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes as `attr:${K}`]?: MireSettingsViewAttributes[K] } & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes as `prop:${K}`]?: MireSettingsView[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2665,6 +2780,23 @@ declare module "@stencil/core" {
              * contrôleur `mire-search`, avec la clé de l'élément, la page ou l'identifiant du site.
              */
             "mire-search-view": LocalJSX.IntrinsicElements["mire-search-view"] & JSXBase.HTMLAttributes<HTMLMireSearchViewElement>;
+            /**
+             * Hôte des Réglages (P4-20) : ses méthodes sont les actions du contrôleur `mire-settings` (palette, thème des pages,
+             * listes, chemins, plugins, configuration…), qui vit avec l'état de l'interface (`src/renderer/controllers/settings.ts`).
+             * Il contient la vue des Réglages (`mire-settings-view`, placée par la page). Une seule balise dans la page, pour que
+             * les `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-settings": LocalJSX.IntrinsicElements["mire-settings"] & JSXBase.HTMLAttributes<HTMLMireSettingsElement>;
+            /**
+             * Vue des Réglages (P4-20) : un panneau par bloc du schéma des réglages, puis un par plugin qui déclare des réglages.
+             * Champs de dot-stash (`ds-field`, `ds-select`, `ds-toggle`), palettes avec leur aperçu (dessiné avec leurs propres
+             * jetons), thèmes des pages, listes ordonnables (`ds-sortable`).
+             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/settings/`) lui donne les panneaux déjà
+             * rédigés, et reçoit chaque changement (`mireSettingChange`, enregistré aussitôt), chaque brouillon (`mireSettingDraft` :
+             * texte à ajouter à une liste, éditeur JSON) et chaque nouvel ordre (`mireSettingOrder`). Les boutons vont au
+             * contrôleur `mire-settings` par `ds-trigger`, avec la clé du champ, l'identifiant de la palette ou de la liste.
+             */
+            "mire-settings-view": LocalJSX.IntrinsicElements["mire-settings-view"] & JSXBase.HTMLAttributes<HTMLMireSettingsViewElement>;
         }
     }
 }
