@@ -791,7 +791,13 @@
         "slideshow": "Diaporama",
         "image": "Image",
         "confirm": "Valider",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "detected": "Manette {name} détectée. Les commandes s’affichent en bas de l’écran.",
+        "disconnected": "Manette déconnectée",
+        "buttons": {
+          "view": "Affichage",
+          "create": "Créer"
+        }
       }
     },
     "themes": {
@@ -1278,6 +1284,42 @@
         "failed": "Impossible d’ajouter à cette liste."
       },
       "gone": "Cet élément n’est plus dans le catalogue."
+    },
+    "player": {
+      "video": {
+        "close": "Fermer le lecteur",
+        "external": "Lecteur externe",
+        "seek": "Position dans la vidéo",
+        "prev": "Vidéo précédente",
+        "next": "Vidéo suivante",
+        "play": "Lecture ou pause",
+        "volume": "Volume",
+        "fullscreen": "Plein écran",
+        "position": "{folder}, {index} sur {count}",
+        "subtitles": {
+          "on": "Sous-titres : {label}",
+          "off": "Sous-titres : non"
+        },
+        "osd": {
+          "play": "Lecture",
+          "pause": "Pause",
+          "forward": "+{seconds} s  {time}",
+          "back": "−{seconds} s  {time}",
+          "volume": "Volume {percent} %",
+          "muted": "Son coupé",
+          "unmuted": "Son rétabli",
+          "subtitlesOff": "Sous-titres désactivés"
+        },
+        "resume": {
+          "at": "Reprise à {time}",
+          "restart": "Reprendre au début"
+        },
+        "silent": {
+          "message": "Pas de son ? La piste audio de ce fichier n’est sans doute pas lisible ici.",
+          "action": "Ouvrir dans le lecteur externe"
+        },
+        "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe"
+      }
     }
   }
 }

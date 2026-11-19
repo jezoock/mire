@@ -9,7 +9,9 @@ import { api } from '../api/index.ts';
 
 export const audio = new Audio();
 audio.preload = 'auto';
-export const video = $('#video') as HTMLVideoElement;
+// La vidéo est celle du lecteur (`mire-video-player`, P4-14), rendu par la coquille avant le démarrage de l'interface.
+const player = $('mire-video-player') as HTMLElement & { volume: number };
+export const video = player.querySelector('video') as HTMLVideoElement;
 let volume = 0.9;
 
 export const getVolume = (): number => volume;
@@ -24,10 +26,10 @@ export function setVolume(v: number): number {
   volume = clamp(Math.round(v * 100) / 100, 0, 1);
   audio.volume = volume;
   video.volume = volume;
-  for (const el of [$<HTMLInputElement>('#mini-vol'), $<HTMLInputElement>('#vp-vol')] as HTMLInputElement[]) {
-    el.value = String(volume);
-    setRangeFill(el, volume);
-  }
+  player.volume = volume;
+  const mini = $<HTMLInputElement>('#mini-vol') as HTMLInputElement;
+  mini.value = String(volume);
+  setRangeFill(mini, volume);
   if (volume !== S.usage.volume) {
     S.usage.volume = volume;
     api.usageSetVolume(volume);

@@ -12,6 +12,17 @@ import type { Search } from '../search/index.ts';
 import type { Explorer } from '../explorer/index.ts';
 import type { Settings } from '../settings/index.ts';
 
+/** Lecteur vidéo (`src/renderer/players/video.ts`, P4-14) : ce que ses commandes font. */
+export interface VideoUi {
+  close(): void;
+  togglePlay(): void;
+  /** Vidéo suivante (1) ou précédente (-1) de la liste. */
+  step(d: number): void;
+  cycleSubtitles(): void;
+  /** Ferme le lecteur et reprend la vidéo dans le lecteur externe. */
+  openExternally(): void;
+}
+
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
 
@@ -85,6 +96,8 @@ export interface LegacyUi {
   openImages(list: Data[], index: number): void;
   pauseAudio(): void;
   toggleAudio(): void;
+  /** Commandes du lecteur vidéo (P4-14). */
+  video: VideoUi;
   openExternal(item: { path: string; name: string }, start?: number): void;
   addRecent(item: Data): void;
   // Télévision
