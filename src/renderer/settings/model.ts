@@ -4,14 +4,15 @@
  */
 import { SETTINGS_SCHEMA, valueAtPath } from '@mire/shared/settings/schema';
 import type { SettingsBlock, SettingsField, SettingsSchema } from '@mire/shared/settings/schema';
-import type { PluginSettingsInfo } from '@mire/shared/ipc';
+import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
 import { pluginFieldKey } from '@mire/ui/utils';
 import type {
   OrderListView,
-  PageLinkView,
   PageThemeView,
   PaletteView,
   SettingsActionView,
+  SettingsEntryGroup,
+  SettingsEntryView,
   SettingsFieldView,
   SettingsLabels,
   SettingsOptionView,
@@ -40,27 +41,31 @@ export interface PanelSources {
   /** Listes ordonnables de l'accueil (`rows`, `bars`, `sites`), lignes déjà rédigées (`homeOptions`). */
   homeLists: readonly Omit<OrderListView, 'toggle'>[];
   plugins: readonly PluginSettingsInfo[];
+  /** Fournisseurs d'infos des plugins actifs : ils rejoignent l'ordre des fournisseurs. */
+  providers?: readonly PluginMetadataProvider[];
+  /** État des sources après la dernière analyse (par identifiant de source), et analyse en cours. */
+  sourceStatus?: Readonly<Record<string, SourceStatus>>;
+  gameSourceStatus?: Readonly<Record<string, SourceStatus>>;
+  scanning?: boolean;
   /** Informations rédigées : état du bloqueur, de la lecture protégée ; chemin du fichier de configuration. */
   adblockStatus?: string;
   drmStatus?: string;
   configPath?: string;
 }
 
-/** Réglages des blocs propres à une page : ils se font dans les réglages de la page (un onglet), en attendant leurs blocs. */
-const PAGE_LINKS: Readonly<Record<string, ReadonlyArray<readonly [page: string, tab: string, view: string]>>> = {
-  sources: [
-    ['movies', 'sources', 'videos'],
-    ['music', 'sources', 'music'],
-    ['images', 'sources', 'images'],
-    ['games', 'pc', 'games'],
-  ],
-  'tv-services': [['tv', 'tv', 'tv']],
-  'web-sites': [['streaming', 'sites', 'streaming']],
-  consoles: [['games', 'consoles', 'games']],
-  store: [['games', 'consoles', 'games']],
-  'pc-games': [['games', 'pc', 'games']],
-  'link-sites': [['games', 'pc', 'games']],
-};
+/** État d'une source après l'analyse : nombre de fichiers trouvés, ou l'erreur. */
+export interface SourceStatus {
+  ok: boolean;
+  count?: number;
+  error?: string;
+}
+
+/** Natures des sources, dans l'ordre de l'écran ; `game` : dossiers de jeux PC (`gameSources`). */
+export const SOURCE_KINDS = ['video', 'audio', 'image', 'game'] as const;
+
+/** Les choix d'au plus tant d'options courtes s'affichent en boutons (`ds-toggle-group`). */
+const SHORT_CHOICES = 4;
+const SHORT_LABEL = 20;
 
 const asText = (v: unknown): string => (typeof v === 'string' ? v : '');
 
@@ -75,14 +80,155 @@ function choiceOptions(field: Extract<SettingsField, { type: 'choice' }>, src: P
   return base;
 }
 
-/** Ordre des fournisseurs d'infos : ceux de la configuration, puis les autres (comme `metadataOrder`). */
-export function providerOrder(config: unknown): string[] {
+/**
+ * Ordre des fournisseurs d'infos : ceux de la configuration, puis les autres, ceux du cœur d'abord (comme
+ * `metadataOrder`) ; `extra` : identifiants des fournisseurs des plugins actifs.
+ */
+export function providerOrder(config: unknown, extra: readonly string[] = []): string[] {
+  const known = [...METADATA_PROVIDERS, ...extra];
   const chosen = valueAtPath(config, 'catalog.metadataProviders');
-  const list = Array.isArray(chosen) ? chosen.filter((x): x is string => (METADATA_PROVIDERS as readonly string[]).includes(x)) : [];
-  return [...new Set([...list, ...METADATA_PROVIDERS])];
+  const list = Array.isArray(chosen) ? chosen.filter((x): x is string => known.includes(x)) : [];
+  return [...new Set([...list, ...known])];
 }
 
-function customField(field: Extract<SettingsField, { type: 'custom' }>, block: SettingsBlock, src: PanelSources): SettingsFieldView {
+/** Nom affiché d'un fournisseur : ceux du cœur ont le leur, ceux d'un plugin le nom du plugin. */
+function providerLabel(id: string, src: PanelSources): string {
+  const { t } = src;
+  if ((METADATA_PROVIDERS as readonly string[]).includes(id)) return t(`settingsView.providers.${id}`);
+  const p = src.providers?.find((x) => x.id === id);
+  const same = (src.providers ?? []).filter((x) => x.plugin === p?.plugin).length > 1;
+  return t('settingsView.providers.plugin', { name: p ? (same ? `${p.name} · ${id.split('/').pop()}` : p.name) : id });
+}
+
+const asList = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : []);
+
+/** Nature d'un emplacement de source : dossier, partage réseau ou serveur web. */
+export function locationType(location: string): 'folder' | 'network' | 'web' {
+  if (/^https?:\/\//i.test(location)) return 'web';
+  return /^(\\\\|\/\/|smb:)/i.test(location) ? 'network' : 'folder';
+}
+
+/** Sources d'une nature : une ligne par source, avec sa nature et son état après l'analyse. */
+function sourceGroup(kind: (typeof SOURCE_KINDS)[number], src: PanelSources): SettingsEntryGroup {
+  const { t } = src;
+  const list =
+    kind === 'game' ? asList(valueAtPath(src.config, 'gameSources')) : asList(valueAtPath(src.config, 'library.sources')).filter((x) => x.kind === kind);
+  const status = (kind === 'game' ? src.gameSourceStatus : src.sourceStatus) ?? {};
+  const entries = list.map((x): SettingsEntryView => {
+    const location = asText(x.location);
+    const st = status[asText(x.id)];
+    const state = !st
+      ? src.scanning
+        ? t('settingsView.sources.scanning')
+        : ''
+      : st.ok
+        ? t(`settingsView.sources.count.${kind}`, { count: st.count ?? 0 })
+        : st.error || '';
+    const type = t(`settingsView.sources.type.${locationType(location)}`);
+    return { id: asText(x.id), label: location, sub: state ? `${type} · ${state}` : type, ...(st && !st.ok ? { error: true } : {}) };
+  });
+  return {
+    key: `sources:${kind}`,
+    label: t(`settingsView.sources.kinds.${kind}`),
+    entries,
+    empty: t('settingsView.sources.none'),
+    remove: true,
+    buttons: [
+      { label: t('settingsView.sources.addFolder'), action: 'addSourceFolder' },
+      { label: t('settingsView.sources.addAddress'), action: 'addSourceAddress', ghost: true },
+    ],
+  };
+}
+
+/** Services de télévision : un choix parmi eux, la détection de la box ; l'adresse d'une playlist active. */
+function tvFields(base: Pick<SettingsFieldView, 'key' | 'label' | 'help'>, src: PanelSources): SettingsFieldView[] {
+  const { t } = src;
+  const active = asText(valueAtPath(src.config, 'tv.active'));
+  const services = asList(valueAtPath(src.config, 'tv.services'));
+  const entries = services.map((x) => ({
+    id: asText(x.id),
+    label: asText(x.name) || asText(x.id),
+    sub: t(x.kind === 'web' ? 'settingsView.tv.web' : 'settingsView.tv.playlist'),
+    current: x.id === active,
+  }));
+  const current = services.find((x) => x.id === active);
+  const group: SettingsEntryGroup = {
+    key: 'tv',
+    label: base.label,
+    entries,
+    empty: t('settingsView.tv.none'),
+    choose: true,
+    buttons: [
+      { label: t('settingsView.tv.detect'), action: 'detectTvBox' },
+      ...(current ? [{ label: t('settingsView.tv.reload'), action: 'reloadTv' as const, ghost: true }] : []),
+    ],
+  };
+  const fields: SettingsFieldView[] = [{ ...base, kind: 'entries', groups: [group] }];
+  if (current?.kind === 'playlist') {
+    fields.push({
+      key: 'tv.playlist',
+      kind: 'text',
+      label: t('settingsView.tv.url', { name: asText(current.name) || asText(current.id) }),
+      value: asText(current.url),
+    });
+  }
+  return fields;
+}
+
+/** Sites de streaming : la liste, et un site à ajouter (nom, adresse). */
+function webGroup(src: PanelSources): SettingsEntryGroup {
+  const { t } = src;
+  return {
+    key: 'web',
+    entries: asList(valueAtPath(src.config, 'web')).map((x) => ({ id: asText(x.id), label: asText(x.name) || asText(x.url), sub: asText(x.url) })),
+    empty: t('settingsView.web.none'),
+    remove: true,
+    inputs: [
+      { id: 'name', label: t('settingsView.web.name'), placeholder: t('settingsView.web.namePlaceholder') },
+      { id: 'url', label: t('settingsView.web.url'), placeholder: t('settingsView.web.urlPlaceholder') },
+    ],
+    buttons: [{ label: t('settingsView.add'), action: 'addEntry' }],
+  };
+}
+
+/** Jeux PC ajoutés à la main (désignés par leur chemin). */
+function pcGamesGroup(src: PanelSources): SettingsEntryGroup {
+  const { t } = src;
+  return {
+    key: 'games',
+    entries: asList(valueAtPath(src.config, 'games')).map((x) => {
+      const path = asText(x.path);
+      return { id: path, label: asText(x.name) || path.split(/[\\/]/).pop() || path, sub: path };
+    }),
+    empty: t('settingsView.pcGames.none'),
+    remove: true,
+    buttons: [{ label: t('settingsView.pcGames.add'), action: 'addPcGame' }],
+  };
+}
+
+/** Sites pour télécharger des jeux PC : nom, adresse, adresse de recherche avec {q}. */
+function pcSitesGroup(src: PanelSources): SettingsEntryGroup {
+  const { t } = src;
+  return {
+    key: 'pcSites',
+    entries: asList(valueAtPath(src.config, 'pcSites')).map((x) => ({
+      id: asText(x.url) || asText(x.name),
+      label: asText(x.name) || asText(x.url),
+      sub: [asText(x.url), asText(x.search)].filter(Boolean).join(' · '),
+    })),
+    empty: t('settingsView.pcSites.none'),
+    remove: true,
+    inputs: [
+      { id: 'name', label: t('settingsView.pcSites.name') },
+      { id: 'url', label: t('settingsView.pcSites.url'), placeholder: 'https://…' },
+      { id: 'search', label: t('settingsView.pcSites.search'), placeholder: 'https://…?q={q}' },
+    ],
+    buttons: [{ label: t('settingsView.add'), action: 'addEntry' }],
+  };
+}
+
+/** Champs d'un bloc personnalisé (le service de télévision en donne deux : le choix, puis l'adresse de la playlist). */
+function customFields(field: Extract<SettingsField, { type: 'custom' }>, block: SettingsBlock, src: PanelSources): SettingsFieldView[] {
   const { t } = src;
   const base = { key: `${block.id}.${field.id}`, label: t(field.label), ...(field.help ? { help: t(field.help) } : {}) };
   if (field.component === 'themes') {
@@ -94,27 +240,60 @@ function customField(field: Extract<SettingsField, { type: 'custom' }>, block: S
       current: id === theme,
     }));
     const pageThemes = src.pageThemes.map((th) => ({ ...th, current: th.id === src.currentPageTheme }));
-    return { ...base, kind: 'themes', palettes, pageThemes };
+    return [{ ...base, kind: 'themes', palettes, pageThemes }];
   }
   if (field.component === 'ordered-list' && field.paths[0] === 'ui.home.rows') {
-    return { ...base, kind: 'order', lists: src.homeLists.map((l) => ({ ...l, toggle: true })) };
+    return [{ ...base, kind: 'order', lists: src.homeLists.map((l) => ({ ...l, toggle: true })) }];
   }
-  if (field.component === 'ordered-list') {
-    const items = providerOrder(src.config).map((id) => ({ id, label: t(`settingsView.providers.${id}`), color: 'var(--muted)', on: true }));
-    return { ...base, kind: 'order', lists: [{ kind: 'providers', label: t(field.label), items, toggle: false }] };
+  switch (field.component) {
+    case 'ordered-list': {
+      const extra = (src.providers ?? []).map((p) => p.id);
+      const items = providerOrder(src.config, extra).map((id) => ({ id, label: providerLabel(id, src), color: 'var(--muted)', on: true }));
+      return [{ ...base, kind: 'order', lists: [{ kind: 'providers', label: t(field.label), items, toggle: false }] }];
+    }
+    case 'sources':
+      return [{ ...base, kind: 'entries', groups: SOURCE_KINDS.map((k) => sourceGroup(k, src)) }];
+    case 'tv-services':
+      return tvFields(base, src);
+    case 'web-sites':
+      return [{ ...base, kind: 'entries', groups: [{ ...webGroup(src), label: base.label }] }];
+    case 'pc-games':
+      return [{ ...base, kind: 'entries', groups: [{ ...pcGamesGroup(src), label: base.label }] }];
+    case 'link-sites':
+      return [{ ...base, kind: 'entries', help: t('settingsView.pcSites.help'), groups: [{ ...pcSitesGroup(src), label: base.label }] }];
+    case 'store':
+      return [
+        {
+          ...base,
+          key: 'store.romsRoot',
+          kind: 'path',
+          pick: 'folder',
+          help: t('settingsView.store.help'),
+          placeholder: t('settingsView.store.placeholder'),
+          value: asText(valueAtPath(src.config, 'store.romsRoot')),
+        },
+      ];
+    case 'consoles':
+      // Les consoles se créent et se modifient dans l'onglet « Consoles » du Centre (P4-17) : un lien y mène.
+      return [{ ...base, kind: 'link', help: t('settingsView.consoles.help'), link: { tab: 'consoles', label: t('settingsView.consoles.open') } }];
+    default:
+      return [];
   }
-  const links: PageLinkView[] = (PAGE_LINKS[field.component] ?? []).map(([page, tab, view]) => ({
-    page,
-    tab,
-    label: t('settingsView.openPage', { name: t(`shell.views.${view}`) }),
-  }));
-  return { ...base, kind: 'page', links };
 }
 
 /** Champ du schéma tel que la vue l'affiche, avec sa valeur dans la configuration. */
 export function fieldView(field: SettingsField, block: SettingsBlock, src: PanelSources): SettingsFieldView {
+  return fieldViews(field, block, src)[0] as SettingsFieldView;
+}
+
+/** Champs que la vue affiche pour un champ du schéma : un seul, sauf pour certains blocs personnalisés. */
+export function fieldViews(field: SettingsField, block: SettingsBlock, src: PanelSources): SettingsFieldView[] {
+  if (field.type === 'custom') return customFields(field, block, src);
+  return [simpleField(field, src)];
+}
+
+function simpleField(field: Exclude<SettingsField, { type: 'custom' }>, src: PanelSources): SettingsFieldView {
   const { t } = src;
-  if (field.type === 'custom') return customField(field, block, src);
   const raw = valueAtPath(src.config, field.path);
   const view: SettingsFieldView = {
     key: field.path,
@@ -128,8 +307,11 @@ export function fieldView(field: SettingsField, block: SettingsBlock, src: Panel
       return { ...view, value: typeof raw === 'boolean' ? raw : field.default };
     case 'list':
       return { ...view, value: Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [] };
-    case 'choice':
-      return { ...view, value: typeof raw === 'string' ? raw : field.default, options: choiceOptions(field, src) };
+    case 'choice': {
+      const options = choiceOptions(field, src);
+      const short = !field.optionsFrom && options.length <= SHORT_CHOICES && options.every((o) => o.label.length <= SHORT_LABEL);
+      return { ...view, kind: short ? 'segmented' : 'choice', value: typeof raw === 'string' ? raw : field.default, options };
+    }
     case 'path':
       return { ...view, value: asText(raw), pick: field.pick };
     default:
@@ -164,7 +346,7 @@ export function schemaPanels(src: PanelSources, schema: SettingsSchema = SETTING
     id: block.id,
     title: t(block.title),
     ...(block.help ? { help: t(block.help) } : {}),
-    fields: block.fields.map((f) => fieldView(f, block, src)),
+    fields: block.fields.flatMap((f) => fieldViews(f, block, src)),
     ...blockExtras(block, src),
   }));
 }

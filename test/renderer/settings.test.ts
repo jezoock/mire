@@ -129,14 +129,48 @@ describe('panneaux générés depuis le schéma', () => {
       ['tmdb', 'musicbrainz', 'libretro', 'steam'],
     );
     assert.equal(providers.lists?.[0]?.toggle, false);
-    const sourcesField = fieldOf(panels, 'sources.sources');
-    assert.equal(sourcesField.kind, 'page');
-    assert.deepEqual(sourcesField.links?.[0], { page: 'movies', tab: 'sources', label: 'Régler dans Vidéos' });
+    // Plus aucun bouton « Régler dans … » : chaque bloc propre aux pages est un champ de l'écran.
+    assert.ok(panels.every((p) => p.fields.every((f) => (f.kind as string) !== 'page')));
+  });
+
+  it('choix courts en boutons (position du menu), longs en liste de choix', () => {
+    const panels = schemaPanels(sources());
+    const menu = fieldOf(panels, 'ui.menu.position');
+    assert.equal(menu.kind, 'segmented');
+    assert.deepEqual(
+      menu.options?.map((o) => o.label),
+      ['À gauche', 'À droite', 'En haut', 'En bas'],
+    );
+    assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
+    assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
+    assert.equal(fieldOf(panels, 'search.region').kind, 'choice');
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
     assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'tmdb'] } }), ['steam', 'tmdb', 'musicbrainz', 'libretro']);
     assert.deepEqual(providerOrder({}), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+  });
+
+  it('les fournisseurs des plugins actifs rejoignent l’ordre, sous le nom de leur plugin', () => {
+    const extra = ['org.films/infos'];
+    assert.deepEqual(providerOrder({}, extra), ['tmdb', 'musicbrainz', 'libretro', 'steam', 'org.films/infos']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }, extra), [
+      'org.films/infos',
+      'tmdb',
+      'musicbrainz',
+      'libretro',
+      'steam',
+    ]);
+    // Un plugin désactivé : son fournisseur quitte la liste.
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    const providers = [{ id: 'org.films/infos', plugin: 'org.films', name: 'Films libres', kinds: ['video'] }];
+    for (const [t, label] of [
+      [fr.t, 'Films libres (plugin)'],
+      [en.t, 'Films libres (plugin)'],
+    ] as const) {
+      const list = fieldOf(schemaPanels(sources({ t, providers })), 'scrape.providers').lists?.[0];
+      assert.deepEqual(list?.items.at(-1), { id: 'org.films/infos', label, color: 'var(--muted)', on: true });
+    }
   });
 
   it('informations et actions : bloqueur, lecture protégée, éditeur JSON, configuration', () => {
@@ -154,6 +188,117 @@ describe('panneaux générés depuis le schéma', () => {
       ['exportConfig', 'importConfig:replace', 'importConfig:merge', 'revealConfig'],
     );
     assert.deepEqual(byId('config').notes, ['/tmp/config.json']);
+  });
+});
+
+describe('blocs propres aux pages (P4-20, partie 2)', () => {
+  const config = () => {
+    const c = structuredClone(DEFAULT_CONFIG) as Data;
+    c.library.sources = [
+      { id: 's1', kind: 'video', location: '/films' },
+      { id: 's2', kind: 'video', location: '\\\\NAS\\Films' },
+      { id: 's3', kind: 'audio', location: 'http://serveur/musique/' },
+    ];
+    c.gameSources = [{ id: 'g1', location: 'C:\\Jeux' }];
+    c.tv = {
+      active: 'm3u',
+      services: [
+        { id: 'box', name: 'Box', kind: 'web', url: 'https://box' },
+        { id: 'm3u', name: 'IPTV', kind: 'playlist', url: 'http://iptv/liste.m3u' },
+      ],
+    };
+    c.web = [{ id: 'arte', name: 'Arte', url: 'https://www.arte.tv/fr/' }];
+    c.games = [{ name: 'Jeu', path: 'C:\\Jeux\\jeu.exe' }];
+    c.pcSites = [{ name: 'Libre', url: 'https://libre.example', search: 'https://libre.example/?q={q}' }];
+    c.store = { romsRoot: '/roms' };
+    return c;
+  };
+  const groupsOf = (panels: ReturnType<typeof schemaPanels>, key: string) => fieldOf(panels, key).groups ?? [];
+
+  it('sources : une liste par nature, avec la nature de l’emplacement et l’état de l’analyse', () => {
+    const panels = schemaPanels(
+      sources({ config: config(), sourceStatus: { s1: { ok: true, count: 3 }, s2: { ok: false, error: 'Partage injoignable' } }, gameSourceStatus: {} }),
+    );
+    const groups = groupsOf(panels, 'sources.sources');
+    assert.deepEqual(
+      groups.map((g) => [g.key, g.label, g.entries.length]),
+      [
+        ['sources:video', 'Vidéos', 2],
+        ['sources:audio', 'Musique', 1],
+        ['sources:image', 'Images', 0],
+        ['sources:game', 'Jeux PC', 1],
+      ],
+    );
+    assert.deepEqual(groups[0]!.entries, [
+      { id: 's1', label: '/films', sub: 'Dossier · 3 vidéos' },
+      { id: 's2', label: '\\\\NAS\\Films', sub: 'Réseau · Partage injoignable', error: true },
+    ]);
+    assert.equal(groups[1]!.entries[0]!.sub, 'Web');
+    assert.equal(groups[2]!.empty, 'Aucune source.');
+    assert.deepEqual(
+      groups[0]!.buttons?.map((b) => b.action),
+      ['addSourceFolder', 'addSourceAddress'],
+    );
+    assert.ok(groups.every((g) => g.remove));
+    const scanning = groupsOf(schemaPanels(sources({ config: config(), scanning: true })), 'sources.sources');
+    assert.equal(scanning[0]!.entries[0]!.sub, 'Dossier · Analyse…');
+    const english = groupsOf(schemaPanels(sources({ t: en.t, config: config(), sourceStatus: { s1: { ok: true, count: 1 } } })), 'sources.sources');
+    assert.equal(english[0]!.entries[0]!.sub, 'Folder · 1 video');
+  });
+
+  it('télévision : un choix parmi les services, la détection ; l’adresse de la playlist active', () => {
+    const panels = schemaPanels(sources({ config: config() }));
+    const [group] = groupsOf(panels, 'tv.service');
+    assert.equal(group!.choose, true);
+    assert.deepEqual(group!.entries, [
+      { id: 'box', label: 'Box', sub: 'Portail web', current: false },
+      { id: 'm3u', label: 'IPTV', sub: 'Playlist M3U', current: true },
+    ]);
+    assert.deepEqual(
+      group!.buttons?.map((b) => b.action),
+      ['detectTvBox', 'reloadTv'],
+    );
+    const url = fieldOf(panels, 'tv.playlist');
+    assert.equal(url.kind, 'text');
+    assert.equal(url.value, 'http://iptv/liste.m3u');
+    const c = config();
+    c.tv.active = 'box';
+    assert.ok(
+      !schemaPanels(sources({ config: c }))
+        .flatMap((p) => p.fields)
+        .some((f) => f.key === 'tv.playlist'),
+    );
+  });
+
+  it('sites, jeux PC, sites de jeux PC : listes avec « Retirer », et de quoi ajouter', () => {
+    const panels = schemaPanels(sources({ config: config() }));
+    const [web] = groupsOf(panels, 'streaming.sites');
+    assert.deepEqual(web!.entries, [{ id: 'arte', label: 'Arte', sub: 'https://www.arte.tv/fr/' }]);
+    assert.deepEqual(
+      web!.inputs?.map((i) => i.id),
+      ['name', 'url'],
+    );
+    assert.equal(web!.buttons?.[0]?.action, 'addEntry');
+    const [games] = groupsOf(panels, 'games.pcGames');
+    assert.deepEqual(games!.entries, [{ id: 'C:\\Jeux\\jeu.exe', label: 'Jeu', sub: 'C:\\Jeux\\jeu.exe' }]);
+    assert.equal(games!.buttons?.[0]?.action, 'addPcGame');
+    const [sites] = groupsOf(panels, 'games.pcSites');
+    assert.deepEqual(sites!.entries, [{ id: 'https://libre.example', label: 'Libre', sub: 'https://libre.example · https://libre.example/?q={q}' }]);
+    assert.deepEqual(
+      sites!.inputs?.map((i) => i.id),
+      ['name', 'url', 'search'],
+    );
+    for (const g of [web, games, sites]) assert.equal(g!.remove, true);
+  });
+
+  it('boutique : un dossier ; consoles : un lien vers l’onglet du Centre', () => {
+    const panels = schemaPanels(sources({ config: config() }));
+    const store = fieldOf(panels, 'store.romsRoot');
+    assert.deepEqual([store.kind, store.value, store.pick, store.placeholder], ['path', '/roms', 'folder', 'Documents/Mire/ROMs']);
+    const consoles = fieldOf(panels, 'games.consoles');
+    assert.equal(consoles.kind, 'link');
+    assert.deepEqual(consoles.link, { tab: 'consoles', label: 'Ouvrir les consoles du Centre' });
+    assert.equal(fieldOf(schemaPanels(sources({ t: en.t, config: config() })), 'games.consoles').link?.label, 'Open the consoles of the Centre');
   });
 });
 
@@ -359,11 +504,94 @@ describe('contrôleur mire-settings (P4-20)', () => {
     assert.deepEqual(good.toasts, ['Sites, jeux et consoles enregistrés']);
   });
 
-  it('réglages d’une page : la page s’ouvre, puis ses réglages à l’onglet voulu', () => {
+  it('nouvel ordre : les fournisseurs des plugins actifs sont gardés', async () => {
+    const { ctx, named } = context({ 'api.pluginsMetadataProviders': [{ id: 'org.films/infos' }] });
+    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'tmdb'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'tmdb']]]);
+  });
+
+  it('sources : un dossier choisi par le processus principal, une adresse, un retrait ; nature vérifiée', async () => {
+    const { ctx, named } = context();
+    const c = new SettingsController(ctx);
+    await c.addSourceFolder({ key: 'sources:video' });
+    await c.addSourceAddress({ key: 'sources:game' });
+    await c.removeEntry({ key: 'sources:audio', id: 's3' });
+    assert.deepEqual(named('ui.addSourceFolder'), [['ui.addSourceFolder', 'video']]);
+    assert.deepEqual(named('ui.askSourceAddress'), [['ui.askSourceAddress', 'game']]);
+    assert.deepEqual(named('ui.removeSource'), [['ui.removeSource', 'audio', 's3']]);
+    assert.equal(named('ui.settings.refresh').length, 3);
+    await assert.rejects(c.addSourceFolder({ key: 'sources:autre' }));
+  });
+
+  it('sites et sites de jeux PC : ajout d’après les champs remplis, puis champs vidés ; retrait', async () => {
+    S.config = structuredClone(DEFAULT_CONFIG) as typeof S.config;
+    const drafts: Record<string, string> = {
+      'web.name': 'Arte',
+      'web.url': 'www.arte.tv',
+      'pcSites.url': 'https://libre.example',
+      'pcSites.search': 'https://libre.example/?q={q}',
+    };
+    const { ctx, named, toasts } = context({ 'ui.settings.draft': (k: string) => drafts[k], 'api.saveConfig': (c: Data) => c });
+    const c = new SettingsController(ctx);
+    await c.addEntry({ key: 'web' });
+    const web = (S.config as Data).web as Data[];
+    assert.deepEqual([web.at(-1)!.name, web.at(-1)!.url], ['Arte', 'https://www.arte.tv']);
+    assert.equal(toasts.at(-1), 'Arte ajouté dans Streaming');
+    await c.addEntry({ key: 'pcSites' });
+    assert.deepEqual((S.config as Data).pcSites, [{ name: 'libre.example', url: 'https://libre.example', search: 'https://libre.example/?q={q}' }]);
+    assert.deepEqual(
+      named('ui.settings.clearDraft').map((x) => x[1]),
+      ['web.name', 'web.url', 'pcSites.name', 'pcSites.url', 'pcSites.search'],
+    );
+    await c.removeEntry({ key: 'pcSites', id: 'https://libre.example' });
+    assert.deepEqual((S.config as Data).pcSites, []);
+    (S.config as Data).games = [{ path: '/jeu' }, { path: '/autre' }];
+    await c.removeEntry({ key: 'games', id: '/jeu' });
+    assert.deepEqual((S.config as Data).games, [{ path: '/autre' }]);
+    await c.removeEntry({ key: 'web', id: (web.at(-1) as Data).id });
+    assert.ok(!((S.config as Data).web as Data[]).some((x) => x.name === 'Arte'));
+    await assert.rejects(c.removeEntry({ key: 'autre', id: 'x' }));
+  });
+
+  it('site incomplet : rien n’est enregistré, les champs restent remplis', async () => {
+    const { ctx, named, toasts } = context({ 'ui.settings.draft': (k: string) => (k === 'web.name' ? 'Arte' : '') });
+    await new SettingsController(ctx).addEntry({ key: 'web' });
+    assert.equal(named('api.saveConfig').length, 0);
+    assert.equal(named('ui.settings.clearDraft').length, 0);
+    assert.deepEqual(toasts, ['Indiquez un nom et une adresse.']);
+  });
+
+  it('télévision : choix du service, adresse de la playlist active, détection de la box', async () => {
+    S.config = structuredClone(DEFAULT_CONFIG) as typeof S.config;
+    (S.config as Data).tv = { active: 'm3u', services: [{ id: 'm3u', kind: 'playlist', url: '' }] };
+    const { ctx, named, toasts } = context({
+      'api.tvSetActive': () => S.config,
+      'api.saveConfig': (c: Data) => c,
+      'api.tvDetect': { id: 'box', name: 'Ma box' },
+      'api.getConfig': { config: S.config },
+    });
+    const c = new SettingsController(ctx);
+    await c.setValue({ key: 'tv.active', value: 'm3u' });
+    assert.deepEqual(named('api.tvSetActive'), [['api.tvSetActive', 'm3u']]);
+    await c.setValue({ key: 'tv.playlist', value: 'http://iptv/liste.m3u' });
+    assert.equal(((S.config as Data).tv.services as Data[])[0]!.url, 'http://iptv/liste.m3u');
+    assert.equal(named('ui.setCfg').length, 0);
+    await c.detectTvBox();
+    assert.deepEqual(toasts.slice(-2), ['Recherche de votre box sur le réseau…', 'Ma box détecté.']);
+  });
+
+  it('jeu PC ajouté à la main : par le processus principal, puis l’écran se relit', async () => {
+    const { ctx, named } = context();
+    await new SettingsController(ctx).addPcGame();
+    assert.equal(named('ui.addGame').length, 1);
+    assert.equal(named('ui.settings.refresh').length, 1);
+  });
+
+  it('consoles : le lien ouvre l’onglet « Consoles » du Centre', () => {
     const { ctx, named } = context({ 'ui.open': true });
-    new SettingsController(ctx).openPageSettings({ page: 'movies', tab: 'sources' });
-    assert.deepEqual(named('ui.open'), [['ui.open', 'movies']]);
-    assert.deepEqual(named('ui.openPageSettings'), [['ui.openPageSettings', 'sources']]);
+    new SettingsController(ctx).openCentreTab({ tab: 'consoles' });
+    assert.deepEqual(named('ui.open'), [['ui.open', 'downloads']]);
+    assert.deepEqual(named('ui.showCentreTab'), [['ui.showCentreTab', 'consoles']]);
   });
 
   it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
