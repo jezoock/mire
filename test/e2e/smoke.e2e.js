@@ -2695,10 +2695,9 @@ describe('Test de fumée de Mire', () => {
       const row = group('sources:image').locator(`li.mire-settings-view__entry[data-key="${added.id}"]`);
       await row.waitFor();
       await hydrated();
-      await row.scrollIntoViewIfNeeded();
-      await settle();
+      await page.locator(`${VIEW} [data-panel="sources"]`).evaluate((e) => e.scrollIntoView({ block: 'start' }));
       await hideToast();
-      await page.locator(`${VIEW} [data-panel="sources"]`).screenshot({ path: path.join(SHOTS, 'settings-sources.png') });
+      await shot('settings-sources');
       await row.locator('ds-trigger').click();
       await waitConfig((c, a) => c.library.sources.filter((x) => x.kind === 'image').length === a, before);
       await row.waitFor({ state: 'detached' });
@@ -2741,10 +2740,9 @@ describe('Test de fumée de Mire', () => {
       await tvChoice('demo').click();
       await waitConfig((c) => c.tv.active === 'demo');
       await hydrated();
-      await page.locator(`${VIEW} [data-panel="games"]`).scrollIntoViewIfNeeded();
-      await settle();
+      await page.locator(`${VIEW} [data-panel="games"]`).evaluate((e) => e.scrollIntoView({ block: 'start' }));
       await hideToast();
-      await page.locator(`${VIEW} [data-panel="games"]`).screenshot({ path: path.join(SHOTS, 'settings-games.png') });
+      await shot('settings-games');
       assert.deepEqual(errors, []);
     });
   });

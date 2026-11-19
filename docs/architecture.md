@@ -307,6 +307,10 @@ ni dossier, ni fichier, ni hôte.
   `pluginsSetSetting(id, key, value)` (`plugins:setSetting`) en change un (`null` : valeur par défaut) et rend les
   réglages du plugin, ou le message d'un refus, qui ne cite jamais la valeur. L'écran Réglages en tire un panneau par
   plugin, avec ses textes (`pluginTexts.<id>.settings.<clé>.label`).
+- **Fournisseurs d'infos des plugins** (P4-20) : `pluginsMetadataProviders()` (`plugins:metadataProviders`) rend ceux
+  des plugins actifs (identifiant `<plugin>/<contribution>` en minuscules, nom du plugin, natures). Ils rejoignent
+  l'ordre des fournisseurs (`catalog.metadataProviders`) : après ceux du cœur, sauf ordre choisi ; leurs fiches
+  contribuent aux infos des éléments dans cet ordre.
 
 ## Contrat IPC
 

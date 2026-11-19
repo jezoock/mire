@@ -63,6 +63,12 @@ modifie (`paths`). Les composants connus sont dans `SETTINGS_COMPONENTS` :
 | `pc-games` | `games` |
 | `link-sites` | `pcSites` |
 
+À l'écran (P4-20), `sources`, `tv-services`, `web-sites`, `pc-games` et `link-sites` sont des listes d'éléments avec
+« Retirer » et de quoi ajouter (le service de télévision se choisit parmi les autres) ; `store` est un champ de
+dossier ; `consoles` mène à l'onglet « Consoles » du Centre, où elles se créent et se modifient. Les fournisseurs
+d'infos des plugins actifs rejoignent la liste de `catalog.metadataProviders`. Un choix (`choice`) d'au plus quatre
+options courtes, sans `optionsFrom`, s'affiche en boutons (`ds-toggle-group`) plutôt qu'en liste de choix.
+
 ## Règles
 
 - Un chemin de configuration figure **une seule fois** dans tout le schéma, et jamais à l'intérieur d'un autre
