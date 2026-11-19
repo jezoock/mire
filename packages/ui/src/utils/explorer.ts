@@ -46,6 +46,21 @@ export interface ExplorerPreview {
   location: string;
   /** Faux pour un élément indisponible. */
   playable: boolean;
+  /**
+   * Gestion du fichier (P4-09) : renommer, déplacer, supprimer ne sont permis que dans les dossiers autorisés ;
+   * sinon les actions sont désactivées et `reason` dit pourquoi.
+   */
+  files?: { allowed: boolean; reason: string };
+}
+
+/** Barre de la sélection multiple (P4-09) : textes déjà rédigés. */
+export interface ExplorerSelection {
+  /** « 3 éléments choisis ». */
+  count: string;
+  /** Raison pour laquelle « Supprimer » est désactivé ; vide s'il est permis. */
+  blocked: string;
+  /** Contrôle des fichiers en cours : « Supprimer » attend. */
+  checking?: boolean;
 }
 
 /** Textes de l'explorateur, tirés des catalogues par la page (attribut `labels`, JSON). */
@@ -66,6 +81,19 @@ export interface ExplorerLabels {
   editTags?: string;
   addToList?: string;
   unavailable?: string;
+  /** Gestion des fichiers (P4-09) : actions de l'aperçu et titre de la raison quand elles sont désactivées. */
+  rename?: string;
+  move?: string;
+  remove?: string;
+  filesBlocked?: string;
+  /** Sélection multiple : nom de la barre, état d'une ligne choisie, actions. */
+  selection?: string;
+  picked?: string;
+  addTag?: string;
+  removeTag?: string;
+  toList?: string;
+  removePicked?: string;
+  clearPicks?: string;
 }
 
 /** Arguments d'une action de l'explorateur : `[{"node":"pages"}]`, `[{"key":"local:/a.mkv"}]`. */

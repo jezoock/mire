@@ -72,7 +72,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
       pages.load();
       // Dossier autorisé `/bib` (absent du disque : le contrôle des liens lit le disque, puis laisse passer).
       const folders = createFolders({ catalog, engine, roots: () => ['/bib'], platform: 'linux', fs: fs.promises });
-      let state: ExplorerState = { columns: [], preview: null };
+      let state: ExplorerState = { columns: [], preview: null, picked: [], blocked: '' };
       // Comme l'IPC, chaque réponse est copiée (structuredClone) avant d'arriver à l'interface.
       const model = createExplorerModel(
         {
@@ -85,6 +85,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
           element: async (key) => structuredClone(engine.element(key)),
           sources: async () => structuredClone(folders.sources()),
           folder: async (source, p, cursor) => structuredClone(await folders.folder(source, p, cursor)),
+          check: async (paths) => paths.map(() => null),
         },
         (s) => (state = s),
       );

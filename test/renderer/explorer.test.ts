@@ -142,6 +142,7 @@ function setup(t = tFr, over: Partial<ExplorerSources> = {}) {
       calls.push(`folder ${source} ${path} ${cursor}`);
       return folder(source, path, cursor);
     },
+    check: async (paths) => paths.map((p) => (p.startsWith('/bib/') ? null : 'hors des dossiers')),
     ...over,
   };
   const model = createExplorerModel(src, (s) => states.push(s));
