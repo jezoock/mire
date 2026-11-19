@@ -805,7 +805,7 @@
         "mismatch": "Le dossier de « {name} » ne correspond pas à son contenu ({details}).",
         "engine": "« {name} » est fait pour une autre version de Mire ({range}) ; vous avez la {version}.",
         "level": "« {name} » ne contient pas ce que son niveau de sécurité annonce.",
-        "privileged": "« {name} » demande un accès étendu à votre ordinateur : seuls les plugins livrés avec Mire y ont droit pour l’instant.",
+        "privileged": "« {name} » demande un accès étendu à votre ordinateur : seuls les plugins livrés avec Mire ou venus du dépôt officiel y ont droit pour l’instant.",
         "outside": "« {name} » contient un lien vers un fichier hors de son dossier.",
         "data": "Un fichier de « {name} » est illisible ou trop gros : {details}",
         "texts": "Les textes de « {name} » sont illisibles : {details}",
@@ -822,6 +822,25 @@
       },
       "settings": {
         "refused": "{name} n’accepte pas cette valeur."
+      }
+    },
+    "repos": {
+      "errors": {
+        "url": "L’adresse du dépôt de « {name} » n’est pas sûre (https seulement) : rien n’a été installé.",
+        "network": "Le dépôt n’a pas pu être joint pour « {name} ». Vérifiez votre connexion et réessayez.",
+        "too-big": "Le fichier reçu pour « {name} » est trop gros : rien n’a été installé.",
+        "signature": "La liste des plugins du dépôt n’est pas signée par la bonne clé : Mire l’a ignorée par sécurité.",
+        "format": "La liste des plugins du dépôt est illisible : Mire l’a ignorée.",
+        "rollback": "La liste des plugins reçue est plus ancienne que celle déjà connue : Mire garde la plus récente.",
+        "checksum": "Le fichier reçu pour « {name} » ne correspond pas à celui publié : rien n’a été installé, par sécurité.",
+        "archive": "Le fichier de « {name} » contient des éléments interdits : rien n’a été installé, par sécurité.",
+        "manifest": "Le contenu de « {name} » ne correspond pas à ce que le dépôt annonce : rien n’a été installé.",
+        "unknown": "« {name} » n’est pas proposé par les dépôts, ou pas dans cette version.",
+        "engine": "« {name} » n’a pas de version faite pour cette version de Mire.",
+        "dependency": "« {name} » a besoin de « {dependency} », qui ne peut pas être installé dans une version qui convient.",
+        "refused": "« {name} » a été installé mais n’a pas pu être chargé ; la version précédente a été remise. {details}",
+        "busy": "Une installation est déjà en cours. Attendez qu’elle se termine.",
+        "disk": "« {name} » n’a pas pu être écrit sur le disque ; la version précédente a été gardée."
       }
     },
     "shell": {

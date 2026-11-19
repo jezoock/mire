@@ -201,6 +201,13 @@ const ADDED_METHODS: Record<string, string> = {
   // P4-10 : mode secours
   rescueStart: 'rescue:start',
   rescueThemeOk: 'rescue:themeOk',
+  // P3-07 : client des dépôts
+  reposList: 'repos:list',
+  reposRefresh: 'repos:refresh',
+  reposPlugins: 'repos:plugins',
+  pluginsInstall: 'plugins:install',
+  pluginsUpdate: 'plugins:update',
+  pluginsUninstall: 'plugins:uninstall',
 };
 
 // Événements ajoutés après P1-08.
@@ -210,6 +217,7 @@ const ADDED_EVENTS: Record<string, string> = {
   onListsChange: 'lists:changed', // P2-08 : liste changée
   onFoldersChange: 'folders:changed', // P4-08 : sources ou dossiers changés (explorateur)
   onRescue: 'rescue:open', // P4-10 : ouvrir l'explorateur en mode secours
+  onPluginsProgress: 'plugins:progress', // P3-07 : avancement d'une installation depuis un dépôt
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

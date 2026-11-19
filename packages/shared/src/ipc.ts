@@ -209,8 +209,12 @@ export interface PluginSummary {
   version: string | null;
   /** `bundled` : livré avec Mire (`resources/plugins/`) ; `installed` : `userData/plugins/`. */
   origin: 'bundled' | 'installed';
+  /** Plugin installé : dépôt qui l'a installé (`official` : dépôt officiel), `null` sinon (P3-07). */
+  repository: string | null;
   /** Niveau de sécurité (D-18), `null` si le manifeste est illisible. */
   level: 'data' | 'code' | 'privileged' | null;
+  /** Permissions demandées par le manifeste (`permissions`), vide s'il est illisible. */
+  permissions: Record<string, unknown>;
   /** Nom affiché (textes du plugin), ou l'identifiant. */
   name: string;
   /** Voulu actif (état mémorisé). */
@@ -222,6 +226,68 @@ export interface PluginSummary {
   contributions: { kind: string; id: string }[];
   /** Le changement prendra effet au prochain démarrage de Mire. */
   restartRequired: boolean;
+}
+
+/** Dépôt de plugins configuré et état de son index (P3-07 ; le Centre, P4-18). */
+export interface RepositoryInfo {
+  id: string;
+  official: boolean;
+  /** Nom du dépôt dans la langue de l'interface (index), ou son identifiant. */
+  name: string;
+  /** Date de publication de l'index utilisé, `null` s'il n'y en a pas encore (jamais lu, même en cache). */
+  generated: string | null;
+  /** Dernière lecture réussie de l'index en ligne pendant cette session (ms), sinon `null`. */
+  checkedAt: number | null;
+  /** Erreur de la dernière mise à jour (le cache sert alors) : code stable et message, ou `null`. */
+  error: string | null;
+  message: string | null;
+}
+
+/** Plugin proposé par un dépôt (P3-07), tel que l'index vérifié le décrit. */
+export interface AvailablePlugin {
+  id: string;
+  /** Dépôt qui le propose (`official` : dépôt officiel). */
+  repository: string;
+  official: boolean;
+  name: string;
+  description: string | null;
+  /** Plus récente version compatible avec cette version de Mire, `null` s'il n'y en a aucune. */
+  version: string | null;
+  /** Plus récente version publiée. */
+  latest: string;
+  level: 'data' | 'code' | 'privileged';
+  permissions: Record<string, unknown>;
+  dependencies: Record<string, string>;
+  contributes: string[];
+  /** Taille du paquet (octets). */
+  size: number;
+  /** Version installée (ou incluse), `null` sinon. */
+  installed: string | null;
+  /** Version plus récente compatible proposée, `null` sinon. */
+  update: string | null;
+}
+
+/** Résultat d'une installation ou d'une mise à jour : les plugins après coup, ou l'erreur (code stable et message). */
+export type PluginsOutcome = { ok: true; plugins: PluginSummary[] } | { ok: false; code: string; error: string };
+
+/** Résultat d'une désinstallation : refusée si un autre plugin en a besoin, ou s'il est livré avec Mire. */
+export type UninstallOutcome =
+  | { ok: true; keptData: boolean; restored: PluginSummary | null }
+  | { ok: false; code: 'needed'; by: string[]; message: string }
+  | { ok: false; code: 'bundled'; message: string };
+
+/**
+ * Avancement d'une installation depuis un dépôt (P3-07) : des données, que l'interface rédige (P4-18). `id` est le
+ * plugin demandé, `plugin` celui en cours (une dépendance, ou lui-même) ; `message` est l'erreur, déjà rédigée.
+ */
+export interface PluginsProgress {
+  id: string;
+  phase: 'resolve' | 'download' | 'verify' | 'install' | 'done' | 'error';
+  plugin?: string;
+  version?: string;
+  received?: number;
+  total?: number;
+  message?: string;
 }
 
 /** Réglages d'un plugin, pour l'écran Réglages (P4-20) : ses déclarations (manifeste) et ses valeurs. */
@@ -487,6 +553,15 @@ export interface IpcMethods {
   pluginsSetSetting(id: string, key: string, value: unknown): Outcome<{ plugin: PluginSettingsInfo }>;
   // Fournisseurs d'infos des plugins actifs (P4-20) : ils rejoignent l'ordre des fournisseurs des Réglages.
   pluginsMetadataProviders(): PluginMetadataProvider[];
+  // Dépôts (P3-07) : dépôts et état de leur index (sans réseau, ou après mise à jour), plugins proposés.
+  reposList(): RepositoryInfo[];
+  reposRefresh(): RepositoryInfo[];
+  reposPlugins(): AvailablePlugin[];
+  // Installe un plugin des dépôts (une version, ou la plus récente compatible) avec ses dépendances ; met à jour un
+  // plugin installé ; désinstalle (en gardant ou non ses données). `null` : arguments refusés (plugin inconnu…).
+  pluginsInstall(id: string, version?: string): PluginsOutcome | null;
+  pluginsUpdate(id: string): PluginsOutcome | null;
+  pluginsUninstall(id: string, keepData: boolean): UninstallOutcome | null;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -670,6 +745,12 @@ export const IPC_METHODS = {
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
   pluginsMetadataProviders: 'plugins:metadataProviders',
+  reposList: 'repos:list',
+  reposRefresh: 'repos:refresh',
+  reposPlugins: 'repos:plugins',
+  pluginsInstall: 'plugins:install',
+  pluginsUpdate: 'plugins:update',
+  pluginsUninstall: 'plugins:uninstall',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
@@ -724,6 +805,8 @@ export interface IpcEvents {
   onFoldersChange: undefined;
   /** Ouvrir l'explorateur en mode secours (raccourci clavier, touche maintenue au lancement). */
   onRescue: RescueRequest;
+  /** Avancement d'une installation de plugin depuis un dépôt (P3-07). */
+  onPluginsProgress: PluginsProgress;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -752,6 +835,7 @@ export const IPC_EVENTS = {
   onListsChange: 'lists:changed',
   onFoldersChange: 'folders:changed',
   onRescue: 'rescue:open',
+  onPluginsProgress: 'plugins:progress',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

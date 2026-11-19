@@ -96,7 +96,7 @@ describe('vérification', () => {
   ) => {
     const dir = path.join(root, `p${++n}`);
     write(dir, files);
-    return { id, version: origin === 'bundled' ? null : version, origin, dir };
+    return { id, version: origin === 'bundled' ? null : version, origin, dir, repository: null as string | null };
   };
 
   it('accepte un plugin de code et lit ses textes', async () => {

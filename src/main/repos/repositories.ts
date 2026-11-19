@@ -117,7 +117,7 @@ export function createRepositories(opts: RepositoriesOptions) {
       });
       const index = parseIndex(bytes, e.key, { official: e.config.official });
       if (e.index && Date.parse(index.generated) < Date.parse(e.index.generated))
-        throw new RepoError('rollback', `Index du ${index.generated}, plus ancien que celui du cache (${e.index.generated}).`);
+        throw new RepoError('rollback', `Index of ${index.generated}, older than the cached one (${e.index.generated}).`);
       await writeCache(e.config.id, bytes);
       e.index = index;
       e.checkedAt = Date.now();

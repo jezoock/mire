@@ -39,7 +39,7 @@ const readString = (buf: Buffer, offset: number, length: number): string => {
 
 function readOctal(buf: Buffer, offset: number, length: number): number {
   const s = readString(buf, offset, length).trim();
-  if (!/^[0-7]{1,11}$/.test(s)) refuse('En-tête tar invalide.');
+  if (!/^[0-7]{1,11}$/.test(s)) refuse('Invalid tar header.');
   return parseInt(s, 8);
 }
 
@@ -47,7 +47,7 @@ function checkHeader(h: Buffer): void {
   const stored = readOctal(h, 148, 8);
   let sum = 0;
   for (let i = 0; i < BLOCK; i++) sum += i >= 148 && i < 156 ? 32 : h[i];
-  if (sum !== stored) refuse('Somme de contrôle tar invalide.');
+  if (sum !== stored) refuse('Invalid tar checksum.');
 }
 
 /** Fichiers d'un tar ; refuse toute entrée qui n'est pas un fichier ordinaire au chemin sûr. */
@@ -64,20 +64,20 @@ export function readTar(tar: Buffer): TarFile[] {
     const prefix = readString(h, 345, 155);
     const name = readString(h, 0, 100);
     const path = prefix ? `${prefix}/${name}` : name;
-    if (type !== '0' && type !== '\0') refuse(`Entrée refusée (ni un fichier ordinaire) : ${path}`);
-    if (!isArchivePath(path) || seen.has(path.toLowerCase())) refuse(`Chemin refusé : ${path}`);
+    if (type !== '0' && type !== '\0') refuse(`Entry refused (not a regular file): ${path}`);
+    if (!isArchivePath(path) || seen.has(path.toLowerCase())) refuse(`Path refused: ${path}`);
     const size = readOctal(h, 124, 12);
-    if (size > MAX_FILE_SIZE) refuse(`Fichier trop gros : ${path}`);
+    if (size > MAX_FILE_SIZE) refuse(`File too big: ${path}`);
     total += size;
-    if (total > MAX_ARCHIVE_SIZE || files.length >= MAX_FILES) refuse('Archive trop grosse.');
+    if (total > MAX_ARCHIVE_SIZE || files.length >= MAX_FILES) refuse('Archive too big.');
     const start = offset + BLOCK;
-    if (start + size > tar.length) refuse('Archive tronquée.');
+    if (start + size > tar.length) refuse('Truncated archive.');
     files.push({ path, data: Buffer.from(tar.subarray(start, start + size)) });
     // Insensible à la casse : deux fichiers qui ne diffèrent que par elle s'écraseraient sous Windows et macOS.
     seen.add(path.toLowerCase());
     offset = start + Math.ceil(size / BLOCK) * BLOCK;
   }
-  return refuse('Archive tronquée (fin de tar absente).');
+  return refuse('Truncated archive (no end of tar).');
 }
 
 /** Refuse un fichier dont le chemin sert aussi de dossier à un autre (`a` et `a/b`). */
@@ -85,7 +85,7 @@ function noFileAsFolder(files: TarFile[]): TarFile[] {
   const names = new Set(files.map((f) => f.path.toLowerCase()));
   for (const f of files) {
     const parts = f.path.toLowerCase().split('/');
-    for (let i = 1; i < parts.length; i++) if (names.has(parts.slice(0, i).join('/'))) refuse(`Chemin refusé : ${f.path}`);
+    for (let i = 1; i < parts.length; i++) if (names.has(parts.slice(0, i).join('/'))) refuse(`Path refused: ${f.path}`);
   }
   return files;
 }
@@ -96,7 +96,7 @@ export function readTgz(tgz: Uint8Array): TarFile[] {
   try {
     tar = gunzipSync(tgz, { maxOutputLength: MAX_ARCHIVE_SIZE + 1024 * 1024 });
   } catch {
-    return refuse('Archive gzip illisible ou trop grosse.');
+    return refuse('Unreadable or too big gzip archive.');
   }
   return readTar(tar);
 }

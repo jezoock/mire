@@ -33,19 +33,19 @@ export function httpsUrl(url: string, base?: string): string | null {
 export async function downloadBytes(url: string, limits: DownloadLimits): Promise<Buffer> {
   const signal = AbortSignal.any([AbortSignal.timeout(limits.timeout), ...(limits.signal ? [limits.signal] : [])]);
   let current = httpsUrl(url);
-  if (!current) throw new RepoError('url', `Adresse refusée (https seulement) : ${url}`);
+  if (!current) throw new RepoError('url', `URL refused (https only): ${url}`);
   try {
     for (let hop = 0; ; hop++) {
       const res = await request(current, { fetch: limits.fetch, signal, redirect: 'manual', headers: { accept: '*/*' } });
       if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
         await res.body?.cancel().catch(() => {});
         const next = httpsUrl(res.headers.get('location')!, current);
-        if (!next) throw new RepoError('url', `Redirection refusée (https seulement) depuis ${current}`);
-        if (hop >= MAX_REDIRECTS) throw new RepoError('network', `Trop de redirections : ${url}`);
+        if (!next) throw new RepoError('url', `Redirect refused (https only) from ${current}`);
+        if (hop >= MAX_REDIRECTS) throw new RepoError('network', `Too many redirects: ${url}`);
         current = next;
         continue;
       }
-      if (!res.ok || !res.body) throw new RepoError('network', `${current} : code ${res.status}`, { status: String(res.status) });
+      if (!res.ok || !res.body) throw new RepoError('network', `${current}: status ${res.status}`, { status: String(res.status) });
       return await readLimited(res, limits);
     }
   } catch (err) {
@@ -59,7 +59,7 @@ async function readLimited(res: Response, { maxBytes, onProgress }: DownloadLimi
   const announced = Number(res.headers.get('content-length'));
   if (Number.isFinite(announced) && announced > maxBytes) {
     await res.body!.cancel().catch(() => {});
-    throw new RepoError('too-big', `Réponse trop grosse (${announced} octets, ${maxBytes} au plus).`);
+    throw new RepoError('too-big', `Response too big (${announced} bytes, at most ${maxBytes}).`);
   }
   const total = Number.isFinite(announced) && announced > 0 ? announced : 0;
   const chunks: Uint8Array[] = [];
@@ -72,7 +72,7 @@ async function readLimited(res: Response, { maxBytes, onProgress }: DownloadLimi
     received += value.byteLength;
     if (received > maxBytes) {
       await reader.cancel().catch(() => {});
-      throw new RepoError('too-big', `Réponse trop grosse (plus de ${maxBytes} octets).`);
+      throw new RepoError('too-big', `Response too big (more than ${maxBytes} bytes).`);
     }
     chunks.push(value);
     const now = Date.now();

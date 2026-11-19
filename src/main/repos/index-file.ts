@@ -52,7 +52,7 @@ export interface RepoIndex {
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
   if (typeof value === 'number') {
-    if (!Number.isSafeInteger(value)) throw new Error(`Nombre non entier refusé dans l'index : ${value}`);
+    if (!Number.isSafeInteger(value)) throw new Error(`Non-integer number refused in the index: ${value}`);
     return String(value);
   }
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -63,7 +63,7 @@ export function canonicalJson(value: unknown): string {
       .sort();
     return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(',')}}`;
   }
-  throw new Error(`Valeur refusée dans l'index : ${typeof value}`);
+  throw new Error(`Value refused in the index: ${typeof value}`);
 }
 
 /** Octets signés : en-tête de contexte puis index canonique sans `signature`. */
@@ -84,9 +84,9 @@ export function loadPublicKey(text: string): KeyObject {
       key = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: raw.toString('base64url') }, format: 'jwk' });
     }
   } catch {
-    throw new Error('Clé publique illisible : PEM (-----BEGIN PUBLIC KEY-----) ou 32 octets en base64 attendus.');
+    throw new Error('Unreadable public key: PEM (-----BEGIN PUBLIC KEY-----) or 32 bytes in base64 expected.');
   }
-  if (key.asymmetricKeyType !== 'ed25519') throw new Error('La clé publique n’est pas une clé ed25519.');
+  if (key.asymmetricKeyType !== 'ed25519') throw new Error('The public key is not an ed25519 key.');
   return key;
 }
 
@@ -107,17 +107,17 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 export function verifyIndex(index: unknown, publicKey: KeyObject): RepoIndex {
   const sig = isObject(index) ? index.signature : undefined;
   if (!isObject(sig) || sig.algorithm !== 'ed25519' || typeof sig.value !== 'string')
-    throw new RepoError('signature', 'Index non signé ou signature mal formée.');
-  if (sig.keyId !== keyId(publicKey)) throw new RepoError('signature', `Index signé par une autre clé (${String(sig.keyId)}).`);
+    throw new RepoError('signature', 'Index not signed, or malformed signature.');
+  if (sig.keyId !== keyId(publicKey)) throw new RepoError('signature', `Index signed by another key (${String(sig.keyId)}).`);
   let ok = false;
   try {
     ok = verify(null, signedBytes(index as object), publicKey, Buffer.from(sig.value, 'base64'));
   } catch {
     ok = false;
   }
-  if (!ok) throw new RepoError('signature', 'Signature de l’index invalide.');
+  if (!ok) throw new RepoError('signature', 'Invalid index signature.');
   if ((index as { format?: unknown }).format !== INDEX_FORMAT)
-    throw new RepoError('format', `Format d'index ${String((index as { format?: unknown }).format)} inconnu.`);
+    throw new RepoError('format', `Unknown index format ${String((index as { format?: unknown }).format)}.`);
   return index as unknown as RepoIndex;
 }
 
@@ -129,21 +129,21 @@ const isLocalized = (v: unknown): boolean => v === undefined || (isObject(v) && 
  */
 export function checkIndexContent(index: RepoIndex, { official = false } = {}): string[] {
   const errors: string[] = [];
-  if (!Array.isArray(index.plugins)) return ['plugins : liste attendue.'];
-  if (typeof index.generated !== 'string' || Number.isNaN(Date.parse(index.generated))) errors.push('generated : date ISO attendue.');
+  if (!Array.isArray(index.plugins)) return ['plugins: list expected.'];
+  if (typeof index.generated !== 'string' || Number.isNaN(Date.parse(index.generated))) errors.push('generated: ISO date expected.');
   if (!isObject(index.repository) || !isObject(index.repository.name) || typeof index.repository.name.en !== 'string')
-    errors.push('repository.name.en attendu.');
+    errors.push('repository.name.en expected.');
   const ids = new Set<string>();
   for (const p of index.plugins) {
     if (!isObject(p) || typeof p.id !== 'string' || !PLUGIN_ID_RE.test(p.id)) {
-      errors.push(`Identifiant invalide : ${String((p as { id?: unknown })?.id)}`);
+      errors.push(`Invalid id: ${String((p as { id?: unknown })?.id)}`);
       continue;
     }
-    if (ids.has(p.id)) errors.push(`${p.id} : en double.`);
+    if (ids.has(p.id)) errors.push(`${p.id}: duplicated.`);
     ids.add(p.id);
-    if (!official && p.id.startsWith(OFFICIAL_PREFIX)) errors.push(`${p.id} : préfixe « mire. » réservé au dépôt officiel.`);
+    if (!official && p.id.startsWith(OFFICIAL_PREFIX)) errors.push(`${p.id}: the “mire.” prefix is reserved for the official repository.`);
     if (!Array.isArray(p.versions)) {
-      errors.push(`${p.id} : versions attendues.`);
+      errors.push(`${p.id}: versions expected.`);
       continue;
     }
     const seen = new Set<string>();
@@ -151,19 +151,19 @@ export function checkIndexContent(index: RepoIndex, { official = false } = {}): 
       const e = v as Partial<IndexVersion>;
       const where = `${p.id} ${String(e?.version)}`;
       if (!isObject(v) || !isVersion(e.version) || seen.has(e.version) || !isVersionRange(e.engines?.mire)) {
-        errors.push(`${where} : version ou engines.mire invalide.`);
+        errors.push(`${where}: invalid version or engines.mire.`);
         continue;
       }
       seen.add(e.version);
-      if (!PLUGIN_LEVELS.includes(e.level as PluginLevel)) errors.push(`${where} : niveau invalide.`);
-      if (!Array.isArray(e.contributes) || !e.contributes.every((c) => typeof c === 'string')) errors.push(`${where} : contributes invalide.`);
-      if (!isObject(e.permissions)) errors.push(`${where} : permissions invalides.`);
+      if (!PLUGIN_LEVELS.includes(e.level as PluginLevel)) errors.push(`${where}: invalid level.`);
+      if (!Array.isArray(e.contributes) || !e.contributes.every((c) => typeof c === 'string')) errors.push(`${where}: invalid contributes.`);
+      if (!isObject(e.permissions)) errors.push(`${where}: invalid permissions.`);
       if (!isObject(e.dependencies) || !Object.entries(e.dependencies).every(([d, r]) => PLUGIN_ID_RE.test(d) && isVersionRange(r)))
-        errors.push(`${where} : dépendances invalides.`);
-      if (!isLocalized(e.name) || !isLocalized(e.description)) errors.push(`${where} : textes invalides.`);
-      if (!SHA256_RE.test(e.package?.sha256 ?? '')) errors.push(`${where} : empreinte sha256 invalide.`);
-      if (!/^https:\/\//.test(e.package?.url ?? '')) errors.push(`${where} : adresse https attendue.`);
-      if (!Number.isSafeInteger(e.package?.size) || e.package!.size <= 0) errors.push(`${where} : taille invalide.`);
+        errors.push(`${where}: invalid dependencies.`);
+      if (!isLocalized(e.name) || !isLocalized(e.description)) errors.push(`${where}: invalid texts.`);
+      if (!SHA256_RE.test(e.package?.sha256 ?? '')) errors.push(`${where}: invalid sha256.`);
+      if (!/^https:\/\//.test(e.package?.url ?? '')) errors.push(`${where}: https URL expected.`);
+      if (!Number.isSafeInteger(e.package?.size) || e.package!.size <= 0) errors.push(`${where}: invalid size.`);
     }
   }
   return errors;
@@ -175,10 +175,10 @@ export function parseIndex(bytes: Uint8Array, publicKey: KeyObject, { official =
   try {
     json = JSON.parse(Buffer.from(bytes).toString('utf8'));
   } catch {
-    throw new RepoError('format', 'Index illisible (JSON invalide).');
+    throw new RepoError('format', 'Unreadable index (invalid JSON).');
   }
   const index = verifyIndex(json, publicKey);
   const errors = checkIndexContent(index, { official });
-  if (errors.length) throw new RepoError('format', `Index mal formé : ${errors.slice(0, 5).join(' ; ')}`);
+  if (errors.length) throw new RepoError('format', `Malformed index: ${errors.slice(0, 5).join('; ')}`);
   return index;
 }

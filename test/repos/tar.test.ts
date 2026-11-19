@@ -66,7 +66,7 @@ describe('readTgz', () => {
   it('refuse un en-tête dont la somme de contrôle est fausse', () => {
     const tar = tgzTar();
     tar[0] = 'z'.charCodeAt(0);
-    assert.throws(() => readTgz(gzipSync(tar)), /Somme de contrôle/);
+    assert.throws(() => readTgz(gzipSync(tar)), /checksum/);
   });
 });
 

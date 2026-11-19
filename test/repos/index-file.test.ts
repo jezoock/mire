@@ -35,7 +35,7 @@ describe('JSON canonique', () => {
     assert.equal(canonicalJson({ b: [1, 'é', true, null], a: { d: 1, c: undefined } }), '{"a":{"d":1},"b":[1,"é",true,null]}');
   });
   it('refuse les nombres non entiers et les types inconnus', () => {
-    assert.throws(() => canonicalJson({ a: 1.5 }), /entier/);
+    assert.throws(() => canonicalJson({ a: 1.5 }), /Non-integer/);
     assert.throws(() => canonicalJson({ a: () => 1 }));
   });
   it('signe un en-tête de contexte avant l’index canonique', () => {
@@ -65,7 +65,7 @@ describe('clé officielle', () => {
       ['i18n/en.json', 'i18n/fr.json', 'mire-plugin.json', 'packs/exemple.json'],
     );
     // Hors du dépôt officiel, le préfixe `mire.` est refusé.
-    assert.throws(() => parseIndex(fs.readFileSync(path.join(fixtures, 'official-index.json')), loadPublicKey(OFFICIAL_PUBLIC_KEY)), /réservé/);
+    assert.throws(() => parseIndex(fs.readFileSync(path.join(fixtures, 'official-index.json')), loadPublicKey(OFFICIAL_PUBLIC_KEY)), /reserved/);
   });
 });
 
@@ -96,7 +96,7 @@ describe('signature', () => {
       change(signed);
       assert.throws(
         () => verifyIndex(signed, loadPublicKey(repo.publicKey)),
-        (err: Error & { code?: string }) => err.code === 'signature' && /invalide/.test(err.message),
+        (err: Error & { code?: string }) => err.code === 'signature' && /Invalid index signature/.test(err.message),
       );
     }
   });
@@ -105,18 +105,18 @@ describe('signature', () => {
     const a = keys();
     const b = keys();
     const body = { format: 1, repository: { name: { en: 'R' } }, generated: '2026-11-19T12:00:00.000Z', plugins: [] };
-    assert.throws(() => verifyIndex(signIndex(body, a.privateKey, a.publicKey), b.publicKey), /autre clé/);
-    assert.throws(() => verifyIndex(body, a.publicKey), /non signé/);
-    assert.throws(() => verifyIndex(signIndex(body, b.privateKey, a.publicKey), a.publicKey), /invalide/);
+    assert.throws(() => verifyIndex(signIndex(body, a.privateKey, a.publicKey), b.publicKey), /another key/);
+    assert.throws(() => verifyIndex(body, a.publicKey), /not signed/);
+    assert.throws(() => verifyIndex(signIndex(body, b.privateKey, a.publicKey), a.publicKey), /Invalid index signature/);
     assert.throws(
       () =>
         verifyIndex(
           { ...signIndex(body, a.privateKey, a.publicKey), signature: { algorithm: 'ed25519', keyId: keyId(a.publicKey), value: '!!' } },
           a.publicKey,
         ),
-      /invalide/,
+      /Invalid index signature/,
     );
-    assert.throws(() => verifyIndex(signIndex({ ...body, format: 2 }, a.privateKey, a.publicKey), a.publicKey), /Format/);
+    assert.throws(() => verifyIndex(signIndex({ ...body, format: 2 }, a.privateKey, a.publicKey), a.publicKey), /format/);
     assert.throws(
       () => parseIndex(Buffer.from('pas du JSON'), a.publicKey),
       (err: Error & { code?: string }) => err.code === 'format',
@@ -128,7 +128,7 @@ describe('structure', () => {
   it('signale le préfixe mire. hors du dépôt officiel et les champs mal formés', () => {
     const i = structuredClone(repoIndex().index);
     i.plugins[0].id = 'mire.a';
-    assert.match(checkIndexContent(i).join(), /réservé/);
+    assert.match(checkIndexContent(i).join(), /reserved/);
     assert.deepEqual(checkIndexContent(i, { official: true }), []);
     i.plugins[0].versions[0].package.url = 'http://non.chiffre/x.tgz';
     i.plugins[0].versions[1].package.size = 0;
@@ -144,6 +144,6 @@ describe('clés', () => {
     assert.equal(keyId(loadPublicKey(rawPublicKey(publicKey).toString('base64'))), keyId(publicKey));
     const rsa = generateKeyPairSync('rsa', { modulusLength: 1024 });
     assert.throws(() => loadPublicKey(rsa.publicKey.export({ type: 'spki', format: 'pem' }).toString()), /ed25519/);
-    assert.throws(() => loadPublicKey('QUJD'), /illisible/);
+    assert.throws(() => loadPublicKey('QUJD'), /Unreadable/);
   });
 });
