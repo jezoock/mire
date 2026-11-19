@@ -65,7 +65,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `downloads/` | Téléchargements : gestionnaire (`manager.ts`), moteurs HTTP et torrent, fin d'un téléchargement (`finish.ts` : décompression, programme d'installation, fichiers d'un jeu sur disque). |
 | `games/` | Jeux : jeux PC (dossiers, ajout manuel, lancement), jeux de console (liste, lancement, copie locale), jeux sur disque, marque-pages de jeux, nettoyage, suppression, sites « Ajouter des jeux », fin d'un téléchargement vue des jeux. |
 | `store/` | Boutique : catalogue (données seules, `catalog/`), installateurs (GitHub, page de téléchargement, RetroArch), consoles créées, BIOS. |
-| `tv/` | Télévision : service actif, détection de la box au premier lancement, chaînes (listes M3U), fournisseurs `playlist` et `web`. |
+| `tv/` | Télévision : service actif, détection de la box au premier lancement, chaînes (listes M3U), fournisseurs `playlist` et `web` ; variante d'une chaîne (qualité préférée, `pickVariant`) et `tvWatch(clé)` : l'interface ne donne que la clé de la chaîne, l'adresse vient de la liste lue par le service (P4-16). |
 | `platform/` | Ce qui dépend du système : lancement de programmes (`launcher.ts`), lecteurs externes et navigateur (`players.ts`), détection (`detect.ts`). |
 | `archive/` | Décompression `.zip` et `.7z` avec le 7za de `7zip-bin` (boutique, téléchargements). |
 | `i18n/` | Langue de l'interface (`index.ts`), traduction des textes du processus principal (`current.ts`, fonction `t`), langue des fiches (`metadata.ts`). |
@@ -426,10 +426,17 @@ fixé (`i18n/metadata.ts`).
    bloqueur (dix secondes au plus pour le bloqueur), puis une `WebContentsView` est créée avec `WEB_PREFERENCES`.
    Une vue par site : on revient sur un site sans le recharger.
 3. `webShow(id, rectangle)` pose la vue sur la zone que l'interface lui réserve ; `webHide` la masque et met en pause
-   ses vidéos. L'état de la vue part à l'interface (événement `web-state`).
-4. Les fenêtres surgissantes sont refusées : le lien est téléchargé (fichier de jeu), chargé dans la vue (même site)
+   ses vidéos. L'état de la vue part à l'interface (événement `web-state`) : titre, navigation, bloqueur, et le genre
+   (`kind` : `site`, `rom`, `bookmark`, `tv`), le nom et la couleur de la vue, tirés de l'entrée résolue (couleur
+   contrôlée : `#rrggbb` ou la couleur neutre). Une adresse donnée par l'interface (`webOpen`) n'est chargée que si
+   c'est une adresse http(s) ; le rectangle est arrondi et jamais négatif (`roundRect`).
+4. Côté interface (P4-16), `src/renderer/web/` place l'hôte `<mire-web>` (contrôleur `mire-web`), la barre du site
+   (`mire-webbar`, rédigée d'après `web-state` sans relire la configuration) et la place de la vue native
+   (`mire-web-slot`) : son `ResizeObserver` donne la zone réservée, moins le menu automatique déplié par-dessus
+   (`slotBounds`), transmise par `webShow` et `webBounds`.
+5. Les fenêtres surgissantes sont refusées : le lien est téléchargé (fichier de jeu), chargé dans la vue (même site)
    ou ignoré (`windowOpenAction`). Les liens magnet vont aux téléchargements.
-5. Les extensions (`web/extensions.ts`) agissent sur toutes les vues, dans l'ordre : le bloqueur de publicités
+6. Les extensions (`web/extensions.ts`) agissent sur toutes les vues, dans l'ordre : le bloqueur de publicités
    (`adblock.ts`), puis la connexion Google (`google-signin.ts`). L'hôte installe un seul écouteur par événement
    réseau et y appelle les extensions une à une. Il fournit aussi le script d'avant-page (par `web-preload.js`) et
    annule les navigations vers une régie publicitaire (`guardNavigation`).
@@ -723,8 +730,8 @@ déduisent de la configuration :
 | `jeux-pc` | dossier de jeux | `game` | `pc:<programme>`, `program`, `system` = `pc` | chaque `scanGameSources` |
 | `jeux-pc-manuel` | `config` | `game` | `pc:<programme ou adresse>`, `program` (arguments), `system` = `pc`, image | configuration (`games`) |
 | `jeux-marque` | `config` | `game` | `gamebm:<id>`, ouvert comme son lien (`site`), `system` du marque-page ou de sa console | configuration (`gameBookmarks` en attente) |
-| `tv-m3u` | service | `tv` | `tv:<service>\|<numéro>`, `stream` (qualité du service, variantes), info `channel` (numéro, P2-07), logo | chaque `tvChannels` du service choisi |
-| `tv-web` | service | `tv` | portail du service, `site` | configuration (service choisi, s'il est web) |
+| `tv-m3u` | service | `tv` | `tv:<service>\|<numéro>`, `stream` (variante de la qualité préférée, `pickVariant` ; variantes), info `channel` (numéro, P2-07), logo | chaque `tvChannels` du service choisi |
+| `tv-web` | service | `tv` | portail du service, `site` (`site` : `tv:<service>`, sa vue web) | configuration (service choisi, s'il est web) |
 | `svc-<id>` / `web-perso` | `config` | `stream` | `web:<id>`, `site`, info `category` (`video`, `music`…) | configuration (`web`) : site du catalogue intégré / ajouté |
 | `web-bm` | `config` | `stream` | `bm:<id>`, `site` (site au même domaine), `category`, `season`, `episode` | configuration (`bookmarks`) |
 

@@ -79,7 +79,7 @@ describe('portail web → élément (`tv-web`)', () => {
     const e = catalog.element(key)!;
     assert.deepEqual(
       [e.source, e.name, e.open, e.tags],
-      [{ plugin: 'tv-web', instance: 'sfr' }, 'SFR TV', { kind: 'site', url: 'https://tv.sfr.fr/' }, ['tv']],
+      [{ plugin: 'tv-web', instance: 'sfr' }, 'SFR TV', { kind: 'site', url: 'https://tv.sfr.fr/', site: 'tv:sfr' }, ['tv']],
     );
     assert.deepEqual(
       (await tvWebSource.scan(PORTAL)).map((x) => x.key),

@@ -175,6 +175,7 @@ const ADDED_METHODS: Record<string, string> = {
   // P3-03 : plugins
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  tvWatch: 'tv:watch', // P4-16 : chaîne désignée par sa clé, variante choisie par le service
   consoleSave: 'consoles:save', // P4-17 : consoles créées à la main et émulateur choisi
   consoleRemove: 'consoles:remove',
   consoleEmulators: 'consoles:emulators',

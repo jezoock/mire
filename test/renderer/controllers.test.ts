@@ -140,6 +140,15 @@ describe('contrôleurs', () => {
       'rom:3|/r/z.sfc': { key: 'rom:3|/r/z.sfc', name: 'Zelda', tags: ['game'], open: { kind: 'game', console: '3', path: '/r/z.sfc' } },
       'pc:/g/a.exe': { key: 'pc:/g/a.exe', name: 'Jeu', tags: ['game'], open: { kind: 'program', path: '/g/a.exe' } },
       'tv:x|1': { key: 'tv:x|1', name: 'Une', tags: ['tv'], open: { kind: 'stream', url: 'http://box/1' } },
+      // P4-16 : le portail d'un service de télévision s'ouvre dans sa vue web ; un flux qui n'est pas une chaîne, dans
+      // le lecteur externe.
+      'tv:sfr|https://tv.sfr.fr': {
+        key: 'tv:sfr|https://tv.sfr.fr',
+        name: 'SFR',
+        tags: ['tv'],
+        open: { kind: 'site', url: 'https://tv.sfr.fr', site: 'tv:sfr' },
+      },
+      'local:http://radio/x': { key: 'local:http://radio/x', name: 'Radio', tags: ['audio'], open: { kind: 'stream', url: 'http://radio/x' } },
     };
     const { calls: log, c: ctl } = fakeContext({ 'api.catalogElement': async (k: string) => elements[k] ?? null });
     S.videos = [{ path: '/v/a.mkv', name: 'A', dir: '/v', kind: 'video' }];
@@ -161,7 +170,10 @@ describe('contrôleurs', () => {
         // Jeu de console (P4-17) : lancé par sa clé (`api.gameLaunch`, émulateur choisi pour lui) par `mire-games`.
         ['ui.pauseAudio'],
         ['ui.launchEntry', { name: 'Jeu', path: '/g/a.exe' }],
-        ['ui.playChannel', { name: 'Une', variants: [{ q: 'hd', url: 'http://box/1' }] }],
+        // La chaîne est désignée par sa clé : le processus principal choisit sa variante.
+        ['ui.playChannel', { key: 'tv:x|1', name: 'Une' }],
+        ['ui.openTvWeb', { id: 'sfr' }],
+        ['ui.openExternal', { path: 'http://radio/x', name: 'Radio' }],
       ],
     );
     S.videos = [];
@@ -280,8 +292,8 @@ describe('pont des data-action historiques', () => {
     const { errors, legacy, triggers } = checkActions();
     assert.deepEqual(errors, []);
     // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le
-    // Centre en retire dix-huit ; P4-13 : la Recherche en retire neuf).
-    assert.ok(legacy >= 60, `${legacy} actions`);
+    // Centre en retire dix-huit ; P4-13 : la Recherche en retire neuf ; P4-16 : la barre des sites en retire six).
+    assert.ok(legacy >= 58, `${legacy} actions`);
     assert.ok(triggers >= 1);
   });
 

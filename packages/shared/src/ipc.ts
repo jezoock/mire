@@ -285,6 +285,8 @@ export interface IpcMethods {
   // Lecteur externe et télévision
   playExternal(target: string, title?: string, start?: number): Outcome;
   tvChannels(): Outcome<Record<string, unknown>>;
+  /** Regarde une chaîne du service choisi, désignée par sa clé d'élément : la variante est choisie par le service. */
+  tvWatch(key: string): Outcome;
   tvDetect(): { id: string; name: string };
   tvSetActive(id: string): MireConfig;
 
@@ -615,6 +617,7 @@ export const IPC_METHODS = {
   filesRemove: 'files:remove',
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  tvWatch: 'tv:watch',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
   pluginsMetadataProviders: 'plugins:metadataProviders',

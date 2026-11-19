@@ -2922,6 +2922,173 @@ describe('Test de fumée de Mire', () => {
     });
   });
 
+  describe('Vue web et télévision (P4-16)', () => {
+    const PAD = { a: 0, b: 1, select: 8, left: 14, right: 15 };
+    const BAR = '#view mire-web mire-webbar';
+    const VIEW = '#view mire-page-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    let site;
+    let base;
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Barre rendue pour ce site, avec ses boutons prêts.
+    const barShown = (id) =>
+      page.waitForFunction(
+        ([sel, key]) => {
+          const bar = document.querySelector(sel);
+          return (
+            bar?.classList.contains('hydrated') &&
+            bar.dataset.key === key &&
+            [...bar.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+          );
+        },
+        [BAR, id],
+      );
+    const pageTitle = (title) => page.waitForFunction(([sel, t]) => document.querySelector(`${sel} .mire-webbar__page`)?.textContent === t, [BAR, title]);
+    const barButton = (web) => page.locator(`${BAR} button[data-web="${web}"]`);
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      // Site de démonstration sur la boucle locale (Chromium ne passe pas par le proxy du test pour 127.0.0.1).
+      site = http.createServer((req, res) => {
+        const title = req.url === '/deux' ? 'Deuxième page' : 'Page de démonstration';
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(`<!doctype html><title>${title}</title><h1>${title}</h1>`);
+      });
+      await new Promise((resolve) => site.listen(0, '127.0.0.1', resolve));
+      base = `http://127.0.0.1:${site.address().port}`;
+      // Portail web de démonstration (service de télévision « web ») ; lecteur externe absent : aucune chaîne ne se lance.
+      await page.evaluate(async (url) => {
+        const { config } = await window.api.getConfig();
+        const services = [...config.tv.services, { id: 'demo-web', name: 'Portail de démonstration', kind: 'web', url }];
+        await window.api.saveConfig({ ...config, tv: { ...config.tv, services }, externalPlayer: { path: 'mire-e2e-lecteur-absent', args: [] } });
+      }, `${base}/`);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+      await page.evaluate(() => window.api.webClose('tv:demo-web')).catch(() => {});
+      site?.close();
+    });
+
+    it('une vue web de démonstration : nom et couleur publiés, titre de la page, place de la vue native', async () => {
+      await page.evaluate(() => document.querySelector('mire-app').openSite({ id: 'tv:demo-web' }));
+      await page.waitForFunction(() => document.body.dataset.section === 'web');
+      await barShown('tv:demo-web');
+      await pageTitle('Page de démonstration');
+      const bar = await page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        return { kind: el.dataset.kind, name: el.querySelector('.mire-webbar__site').textContent, brand: el.style.getPropertyValue('--brand') };
+      }, BAR);
+      assert.deepEqual(bar, { kind: 'tv', name: 'Portail de démonstration', brand: '#E23B3B' });
+      // La vue native est posée sur la place réservée par mire-web-slot.
+      const placed = await app.evaluate(({ BrowserWindow }) => {
+        const [view] = BrowserWindow.getAllWindows()[0].contentView.children;
+        return view ? view.getBounds() : null;
+      });
+      const slot = await page.evaluate(() => {
+        const r = document.querySelector('#view mire-web-slot').getBoundingClientRect();
+        return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
+      });
+      assert.deepEqual(placed, slot);
+      await settle();
+      await shot('web-barre');
+      assert.deepEqual(errors, []);
+    });
+
+    it('la barre et ses actions : page suivante, précédente, recharger', async () => {
+      assert.equal(await barButton('back').isDisabled(), true);
+      await page.evaluate((url) => window.api.webOpen('tv:demo-web', url), `${base}/deux`);
+      await pageTitle('Deuxième page');
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} button[data-web="back"]`).disabled, BAR);
+      await barButton('back').click();
+      await pageTitle('Page de démonstration');
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} button[data-web="forward"]`).disabled, BAR);
+      await barButton('forward').click();
+      await pageTitle('Deuxième page');
+      await barButton('reload').click();
+      await pageTitle('Deuxième page');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt la barre, A appuie, B revient à la page Télévision', async () => {
+      await connectPad();
+      await settle();
+      // Mire a le clavier (bouton de la barre cliqué) : on part du premier bouton.
+      await barButton('back').focus();
+      const first = await page.evaluate(() => document.activeElement.dataset.web);
+      await padPress('right');
+      const next = await page.evaluate(() => document.activeElement.dataset.web);
+      assert.notEqual(next, first, 'la croix passe au bouton suivant');
+      await padPress('left');
+      assert.equal(await page.evaluate(() => document.activeElement.dataset.web), first);
+      // A appuie sur le bouton : « Page précédente » ramène à la première page.
+      assert.equal(first, 'back');
+      await padPress('a');
+      await pageTitle('Page de démonstration');
+      // Première page : « Page précédente » devient inactif ; B depuis un autre bouton de la barre.
+      await barButton('reload').focus();
+      await padPress('b');
+      await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Télévision');
+      // La vue native est cachée hors de la section web.
+      const visible = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.some((v) => v.getVisible()));
+      assert.equal(visible, false);
+      assert.deepEqual(errors, []);
+    });
+
+    it('une chaîne de la page Télévision : la croix la choisit, A la regarde (variante choisie par le processus principal)', async () => {
+      const card = (name) => page.locator(`${VIEW} mire-card ds-trigger.hydrated`, { hasText: name }).first();
+      await card('Chaîne Deux').waitFor();
+      await card('Chaîne Une').focus();
+      await padPress('right');
+      assert.equal(await page.evaluate(() => document.activeElement?.closest('[data-key]')?.dataset.key), 'tv:demo|2');
+      await padPress('a');
+      await page.waitForFunction(() => /Chaîne Deux|lecteur externe/.test(document.getElementById('toast')?.textContent || ''));
+      // Le lecteur externe de démonstration n'existe pas : le service a bien trouvé la chaîne et tenté de la lancer.
+      const r = await page.evaluate(() => window.api.tvWatch('tv:demo|2'));
+      assert.equal(r.ok, false);
+      assert.doesNotMatch(r.error, /n’est plus dans la liste/);
+      // Une clé inconnue est refusée par le service, sans rien lancer.
+      const gone = await page.evaluate(() => window.api.tvWatch('tv:demo|99'));
+      assert.deepEqual(gone, { ok: false, error: 'Cette chaîne n’est plus dans la liste. Rechargez les chaînes.' });
+      await settle();
+      await shot('television-page');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
   describe('Réglages (P4-20)', () => {
     const PAD = { a: 0, b: 1, down: 13 };
     const VIEW = '#view mire-settings mire-settings-view';

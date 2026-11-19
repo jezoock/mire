@@ -91,6 +91,8 @@ export interface MainContext {
   playExternal: Fn;
   detectTvService: Fn;
   fetchChannels: Fn;
+  /** Flux d'une chaîne du service choisi, par sa clé (variante de la qualité préférée). */
+  channelStream: Fn;
 
   // Vues web (src/main/web) : leur état est interne au gestionnaire.
   readonly web: WebManager;
