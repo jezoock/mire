@@ -113,7 +113,7 @@ Fiches dans `phase-3.md`.
 | P3-06 | Dépôt `mire-addons` : structure et publication | M | P3-01 | 🧑 | faite | [mire-addons#1](https://github.com/jezoock/mire-addons/pull/1) |
 | P3-07 | Client des dépôts | L | P3-05, P3-06 |  | faite | [#95](https://github.com/jezoock/mire/pull/95) |
 | P3-08 | Dépôts tiers et confiance | M | P3-07 |  | à faire | |
-| **G4** | **Point d'étape : fin de la phase 3 (hôte isolé, SDK, publication)** | | P3-01…P3-08 | | | |
+| **G4** | **Point d'étape : fin de la phase 3 (hôte isolé, SDK, publication)** — ✅ validé le 19/11/2026 (🧑 vérification de la sandbox de l'hôte isolé sur une vraie machine encore à faire) | | P3-01…P3-08 | | | |
 
 ## Phase 4 — Interface : dot-stash, explorateur et thèmes
 

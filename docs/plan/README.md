@@ -33,7 +33,7 @@ On ne commence pas une phase sans avoir fait le point. Chaque point d'étape est
 | **G2** | ✅ 12/11/2026 | Bilan de la refacto (arborescence, contrats), décisions D-12 et D-13 |
 | **G2c** | ✅ 16/11/2026 | Nouvelle architecture (`docs/architecture-cible.md`, décisions D-14 à D-23) et nouveau plan |
 | **G3** | ✅ 17/11/2026 | Modèle d'éléments, tags et pages, contrat IPC et mesures sur 20 000 éléments validés tels quels ; finitions confiées à P2-12 (modèle) et P4-03b (renderer et test de fumée) |
-| **G4** | Fin de la phase 3 | Prototype de l'hôte isolé (mesures, choix), SDK, chaîne de publication de `mire-addons` |
+| **G4** | ✅ 19/11/2026 | Prototype de l'hôte isolé (mesures, choix), SDK, chaîne de publication de `mire-addons` ; 🧑 vérification de la sandbox de l'hôte isolé sur une vraie machine encore à faire |
 | **G5** | ✅ 17/11/2026 | Intégration de dot-stash, palettes, navigation et contrôleurs validées ; ADR 0001 acceptée (pas de Vitest, contrôleurs par écran dans `src/renderer/controllers/`) ; parcours manette de P4-03 à faire à la main |
 | **G6** | Fin de la phase 4 | Interface complète, interface historique retirée, thèmes avec code |
 | **G7** | Fin de la phase 5 | Bilan du cœur : il ne contient plus que les éléments « Cœur » de l'inventaire |
