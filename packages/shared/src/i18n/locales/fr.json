@@ -805,7 +805,8 @@
         "mismatch": "Le dossier de « {name} » ne correspond pas à son contenu ({details}).",
         "engine": "« {name} » est fait pour une autre version de Mire ({range}) ; vous avez la {version}.",
         "level": "« {name} » ne contient pas ce que son niveau de sécurité annonce.",
-        "privileged": "« {name} » demande un accès étendu à votre ordinateur : seuls les plugins livrés avec Mire ou venus du dépôt officiel y ont droit pour l’instant.",
+        "privileged": "« {name} » demande un accès étendu à votre ordinateur : seuls les plugins livrés avec Mire ou venus d’un dépôt (officiel, ou tiers avec votre accord) y ont droit.",
+        "consent": "« {name} » demande un accès étendu à votre ordinateur et vient d’un dépôt tiers : il n’est pas chargé sans votre accord pour cette version.",
         "outside": "« {name} » contient un lien vers un fichier hors de son dossier.",
         "data": "Un fichier de « {name} » est illisible ou trop gros : {details}",
         "texts": "Les textes de « {name} » sont illisibles : {details}",
@@ -839,8 +840,15 @@
         "engine": "« {name} » n’a pas de version faite pour cette version de Mire.",
         "dependency": "« {name} » a besoin de « {dependency} », qui ne peut pas être installé dans une version qui convient.",
         "refused": "« {name} » a été installé mais n’a pas pu être chargé ; la version précédente a été remise. {details}",
-        "busy": "Une installation est déjà en cours. Attendez qu’elle se termine.",
-        "disk": "« {name} » n’a pas pu être écrit sur le disque ; la version précédente a été gardée."
+        "busy": "Une installation ou une autre opération sur les dépôts est déjà en cours. Attendez qu’elle se termine.",
+        "disk": "« {name} » n’a pas pu être écrit sur le disque ; la version précédente a été gardée.",
+        "key": "La clé fournie pour « {name} » n’est pas valide : il faut la clé publique du dépôt (bloc « BEGIN PUBLIC KEY »).",
+        "fingerprint": "L’empreinte de la clé a changé depuis que vous l’avez vérifiée : le dépôt « {name} » n’a pas été ajouté.",
+        "exists": "Le dépôt « {name} » est déjà dans votre liste.",
+        "limit": "Vous avez déjà trop de dépôts : retirez-en un avant d’ajouter « {name} ».",
+        "repository": "Le dépôt de « {name} » n’est pas (ou plus) dans votre liste : il ne peut pas être mis à jour depuis là.",
+        "owner": "« {name} » a été installé depuis le dépôt « {repository} » : seul ce dépôt peut le mettre à jour ou le remplacer.",
+        "consent": "« {name} » vient d’un dépôt tiers et demande un accès étendu à votre ordinateur : il n’est installé qu’avec votre accord."
       }
     },
     "shell": {

@@ -54,6 +54,8 @@ export interface DataPaths {
   pluginData: string;
   /** Index des dépôts de plugins gardés pour le hors ligne (`<dépôt>/index.json`, P3-07). */
   repoCache: string;
+  /** Dépôts tiers ajoutés par l'utilisateur et accords pour leurs plugins de code sensible (P3-08). */
+  repoTrust: string;
 }
 
 export function dataPaths(root: string): DataPaths {
@@ -90,5 +92,6 @@ export function dataPaths(root: string): DataPaths {
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),
+    repoTrust: at('repos', 'trust.json'),
   };
 }

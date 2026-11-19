@@ -205,7 +205,11 @@ const ADDED_METHODS: Record<string, string> = {
   reposList: 'repos:list',
   reposRefresh: 'repos:refresh',
   reposPlugins: 'repos:plugins',
+  reposInspect: 'repos:inspect',
+  reposAdd: 'repos:add',
+  reposRemove: 'repos:remove',
   pluginsInstall: 'plugins:install',
+  pluginsConsent: 'plugins:consent',
   pluginsUpdate: 'plugins:update',
   pluginsUninstall: 'plugins:uninstall',
 };
