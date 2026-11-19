@@ -147,12 +147,17 @@ describe('contrôleurs', () => {
     for (const key of Object.keys(elements)) await ctl.page.openElement({ key });
     await assert.rejects(ctl.page.openElement({ key: 'local:/absent' }), /introuvable/);
     assert.deepEqual(
+      log.filter((c) => c[0] === 'api.gameLaunch'),
+      [['api.gameLaunch', 'rom:3|/r/z.sfc', undefined]],
+    );
+    assert.deepEqual(
       log.filter((c) => !c[0].startsWith('api.')),
       [
         ['ui.playInContext', { path: '/v/a.mkv', name: 'A', dir: '/v', kind: 'video' }],
         ['ui.playInContext', { path: '/n.mp3', name: 'N', kind: 'audio' }],
         ['ui.openWeb', 'arte', 'https://arte.tv'],
-        ['ui.launchRom', { path: '/r/z.sfc', displayName: 'Zelda' }, '3'],
+        // Jeu de console (P4-17) : lancé par sa clé (`api.gameLaunch`, émulateur choisi pour lui) par `mire-games`.
+        ['ui.pauseAudio'],
         ['ui.launchEntry', { name: 'Jeu', path: '/g/a.exe' }],
         ['ui.playChannel', { name: 'Une', variants: [{ q: 'hd', url: 'http://box/1' }] }],
       ],

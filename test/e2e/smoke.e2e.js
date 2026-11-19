@@ -2440,4 +2440,162 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Jeux (P4-17)', () => {
+    const PAD = { a: 0, b: 1, x: 2, down: 13 };
+    const CENTRE = '#view mire-centre mire-centre-view';
+    const SEARCH = '#view mire-search mire-search-view';
+    const FORM = 'mire-dialogs mire-form';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const field = (label) => page.locator(`${FORM} ds-field`, { hasText: label });
+    const consoles = () => page.evaluate(async () => (await window.api.getConfig()).config.emulators);
+    const card = (name) => page.locator(`${CENTRE} .mire-centre-view__console`, { has: page.locator('.mire-centre-view__name', { hasText: name }) });
+    // Onglet des consoles du Centre, rendu.
+    const openConsoles = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'downloads' && document.querySelector(sel)?.classList.contains('hydrated'), CENTRE);
+      const tab = page.locator(`${CENTRE} .mire-centre-view__tab.hydrated[data-tab="consoles"]`);
+      await tab.click();
+      await page.waitForFunction((sel) => document.querySelector(sel)?.tab === 'consoles', CENTRE);
+      await page.locator(`${CENTRE} .mire-centre-view__new-console.hydrated`).waitFor();
+    };
+    // Un jeu de la Super Nintendo de démonstration trouvé par la Recherche : sa carte rendue.
+    const romCard = () => page.locator(`${SEARCH} mire-card ds-trigger.hydrated[data-key^="rom:"]`).first();
+    const findRom = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), SEARCH);
+      await page.locator(`${SEARCH} .mire-search-view__input`).fill('Course de karts');
+      await romCard().waitFor();
+      return romCard().getAttribute('data-key');
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('créer une console à la main, puis lui faire lancer ses jeux avec l’émulateur d’une autre', async () => {
+      await openConsoles();
+      await card('Super Nintendo').waitFor();
+      await page.locator(`${CENTRE} .mire-centre-view__new-console`).click();
+      assert.equal(await formOpen(), 'Créer une console');
+      const emulator = (await consoles())[0].path;
+      await field('Nom').locator('input').fill('Super Nintendo (bis)');
+      await field('Système').locator('select').selectOption('Nintendo - Super Nintendo Entertainment System');
+      await field('Émulateur (programme)').locator('input').fill(emulator);
+      await field('Arguments').locator('input').fill('--plein-ecran {rom}');
+      await button('Enregistrer').click();
+      await formClosed();
+      await card('Super Nintendo (bis)').waitFor();
+      const made = (await consoles()).find((e) => e.name === 'Super Nintendo (bis)');
+      assert.ok(made?.id);
+      assert.deepEqual(made.args, ['--plein-ecran', '{rom}']);
+      assert.equal(made.path, emulator);
+      await shot('centre-consoles');
+      // La console de démonstration lance ses jeux avec l'émulateur de la nouvelle.
+      const demo = (await consoles())[0];
+      await card('Super Nintendo').filter({ hasNotText: '(bis)' }).locator('.mire-centre-view__emulator').click();
+      assert.equal(await formOpen(), 'Émulateur de Super Nintendo');
+      await field('Émulateur').locator('select').selectOption(made.id);
+      await button('Enregistrer').click();
+      await formClosed();
+      await page.waitForFunction(async (id) => (await window.api.getConfig()).config.emulators[0].emulator === id, made.id);
+      await card('Super Nintendo').filter({ hasNotText: '(bis)' }).getByText('celui de la console Super Nintendo (bis)').waitFor();
+      // Pour un jeu : la boîte du jeu (clic droit sur sa carte) garde un autre choix, enregistré par sa clé.
+      const key = await findRom();
+      await romCard().click({ button: 'right' });
+      assert.match(await formOpen(), /Course de karts/);
+      await field('Émulateur').locator('select').selectOption(demo.id);
+      await button('Enregistrer l’émulateur').click();
+      await formClosed();
+      const chosen = await page.evaluate((k) => window.api.gameEmulators(k), key);
+      assert.deepEqual([chosen.console, chosen.consoleDefault, chosen.game], [demo.id, made.id, demo.id]);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : X ouvre la boîte d’un jeu, la croix la parcourt, A choisit Annuler, B ferme', async () => {
+      await connectPad();
+      const key = await findRom();
+      const before = await page.evaluate((k) => window.api.gameEmulators(k), key);
+      await romCard().focus();
+      await padPress('x');
+      assert.match(await formOpen(), /Course de karts/);
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      const first = await page.evaluateHandle(() => document.activeElement);
+      await padPress('down');
+      assert.ok(await page.evaluate((f) => document.activeElement !== f, first));
+      assert.ok(await page.evaluate((sel) => !!document.activeElement?.closest(sel), FORM));
+      await button('Annuler').focus();
+      await padPress('a');
+      await formClosed();
+      await romCard().focus();
+      await padPress('x');
+      await formOpen();
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      await padPress('b');
+      await formClosed();
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-card`), SEARCH);
+      assert.deepEqual(await page.evaluate((k) => window.api.gameEmulators(k), key), before);
+      await disconnectPad();
+      // La console créée par le test est retirée : les blocs suivants retrouvent la configuration de démonstration.
+      await openConsoles();
+      await card('Super Nintendo (bis)').locator('ds-trigger', { hasText: 'Retirer' }).click();
+      assert.equal(await formOpen(), 'Retirer la console Super Nintendo (bis) ?');
+      await button('Retirer').click();
+      await formClosed();
+      await page.waitForFunction(async () => (await window.api.getConfig()).config.emulators.length === 1);
+      assert.equal((await consoles())[0].emulator, undefined);
+      assert.deepEqual(errors, []);
+    });
+  });
 });
