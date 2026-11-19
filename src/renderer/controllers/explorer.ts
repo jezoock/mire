@@ -266,7 +266,10 @@ export class ExplorerController extends Controller {
       known ?? [],
       elements.map((e) => e?.tags ?? []),
     );
-    if (mode === 'remove' && !choices.length) return this.#fail(t('explorer.tag.none')) as unknown as number;
+    if (mode === 'remove' && !choices.length) {
+      this.#fail(t('explorer.tag.none'));
+      return 0;
+    }
     const add = mode === 'add';
     const res = await dialogs.form({
       title: t(add ? 'explorer.tag.addTitle' : 'explorer.tag.removeTitle'),

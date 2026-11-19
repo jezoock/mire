@@ -1,4 +1,4 @@
-import { Component, Element, Event, Host, Prop, h } from '@stencil/core';
+import { Component, Element, Event, Host, Listen, Prop, h } from '@stencil/core';
 import type { EventEmitter } from '@stencil/core';
 import { readJson, readList } from '../../utils/elements.ts';
 import { explorerArgs } from '../../utils/explorer.ts';
@@ -72,10 +72,12 @@ export class MireExplorerView {
     if (row) this.pick(e, row, e.shiftKey);
   };
 
-  private onKeyDownCapture = (e: KeyboardEvent) => {
+  // Espace sur un élément : avant le ds-trigger de la ligne, qui l'ouvrirait (écouté en capture sur l'hôte).
+  @Listen('keydown', { capture: true })
+  onKeyDownCapture(e: KeyboardEvent) {
     const row = e.key === ' ' && !e.ctrlKey && !e.altKey && !e.metaKey ? this.pickable(e) : null;
     if (row) this.pick(e, row, e.shiftKey);
-  };
+  }
 
   private renderRow(r: ExplorerRow, selected: boolean, l: ExplorerLabels, picked: boolean) {
     const common = {
@@ -276,14 +278,7 @@ export class MireExplorerView {
     return (
       <Host class="mire-explorer-view">
         {selection && this.renderSelection(selection, l)}
-        <div
-          class="mire-explorer-view__columns"
-          data-nav="columns"
-          aria-label={l.columns}
-          onFocusin={this.onFocusIn}
-          onClickCapture={this.onClickCapture}
-          onKeyDownCapture={this.onKeyDownCapture}
-        >
+        <div class="mire-explorer-view__columns" data-nav="columns" aria-label={l.columns} onFocusin={this.onFocusIn} onClickCapture={this.onClickCapture}>
           {columns.map((c) => this.renderColumn(c, l, picked))}
           {preview && this.renderPreview(preview, l)}
         </div>

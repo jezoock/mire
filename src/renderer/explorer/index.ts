@@ -128,6 +128,8 @@ export function createExplorer(opts: ExplorerOptions, doc: Document = document):
   });
   view.addEventListener('mireExplorerPick', (e) => {
     const { key, range } = (e as CustomEvent<{ key: string; range: boolean }>).detail;
+    // Choisir n'ouvre pas l'aperçu : la pause lancée par le focus du clic est annulée.
+    clearTimeout(follow);
     model.pick(key, { range });
   });
   view.addEventListener('mireExplorerRender', () => {
