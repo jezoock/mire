@@ -116,6 +116,14 @@
     &.--ok {
       color: var(--ring);
     }
+
+    &.--warn {
+      color: var(--bar-yellow);
+    }
+
+    &.--error {
+      color: var(--bar-red);
+    }
   }
 
   &__desc {
@@ -264,5 +272,99 @@
   &__game-text > ds-trigger,
   &__game-text > &__state {
     margin-top: auto;
+  }
+
+  // Plugins et dépôts (P4-19)
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(1) ds-spacing(2);
+  }
+
+  &__badge {
+    padding: ds-spacing(1) ds-spacing(3);
+    border-radius: ds-radius(pill);
+    background: var(--surface-2);
+    font-size: ds-token(font-size, 100);
+    font-weight: 700;
+  }
+
+  &__error {
+    color: var(--bar-red);
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  &__warning {
+    padding: ds-spacing(3) ds-spacing(4);
+    border-left: 4px solid var(--bar-yellow);
+    border-radius: var(--r-sm, #{ds-radius(sm)});
+    background: var(--surface-2);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  &__sheet {
+    display: flex;
+    flex-direction: column;
+    gap: ds-spacing(4);
+    max-width: 960px;
+    padding: ds-spacing(6);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, #{ds-radius(md)});
+    background: var(--surface);
+  }
+
+  &__sheet-back {
+    align-self: flex-start;
+  }
+
+  &__sheet-name {
+    font-size: ds-token(font-size, 600);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: ds-spacing(1) ds-spacing(4);
+    margin: 0;
+    font-size: ds-token(font-size, 200);
+
+    dt {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__fingerprint {
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    letter-spacing: 0.02em;
+  }
+
+  &__sheet-title {
+    margin-bottom: ds-spacing(2);
+    font-size: ds-token(font-size, 400);
+    font-weight: 800;
+  }
+
+  &__sheet-list {
+    display: flex;
+    flex-direction: column;
+    gap: ds-spacing(1);
+    margin: 0;
+    padding-left: ds-spacing(5);
+    line-height: 1.45;
+
+    .--sensitive {
+      color: var(--bar-yellow);
+      font-weight: 700;
+    }
   }
 }

@@ -229,6 +229,33 @@ describe('Hôte de plugins', () => {
     assert.deepEqual(config.plugins['org.exemple.dossier'], { dossier: granted });
     assert.ok(!JSON.stringify(config).includes('CLE-E2E'));
   });
+
+  it('Centre (P4-19) : la fiche d’un plugin montre les permissions qu’il demande, et son refus s’il est refusé', async () => {
+    const VIEW = '#view mire-centre mire-centre-view';
+    await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+    await page.waitForFunction(() => document.querySelector('#view mire-centre')?.showTab);
+    await page.evaluate(() => document.querySelector('#view mire-centre').showTab({ tab: 'plugins' }));
+    const card = page.locator(`${VIEW} .mire-centre-view__plugin[data-key="org.exemple.dossier"]`);
+    await card.waitFor();
+    assert.match(await card.locator('.mire-centre-view__meta').textContent(), /Installé à la main · Code limité/);
+    await card.locator('ds-trigger.--openPlugin.hydrated').click();
+    const sheet = page.locator(`${VIEW} .mire-centre-view__sheet[data-key="org.exemple.dossier"]`);
+    await sheet.waitFor();
+    assert.deepEqual(await sheet.locator('[data-part="permissions"] li').allTextContents(), [
+      'Vous demander l’accès à des dossiers de votre choix',
+      'Se connecter à : api.exemple.invalid',
+    ]);
+    assert.deepEqual(await sheet.locator('[data-part="contributes"] li').allTextContents(), ['Des sources de contenus']);
+    await sheet.locator('ds-trigger.mire-centre-view__sheet-back.hydrated').click();
+    // Un plugin refusé : son message, et pas de bouton pour l'activer.
+    const futur = page.locator(`${VIEW} .mire-centre-view__plugin[data-key="org.exemple.futur"]`);
+    await futur.waitFor();
+    assert.equal(await futur.locator('.mire-centre-view__state').textContent(), 'Refusé');
+    await futur.locator('ds-trigger.--openPlugin.hydrated').click();
+    await page.locator(`${VIEW} .mire-centre-view__sheet .mire-centre-view__error`, { hasText: 'autre version de Mire' }).waitFor();
+    assert.equal(await page.locator(`${VIEW} .mire-centre-view__sheet-action`).count(), 1, 'désinstaller seulement');
+    await page.locator(`${VIEW} ds-trigger.mire-centre-view__sheet-back.hydrated`).click();
+  });
 });
 
 // Application empaquetée : le plugin d'exemple doit être dans process.resourcesPath/plugins (`extraResources`).
