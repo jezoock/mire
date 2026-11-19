@@ -335,7 +335,7 @@ function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
   if (S.section === PAGE_VIEW && pages.back()) return;
   if (S.section === EXPLORER_VIEW && explorer.back()) return;
-  if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
+  if (S.section === 'web') { openWebHome(webHome()); return; }
   if (S.section !== HOME_VIEW) go(HOME_VIEW, { focus: 'content' });
 }
 
@@ -1611,6 +1611,12 @@ function syncWeb(focus = false) {
   if (S.section === 'web') web.sync(focus);
 }
 
+// Retour d'un site : sa page d'origine (Streaming, Télévision, Jeux), dans la vue de page comme depuis le menu ;
+// la section historique si la page n'existe plus.
+function openWebHome(home) {
+  if (!shell.open(home, { focus: 'content' })) go(home, { focus: 'content' });
+}
+
 // Barre du site redessinée d'après le dernier état publié (bloqueur changé, éléments bloqués).
 function refreshWebBar() {
   if (S.section === 'web') web.set(S.webActive, S.webStates[S.webActive] ?? null);
@@ -1641,7 +1647,7 @@ api.onWebClosed(({ id }) => {
   if (S.webActive === id) {
     const home = webHome(id);
     S.webActive = null;
-    if (S.section === 'web') go(home, { focus: 'content' });
+    if (S.section === 'web') openWebHome(home);
   }
 });
 api.onWebError(({ message }) => toast(message, { duration: 8000 }));
