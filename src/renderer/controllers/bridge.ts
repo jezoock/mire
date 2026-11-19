@@ -149,12 +149,6 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
   'dl-pick-dir': { tag: 'mire-settings', method: 'chooseDownloadFolder' },
   // Vue web
   'open-web': { tag: 'mire-web', method: 'open', args: byId },
-  'web-nav': { tag: 'mire-web', method: 'navigate', args: byId },
-  'web-close': { tag: 'mire-web', method: 'close' },
-  'web-adblock': { tag: 'mire-web', method: 'toggleAdblock' },
-  'web-bookmark': { tag: 'mire-web', method: 'bookmarkPage' },
-  'game-bookmark': { tag: 'mire-web', method: 'bookmarkGame' },
-  'web-learn': { tag: 'mire-web', method: 'learnSearch' },
 };
 
 /** Exécute l'action d'un élément `data-action` d'une vue historique ; sans effet pour une action inconnue. */

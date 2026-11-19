@@ -46,11 +46,10 @@ export class WebController extends Controller {
     if (!r) return;
     S.config = ((await api.getConfig()) as Data).config;
     S.adblock = r;
-    const cur = (S.webStates[S.webActive as string] || {}) as Data;
-    cur.adOn = r.adOn;
-    cur.blocked = 0;
-    ui.setAdButton(cur);
-    toast(r.adOn ? 'Bloqueur réactivé sur ce site. La page se recharge.' : 'Bloqueur désactivé sur ce site. La page se recharge.');
+    const id = S.webActive as string;
+    if (S.webStates[id]) S.webStates[id] = { ...(S.webStates[id] as Data), adOn: r.adOn, blocked: 0 };
+    ui.refreshWebBar();
+    toast(this.ctx.t(r.adOn ? 'webView.adblockOn' : 'webView.adblockOff'));
   }
 
   /** Montre ou cache la vue web selon l'écran (après un lecteur, un changement de menu…). */

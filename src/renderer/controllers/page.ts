@@ -407,14 +407,15 @@ export async function openCatalogElement(ctx: ControllerContext, key: string): P
   if (o.kind === 'file') ui.playInContext(mediaItemOf(S, el, o.path));
   else if (o.kind === 'site') {
     if (!o.site) throw new Error(`Site sans service : ${key}`);
-    ui.openWeb(o.site, o.url);
+    // Portail d'un service de télévision (`tv:<service>`) : sa vue web, résolue par le processus principal.
+    if (o.site.startsWith('tv:')) ui.openTvWeb({ id: o.site.slice(3) });
+    else ui.openWeb(o.site, o.url);
   } else if (o.kind === 'program') {
     const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
     ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
-  } else {
-    const known = (S.channels ?? []).find((c) => (c.variants as Data[] | undefined)?.some((v) => v.url === o.url));
-    ui.playChannel(known ?? { name: el.name, variants: [{ q: 'hd', url: o.url }] });
-  }
+  } else if (el.tags.includes('tv')) ui.playChannel({ key, name: el.name });
+  // Autre flux (entrée d'une liste M3U de la bibliothèque) : son adresse vient du catalogue.
+  else ui.openExternal({ path: o.url, name: el.name });
 }
 
 /** Élément de l'interface historique pour un fichier du catalogue (sa liste de lecture vient de son dossier). */

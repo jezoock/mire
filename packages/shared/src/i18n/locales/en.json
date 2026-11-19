@@ -505,6 +505,7 @@
         "playlistUnreachable": "{service} isn't responding. Playlist TV only works when the computer is on the box's network (Wi-Fi or cable).",
         "playlistFileNotFound": "Playlist file not found: {path}",
         "noChannels": "The playlist has no channels.",
+        "channelGone": "This channel is no longer in the list. Reload the channels.",
         "noService": "No TV service chosen. Choose one in the TV page settings."
       }
     },
@@ -1249,7 +1250,6 @@
       "show": "Show",
       "hide": "Hide",
       "hidden": "Hidden:",
-      "openPage": "Set in {name}",
       "start": {
         "sites": "Straight to a service"
       },
@@ -1260,7 +1260,8 @@
         "tmdb": "TMDB (movies and series)",
         "musicbrainz": "MusicBrainz (music)",
         "libretro": "libretro (console games)",
-        "steam": "Steam (PC games)"
+        "steam": "Steam (PC games)",
+        "plugin": "{name} (plugin)"
       },
       "plugin": {
         "help": "Settings of this plugin. They apply right away."
@@ -1322,6 +1323,83 @@
         "cancelled": "{label} back to position {index} of {count}.",
         "moveBefore": "Move {label} before {other}",
         "moveAfter": "Move {label} after {other}"
+      },
+      "removed": "Removed",
+      "sources": {
+        "kinds": {
+          "video": "Videos",
+          "audio": "Music",
+          "image": "Pictures",
+          "game": "PC games"
+        },
+        "type": {
+          "folder": "Folder",
+          "network": "Network",
+          "web": "Web"
+        },
+        "count": {
+          "video": {
+            "one": "{count} video",
+            "other": "{count} videos"
+          },
+          "audio": {
+            "one": "{count} track",
+            "other": "{count} tracks"
+          },
+          "image": {
+            "one": "{count} picture",
+            "other": "{count} pictures"
+          },
+          "game": {
+            "one": "{count} game",
+            "other": "{count} games"
+          }
+        },
+        "scanning": "Scanning…",
+        "none": "No source.",
+        "addFolder": "Add a folder",
+        "addAddress": "Add a network or web address"
+      },
+      "tv": {
+        "web": "Web portal",
+        "playlist": "M3U playlist",
+        "none": "No service.",
+        "detect": "Detect my box",
+        "reload": "Reload the channels",
+        "reloaded": "The channels will be reloaded.",
+        "url": "Address of the “{name}” playlist",
+        "detecting": "Looking for your box on the network…",
+        "detected": "{name} detected.",
+        "notDetected": "No box found. Choose your service in the list."
+      },
+      "web": {
+        "none": "No site.",
+        "name": "Name",
+        "namePlaceholder": "Arte",
+        "url": "Address",
+        "urlPlaceholder": "https://www.arte.tv/en/",
+        "missing": "Enter a name and an address.",
+        "added": "{name} added to Streaming"
+      },
+      "pcGames": {
+        "none": "No game added by hand.",
+        "add": "Add a game by hand"
+      },
+      "pcSites": {
+        "help": "Mire offers no site by default. “Add PC games” opens the ones you add here in a built-in browser, with search and download.",
+        "none": "No site.",
+        "name": "Name",
+        "url": "Address",
+        "search": "Search address (with {q})",
+        "missing": "Enter at least the address of the site (https://…)."
+      },
+      "store": {
+        "help": "Console games downloaded from the apps of the Centre go there, one folder per console.",
+        "placeholder": "Documents/Mire/ROMs"
+      },
+      "consoles": {
+        "help": "Consoles are created and changed in the Centre: emulator, game folders and sources, banner.",
+        "open": "Open the consoles of the Centre"
       }
     },
     "explorer": {
@@ -1475,6 +1553,45 @@
           "other": "The {count} chosen items will be added at the end of the chosen list."
         }
       }
+    },
+    "webView": {
+      "bar": {
+        "label": "Site bar",
+        "back": "Previous page",
+        "forward": "Next page",
+        "reload": "Reload the page",
+        "site": "Site",
+        "siteChoice": "Site to look for games",
+        "learn": "Remember the search",
+        "learnTitle": "Remember the search: search for the word “mire” on the site, then press here.",
+        "learned": "Search remembered",
+        "learnedTitle": "Search remembered: this site appears in Search. To do it again, search for the word “mire” on the site, then press here.",
+        "adOff": "Ad blocker turned off on this site",
+        "adBlocked": {
+          "one": "{count} ad blocked on this page",
+          "other": "{count} ads blocked on this page"
+        },
+        "adHint": "{state}. Press to turn the blocker off or on for this site.",
+        "bookmarkPage": "Add this page to videos",
+        "bookmarkPageTitle": "Add this page to videos (movie or series)",
+        "bookmarkGame": "Add this game (to download)",
+        "bookmarkGameTitle": "Add this game to the list, to download later",
+        "immersive": "Full screen",
+        "immersiveTitle": "Full screen (F11)",
+        "browser": "Open in the browser",
+        "browserTitle": "Open this page in your usual browser, if the site does not work in Mire",
+        "close": "Close the site",
+        "closeTitle": "Close the site (Ctrl+W)"
+      },
+      "loading": "Loading {name}…",
+      "opening": "Opening {name}…",
+      "inBrowser": "{name} opens in the browser",
+      "openFailed": "Could not open it.",
+      "learnFailed": "Could not remember the search.",
+      "learned": "Search remembered: this site will appear in Search results.",
+      "adblockOn": "Ad blocker turned back on for this site. The page reloads.",
+      "adblockOff": "Ad blocker turned off for this site. The page reloads.",
+      "channelOpening": "Opening {name}…"
     },
     "player": {
       "video": {

@@ -11,6 +11,7 @@ import type { Config, TvService } from '@mire/shared';
 import { tvChannelKey } from '../catalog/keys.ts';
 import { compact, type ConfigFeed } from '../catalog/sync.ts';
 import type { ElementInput, ElementSource } from '../catalog/types.ts';
+import { pickVariant } from './channels.ts';
 import type { Channel, TvProvider, TvProviderContext } from './types.ts';
 
 /** Tags de chaque source. */
@@ -21,9 +22,9 @@ export const TV_SOURCE_TAGS = {
 
 export type TvSourceId = keyof typeof TV_SOURCE_TAGS;
 
-/** Chaîne d'une liste : flux de la qualité choisie pour le service (sinon le premier), et toutes ses variantes. */
+/** Chaîne d'une liste : flux de la qualité préférée du service (`pickVariant`), et toutes ses variantes. */
 export function channelElement(svc: TvService, ch: Channel): ElementInput {
-  const main = ch.variants.find((v) => v.q === svc.quality) ?? ch.variants[0];
+  const main = pickVariant(ch.variants, svc.quality) ?? ch.variants[0];
   return {
     key: tvChannelKey(svc.id, { number: ch.number, urls: ch.variants.map((v) => v.url) }),
     name: ch.name,
@@ -51,7 +52,8 @@ export function portalElement(svc: TvService): ElementInput {
   return {
     key: tvChannelKey(svc.id, { number: null, urls: [svc.url] }),
     name: String(svc.name || svc.id),
-    open: { kind: 'site', url: svc.url },
+    // `site` : la vue web du portail (`tv:<service>`, entrée de `web/entries.ts`).
+    open: { kind: 'site', url: svc.url, site: `tv:${svc.id}` },
     tags: [...TV_SOURCE_TAGS['tv-web']],
     infos: {},
     images: {},

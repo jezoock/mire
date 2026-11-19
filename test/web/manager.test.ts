@@ -2,7 +2,17 @@
 // liens magnet) et Widevine. Aucune page n'est chargée.
 import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDrm, createGoogleSignin, createWebExtensions, createWebManager, setupWebSession, WEB_PREFERENCES } from '../../src/main/web/index.ts';
+import {
+  createDrm,
+  createGoogleSignin,
+  createWebExtensions,
+  createWebManager,
+  NEUTRAL_COLOR,
+  roundRect,
+  setupWebSession,
+  WEB_PREFERENCES,
+} from '../../src/main/web/index.ts';
+import { BOOKMARK_COLOR, ROM_COLOR, TV_COLOR } from '../../src/main/lib/web-entry.ts';
 
 type Any = any;
 
@@ -514,5 +524,52 @@ describe('Widevine', () => {
     const slow = createDrm({ components: comp(() => new Promise(() => {})), timeoutMs: 5 });
     slow.start();
     assert.equal(await slow.whenReady(), false);
+  });
+});
+
+// P4-16 : la barre du site affiche le nom et la couleur publiés ici, sans relire la configuration.
+describe('état publié (web-state)', () => {
+  test('nom, couleur et genre de chaque vue viennent de son entrée', async () => {
+    await t.web.open('netflix');
+    await t.web.open('rom:snes-1');
+    await t.web.open('bm:b1');
+    await t.web.open('tv:sfr');
+    const pick = (id: string) => {
+      const st: Any = t.web.stateOf(id);
+      return { kind: st.kind, name: st.name, color: st.color };
+    };
+    assert.deepEqual(pick('netflix'), { kind: 'site', name: 'Netflix', color: '#E50914' });
+    assert.deepEqual(pick('rom:snes-1'), { kind: 'rom', name: 'Jeux : Super Nintendo', color: ROM_COLOR });
+    assert.deepEqual(pick('bm:b1'), { kind: 'bookmark', name: 'Film', color: BOOKMARK_COLOR });
+    assert.deepEqual(pick('tv:sfr'), { kind: 'tv', name: 'SFR', color: TV_COLOR });
+  });
+
+  test('une couleur mal écrite dans la configuration est remplacée par la couleur neutre', async () => {
+    t.config().web.push({ id: 'bad', name: 'Bad', url: 'https://bad.example/', mode: 'integrated', search: '', color: 'red;background:url(x)' });
+    await t.web.open('bad');
+    assert.equal((t.web.stateOf('bad') as Any).color, NEUTRAL_COLOR);
+  });
+
+  test('chaque changement de la page publie l’état, avec son nom et sa couleur', async () => {
+    await t.web.open('tv:sfr');
+    t.web.show('tv:sfr', { x: 0, y: 0, width: 10, height: 10 });
+    t.sent.length = 0;
+    t.created[0].webContents.emit('page-title-updated');
+    const st: Any = channels(t.sent, 'web-state').at(-1);
+    assert.equal(st.id, 'tv:sfr');
+    assert.equal(st.name, 'SFR');
+    assert.equal(st.color, TV_COLOR);
+  });
+
+  test('une adresse donnée par l’interface qui n’est pas http(s) est ignorée : la vue charge son entrée', async () => {
+    await t.web.open('netflix', 'file:///etc/passwd');
+    await t.web.open('netflix', 'javascript:alert(1)');
+    const loads = t.created[0].webContents.log.filter(([k]: Any[]) => k === 'load').map(([, u]: Any[]) => u);
+    assert.deepEqual([...new Set(loads)], ['https://www.netflix.com/browse']);
+  });
+
+  test('une position donnée par l’interface est arrondie et jamais négative', () => {
+    assert.deepEqual(roundRect({ x: -4.4, y: 10.6, width: 99.5, height: Number.NaN }), { x: 0, y: 11, width: 100, height: 0 });
+    assert.deepEqual(roundRect(null), { x: 0, y: 0, width: 0, height: 0 });
   });
 });

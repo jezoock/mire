@@ -505,6 +505,7 @@
         "playlistUnreachable": "{service} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).",
         "playlistFileNotFound": "Fichier de playlist introuvable : {path}",
         "noChannels": "La playlist ne contient aucune chaîne.",
+        "channelGone": "Cette chaîne n’est plus dans la liste. Rechargez les chaînes.",
         "noService": "Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision."
       }
     },
@@ -1249,7 +1250,6 @@
       "show": "Afficher",
       "hide": "Masquer",
       "hidden": "Masqués :",
-      "openPage": "Régler dans {name}",
       "start": {
         "sites": "Directement sur un service"
       },
@@ -1260,7 +1260,8 @@
         "tmdb": "TMDB (films et séries)",
         "musicbrainz": "MusicBrainz (musique)",
         "libretro": "libretro (jeux de console)",
-        "steam": "Steam (jeux PC)"
+        "steam": "Steam (jeux PC)",
+        "plugin": "{name} (plugin)"
       },
       "plugin": {
         "help": "Réglages de ce plugin. Ils s’appliquent tout de suite."
@@ -1322,6 +1323,83 @@
         "cancelled": "{label} revenu en position {index} sur {count}.",
         "moveBefore": "Placer {label} avant {other}",
         "moveAfter": "Placer {label} après {other}"
+      },
+      "removed": "Retiré",
+      "sources": {
+        "kinds": {
+          "video": "Vidéos",
+          "audio": "Musique",
+          "image": "Images",
+          "game": "Jeux PC"
+        },
+        "type": {
+          "folder": "Dossier",
+          "network": "Réseau",
+          "web": "Web"
+        },
+        "count": {
+          "video": {
+            "one": "{count} vidéo",
+            "other": "{count} vidéos"
+          },
+          "audio": {
+            "one": "{count} morceau",
+            "other": "{count} morceaux"
+          },
+          "image": {
+            "one": "{count} image",
+            "other": "{count} images"
+          },
+          "game": {
+            "one": "{count} jeu",
+            "other": "{count} jeux"
+          }
+        },
+        "scanning": "Analyse…",
+        "none": "Aucune source.",
+        "addFolder": "Ajouter un dossier",
+        "addAddress": "Ajouter une adresse réseau ou web"
+      },
+      "tv": {
+        "web": "Portail web",
+        "playlist": "Playlist M3U",
+        "none": "Aucun service.",
+        "detect": "Détecter ma box",
+        "reload": "Recharger les chaînes",
+        "reloaded": "Les chaînes seront rechargées.",
+        "url": "Adresse de la playlist « {name} »",
+        "detecting": "Recherche de votre box sur le réseau…",
+        "detected": "{name} détecté.",
+        "notDetected": "Aucune box reconnue. Choisissez votre service dans la liste."
+      },
+      "web": {
+        "none": "Aucun site.",
+        "name": "Nom",
+        "namePlaceholder": "Arte",
+        "url": "Adresse",
+        "urlPlaceholder": "https://www.arte.tv/fr/",
+        "missing": "Indiquez un nom et une adresse.",
+        "added": "{name} ajouté dans Streaming"
+      },
+      "pcGames": {
+        "none": "Aucun jeu ajouté à la main.",
+        "add": "Ajouter un jeu à la main"
+      },
+      "pcSites": {
+        "help": "Mire ne propose aucun site d’office. « Ajouter des jeux PC » ouvre ceux que vous ajoutez ici dans un navigateur intégré, avec recherche et téléchargement.",
+        "none": "Aucun site.",
+        "name": "Nom",
+        "url": "Adresse",
+        "search": "Adresse de recherche (avec {q})",
+        "missing": "Indiquez au moins l’adresse du site (https://…)."
+      },
+      "store": {
+        "help": "Les jeux de console téléchargés depuis les apps du Centre y sont rangés, un dossier par console.",
+        "placeholder": "Documents/Mire/ROMs"
+      },
+      "consoles": {
+        "help": "Les consoles se créent et se modifient dans le Centre : émulateur, dossiers et sources de jeux, bannière.",
+        "open": "Ouvrir les consoles du Centre"
       }
     },
     "explorer": {
@@ -1475,6 +1553,45 @@
           "other": "Les {count} éléments choisis seront ajoutés à la fin de la liste choisie."
         }
       }
+    },
+    "webView": {
+      "bar": {
+        "label": "Barre du site",
+        "back": "Page précédente",
+        "forward": "Page suivante",
+        "reload": "Recharger la page",
+        "site": "Site",
+        "siteChoice": "Site où chercher des jeux",
+        "learn": "Mémoriser la recherche",
+        "learnTitle": "Mémoriser la recherche : cherchez le mot « mire » sur le site, puis appuyez ici.",
+        "learned": "Recherche mémorisée",
+        "learnedTitle": "Recherche mémorisée : ce site apparaît dans Rechercher. Pour la refaire, cherchez le mot « mire » sur le site puis appuyez ici.",
+        "adOff": "Bloqueur désactivé sur ce site",
+        "adBlocked": {
+          "one": "{count} publicité bloquée sur cette page",
+          "other": "{count} publicités bloquées sur cette page"
+        },
+        "adHint": "{state}. Appuyez pour désactiver ou réactiver le bloqueur sur ce site.",
+        "bookmarkPage": "Ajouter cette page aux vidéos",
+        "bookmarkPageTitle": "Ajouter cette page aux vidéos (film ou série)",
+        "bookmarkGame": "Ajouter ce jeu (à télécharger)",
+        "bookmarkGameTitle": "Ajouter ce jeu à la liste, à télécharger plus tard",
+        "immersive": "Plein écran",
+        "immersiveTitle": "Plein écran (F11)",
+        "browser": "Ouvrir dans le navigateur",
+        "browserTitle": "Ouvrir cette page dans votre navigateur habituel, si le site refuse de fonctionner dans Mire",
+        "close": "Fermer le site",
+        "closeTitle": "Fermer le site (Ctrl+W)"
+      },
+      "loading": "Chargement de {name}…",
+      "opening": "Ouverture de {name}…",
+      "inBrowser": "{name} s’ouvre dans le navigateur",
+      "openFailed": "Ouverture impossible.",
+      "learnFailed": "Impossible de mémoriser la recherche.",
+      "learned": "Recherche mémorisée : ce site apparaîtra dans les résultats de Rechercher.",
+      "adblockOn": "Bloqueur réactivé sur ce site. La page se recharge.",
+      "adblockOff": "Bloqueur désactivé sur ce site. La page se recharge.",
+      "channelOpening": "Ouverture de {name}…"
     },
     "player": {
       "video": {
