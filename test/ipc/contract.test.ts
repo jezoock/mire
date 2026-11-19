@@ -173,6 +173,8 @@ const ADDED_METHODS: Record<string, string> = {
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
   tvWatch: 'tv:watch', // P4-16 : chaîne désignée par sa clé, variante choisie par le service
+  pluginsSettings: 'plugins:settings',
+  pluginsSetSetting: 'plugins:setSetting',
 };
 
 // Événements ajoutés après P1-08.

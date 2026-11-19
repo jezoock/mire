@@ -1,0 +1,280 @@
+@use '../../theme/tokens' as *;
+
+// Vue des Réglages : panneaux du schéma et des plugins. Habillage du cœur (palette des réglages, P4-02) ; l'allure
+// reprend celle des réglages historiques (.set-block, .theme-card, .order-list).
+.mire-settings-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+  gap: ds-spacing(5);
+  align-items: start;
+  min-width: 0;
+  padding-bottom: ds-spacing(8);
+
+  &__panel {
+    display: grid;
+    gap: ds-spacing(3);
+    min-width: 0;
+    padding: ds-spacing(5);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+
+    &[data-panel='appearance'],
+    &[data-panel='home'],
+    &[data-panel='advanced'] {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  &__sub {
+    margin: ds-spacing(2) 0 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  &__help,
+  &__hint,
+  &__note {
+    margin: 0;
+    max-width: 75ch;
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  &__note {
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  &__fields {
+    display: grid;
+    gap: ds-spacing(4);
+  }
+
+  &__field {
+    display: grid;
+    gap: ds-spacing(2);
+    min-width: 0;
+  }
+
+  &__label {
+    font-weight: 700;
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    gap: ds-spacing(3);
+    cursor: pointer;
+  }
+
+  &__row {
+    display: flex;
+    align-items: flex-end;
+    gap: ds-spacing(2);
+
+    > ds-field,
+    > input {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+  }
+
+  &__entries {
+    display: grid;
+    gap: ds-spacing(1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: ds-spacing(2);
+    padding: ds-spacing(1) ds-spacing(2);
+    background: var(--surface-2);
+    border-radius: 8px;
+
+    &.--none {
+      color: var(--muted);
+      background: none;
+    }
+  }
+
+  &__value {
+    overflow-wrap: anywhere;
+  }
+
+  // Palettes : l'aperçu est dessiné avec les jetons de chaque palette (data-palette).
+  &__palettes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: ds-spacing(3);
+  }
+
+  &__palette {
+    display: grid;
+    gap: ds-spacing(2);
+    height: auto;
+    padding: ds-spacing(2);
+    text-align: left;
+    white-space: normal;
+
+    &[aria-pressed='true'] {
+      outline: 2px solid var(--text);
+    }
+  }
+
+  &__preview {
+    display: flex;
+    height: 96px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  &__pane {
+    display: flex;
+    flex: 1;
+    color: var(--text);
+    background: var(--bg);
+  }
+
+  &__pane-rail {
+    width: 22%;
+    background: var(--bg-rail);
+    border-right: 1px solid var(--line);
+  }
+
+  &__pane-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px;
+  }
+
+  &__pane-bars {
+    display: flex;
+    height: 28px;
+    overflow: hidden;
+    border-radius: 3px;
+
+    i {
+      flex: 1;
+    }
+  }
+
+  &__pane-line {
+    width: 60%;
+    height: 6px;
+    background: var(--text);
+    border-radius: 3px;
+  }
+
+  &__pane-button {
+    width: 40%;
+    min-height: 0;
+    height: 14px;
+    padding: 0;
+    pointer-events: none;
+  }
+
+  &__palette-name,
+  &__theme-name {
+    font-weight: 700;
+  }
+
+  &__current {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  &__themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+  }
+
+  &__theme {
+    display: grid;
+    gap: 2px;
+    max-width: 360px;
+    height: auto;
+    text-align: left;
+    white-space: normal;
+
+    &[aria-pressed='true'] {
+      outline: 2px solid var(--text);
+    }
+  }
+
+  &__theme-desc {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  // Listes ordonnables (ds-sortable) : les valeurs choisies, puis celles qu'on peut ajouter.
+  &__sortable {
+    display: grid;
+    gap: ds-spacing(1);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: ds-spacing(2);
+    padding: ds-spacing(1) ds-spacing(2);
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+
+  &__item-label {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__chip {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+  }
+
+  &__hidden {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(2);
+    margin-top: ds-spacing(2);
+  }
+
+  &__off {
+    display: inline-flex;
+    align-items: center;
+    gap: ds-spacing(1);
+  }
+
+  &__code {
+    width: 100%;
+    font-family: ui-monospace, monospace;
+    font-size: 15px;
+  }
+}

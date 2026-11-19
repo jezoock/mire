@@ -19,7 +19,7 @@ import {
   romProgressNotice,
 } from '../../src/renderer/centre/model.ts';
 import type { Writer } from '../../src/renderer/centre/model.ts';
-import { CENTRE_TARGET, CENTRE_VIEW, LEGACY_VIEWS, SCREEN_VIEWS, targetOfLegacyView, viewOf } from '../../src/renderer/shell/router.ts';
+import { CENTRE_TARGET, CENTRE_VIEW, SCREEN_VIEWS, targetOfLegacyView, viewOf } from '../../src/renderer/shell/router.ts';
 
 const writer = (lang: 'fr' | 'en'): Writer => {
   const i18n = createI18n({ locale: lang, catalogs: BUILTIN_CATALOGS });
@@ -304,7 +304,6 @@ describe('Centre : coquille', () => {
     assert.equal(CENTRE_TARGET, 'screen:center');
     assert.equal(viewOf('screen:center'), CENTRE_VIEW);
     assert.ok(SCREEN_VIEWS.some(([t]) => t === CENTRE_TARGET));
-    assert.ok(!LEGACY_VIEWS.some(([t]) => t === CENTRE_TARGET));
     assert.equal(targetOfLegacyView(CENTRE_VIEW), CENTRE_TARGET);
   });
 });

@@ -8,11 +8,11 @@ import {
   HOME_TARGET,
   HOME_VIEW,
   LEGACY_PAGE_SECTIONS,
-  LEGACY_VIEWS,
   PAGE_VIEW,
   createRouter,
   legacySectionOf,
-  legacyViewOf,
+  SCREEN_VIEWS,
+  SETTINGS_VIEW,
   routeOf,
   sameRoute,
   targetOfLegacyView,
@@ -52,12 +52,13 @@ describe('routeur de la coquille', () => {
     for (const s of CORE_SCREENS) assert.notEqual(viewOf(`screen:${s}`), null, s);
     // L'accueil (P4-12) a quitté les vues historiques : sa vue est mire-home, dans la section qui garde son nom.
     assert.equal(viewOf('screen:home'), HOME_VIEW);
-    assert.equal(legacyViewOf('screen:home'), null);
+    // Les Réglages (P4-20) aussi : plus aucun écran ne s'affiche dans une vue historique.
+    assert.equal(viewOf('screen:settings'), SETTINGS_VIEW);
+    assert.equal(targetOfLegacyView(SETTINGS_VIEW), 'screen:settings');
     assert.equal(targetOfLegacyView(HOME_VIEW), 'screen:home');
     for (const id of [...DEFAULT_PINNED, 'films-annees-90']) assert.equal(viewOf(id), PAGE_VIEW, id);
     assert.equal(viewOf('list:favoris'), null);
     assert.equal(viewOf('pas une cible'), null);
-    assert.equal(legacyViewOf('movies'), null);
     // Ancienne vue des pages prêtes à l'emploi ; une page de l'utilisateur n'en a pas.
     for (const id of DEFAULT_PINNED) assert.ok(legacySectionOf(id), id);
     assert.equal(legacySectionOf('films-annees-90'), null);
@@ -66,7 +67,7 @@ describe('routeur de la coquille', () => {
     assert.equal(targetOfLegacyView('downloads'), 'screen:center');
     assert.equal(targetOfLegacyView('web'), null);
     assert.equal(targetOfLegacyView('demo'), null);
-    for (const [target] of [...LEGACY_VIEWS, ...LEGACY_PAGE_SECTIONS]) assert.ok(routeOf(target), target);
+    for (const [target] of [...SCREEN_VIEWS, ...LEGACY_PAGE_SECTIONS]) assert.ok(routeOf(target), target);
   });
 
   it('ouvre une cible dans sa vue, garde le chemin, refuse ce qu’aucune vue n’affiche', () => {

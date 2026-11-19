@@ -280,6 +280,16 @@ describe('ctx.settings', () => {
     assert.deepEqual(keepSecrets({ 'org.exemple.t': { langue: 'fr' } }, section())?.['org.exemple.t'].cle, section()!['org.exemple.t'].cle);
   });
 
+  it('vue de l’écran Réglages (P4-20) : valeurs sans les secrets, dont on dit seulement s’ils sont saisis', () => {
+    const { s } = store();
+    assert.deepEqual(s.view('org.exemple.t', declared), { values: { langue: 'fr', actif: true }, secrets: [] });
+    s.set('org.exemple.t', declared, 'cle', 'API-123');
+    s.set('org.exemple.t', declared, 'langue', 'en');
+    const view = s.view('org.exemple.t', declared);
+    assert.deepEqual(view, { values: { langue: 'en', actif: true }, secrets: ['cle'] });
+    assert.ok(!JSON.stringify(view).includes('API-123'));
+  });
+
   it('sans chiffrement du système : gardé tel quel, mais toujours retiré de l’export', () => {
     const { s, section } = store({ ...box, available: () => false });
     s.set('org.exemple.t', declared, 'cle', 'API-456');

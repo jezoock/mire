@@ -20,13 +20,15 @@ function fakeContext(answers: Record<string, unknown> = {}) {
     new Proxy(
       {},
       {
-        get:
-          (_t, name: string) =>
-          (...args: unknown[]) => {
-            calls.push([`${prefix}${name}`, ...args]);
-            const answer = answers[`${prefix}${name}`];
-            return typeof answer === 'function' ? answer(...args) : answer;
-          },
+        // `ui.settings` (P4-20) : un écran avec ses propres opérations, enregistrées sous `ui.settings.*`.
+        get: (_t, name: string): unknown =>
+          prefix === 'ui.' && name === 'settings'
+            ? record('ui.settings.')
+            : (...args: unknown[]) => {
+                calls.push([`${prefix}${name}`, ...args]);
+                const answer = answers[`${prefix}${name}`];
+                return typeof answer === 'function' ? answer(...args) : answer;
+              },
       },
     );
   const ctx: ControllerContext = {
@@ -281,12 +283,12 @@ describe('pont des data-action historiques', () => {
     assert.deepEqual(args('go', { go: 'settings' }), { section: 'settings' });
   });
 
-  it('npm run check:actions ne trouve aucun problème, et relie les ~65 actions historiques', () => {
+  it('npm run check:actions ne trouve aucun problème, et relie les ~60 actions historiques', () => {
     const { errors, legacy, triggers } = checkActions();
     assert.deepEqual(errors, []);
     // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le
     // Centre en retire dix-huit ; P4-13 : la Recherche en retire neuf ; P4-16 : la barre des sites en retire six).
-    assert.ok(legacy >= 64, `${legacy} actions`);
+    assert.ok(legacy >= 58, `${legacy} actions`);
     assert.ok(triggers >= 1);
   });
 

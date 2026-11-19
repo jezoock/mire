@@ -116,26 +116,12 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
   'src-remove': { tag: 'mire-explorer', method: 'removeSource', args: (d) => ({ kind: d.kind, id: d.id }) },
   rescan: { tag: 'mire-explorer', method: 'rescan' },
   // Réglages
-  theme: { tag: 'mire-settings', method: 'setTheme', args: byId, after: (_v, d, view) => pressed($$('.theme-card', view.root), d.id) },
-  'page-theme': { tag: 'mire-settings', method: 'setPageTheme', args: byId, after: (_v, d) => pressed($$('[data-action="page-theme"]'), d.id) },
   'menu-pos': { tag: 'mire-settings', method: 'setMenuPosition', args: byId, after: (_v, d) => pressed($$('[data-action="menu-pos"]'), d.id) },
   'order-move': {
     tag: 'mire-settings',
     method: 'moveHomeItem',
     args: (d) => ({ kind: d.kind, id: d.id, dir: Number(d.dir) }),
     after: (_v, d, view) => view.refreshOrderList(d.kind!, d.id!, d.dir!),
-  },
-  'config-export': { tag: 'mire-settings', method: 'exportConfig' },
-  'config-import': { tag: 'mire-settings', method: 'importConfig', args: (d) => ({ mode: d.mode || 'replace' }) },
-  'reveal-config': { tag: 'mire-settings', method: 'revealConfig' },
-  browse: {
-    tag: 'mire-settings',
-    method: 'browse',
-    args: (d) => ({ kind: d.kind }),
-    after: (p, d) => {
-      const input = p ? $<HTMLInputElement>(`#${d.id}`) : null;
-      if (input) input.value = p as string;
-    },
   },
   'save-pc-sites': { tag: 'mire-settings', method: 'savePcSites', args: () => ({ text: field('#pc-sites') }) },
   'add-site': {
@@ -159,8 +145,6 @@ export const LEGACY_ACTIONS: Record<string, BridgeEntry> = {
     args: () => ({ url: field('#adblock-new').trim() }),
     after: (added) => added && clear('#adblock-new'),
   },
-  'scrape-all': { tag: 'mire-settings', method: 'scrapeAll' },
-  'scrape-clear': { tag: 'mire-settings', method: 'clearScrape' },
   'tv-service-radio': { tag: 'mire-settings', method: 'setTvService', args: byId },
   'dl-pick-dir': { tag: 'mire-settings', method: 'chooseDownloadFolder' },
   // Vue web

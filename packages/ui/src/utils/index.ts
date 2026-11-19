@@ -11,3 +11,4 @@ export * from './centre.ts';
 export * from './search.ts';
 export * from './explorer.ts';
 export * from './web.ts';
+export * from './settings.ts';
