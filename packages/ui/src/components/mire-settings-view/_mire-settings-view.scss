@@ -32,7 +32,7 @@
     font-weight: 800;
   }
 
-  &__detail {
+  &__sub {
     margin: ds-spacing(2) 0 0;
     font-size: 18px;
     font-weight: 700;
@@ -123,7 +123,7 @@
     overflow-wrap: anywhere;
   }
 
-  &__sub {
+  &__detail {
     color: var(--muted);
     font-size: 14px;
     font-weight: 400;
@@ -171,6 +171,12 @@
     background: var(--surface-2);
     border-radius: 8px;
     cursor: pointer;
+  }
+
+  &__segment[aria-pressed='true'],
+  &__choice[aria-pressed='true'] {
+    outline: 2px solid var(--text);
+    font-weight: 700;
   }
 
   &__choice > .mire-settings-view__value {

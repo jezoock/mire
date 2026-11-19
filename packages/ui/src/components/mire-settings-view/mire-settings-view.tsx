@@ -222,7 +222,11 @@ export class MireSettingsView {
     );
   }
 
-  /** Choix court (position du menu) : boutons radio d'un `ds-toggle-group`, enregistré au choix. */
+  /**
+   * Choix court (position du menu) : boutons à bascule d'un `ds-toggle-group`, un seul choisi, enregistré au choix.
+   * Pas de boutons radio : leur groupe garde les flèches pour lui (et choisit en se déplaçant), la croix de la manette
+   * doit pouvoir en sortir.
+   */
   private renderSegmented(f: SettingsFieldView) {
     const id = settingsDomId(f.key);
     const value = String(f.value ?? '');
@@ -234,7 +238,8 @@ export class MireSettingsView {
         <ds-toggle-group
           class="mire-settings-view__segmented"
           id={id}
-          type="radio"
+          type="icon"
+          count="[1, 1]"
           aria-labelledby={`${id}-label`}
           onToggleValueChange={(e: CustomEvent<{ value: string[] }>) => e.detail.value[0] !== undefined && this.change(f.key, String(e.detail.value[0]))}
         >
@@ -295,14 +300,15 @@ export class MireSettingsView {
     }
   }
 
-  /** Lignes d'une liste à choix : boutons radio d'un `ds-toggle-group`. */
+  /** Lignes d'une liste à choix : boutons à bascule d'un `ds-toggle-group`, un seul choisi (voir `renderSegmented`). */
   private renderChoices(g: SettingsEntryGroup) {
     const id = settingsDomId(g.key);
     return (
       <ds-toggle-group
         class="mire-settings-view__choices"
         id={id}
-        type="radio"
+        type="icon"
+        count="[1, 1]"
         label={g.label}
         onToggleValueChange={(e: CustomEvent<{ value: string[] }>) =>
           e.detail.value[0] !== undefined && this.change(`${g.key}.active`, String(e.detail.value[0]))

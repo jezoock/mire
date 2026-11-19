@@ -9,7 +9,10 @@
   },
   "gameSources": [],
   "tv": {
-    "services": [{ "id": "demo", "name": "Télé de démonstration", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" }],
+    "services": [
+      { "id": "demo", "name": "Télé de démonstration", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" },
+      { "id": "secours", "name": "Télé de secours", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" }
+    ],
     "active": "demo",
     "detected": true
   },

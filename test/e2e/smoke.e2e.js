@@ -1122,10 +1122,10 @@ describe('Test de fumée de Mire', () => {
       // Par l'action du contrôleur (routeur de la coquille) : le menu rétractable peut être caché.
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
       await page.waitForFunction(() => document.body.dataset.section === 'settings');
-      // Écran Réglages (P4-20) : liste de choix et interrupteur, enregistrés dès qu'ils changent.
-      await page.waitForSelector('#view mire-settings-view.hydrated ds-select.hydrated select#set-ui-menu-position');
+      // Écran Réglages (P4-20) : choix court en boutons (ds-toggle-group) et interrupteur, enregistrés dès qu'ils changent.
+      await page.waitForSelector('#view mire-settings-view.hydrated ds-toggle-group.hydrated#set-ui-menu-position ds-toggle.hydrated');
       if (!(await page.evaluate((p) => document.body.classList.contains(`menu-${p}`), position))) {
-        await page.locator('#view select#set-ui-menu-position').selectOption(position);
+        await page.locator(`#view ds-toggle-group#set-ui-menu-position ds-toggle[data-key="${position}"]`).click();
       }
       await page.waitForFunction((p) => document.body.classList.contains(`menu-${p}`), position);
       const box = page.locator('#view ds-toggle.hydrated#set-ui-menu-autohide');
@@ -2598,6 +2598,153 @@ describe('Test de fumée de Mire', () => {
       await openSettings();
       await palette('ecran').click();
       await waitSaved('ui.theme', 'ecran');
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Réglages : blocs des pages (P4-20)', () => {
+    const PAD = { a: 0, b: 1, down: 13 };
+    const VIEW = '#view mire-settings mire-settings-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const frames = (n) =>
+      page.evaluate(
+        (k) =>
+          new Promise((resolve) =>
+            (function next(i) {
+              if (!i) resolve();
+              else requestAnimationFrame(() => next(i - 1));
+            })(k),
+          ),
+        n,
+      );
+    const padPress = async (button) => {
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: true, value: 1 }), PAD[button]);
+      await frames(3);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD[button]);
+      await frames(2);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Écran Réglages affiché, ses composants rendus (classe hydrated) : attendue avant chaque touche.
+    const openSettings = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await hydrated();
+    };
+    const hydrated = () =>
+      page.waitForFunction(
+        (sel) =>
+          document.body.dataset.section === 'settings' &&
+          document.querySelector(`${sel}.hydrated .mire-settings-view__group`) &&
+          [...document.querySelectorAll(`${sel} ds-toggle, ${sel} ds-toggle-group, ${sel} ds-trigger, ${sel} ds-field`)].every((e) =>
+            e.classList.contains('hydrated'),
+          ),
+        VIEW,
+      );
+    const config = () => page.evaluate(async () => (await window.api.getConfig()).config);
+    const waitConfig = (fn, arg) =>
+      page.waitForFunction(async ([f, a]) => new Function('c', 'a', `return (${f})(c, a)`)((await window.api.getConfig()).config, a), [fn.toString(), arg]);
+    const group = (key) => page.locator(`${VIEW} .mire-settings-view__group[data-list="${key}"]`);
+    // Message bref masqué avant une capture : il dépend du minutage.
+    const hideToast = async () => {
+      await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
+      await settle();
+    };
+    const tvChoice = (id) => page.locator(`${VIEW} ds-toggle-group#set-tv ds-toggle[data-key="${id}"]`);
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('sources : ajouter une adresse, puis la retirer ; plus de bouton « Régler dans … »', async () => {
+      await openSettings();
+      assert.equal(await page.locator(`${VIEW} ds-trigger[action^="openPageSettings"]`).count(), 0);
+      const location = path.join(os.tmpdir(), 'mire-e2e', 'fixtures', 'bibliotheque');
+      const before = (await config()).library.sources.filter((x) => x.kind === 'image').length;
+      await group('sources:image').locator('ds-trigger[action^="addSourceAddress"]').click();
+      // Boîte « Ajouter une adresse » (encore celle de l'interface historique).
+      await page.locator('#dlg[open] #dlgf-location').fill(location);
+      await page.locator('#dlg[open] [data-dlg="ok"]').click();
+      await waitConfig((c, a) => c.library.sources.some((x) => x.kind === 'image' && x.location === a), location);
+      const added = (await config()).library.sources.find((x) => x.kind === 'image' && x.location === location);
+      const row = group('sources:image').locator(`li.mire-settings-view__entry[data-key="${added.id}"]`);
+      await row.waitFor();
+      await hydrated();
+      await row.scrollIntoViewIfNeeded();
+      await settle();
+      await hideToast();
+      await page.locator(`${VIEW} [data-panel="sources"]`).screenshot({ path: path.join(SHOTS, 'settings-sources.png') });
+      await row.locator('ds-trigger').click();
+      await waitConfig((c, a) => c.library.sources.filter((x) => x.kind === 'image').length === a, before);
+      await row.waitFor({ state: 'detached' });
+      assert.deepEqual(errors, []);
+    });
+
+    it('télévision : choisir un service, puis revenir au premier', async () => {
+      await openSettings();
+      assert.equal((await config()).tv.active, 'demo');
+      await tvChoice('secours').click();
+      await waitConfig((c) => c.tv.active === 'secours');
+      // Service actif sous forme de playlist : son adresse est un champ de l'écran.
+      await page.waitForFunction((sel) => document.querySelector(`${sel} input#set-tv-playlist`)?.value.endsWith('chaines.m3u'), VIEW);
+      await hydrated();
+      await tvChoice('demo').click();
+      await waitConfig((c) => c.tv.active === 'demo');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt les blocs, A choisit un service, B quitte l’écran', async () => {
+      await connectPad();
+      await openSettings();
+      await tvChoice('demo').focus();
+      // Croix vers le bas : le focus reste dans les réglages, sur un autre élément.
+      await padPress('down');
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel) && document.activeElement.dataset.key !== 'demo', VIEW);
+      assert.equal((await config()).tv.active, 'demo');
+      // A sur un service : il devient le service actif.
+      await hydrated();
+      await tvChoice('secours').focus();
+      await padPress('a');
+      await waitConfig((c) => c.tv.active === 'secours');
+      // B : le focus quitte les réglages (retour au menu).
+      await hydrated();
+      await padPress('b');
+      await page.waitForFunction((sel) => !document.activeElement?.closest(sel), VIEW);
+      await disconnectPad();
+      // Retour au service de départ.
+      await openSettings();
+      await tvChoice('demo').click();
+      await waitConfig((c) => c.tv.active === 'demo');
+      await hydrated();
+      await page.locator(`${VIEW} [data-panel="games"]`).scrollIntoViewIfNeeded();
+      await settle();
+      await hideToast();
+      await page.locator(`${VIEW} [data-panel="games"]`).screenshot({ path: path.join(SHOTS, 'settings-games.png') });
       assert.deepEqual(errors, []);
     });
   });
