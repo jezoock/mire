@@ -6,7 +6,7 @@
  * (tags → clés), puis reste en cache. Les changements du moteur mettent à jour les éléments d'une page déjà calculée,
  * effacent ses niveaux en cache et annoncent les pages touchées (`onChange`).
  */
-import type { ElementKey, PageDefinition, PageGroup, PageLevel, PagePath, PageSaveResult } from '@mire/shared';
+import type { ElementKey, PageDefinition, PageGroup, PageLevel, PageOrigin, PageOverview, PagePath, PagePreview, PageSaveResult } from '@mire/shared';
 import { tagIdOfPage, validatePage } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { TagEngine } from '../tags/engine.ts';
@@ -111,9 +111,8 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
     return c;
   }
 
-  function members(page: PageDefinition): Set<ElementKey> {
-    const cache = cacheOf(page.id);
-    if (cache.members) return cache.members;
+  /** Éléments d'une définition, calculés sans cache (aperçu, P4-21) ou pour le cache (`members`). */
+  function collect(page: PageDefinition): Set<ElementKey> {
     const exclude = page.exclude ?? [];
     const candidates = page.require.length ? engine.query(page.require, exclude) : [...engine.keys()];
     const out = new Set<ElementKey>();
@@ -122,7 +121,17 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
       if (!eff) continue;
       if (page.require.length ? matchesWhere(page, eff) : matchesPage(page, eff)) out.add(key);
     }
-    return (cache.members = out);
+    return out;
+  }
+
+  function members(page: PageDefinition): Set<ElementKey> {
+    const cache = cacheOf(page.id);
+    return (cache.members ??= collect(page));
+  }
+
+  function origin(id: string): PageOrigin {
+    if (!builtinById.has(id)) return 'user';
+    return Object.hasOwn(data.pages, id) ? 'modified' : 'builtin';
   }
 
   function level(page: PageDefinition, path: PagePath): Level {
@@ -221,6 +230,30 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
       store.set(data);
       changed(id);
       return true;
+    },
+
+    /** Pages, dans l'ordre du menu, avec leur origine et leur nombre d'éléments (`pages.overview`, P4-21). */
+    overview: (): PageOverview[] => all().map((p) => ({ page: structuredClone(p), origin: origin(p.id), count: members(p).size })),
+
+    /** Nombre d'éléments qu'aurait une définition, sans l'enregistrer (`pages.preview`, aperçu de P4-21). */
+    preview(def: unknown): PagePreview {
+      const r = validatePage(def);
+      return r.ok ? { ok: true, count: collect(r.page).size } : r;
+    },
+
+    /**
+     * Revient à la page prête à l'emploi d'origine (`pages.reset`) : ses changements sont oubliés, et elle revient si
+     * elle avait été supprimée. `null` si ce n'est pas une page prête à l'emploi.
+     */
+    reset(id: unknown): PageDefinition | null {
+      if (typeof id !== 'string' || !builtinById.has(id)) return null;
+      if (Object.hasOwn(data.pages, id) || data.removed.includes(id)) {
+        delete data.pages[id];
+        data.removed = data.removed.filter((x) => x !== id);
+        store.set(data);
+        changed(id);
+      }
+      return structuredClone(builtinById.get(id) as PageDefinition);
     },
 
     /**

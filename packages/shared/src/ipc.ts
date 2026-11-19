@@ -11,7 +11,18 @@
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark, LinkSite } from './config.ts';
 import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from './element.ts';
-import type { CatalogGroup, GroupEdit, GroupFetchResult, PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
+import type {
+  CatalogGroup,
+  GroupEdit,
+  GroupFetchResult,
+  PageDefinition,
+  PageLevel,
+  PageOverview,
+  PagePath,
+  PagePreview,
+  PageSaveResult,
+  PagesChange,
+} from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
 import type { CatalogSources, FolderLevel } from './browse.ts';
@@ -420,6 +431,11 @@ export interface IpcMethods {
   pagesGet(id: string): PageDefinition | null;
   pagesSave(page: PageDefinition): PageSaveResult;
   pagesRemove(id: string): boolean;
+  // Administration des pages (P4-21) : pages avec leur origine et leur nombre d'éléments ; nombre d'éléments d'une
+  // définition non enregistrée (aperçu) ; retour à la page prête à l'emploi d'origine (`null` : pas une telle page).
+  pagesOverview(): PageOverview[];
+  pagesPreview(page: PageDefinition): PagePreview;
+  pagesReset(id: string): PageDefinition | null;
   // Un niveau d'une page (regroupements ou éléments), par tranches ; `null` : page inconnue ou chemin invalide.
   // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08) ; `tag:<id>` : les éléments d'un tag, par
   // nom (explorateur, P4-08).
@@ -612,6 +628,9 @@ export const IPC_METHODS = {
   pagesGet: 'pages:get',
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
+  pagesOverview: 'pages:overview',
+  pagesPreview: 'pages:preview',
+  pagesReset: 'pages:reset',
   catalogPage: 'catalog:page',
   catalogSources: 'catalog:sources',
   catalogFolder: 'catalog:folder',

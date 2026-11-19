@@ -123,6 +123,19 @@ export type GroupFetchResult = { ok: true; facts: GroupFacts; group: CatalogGrou
 /** Réponse de `pages.save` : la page enregistrée, ou les endroits de la définition qui ne conviennent pas. */
 export type PageSaveResult = { ok: true; page: PageDefinition } | { ok: false; errors: string[] };
 
+/** Origine d'une page : prête à l'emploi, prête à l'emploi modifiée par l'utilisateur, ou créée par lui. */
+export type PageOrigin = 'builtin' | 'modified' | 'user';
+
+/** Page telle que l'administration des pages la montre (P4-21, `pages.overview`) : sa définition, son origine, son nombre d'éléments. */
+export interface PageOverview {
+  page: PageDefinition;
+  origin: PageOrigin;
+  count: number;
+}
+
+/** Réponse de `pages.preview` : nombre d'éléments qu'aurait la page, ou les endroits de la définition qui ne conviennent pas. */
+export type PagePreview = { ok: true; count: number } | { ok: false; errors: string[] };
+
 /** Contenu d'une ou plusieurs pages changé (analyse, infos, modification à la main, définition). */
 export interface PagesChange {
   pages: string[];
@@ -142,6 +155,8 @@ export const tagIdOfPage = (pageId: unknown): string | null =>
 const INFO_RE = /^[a-z][a-zA-Z0-9]{0,63}$/;
 const TAG_RE = /^[^\s].{0,63}$/;
 export const PAGE_DISPLAYS: readonly PageDisplay[] = ['posters', 'thumbnails', 'list', 'rows'];
+/** Tailles permises (P4-21) : une définition venue de l'interface ne dépasse pas ces nombres de tags, conditions et tris. */
+export const PAGE_LIMITS = { tags: 32, where: 16, sort: 8, text: 200 } as const;
 
 /** Schéma JSON d'une définition de page (pour les plugins et les fichiers ; `validatePage` l'applique). */
 export const PAGE_DEFINITION_SCHEMA = {
@@ -159,10 +174,11 @@ export const PAGE_DEFINITION_SCHEMA = {
       ],
     },
     icon: { type: 'string', maxLength: 64 },
-    require: { type: 'array', items: { type: 'string', pattern: TAG_RE.source } },
-    exclude: { type: 'array', items: { type: 'string', pattern: TAG_RE.source } },
+    require: { type: 'array', items: { type: 'string', pattern: TAG_RE.source }, maxItems: PAGE_LIMITS.tags },
+    exclude: { type: 'array', items: { type: 'string', pattern: TAG_RE.source }, maxItems: PAGE_LIMITS.tags },
     where: {
       type: 'array',
+      maxItems: PAGE_LIMITS.where,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -171,8 +187,8 @@ export const PAGE_DEFINITION_SCHEMA = {
         maxProperties: 2,
         properties: {
           info: { type: 'string', pattern: INFO_RE.source },
-          equals: { type: ['string', 'number', 'boolean'] },
-          contains: { type: 'string', minLength: 1 },
+          equals: { type: ['string', 'number', 'boolean'], maxLength: PAGE_LIMITS.text },
+          contains: { type: 'string', minLength: 1, maxLength: PAGE_LIMITS.text },
           between: {
             oneOf: [
               { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
@@ -185,6 +201,7 @@ export const PAGE_DEFINITION_SCHEMA = {
     groupBy: { type: 'array', items: { type: 'string', pattern: INFO_RE.source }, maxItems: 8 },
     sort: {
       type: 'array',
+      maxItems: PAGE_LIMITS.sort,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -221,12 +238,13 @@ function condition(v: unknown, at: string, errors: string[]): PageCondition | nu
     return null;
   }
   const { info } = v;
-  if ('equals' in v && isScalar(v.equals)) return { info, equals: v.equals };
-  if ('contains' in v && typeof v.contains === 'string' && v.contains) return { info, contains: v.contains };
+  const short = (x: unknown) => typeof x !== 'string' || x.length <= PAGE_LIMITS.text;
+  if ('equals' in v && isScalar(v.equals) && short(v.equals)) return { info, equals: v.equals };
+  if ('contains' in v && typeof v.contains === 'string' && v.contains && short(v.contains)) return { info, contains: v.contains };
   const b = v.between;
   if (Array.isArray(b) && b.length === 2) {
     if (b.every((x) => typeof x === 'number' && Number.isFinite(x))) return { info, between: [b[0], b[1]] };
-    if (b.every((x) => typeof x === 'string')) return { info, between: [b[0], b[1]] };
+    if (b.every((x) => typeof x === 'string' && short(x))) return { info, between: [b[0], b[1]] };
   }
   errors.push(at);
   return null;
@@ -265,9 +283,13 @@ export function validatePage(value: unknown): PageSaveResult {
   if (v.icon !== undefined && (typeof v.icon !== 'string' || v.icon.length > 64)) errors.push('icon');
   const page: PageDefinition = { id: v.id as string, name: name as PageDefinition['name'], require: stringList(v.require, TAG_RE, 'require', errors) };
   if (typeof v.icon === 'string') page.icon = v.icon;
-  if (v.exclude !== undefined) page.exclude = stringList(v.exclude, TAG_RE, 'exclude', errors);
+  if (page.require.length > PAGE_LIMITS.tags) errors.push('require');
+  if (v.exclude !== undefined) {
+    page.exclude = stringList(v.exclude, TAG_RE, 'exclude', errors);
+    if (page.exclude.length > PAGE_LIMITS.tags) errors.push('exclude');
+  }
   if (v.where !== undefined) {
-    if (!Array.isArray(v.where)) errors.push('where');
+    if (!Array.isArray(v.where) || v.where.length > PAGE_LIMITS.where) errors.push('where');
     else page.where = v.where.map((c, i) => condition(c, `where.${i}`, errors)).filter((c): c is PageCondition => !!c);
   }
   if (v.groupBy !== undefined) {
@@ -275,7 +297,7 @@ export function validatePage(value: unknown): PageSaveResult {
     if (page.groupBy.length > PAGE_DEFINITION_SCHEMA.properties.groupBy.maxItems) errors.push('groupBy');
   }
   if (v.sort !== undefined) {
-    if (!Array.isArray(v.sort)) errors.push('sort');
+    if (!Array.isArray(v.sort) || v.sort.length > PAGE_LIMITS.sort) errors.push('sort');
     else page.sort = v.sort.map((s, i) => sortSpec(s, `sort.${i}`, errors)).filter((s): s is PageSort => !!s);
   }
   if (v.display !== undefined) {
