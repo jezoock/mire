@@ -27,4 +27,3 @@ export function stepInQueue(index: number, count: number, delta: number, time: n
 export function trackSubheading(folder: string, index: number, count: number, t: Translate): string {
   return count > 1 ? t('player.music.position', { folder, index: index + 1, count }) : folder;
 }
-
