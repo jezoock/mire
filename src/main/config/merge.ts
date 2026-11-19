@@ -1,6 +1,7 @@
 /** Import « compléter » : ajoute au présent ce qui vient du fichier, sans doublon ni perte de l'existant. */
 import type { Config } from '@mire/shared';
 import { isObjectLike, type Loose } from './normalize/common.ts';
+import { normalizeContinuityQueue } from './migrations/continuity.ts';
 
 export function mergeConfig(current: Config, incoming: unknown): Config {
   const out = structuredClone(current);
@@ -32,5 +33,8 @@ export function mergeConfig(current: Config, incoming: unknown): Config {
     const have = byKey(out.tv.services, (t) => t.id);
     for (const t of inc.tv.services) if (t && t.id && !have.has(t.id)) out.tv.services.push(t);
   }
+  // Règles de continuité d'un fichier ancien (P5-01) : ses fonctions devenues des plugins sont reprises aussi.
+  const queue = [...new Set([...normalizeContinuityQueue(out.continuity), ...normalizeContinuityQueue(inc.continuity)])];
+  if (queue.length) out.continuity = queue;
   return out;
 }

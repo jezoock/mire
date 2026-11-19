@@ -241,6 +241,11 @@ export interface Config {
    * sortent jamais vers l'interface ni dans un export.
    */
   plugins?: PluginSettingsSection;
+  /**
+   * Règles de continuité appliquées par la migration v10 (P5-01), que le service de continuité n'a pas encore reprises
+   * (il les efface aussitôt). Absente le reste du temps.
+   */
+  continuity?: string[];
 }
 
 /** Réglage secret d'un plugin : chiffré par le système quand il le permet (`encrypted`). */

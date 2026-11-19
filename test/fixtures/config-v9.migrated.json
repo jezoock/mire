@@ -1,0 +1,231 @@
+{
+  "raw": {
+    "version": 10,
+    "library": {
+      "sources": [
+        {
+          "id": "films",
+          "kind": "video",
+          "location": "/home/moi/Films"
+        },
+        {
+          "id": "musique",
+          "kind": "audio",
+          "location": "\\\\NAS\\Musique"
+        },
+        {
+          "id": "photos",
+          "kind": "image",
+          "location": "https://nas.local/photos/"
+        }
+      ]
+    },
+    "gameSources": [
+      {
+        "id": "jeux-pc",
+        "location": "D:\\Jeux"
+      }
+    ],
+    "externalPlayer": {
+      "path": "/usr/bin/vlc",
+      "args": ["--fullscreen"]
+    },
+    "browser": {
+      "path": "/usr/bin/firefox",
+      "args": ["--private-window"]
+    },
+    "tv": {
+      "services": [
+        {
+          "id": "freebox",
+          "name": "Freebox",
+          "kind": "playlist",
+          "url": "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u",
+          "detect": "http://mafreebox.freebox.fr/",
+          "quality": "hd"
+        },
+        {
+          "id": "orange",
+          "name": "Orange TV",
+          "kind": "playlist",
+          "url": "http://lafibre.info/images/orange/TV_sur_PC_Orange.m3u",
+          "detect": "http://livebox.home/"
+        },
+        {
+          "id": "sfr",
+          "name": "SFR TV",
+          "kind": "web",
+          "url": "https://tv.sfr.fr/",
+          "detect": "http://192.168.1.1/"
+        },
+        {
+          "id": "bouygues",
+          "name": "B.tv (Bouygues)",
+          "kind": "web",
+          "url": "https://www.bouyguestelecom.fr/tv-direct/",
+          "detect": "http://mabbox.bytel.fr/"
+        },
+        {
+          "id": "molotov",
+          "name": "Molotov",
+          "kind": "web",
+          "url": "https://www.molotov.tv/",
+          "detect": ""
+        },
+        {
+          "id": "ma-liste",
+          "name": "Ma liste",
+          "kind": "playlist",
+          "url": "https://exemple.fr/liste.m3u"
+        }
+      ],
+      "active": "ma-liste",
+      "detected": true
+    },
+    "ui": {
+      "fullscreen": true,
+      "theme": "minuit",
+      "pageTheme": "mire",
+      "backdrop": false,
+      "menu": {
+        "position": "right",
+        "autohide": true
+      },
+      "start": "music",
+      "home": {
+        "clock": false,
+        "recent": true,
+        "bars": ["games", "videos", "search", "tv"],
+        "services": ["netflix", "arte"],
+        "rows": [
+          {
+            "kind": "bars",
+            "targets": ["games", "movies", "series", "screen:search", "tv"]
+          },
+          {
+            "kind": "sites",
+            "keys": ["web:netflix", "web:arte"]
+          },
+          {
+            "kind": "recent"
+          }
+        ]
+      },
+      "language": "en"
+    },
+    "search": {
+      "tmdbToken": "jeton-tmdb",
+      "region": "BE",
+      "language": "en-US"
+    },
+    "scrape": {
+      "auto": false
+    },
+    "games": [
+      {
+        "name": "Celeste",
+        "path": "C:\\Games\\Celeste\\Celeste.exe",
+        "args": ["-windowed"]
+      }
+    ],
+    "gamesOpts": {
+      "autoOnline": true
+    },
+    "pcSites": [
+      {
+        "name": "Jeux libres",
+        "url": "https://jeux.example/",
+        "search": "https://jeux.example/?q={q}"
+      }
+    ],
+    "adblock": {
+      "enabled": false,
+      "allowlist": ["arte.tv"],
+      "customLists": ["https://listes.example/filtres.txt"]
+    },
+    "downloads": {
+      "dir": "/home/moi/Téléchargements/Mire",
+      "torrentClient": "system",
+      "seed": true
+    },
+    "store": {
+      "romsRoot": "/home/moi/Roms"
+    },
+    "bookmarks": [
+      {
+        "id": "bm1",
+        "url": "https://www.netflix.com/watch/1",
+        "title": "Une série",
+        "type": "tv",
+        "season": 2,
+        "episode": 5,
+        "site": "netflix",
+        "added": 1760000000000
+      }
+    ],
+    "gameBookmarks": [
+      {
+        "id": "gb1",
+        "source": "https://jeux.example/jeu.torrent",
+        "kind": "torrent",
+        "title": "Un jeu",
+        "console": null,
+        "system": "",
+        "downloadId": null,
+        "done": false,
+        "added": 1760000000000
+      }
+    ],
+    "web": [
+      {
+        "id": "netflix",
+        "name": "Netflix",
+        "url": "https://www.netflix.com/",
+        "mode": "integrated",
+        "search": "https://www.netflix.com/search?q={q}",
+        "color": "#e50914"
+      },
+      {
+        "id": "arte",
+        "name": "Arte",
+        "url": "https://www.arte.tv/fr/",
+        "mode": "browser",
+        "search": ""
+      },
+      {
+        "id": "mon-site",
+        "name": "Mon site",
+        "url": "https://exemple.fr/",
+        "mode": "integrated",
+        "search": ""
+      }
+    ],
+    "emulators": [
+      {
+        "id": "snes-a1b2",
+        "name": "Super Nintendo",
+        "path": "/usr/bin/snes9x",
+        "args": ["{rom}"],
+        "sources": ["/home/moi/Roms/snes"],
+        "extensions": ["sfc", "smc"]
+      }
+    ],
+    "catalog": {
+      "fileTags": {
+        ".mkv": ["video", "anime"]
+      },
+      "metadataProviders": ["tmdb"]
+    },
+    "plugins": {
+      "org.exemple.films": {
+        "region": "BE",
+        "langues": ["fr", "nl"],
+        "cle": {
+          "$secret": "Y2hpZmZyw6k=",
+          "encrypted": true
+        }
+      }
+    }
+  },
+  "changed": true
+}
