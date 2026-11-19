@@ -12,6 +12,17 @@ import type { Search } from '../search/index.ts';
 import type { Explorer } from '../explorer/index.ts';
 import type { Settings } from '../settings/index.ts';
 
+/** Lecteur vidéo (`src/renderer/players/video.ts`, P4-14) : ce que ses commandes font. */
+export interface VideoUi {
+  close(): void;
+  togglePlay(): void;
+  /** Vidéo suivante (1) ou précédente (-1) de la liste. */
+  step(d: number): void;
+  cycleSubtitles(): void;
+  /** Ferme le lecteur et reprend la vidéo dans le lecteur externe. */
+  openExternally(): void;
+}
+
 /** Élément de l'interface historique (vidéo, morceau, jeu…), aux champs encore peu décrits (`state/`). */
 export type Data = Record<string, any>;
 
@@ -65,6 +76,8 @@ export interface LegacyUi {
   /** Après une modification faite dans un éditeur (P4-22) : la Recherche se met à jour (les pages le font seules). */
   afterEdit?(): void;
   editConsole(consoleId: unknown): void;
+  /** Consoles changées par `mire-games` (P4-17) : nouvelle configuration, Centre et vues redessinés. */
+  afterConsolesChange?(config: Data): void;
   deletableGame(ref: ItemRef | null): boolean;
   deleteGameRef(ref: ItemRef): void;
   consoleName(consoleId: unknown): string | undefined;
@@ -85,6 +98,8 @@ export interface LegacyUi {
   openImages(list: Data[], index: number): void;
   pauseAudio(): void;
   toggleAudio(): void;
+  /** Commandes du lecteur vidéo (P4-14). */
+  video: VideoUi;
   openExternal(item: { path: string; name: string }, start?: number): void;
   addRecent(item: Data): void;
   // Télévision
@@ -124,7 +139,7 @@ export interface LegacyUi {
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;
   loadCatalog(): Promise<void>;
-  /** Centre (P4-18) : affiche l'onglet `downloads` ou `apps`. */
+  /** Centre (P4-18) : affiche l'onglet `downloads`, `apps` ou `consoles`. */
   showCentreTab(tab: string): void;
   afterStoreChange(result: unknown, message: string): Promise<void>;
   afterAdblockChange(state: unknown): Promise<void>;

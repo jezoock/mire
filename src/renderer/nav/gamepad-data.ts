@@ -25,10 +25,11 @@ export const PAD_NAMES: Readonly<Record<PadFamily, string>> = { xbox: 'Xbox', ps
 
 type GlyphButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select';
 
-// Libellés des boutons par famille (selon leur position : en bas = valider, à droite = retour…).
+// Libellés des boutons par famille (selon leur position : en bas = valider, à droite = retour…). Un bouton qui porte un
+// mot plutôt qu'un symbole est donné par sa clé des catalogues (`shell.pad.buttons.…`), traduite à l'affichage.
 export const PAD_GLYPHS: Readonly<Record<PadFamily, Readonly<Record<GlyphButton, string>>>> = {
-  xbox: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', select: 'Affichage' },
-  ps: { a: '✕', b: '○', x: '□', y: '△', lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2', select: 'Créer' },
+  xbox: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', select: 'shell.pad.buttons.view' },
+  ps: { a: '✕', b: '○', x: '□', y: '△', lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2', select: 'shell.pad.buttons.create' },
   nintendo: { a: 'B', b: 'A', x: 'Y', y: 'X', lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR', select: '−' },
 };
 
@@ -65,6 +66,9 @@ export const PAD_HINTS: Readonly<Partial<Record<PadContext, ReadonlyArray<readon
     ['b', 'cancel'],
   ],
 };
+
+/** Vrai si le libellé d'un bouton est une clé des catalogues, à traduire. */
+export const isGlyphKey = (glyph: string): boolean => glyph.startsWith('shell.pad.buttons.');
 
 /**
  * Aide de la manette pour ce contexte et cette famille : libellés des boutons et clé du texte (`shell.pad.<clé>`),

@@ -148,6 +148,9 @@ export function createCatalog({ dir, debounceMs = 1000, now = Date.now, onIgnore
     /** Emplacements de source connus. */
     sources: (): ElementSourceRef[] => [...instances.values()].map((i) => ({ ...i.ref })),
 
+    /** Clés des éléments d'un emplacement (explorateur, P4-08) ; aucune pour un emplacement inconnu. */
+    keysOf: (source: ElementSourceRef): ElementKey[] => [...(instances.get(sourceId(source))?.elements.keys() ?? [])],
+
     /**
      * Résultat d'une analyse d'un emplacement : la liste complète de ses éléments. Ceux qui manquent sont retirés ;
      * un élément déjà connu garde sa date d'ajout. Deux éléments de même clé dans une même analyse : le dernier

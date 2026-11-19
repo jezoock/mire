@@ -9,11 +9,12 @@
  * Les canaux synchrones du preload des sites (`mire:scriptlets`, `mire:signin-ua`) ne passent pas par ce contrat.
  */
 
-import type { Bookmark, Config, ConsoleRef, GameBookmark } from './config.ts';
+import type { Bookmark, Config, ConsoleRef, GameBookmark, LinkSite } from './config.ts';
 import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from './element.ts';
 import type { CatalogGroup, GroupEdit, GroupFetchResult, PageDefinition, PageLevel, PagePath, PageSaveResult, PagesChange } from './pages.ts';
 import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
+import type { CatalogSources, FolderLevel } from './browse.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
@@ -62,6 +63,45 @@ export interface GameRef {
 }
 
 /** Contexte d'un téléchargement : console de destination, nom affiché… */
+/** Console créée ou modifiée à la main (P4-17) : dossiers, émulateur, arguments et sites de jeux. */
+export interface ConsoleInput {
+  name: string;
+  /** Système du référentiel (`gameSystems`), pour les jaquettes et l'émulateur partagé ; vide : deviné. */
+  system?: string;
+  /** Programme de l'émulateur. */
+  path: string;
+  /** Arguments ; `{rom}` est remplacé par le chemin du jeu. */
+  args?: string[];
+  /** Dossier principal des jeux (téléchargements et imports). */
+  romsDir?: string;
+  /** Autres dossiers, partages ou adresses web de jeux. */
+  sources?: string[];
+  extensions?: string[];
+  /** Sites de jeux propres à la console ; `null` : ceux que Mire propose ; absent : inchangés. */
+  romSites?: LinkSite[] | null;
+}
+
+/** Un émulateur proposé pour une console ou un jeu (D-21) : celui d'une console du même système. */
+export interface EmulatorChoice {
+  /** Identifiant de la console dont l'émulateur est proposé. */
+  id: string;
+  /** Nom de l'émulateur (celui de la boutique, sinon celui du programme). */
+  emulator: string;
+  /** Nom de cette console. */
+  console: string;
+}
+
+/** Émulateurs d'un jeu désigné par sa clé : ceux proposés, celui de sa console et celui choisi pour lui. */
+export interface GameEmulators {
+  /** Console du jeu. */
+  console: string;
+  choices: EmulatorChoice[];
+  /** Émulateur choisi pour la console (identifiant d'une console) ; `null` : le sien. */
+  consoleDefault: string | null;
+  /** Émulateur choisi pour ce jeu ; `null` : celui de la console. */
+  game: string | null;
+}
+
 export interface DownloadContext {
   /** Identifiant de la console de destination. */
   console?: string;
@@ -327,7 +367,18 @@ export interface IpcMethods {
   launchGame(index: number): Outcome;
   addGame(): MireConfig | null;
   listRoms(console: string, opts?: { online?: boolean; only?: string }): Outcome<Record<string, unknown>>;
-  launchRom(console: string, romPath: string): Outcome;
+  /** `emulator` : identifiant d'une console du même système dont l'émulateur lance ce jeu, pour cette fois (D-21). */
+  launchRom(console: string, romPath: string, emulator?: string): Outcome;
+
+  // Consoles et émulateurs (P4-17) : jeux désignés par leur clé d'élément
+  consoleSave(input: ConsoleInput, id?: string): Outcome<{ id: string; config: MireConfig }>;
+  consoleRemove(id: string): Outcome<{ config: MireConfig }>;
+  consoleEmulators(id: string): EmulatorChoice[];
+  consoleSetEmulator(id: string, emulator: string | null): Outcome<{ config: MireConfig }>;
+  gameEmulators(key: string): Outcome<GameEmulators>;
+  gameSetEmulator(key: string, emulator: string | null): Outcome<{ config: MireConfig }>;
+  gameLaunch(key: string, emulator?: string): Outcome;
+  gameDeleteElement(key: string): Outcome<{ config?: MireConfig }>;
 
   // Langue de l'interface et catalogues de textes
   i18nGet(): LanguageInfo;
@@ -361,6 +412,11 @@ export interface IpcMethods {
   // `pageId` `list:<id>` : les éléments d'une liste, dans son ordre (P2-08) ; `tag:<id>` : les éléments d'un tag, par
   // nom (explorateur, P4-08).
   catalogPage(pageId: string, path?: PagePath, cursor?: string | null): PageLevel | null;
+  // Parcours par source et par dossier (explorateur, P4-08) : les sources du catalogue et les dossiers autorisés ;
+  // un dossier désigné par sa source (identifiant de `catalogSources`) et un chemin relatif (`''` : la source), par
+  // tranches. `null` : source inconnue, chemin refusé (`..`, lien qui sort de la source) ou dossier sans élément.
+  catalogSources(): CatalogSources;
+  catalogFolder(source: string, path?: string, cursor?: string | null): FolderLevel | null;
   // Listes (P2-08) : `lists.*` de l'architecture cible. `null` / `false` : liste inconnue ou valeur invalide.
   listsList(): ListSummary[];
   listsGet(id: string): ListView | null;
@@ -437,6 +493,14 @@ export const IPC_METHODS = {
   gameBookmarkDownload: 'gameBookmarks:download',
   romListSource: 'roms:listSource',
   gameDelete: 'games:delete',
+  consoleSave: 'consoles:save',
+  consoleRemove: 'consoles:remove',
+  consoleEmulators: 'consoles:emulators',
+  consoleSetEmulator: 'consoles:setEmulator',
+  gameEmulators: 'games:emulators',
+  gameSetEmulator: 'games:setEmulator',
+  gameLaunch: 'games:launchElement',
+  gameDeleteElement: 'games:deleteElement',
   gamesCleanup: 'games:cleanup',
   downloadsList: 'downloads:list',
   downloadsAddUrl: 'downloads:addUrl',
@@ -524,6 +588,8 @@ export const IPC_METHODS = {
   pagesSave: 'pages:save',
   pagesRemove: 'pages:remove',
   catalogPage: 'catalog:page',
+  catalogSources: 'catalog:sources',
+  catalogFolder: 'catalog:folder',
   listsList: 'lists:list',
   listsGet: 'lists:get',
   listsCreate: 'lists:create',
@@ -591,6 +657,8 @@ export interface IpcEvents {
   onPagesChange: PagesChange;
   /** Ces listes ont changé (définition, éléments, élément disparu, revenu ou changé) : à redemander. */
   onListsChange: ListsChange;
+  /** Les sources, les dossiers autorisés ou leur contenu ont pu changer : à redemander (explorateur). */
+  onFoldersChange: undefined;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -617,6 +685,7 @@ export const IPC_EVENTS = {
   onLanguageChange: 'i18n:changed',
   onPagesChange: 'pages:changed',
   onListsChange: 'lists:changed',
+  onFoldersChange: 'folders:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

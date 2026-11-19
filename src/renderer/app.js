@@ -19,7 +19,7 @@ import { initGamepad, startGamepad } from './nav/gamepad.ts';
 import { nextSection } from './nav/gamepad-data.ts';
 import { setVolume } from './players/volume.ts';
 import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
-import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey } from './players/video.ts';
+import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey, videoUi } from './players/video.ts';
 import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
 import { createPaletteLoader } from '@mire/ui/palettes';
 import { DEMO_SECTION, demoTitle, initDemoDialogs, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
@@ -35,6 +35,7 @@ import { createWeb, webHome as webHomeOf } from './web/index.ts';
 import { createExplorer } from './explorer/index.ts';
 import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
+import { consoleCards, isGameBookmarkKey, isGameKey } from './games/model.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -120,6 +121,7 @@ const centre = createCentre({
   catalog: () => S.catalog,
   loadCatalog: () => loadCatalog(),
   apps: () => ({ picks: S.raPick, progress: S.storeProgress, consoles: S.config?.emulators ?? [] }),
+  consoles: () => consoleCards(S.config?.emulators, t),
   onLanguageChange: (listener) => i18n.onChange(listener),
   // Centre redessiné : le focus, s'il était sur un bouton retiré, va au premier élément du contenu.
   onRendered: () => {
@@ -150,7 +152,7 @@ const search = createSearch({
   },
 });
 
-// Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags), puis l'aperçu d'un élément.
+// Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags, sources, dossiers), puis l'aperçu d'un élément.
 const explorer = createExplorer({
   t,
   plural: (key, count) => {
@@ -162,8 +164,10 @@ const explorer = createExplorer({
   tags: () => api.tagsList(),
   level: (id, path, cursor) => api.catalogPage(id, path, cursor),
   element: (key) => api.catalogElement(key),
+  sources: () => api.catalogSources(),
+  folder: (source, path, cursor) => api.catalogFolder(source, path, cursor),
   onLanguageChange: (listener) => i18n.onChange(listener),
-  onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); },
+  onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); api.onFoldersChange(listener); },
   shown: () => S.section === EXPLORER_VIEW,
   // Colonnes redessinées : le focus, s'il était sur une ligne retirée, revient à la première colonne.
   onRendered: () => {
@@ -2360,11 +2364,19 @@ const legacyUi = {
   afterEdit: () => { if (S.section === SEARCH_VIEW) search.refresh(); },
   firstItemRef: () => refFromEl(viewEl.querySelector('.tile, .track')),
   editRef, editConsole, deletableGame, deleteGameRef,
+  afterConsolesChange(config) {
+    S.config = config;
+    S.romsCache = {};
+    S.romSites = {};
+    refreshPanel();
+    if (S.section === CENTRE_VIEW) centre.refresh();
+    else if (!panel.open) render();
+  },
   consoleName: (id) => consoleOf(id)?.name,
   openFileDialog, scan, addSourceFolder, askSourceAddress, removeSource, startScrape, updateScrapeButton, reloadScrape,
   playInContext, playRecent, openVideo, playQueue, openImages,
   pauseAudio: () => audio.pause(),
-  toggleAudio, openExternal, addRecent,
+  toggleAudio, openExternal, addRecent, video: videoUi,
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
@@ -2395,7 +2407,9 @@ dialogs.initDialogs({
 });
 initDemoDialogs({ openForm });
 const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
-initEditors(document, (key) => C.editor.edit({ key }), (node) => {
+// Jeux (P4-17) : hôte des actions de `mire-games` ; un jeu ouvre sa boîte (émulateur, lancer, infos, supprimer).
+document.body.appendChild(document.createElement('mire-games'));
+initEditors(document, (key) => (isGameKey(key) || isGameBookmarkKey(key) ? C.games.gameOptions({ key }) : C.editor.edit({ key })), (node) => {
   const ref = groupRefOf(node, pages.route());
   if (ref) C.editor.editGroup(ref);
   return ref;

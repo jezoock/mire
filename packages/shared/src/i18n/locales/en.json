@@ -396,9 +396,91 @@
         "notInConsoleFolders": "This game isn't in the console's folders.",
         "noRomFolder": "No game folder set for {console}.",
         "invalidLink": "Invalid link or file.",
-        "bookmarkNotFound": "Bookmark not found."
+        "bookmarkNotFound": "Bookmark not found.",
+        "deleteNotGame": "This item isn't a game: it wasn't deleted."
       },
-      "romProgress": "{name} (file {index} of {total})"
+      "romProgress": "{name} (file {index} of {total})",
+      "consoles": {
+        "errors": {
+          "name": "Give the console a name.",
+          "path": "Choose the emulator program.",
+          "gone": "This console no longer exists.",
+          "emulator": "This emulator doesn't handle this console."
+        }
+      },
+      "ui": {
+        "failed": "That didn't work.",
+        "consoleGone": "This console no longer exists.",
+        "consoleSaved": "Console saved",
+        "consoleCreated": "Console created",
+        "consoleRemoved": "Console removed",
+        "form": {
+          "newTitle": "Create a console",
+          "editTitle": "Edit the {name} console",
+          "help": "A console is an emulator plus the folders that hold its games. Folders can also be network shares or web addresses (a page that lists the files).",
+          "save": "Save",
+          "cancel": "Cancel",
+          "name": "Name",
+          "system": "System (for box art and the emulator choice)",
+          "systemGuess": "Guess from the name",
+          "path": "Emulator (program)",
+          "args": "Arguments ({rom} = path of the game)",
+          "romsDir": "Main games folder (downloads and imports)",
+          "sources": "Other game folders",
+          "sourcesHint": "\\\\NAS\\Games, smb://nas/games or http://…/games/",
+          "extensions": "Game file extensions (separated by commas)",
+          "sites": "Game sites: one per line, “Name | address | search address with {q}”",
+          "sitesHint": "Leave empty for the sites Mire suggests."
+        },
+        "remove": {
+          "title": "Remove the {name} console?",
+          "help": "Only the console leaves Mire: the emulator and your games stay on the disk.",
+          "yes": "Remove"
+        },
+        "emulators": {
+          "consoleTitle": "Emulator for {name}",
+          "consoleHelp": "This console's games start with the emulator chosen here. You can pick another one for a single game.",
+          "alone": "No other console for this system: install another emulator from the Centre's apps, or create a console for the same system.",
+          "label": "Emulator",
+          "saved": "Emulator saved",
+          "own": "{name}",
+          "other": "{name} ({console} console)",
+          "followConsole": "The console's ({name})"
+        },
+        "game": {
+          "help": "Choose this game's emulator, then start it.",
+          "alone": "This game starts with its console's emulator.",
+          "launch": "Play",
+          "save": "Save the emulator",
+          "edit": "Edit info",
+          "delete": "Delete the game",
+          "launching": "Starting {name}…"
+        },
+        "delete": {
+          "title": "Delete “{name}”?",
+          "rom": "The game file will be deleted from the computer.",
+          "pc": "The game will be removed from the list.",
+          "yes": "Delete",
+          "done": "Game deleted"
+        },
+        "bookmark": {
+          "help": "This game is waiting to be downloaded.",
+          "download": "Download",
+          "remove": "Remove",
+          "removeTitle": "Remove “{name}”?",
+          "removeHelp": "The bookmark and its pending download will be removed.",
+          "removed": "Game removed"
+        },
+        "consoles": {
+          "noSystem": "System to be guessed",
+          "folders": {
+            "one": "{count} folder",
+            "other": "{count} folders"
+          },
+          "emulator": "Emulator: {name}",
+          "emulatorOf": "Emulator: {name}, from the {console} console"
+        }
+      }
     },
     "web": {
       "romSites": "Games: {console}",
@@ -792,7 +874,13 @@
         "slideshow": "Slideshow",
         "image": "Picture",
         "confirm": "OK",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "detected": "{name} controller detected. The controls are shown at the bottom of the screen.",
+        "disconnected": "Controller disconnected",
+        "buttons": {
+          "view": "View",
+          "create": "Create"
+        }
       }
     },
     "themes": {
@@ -887,7 +975,8 @@
       "tabs": {
         "label": "Centre sections",
         "downloads": "Downloads",
-        "apps": "Apps"
+        "apps": "Apps",
+        "consoles": "Consoles"
       },
       "downloads": {
         "add": "Add a link",
@@ -1074,6 +1163,16 @@
         "romReady": "{name} is ready, starting…",
         "romProgress": "Downloading {name}: {percent}%",
         "romProgressUnknown": "Downloading {name}…"
+      },
+      "consoles": {
+        "help": "Create a console by hand, or choose the emulator that starts its games when several consoles share a system.",
+        "new": "Create a console",
+        "none": "No consoles. The Centre's apps install them in one click, or create one by hand.",
+        "edit": "Edit",
+        "emulator": "Emulator",
+        "sites": "Game sites",
+        "remove": "Remove",
+        "fromApps": "Installed from apps"
       }
     },
     "editors": {
@@ -1230,8 +1329,25 @@
       "sections": {
         "pages": "Pages",
         "lists": "Lists",
-        "tags": "Tags"
+        "tags": "Tags",
+        "sources": "Sources",
+        "folders": "Folders"
       },
+      "sourceKinds": {
+        "src-local": "Folder",
+        "src-smb": "Network share",
+        "src-http": "Web server",
+        "src-m3u": "M3U playlist",
+        "tv-m3u": "TV",
+        "tv-web": "TV on the web",
+        "jeux-roms": "Console games",
+        "jeux-pc": "PC games",
+        "jeux-pc-manuel": "PC games added by hand",
+        "jeux-marque": "Games to download",
+        "web-perso": "Added sites",
+        "web-bm": "Bookmarks"
+      },
+      "sourceLabel": "{kind} · {place}",
       "columns": "Explorer columns",
       "empty": "Nothing here yet.",
       "unavailable": "Unavailable",
@@ -1301,6 +1417,42 @@
       "adblockOn": "Ad blocker turned back on for this site. The page reloads.",
       "adblockOff": "Ad blocker turned off for this site. The page reloads.",
       "channelOpening": "Opening {name}…"
+    },
+    "player": {
+      "video": {
+        "close": "Close the player",
+        "external": "External player",
+        "seek": "Position in the video",
+        "prev": "Previous video",
+        "next": "Next video",
+        "play": "Play or pause",
+        "volume": "Volume",
+        "fullscreen": "Full screen",
+        "position": "{folder}, {index} of {count}",
+        "subtitles": {
+          "on": "Subtitles: {label}",
+          "off": "Subtitles: off"
+        },
+        "osd": {
+          "play": "Play",
+          "pause": "Pause",
+          "forward": "+{seconds} s  {time}",
+          "back": "−{seconds} s  {time}",
+          "volume": "Volume {percent}%",
+          "muted": "Sound off",
+          "unmuted": "Sound on",
+          "subtitlesOff": "Subtitles off"
+        },
+        "resume": {
+          "at": "Resumed at {time}",
+          "restart": "Start over"
+        },
+        "silent": {
+          "message": "No sound? This file’s audio track probably can’t be played here.",
+          "action": "Open in the external player"
+        },
+        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
+      }
     }
   }
 }

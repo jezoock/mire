@@ -7,7 +7,7 @@
  * Mises à jour fines : quand un téléchargement avance sans changer d'état, seule sa ligne (`mire-download-row`)
  * reçoit la nouvelle ligne ; la vue n'est pas redessinée.
  */
-import type { CentreLabels, CentreTab, DownloadRow, DownloadRowLabels } from '@mire/ui/utils';
+import type { CentreLabels, CentreTab, ConsoleCard, DownloadRow, DownloadRowLabels } from '@mire/ui/utils';
 import { centreTab } from '@mire/ui/utils';
 import { appsView, downloadGroups, downloadRow, downloadsHint } from './model.ts';
 import type { AppsState, Translate, Writer } from './model.ts';
@@ -26,6 +26,8 @@ export interface CentreOptions {
   catalog(): any;
   loadCatalog(): Promise<void>;
   apps(): AppsState;
+  /** Cartes de l'onglet des consoles (P4-17, `src/renderer/games/`). */
+  consoles?(): ConsoleCard[];
   onLanguageChange(listener: () => void): unknown;
   /** Le Centre a été redessiné (focus à rendre au contenu s'il s'est perdu). */
   onRendered(): void;
@@ -48,6 +50,15 @@ const LABEL_KEYS: Record<keyof CentreLabels, string> = {
   tabs: 'tabs.label',
   tabDownloads: 'tabs.downloads',
   tabApps: 'tabs.apps',
+  tabConsoles: 'tabs.consoles',
+  consolesHelp: 'consoles.help',
+  newConsole: 'consoles.new',
+  noConsoles: 'consoles.none',
+  editConsole: 'consoles.edit',
+  chooseEmulator: 'consoles.emulator',
+  openSites: 'consoles.sites',
+  removeConsole: 'consoles.remove',
+  fromApps: 'consoles.fromApps',
   add: 'downloads.add',
   torrent: 'downloads.torrent',
   hint: '',
@@ -102,6 +113,7 @@ export function createCentre(opts: CentreOptions, doc: Document = document): Cen
       rowLabels: rowLabels(w.t),
       ...downloadGroups(opts.downloads(), w),
       apps: appsView(catalog, opts.apps(), w),
+      consoles: opts.consoles?.() ?? [],
     });
   }
 

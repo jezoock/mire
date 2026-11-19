@@ -130,16 +130,16 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-05 | Composants d'éléments | M | P4-02, P4-03, P4-04 |  | faite | [#66](https://github.com/jezoock/mire/pull/66) |
 | P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | faite | [#68](https://github.com/jezoock/mire/pull/68) |
 | P4-07 | Coquille de l'application | L | P4-05, P4-06, P2-07 |  | faite | [#70](https://github.com/jezoock/mire/pull/70) |
-| P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | en cours (partie 1 : [#79](https://github.com/jezoock/mire/pull/79)) | |
+| P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | faite ([#79](https://github.com/jezoock/mire/pull/79), [#82](https://github.com/jezoock/mire/pull/82)) | |
 | P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |
 | P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | à faire | |
 | P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | faite | [#73](https://github.com/jezoock/mire/pull/73) |
 | P4-12 | Accueil | M | P4-11 |  | faite | [#74](https://github.com/jezoock/mire/pull/74) |
 | P4-13 | Recherche | M | P4-11, P2-09 |  | faite | [#77](https://github.com/jezoock/mire/pull/77) |
-| P4-14 | Lecteur vidéo | M | P4-07 | 🧑 | à faire | |
+| P4-14 | Lecteur vidéo | M | P4-07 | 🧑 | faite | [#83](https://github.com/jezoock/mire/pull/83) |
 | P4-15 | Lecteurs de musique et d'images | M | P4-14 |  | à faire | |
 | P4-16 | Vue web et télévision | M | P4-11 | 🧑 | faite | [#85](https://github.com/jezoock/mire/pull/85) |
-| P4-17 | Jeux : consoles et émulateurs | M | P4-11, P4-06 | 🧑 | à faire | |
+| P4-17 | Jeux : consoles et émulateurs | M | P4-11, P4-06 | 🧑 | faite | [#84](https://github.com/jezoock/mire/pull/84) |
 | P4-18 | Centre : téléchargements et apps | M | P4-07, P4-06 |  | faite | [#75](https://github.com/jezoock/mire/pull/75) |
 | P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | à faire | |
 | P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | en cours (partie 1 : [#80](https://github.com/jezoock/mire/pull/80)) | |
