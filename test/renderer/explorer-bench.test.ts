@@ -130,7 +130,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
       assert.equal(state.columns[3]?.rows.length, (N * 2) / 10);
       times.set('Dossiers › Films, tranche suivante la plus lente', Math.max(...dirSlices));
       await step('Sources (5 sources)', () => model.open('sources'));
-      const music = state.columns[1]?.rows.find((r) => r.label.endsWith('/bib/Musique'))?.node as string;
+      const music = state.columns[1]?.rows.find((r) => r.label === 'Dossier · Musique')?.node as string;
       await step('Sources › Musique (53 dossiers, 6 000 éléments)', () => model.open(music));
       assert.equal(state.columns[2]?.rows.length, 53);
       return { times, state: () => state };
