@@ -1,10 +1,10 @@
 /**
  * Centre (P4-18) : ce qu'affichent `mire-centre-view` et `mire-download-row`, déjà rédigé par la page
- * (`src/renderer/centre/`). Sans DOM.
+ * (`src/renderer/centre/`, et `src/renderer/games/` pour l'onglet des consoles, P4-17). Sans DOM.
  */
 
 /** Onglets du Centre. */
-export const CENTRE_TABS = ['downloads', 'apps'] as const;
+export const CENTRE_TABS = ['downloads', 'apps', 'consoles'] as const;
 export type CentreTab = (typeof CENTRE_TABS)[number];
 
 /** Onglet connu, sinon les téléchargements. */
@@ -105,11 +105,32 @@ export interface AppsView {
   canImport: boolean;
 }
 
+/** Une carte de l'onglet des consoles (P4-17) : textes déjà rédigés. */
+export interface ConsoleCard {
+  id: string;
+  name: string;
+  /** Système et nombre de dossiers de jeux. */
+  meta: string;
+  /** Émulateur qui lance les jeux : le sien, ou celui d'une autre console du même système. */
+  emulator: string;
+  /** Console installée par les apps du Centre (et non créée à la main). */
+  store: boolean;
+}
+
 /** Textes du Centre (hors lignes et cartes, déjà rédigées). */
 export interface CentreLabels {
   tabs?: string;
   tabDownloads?: string;
   tabApps?: string;
+  tabConsoles?: string;
+  consolesHelp?: string;
+  newConsole?: string;
+  noConsoles?: string;
+  editConsole?: string;
+  chooseEmulator?: string;
+  openSites?: string;
+  removeConsole?: string;
+  fromApps?: string;
   add?: string;
   torrent?: string;
   hint?: string;

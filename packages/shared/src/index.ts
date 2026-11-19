@@ -13,3 +13,4 @@ export * from './pages.ts';
 export * from './lists.ts';
 export * from './targets.ts';
 export type * from './search.ts';
+export type * from './browse.ts';

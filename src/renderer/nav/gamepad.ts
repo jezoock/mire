@@ -15,6 +15,7 @@ import {
   IMAGE_PAD,
   LIST_PAD,
   PAD_NAMES,
+  isGlyphKey,
   VIDEO_PAD,
   WEB_PAD,
   padFamily,
@@ -112,14 +113,14 @@ export function updatePadbar(force = false): void {
   document.body.classList.toggle('has-pad', hints !== null);
   // Aide de la manette de la coquille (mire-padbar, P4-07), textes traduits.
   const padbar = $('mire-padbar') as (HTMLElement & { hints: { glyphs: string[]; label: string }[] }) | null;
-  if (padbar) padbar.hints = (hints ?? []).map((h) => ({ glyphs: h.glyphs, label: t(h.key) }));
+  if (padbar) padbar.hints = (hints ?? []).map((h) => ({ glyphs: h.glyphs.map((g) => (isGlyphKey(g) ? t(g) : g)), label: t(h.key) }));
 }
 
 function setPad(gp: Gamepad): void {
   const family = padFamily(gp.id);
   const isNew = !S.pad || S.pad.id !== gp.id;
   S.pad = { id: gp.id, family };
-  if (isNew) toast(`Manette ${PAD_NAMES[family]} détectée. Les commandes s’affichent en bas de l’écran.`, { duration: 4500 });
+  if (isNew) toast(t('shell.pad.detected', { name: PAD_NAMES[family] }), { duration: 4500 });
   updatePadbar(true);
 }
 
@@ -162,7 +163,7 @@ export function initGamepad(h: GamepadHooks, controllers: GamepadControllers): v
     else {
       S.pad = null;
       updatePadbar(true);
-      toast('Manette déconnectée');
+      toast(t('shell.pad.disconnected'));
     }
   });
 }

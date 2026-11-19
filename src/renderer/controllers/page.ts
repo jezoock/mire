@@ -3,6 +3,8 @@ import { plural } from '../core/format.ts';
 import { Controller, findBy, indexBy } from './base.ts';
 import type { ControllerContext, Data, ItemRef } from './types.ts';
 import type { Element as CatalogElement, InfoScalar, PagePath } from '@mire/shared';
+import { isGameBookmarkKey } from '../games/model.ts';
+import { callAction } from './registry.ts';
 
 /**
  * `mire-page` : pages de contenus (vidéos, musique, images, télévision, jeux et consoles) : lecture, filtres et tris,
@@ -392,12 +394,21 @@ export async function openCatalogElement(ctx: ControllerContext, key: string): P
   const el = (await api.catalogElement(key)) as CatalogElement | null;
   if (!el) throw new Error(`Élément introuvable : ${key}`);
   const o = el.open;
+  // Jeux (P4-17) : un jeu de console se lance par sa clé (émulateur choisi pour lui) ; un marque-page « à
+  // télécharger » ouvre sa boîte (télécharger, retirer).
+  if (o.kind === 'game') {
+    await callAction('mire-games', 'launch', { key });
+    return;
+  }
+  if (isGameBookmarkKey(key)) {
+    await callAction('mire-games', 'bookmark', { key });
+    return;
+  }
   if (o.kind === 'file') ui.playInContext(mediaItemOf(S, el, o.path));
   else if (o.kind === 'site') {
     if (!o.site) throw new Error(`Site sans service : ${key}`);
     ui.openWeb(o.site, o.url);
-  } else if (o.kind === 'game') ui.launchRom({ path: o.path, displayName: el.name }, o.console);
-  else if (o.kind === 'program') {
+  } else if (o.kind === 'program') {
     const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
     ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
   } else {

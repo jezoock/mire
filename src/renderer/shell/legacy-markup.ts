@@ -1,8 +1,8 @@
 /**
  * Lecteurs, boîtes et messages de l'interface historique (P4-07) : repris tels quels de l'ancien `index.html`, ils
  * sont placés dans leur hôte (`mire-legacy-view`) avant le démarrage de `app.js`, qui les trouve par leurs
- * identifiants. En français, comme les autres vues historiques, jusqu'à leur remplacement (lecteurs P4-14 et P4-15,
- * retrait P4-24). Les icônes (`data-icon`) sont dessinées au démarrage par `app.js`.
+ * identifiants. En français, comme les autres vues historiques, jusqu'à leur remplacement (lecteurs P4-15, retrait
+ * P4-24) ; le lecteur vidéo est devenu `mire-video-player` (P4-14). Les icônes (`data-icon`) sont dessinées au démarrage par `app.js`.
  */
 export const LEGACY_LAYERS = `
 <!-- Mini-lecteur de musique -->
@@ -29,36 +29,6 @@ export const LEGACY_LAYERS = `
     <input class="range" id="mini-vol" type="range" min="0" max="1" step="0.05" aria-label="Volume">
   </div>
   <button class="icon-btn focusable" id="mini-close" data-icon="close" aria-label="Arrêter la musique"></button>
-</div>
-
-<!-- Lecteur vidéo -->
-<div class="layer video-layer" id="video-layer" tabindex="-1" hidden>
-  <video id="video" preload="metadata"></video>
-  <div class="osd" id="vp-osd"></div>
-  <div class="vp-ui">
-    <div class="vp-top">
-      <button class="icon-btn" data-act="close" data-icon="close" aria-label="Fermer le lecteur"></button>
-      <div class="vp-heading">
-        <div class="vp-title" id="vp-title"></div>
-        <div class="vp-sub" id="vp-sub"></div>
-      </div>
-      <button class="text-btn" data-act="external"><span data-icon="external"></span>Lecteur externe</button>
-    </div>
-    <div class="vp-bottom">
-      <input class="range vp-seek" id="vp-seek" type="range" min="0" max="1000" value="0" aria-label="Position dans la vidéo">
-      <div class="vp-row">
-        <button class="icon-btn" data-act="prev" id="vp-prev" data-icon="prev" aria-label="Vidéo précédente"></button>
-        <button class="icon-btn big" data-act="play" id="vp-play" data-icon="pause" aria-label="Lecture ou pause"></button>
-        <button class="icon-btn" data-act="next" id="vp-next" data-icon="next" aria-label="Vidéo suivante"></button>
-        <span class="vp-time" id="vp-time">0:00 / 0:00</span>
-        <span class="vp-spacer"></span>
-        <button class="text-btn" data-act="subs" id="vp-subs" hidden><span data-icon="subs"></span><span id="vp-subs-lbl">Sous-titres</span></button>
-        <span class="vol-ico" data-icon="volume"></span>
-        <input class="range vp-vol" id="vp-vol" type="range" min="0" max="1" step="0.05" aria-label="Volume">
-        <button class="icon-btn" data-act="fs" data-icon="fullscreen" aria-label="Plein écran"></button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Visionneuse d'images -->

@@ -141,7 +141,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
 | `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>` et des vues historiques (`mire-legacy-view`), entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une page s'affiche dans la vue de page (section `page`, P4-11), un écran du cœur sans vue à lui dans la vue historique qui en tient lieu. |
 | `pages/` | Vue de page (P4-11) : l'hôte `<mire-page>` et sa `mire-page-view`, remplis d'après la route (page et chemin) ; niveaux chargés par tranches (`catalog.page`), regroupements (« Autres », « Saison 1 »), chemin parcouru, rangées (`model.ts`, sans DOM). |
-| `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes et Tags, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. |
+| `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes, Tags, Sources et Dossiers, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) ou les dossiers de `catalog.folder` (source et chemin relatif) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. |
 | `home/` | Accueil (P4-12) : l'hôte `<mire-home>` et sa `mire-home-view`, remplis d'après `ui.home` (rangées : barres de la mire vers des cibles, sites épinglés, « Reprendre », pages et listes ; `model.ts`, sans DOM) ; réglages de l'accueil (rangées, barres, sites, ordre ; `settings.ts`, sans DOM). |
 | `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). |
 | `themes/` | Moteur de thèmes (P4-11) et thèmes intégrés (`<id>/theme.json` et leurs fichiers) : palette, polices et fond posés sur `<mire-page>` et `<mire-home>` (portée commune, P4-12), mise en page transmise à la vue de page et à l'accueil. Voir `docs/themes.md`. |
@@ -152,7 +152,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `api/` | Seul accès à `window.api` (`api`), typé par le contrat IPC. |
 | `domain/` | Logique sans DOM ni état : éléments, vidéos et séries, jeux, recherche, sites, états des téléchargements. Les fonctions reçoivent leurs données en paramètre ; elles sont testées sous Node. |
 | `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), service de focus sur les vues historiques et les composants `ds-*` / `mire-*` (`focus.ts`, règles sans DOM dans `targets.ts`, P4-03 ; voir l'ADR 0001, § 10), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
-| `players/` | Lecteurs intégrés : vidéo (`video.ts`), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
+| `players/` | Lecteurs intégrés : vidéo (`video.ts`, qui pilote `mire-video-player` ; règles sans DOM dans `video-model.ts`, P4-14), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
 | `styles.css`, `fonts/` | Styles de l'interface historique et police Archivo. |
@@ -742,6 +742,19 @@ déduisent de la configuration :
   (`adopt`), dans `overrides.json` comme dans `metadata.json`.
 - Coût mesuré (750 jeux de console, 100 jeux PC, 300 chaînes, ~70 sites et marque-pages, à côté de 20 000 fichiers) :
   quelques millisecondes par liste, ~3 ms par changement de la configuration, rien de mesurable au chargement.
+- **Consoles et émulateurs** (P4-17, `games/consoles.ts`, D-21) : `consoleSave(fiche, id?)` crée (sans `id`) ou
+  modifie une console (nom et programme exigés, arguments, dossiers, extensions, sites de jeux propres ou `null` pour
+  ceux que Mire propose), `consoleRemove(id)` la retire. L'émulateur d'une console, ce sont son programme et ses
+  arguments : `consoleEmulators(id)` propose le sien puis ceux des consoles du même système,
+  `consoleSetEmulator(id, autre | null)` choisit celui qui lance ses jeux (`emulator`), `gameSetEmulator(clé, autre |
+  null)` celui d'un jeu (`gameEmulators`, par clé d'élément) ; `gameEmulators(clé)` rend les propositions et les deux
+  choix. Au lancement (`launchRom`, `gameLaunch(clé, autre?)`), l'ordre est : celui demandé pour cette fois, celui du
+  jeu, celui de la console, le sien. Un choix qui ne fait plus partie des propositions est ignoré, et retiré au
+  prochain enregistrement.
+- **Suppression d'un jeu** (P4-17) : `gameDeleteElement(clé)`. Le processus principal retrouve l'élément ; un jeu de
+  console n'est effacé que s'il est sous un dossier local de sa console (contrôle de P0-06, puis `checkExisting` de
+  `files/guard.ts` : un lien symbolique qui mène ailleurs est refusé), un jeu PC ajouté à la main est retiré de la
+  liste. La liste de la console est relue ensuite, et la carte quitte le catalogue.
 
 ### Tags et infos
 
@@ -882,6 +895,16 @@ sur plusieurs niveaux (`groupBy`, une info par niveau). Le service (`catalog/pag
   ce tag, triés par nom, sans regroupement (`TAG_PAGE_PREFIX`, `tagPageId`). Calculé et gardé en cache comme une page,
   il n'est ni listé ni annoncé : un changement du moteur l'efface, l'explorateur relit ses colonnes à chaque
   `pages:changed`.
+- **Sources et dossiers** (explorateur, P4-08, `catalog/folders.ts`) : `catalogSources()` rend `{ sources, folders }`,
+  les emplacements de source du catalogue et les dossiers autorisés de la gestion des fichiers (`managedRoots`), chacun
+  avec un identifiant opaque (empreinte), son emplacement et son nombre d'éléments. `catalogFolder(source, path, cursor)`
+  rend un dossier par tranches de 100 : `{ folders, elements, total, next }`, les sous-dossiers d'abord. L'interface
+  désigne un dossier par l'identifiant de sa source et un chemin relatif (`Films/Action`, `''` pour la source), jamais
+  par un chemin absolu. Les dossiers se déduisent de l'emplacement des éléments du catalogue, sans lire le disque. Le
+  chemin est refusé (`null`) s'il contient `..`, `.`, un segment vide, `\` ou un caractère nul (`:` sous Windows) ;
+  pour un dossier de cet ordinateur, le contrôle de chemin de la gestion des fichiers (`checkFolder`, P0-06 puis P2-10)
+  refuse en plus un lien symbolique qui sort de la source. Un dossier absent du disque reste parcourable. Événement
+  `onFoldersChange` (`folders:changed`) à chaque changement du moteur ou des dossiers autorisés.
 - Coût sur 20 000 éléments factices (`test/catalog/pages-bench.test.ts`) : 2 à 4 ms pour un niveau jamais calculé
   (première page des Séries, épisodes d'une saison, 4 000 films triés), moins de 0,5 ms en cache ; ~1 ms pour un
   élément changé avec les sept pages en cache.

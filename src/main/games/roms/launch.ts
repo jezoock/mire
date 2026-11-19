@@ -7,6 +7,8 @@ import path from 'node:path';
 import { isHttpUrl, safeDecode, safeFileName, slug } from '@mire/shared';
 import type { Emulator } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
+import { romKey } from '../../catalog/keys.ts';
+import { launcherOf, workingDir } from '../consoles.ts';
 import { substitute } from '../../lib/args.ts';
 import type { LaunchResult } from '../../platform/index.ts';
 import * as disc from '../disc/index.ts';
@@ -56,8 +58,13 @@ export async function cacheRemoteRom(deps: Deps, emu: Emulator, url: string): Pr
   return { ok: true, file: path.join(folder, files[0].rel) };
 }
 
-export async function launchRom(deps: Deps, consoleId: unknown, romPath: string): Promise<LaunchResult> {
-  const emu = findConsole(deps.config.get(), consoleId);
+/**
+ * Lance un jeu de console. L'émulateur est celui demandé (`emulator` : identifiant d'une console du même système),
+ * sinon celui choisi pour le jeu, sinon celui de la console (P4-17, D-21) ; le jeu reste celui de sa console.
+ */
+export async function launchRom(deps: Deps, consoleId: unknown, romPath: string, emulator?: unknown): Promise<LaunchResult> {
+  const config = deps.config.get();
+  const emu = findConsole(config, consoleId);
   if (!emu) return { ok: false, error: t('games.errors.consoleGone') };
   let target = romPath;
   if (isHttpUrl(romPath)) {
@@ -68,7 +75,8 @@ export async function launchRom(deps: Deps, consoleId: unknown, romPath: string)
   } else if (!deps.access.isAllowed(romPath)) {
     return { ok: false, error: t('games.errors.notInConsoleFolders') };
   }
-  const args = substitute(Array.isArray(emu.args) && emu.args.length ? emu.args : ['{rom}'], { rom: target });
-  const cwd = path.isAbsolute(emu.path) ? path.dirname(emu.path) : undefined;
-  return deps.launcher.launchProcess(emu.path, args, { cwd, hideWhileRunning: true });
+  const key = typeof romPath === 'string' && romPath ? romKey(emu.id, romPath) : undefined;
+  const runner = launcherOf(config.emulators, emu.id, { key, emulator }) ?? emu;
+  const args = substitute(Array.isArray(runner.args) && runner.args.length ? runner.args : ['{rom}'], { rom: target });
+  return deps.launcher.launchProcess(runner.path, args, { cwd: workingDir(runner.path), hideWhileRunning: true });
 }

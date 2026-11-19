@@ -2452,6 +2452,475 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+  describe('Explorateur : Sources et Dossiers (P4-08)', () => {
+    const PAD = { a: 0, b: 1, down: 13, right: 15 };
+    const VIEW = '#view mire-explorer mire-explorer-view';
+    const COL = `${VIEW} .mire-explorer-view__column:not(.mire-explorer-view__preview)`;
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    // Une touche de la manette ; la ligne qui a le focus est rendue (hydrated) avant chaque appui.
+    const padPress = async (button) => {
+      await page.waitForFunction(() => document.activeElement?.classList.contains('hydrated'));
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const headings = () => page.$$eval(COL, (cols) => cols.map((c) => c.getAttribute('aria-label')));
+    const columns = (n) => page.waitForFunction(([sel, k]) => document.querySelectorAll(sel).length === k, [COL, n]);
+    const row = (col, text) =>
+      page.locator(`${VIEW} .mire-explorer-view__column:nth-child(${col + 1}) .mire-explorer-view__row.hydrated`, { hasText: text }).first();
+    const focusedRow = () =>
+      page.evaluate((sel) => {
+        const r = document.activeElement?.closest('.mire-explorer-view__row');
+        if (!r) return null;
+        const cols = [...document.querySelectorAll(`${sel} .mire-explorer-view__column`)];
+        return [cols.indexOf(r.closest('.mire-explorer-view__column')), r.querySelector('.mire-explorer-view__label')?.textContent];
+      }, VIEW);
+    const inColumn = (n) => page.waitForFunction((k) => document.activeElement?.closest(`.mire-explorer-view__column:nth-child(${k})`), n + 1);
+    const openExplorer = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:explorer' }));
+      await page.waitForFunction(
+        (sel) => document.body.dataset.section === 'explorer' && document.querySelector(`${sel} .mire-explorer-view__row.hydrated`),
+        VIEW,
+      );
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('souris : Sources › la source Images › Vacances, puis une image et son aperçu', async () => {
+      await openExplorer();
+      await row(0, 'Sources').click();
+      await columns(2);
+      // Les sources de la configuration de démonstration, avec leur sorte et leur emplacement.
+      const sources = await page.$$eval(`${VIEW} .mire-explorer-view__column:nth-child(2) .mire-explorer-view__label`, (ls) => ls.map((l) => l.textContent));
+      for (const name of ['Images', 'Musique', 'Vidéos']) assert.ok(sources.includes(`Dossier · ${name}`), sources.join(' | '));
+      await row(1, 'Dossier · Images').click();
+      await columns(3);
+      await row(2, 'Vacances').click();
+      await columns(4);
+      assert.deepEqual((await headings()).slice(0, 2), ['Explorateur', 'Sources']);
+      assert.equal((await headings())[3], 'Vacances');
+      await page.locator(`${VIEW} .mire-explorer-view__column:nth-child(4) .mire-explorer-view__row.hydrated`).first().click();
+      await page.locator(`${VIEW} .mire-explorer-view__preview .mire-explorer-view__action.hydrated`, { hasText: 'Lire' }).waitFor();
+      const preview = await page.$eval(`${VIEW} .mire-explorer-view__preview`, (p) => ({
+        image: !!p.querySelector('ds-thumb'),
+        location: p.querySelector('.mire-explorer-view__location')?.textContent ?? '',
+      }));
+      assert.ok(preview.image);
+      assert.ok(preview.location.includes('/bibliotheque/Images/Vacances/'), preview.location);
+      await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
+      await shot('section-explorer-sources');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix descend jusqu’à Dossiers, A ouvre un dossier puis un élément, B revient jusqu’à l’accueil', async () => {
+      await connectPad();
+      await openExplorer();
+      await row(0, 'Pages').focus();
+      for (let i = 0; i < 4; i++) await padPress('down');
+      await page.waitForFunction(() => document.activeElement?.textContent?.includes('Dossiers'));
+      // A sur Dossiers : les dossiers autorisés, le focus sur le premier (Vidéos, premier de la configuration).
+      // La colonne des dossiers autorisés s'affiche dès que le focus s'arrête sur Dossiers ; A y entre.
+      await page.waitForFunction(
+        (sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(2)`)?.getAttribute('aria-label') === 'Dossiers',
+        VIEW,
+      );
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__column:nth-child(2) .mire-explorer-view__row.hydrated`), VIEW);
+      await padPress('a');
+      await inColumn(1);
+      const [, first] = await focusedRow();
+      assert.equal(first, 'Vidéos');
+      // A : les sous-dossiers, puis les fichiers de Vidéos.
+      await padPress('a');
+      await inColumn(2);
+      assert.deepEqual(await focusedRow(), [2, 'Série']);
+      // La croix descend sur un film : son aperçu s'affiche ; A y porte le focus (« Lire »).
+      await padPress('down');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__preview .mire-explorer-view__action.hydrated`), VIEW);
+      const film = (await focusedRow())[1];
+      await padPress('a');
+      await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
+      // B : retour au film, puis au dossier Vidéos, puis à Dossiers, puis à l'accueil.
+      await padPress('b');
+      assert.deepEqual(await focusedRow(), [2, film]);
+      await padPress('b');
+      await inColumn(1);
+      assert.deepEqual(await focusedRow(), [1, 'Vidéos']);
+      await padPress('b');
+      assert.deepEqual(await focusedRow(), [0, 'Dossiers']);
+      await padPress('b');
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Lecteur vidéo (P4-14)', () => {
+    // Vidéo de démonstration de six minutes, sans son, avec des sous-titres en anglais et en français à côté.
+    const PAD = { b: 1, lt: 6, rt: 7, up: 12, down: 13 };
+    const PLAYER = 'mire-video-player';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    let file;
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const isOpen = () => page.evaluate((sel) => !document.querySelector(sel).hidden, PLAYER);
+    const text = (part) => page.evaluate(([sel, p]) => document.querySelector(`${sel} .mire-video-player__${p}`)?.textContent ?? null, [PLAYER, part]);
+    const state = () =>
+      page.evaluate((sel) => {
+        const v = document.querySelector(`${sel} video`);
+        const [seek, volume] = [...document.querySelectorAll(`${sel} ds-range input`)];
+        return { time: v.currentTime, volume: v.volume, seek: Number(seek.value), volumeRange: Number(volume.value), paused: v.paused };
+      }, PLAYER);
+    // Le lecteur est rendu (hydrated) et la durée de la vidéo connue : les touches peuvent agir.
+    const ready = () =>
+      page.waitForFunction(
+        (sel) => {
+          const el = document.querySelector(sel);
+          return el?.classList.contains('hydrated') && !el.hidden && el.querySelector('video').readyState >= 1;
+        },
+        PLAYER,
+        { timeout: 15000 },
+      );
+    // Ouverture comme depuis le système (fichier passé à une seconde instance de Mire).
+    const openDemo = async () => {
+      await app.evaluate(({ app: a }, f) => a.emit('second-instance', {}, ['electron', '.', f]), file);
+      await ready();
+    };
+    // La réglette du volume montre le volume de la vidéo (rendu à l'image suivante).
+    const rangeFollows = () =>
+      page.waitForFunction(
+        (sel) => Number(document.querySelector(`${sel} .mire-video-player__volume input`).value) === document.querySelector(`${sel} video`).volume,
+        PLAYER,
+      );
+    // Message au centre de l'écran, rendu à l'image suivante.
+    const osdShows = (re) =>
+      page.waitForFunction(([sel, r]) => new RegExp(r).test(document.querySelector(`${sel} .mire-video-player__osd`)?.textContent ?? ''), [PLAYER, re]);
+    const pause = async () => {
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} video`).paused && document.activeElement === document.querySelector(sel), PLAYER);
+      await page.keyboard.press(' ');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} video`).paused, PLAYER);
+    };
+
+    before(() => {
+      file = path.join(tmp, 'fixtures', 'media', 'Démonstration.webm');
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      if (await isOpen()) await page.keyboard.press('Escape');
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('une vidéo de démonstration s’ouvre : titre, réglettes, sous-titres en français', async () => {
+      const from = await page.evaluateHandle(() => document.activeElement);
+      await openDemo();
+      assert.equal(await text('title'), 'Démonstration');
+      assert.equal(await text('sub'), 'media');
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} ds-range.hydrated`).length === 2, PLAYER);
+      // Les sous-titres français sont activés d'office.
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__subs`)?.textContent === 'Sous-titres : fr', PLAYER);
+      const showing = await page.evaluate((sel) => [...document.querySelector(`${sel} video`).textTracks].map((t) => `${t.label}:${t.mode}`), PLAYER);
+      assert.deepEqual(showing.sort(), ['en:disabled', 'fr:showing']);
+      // Pause (Espace) : l'affichage reste ; le message au centre s'efface avant la capture.
+      await pause();
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} .mire-video-player__osd`).classList.contains('is-shown'), PLAYER);
+      await page.evaluate((sel) => (document.querySelector(`${sel} video`).currentTime = 45), PLAYER);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__time`)?.textContent === '0:45 / 6:00', PLAYER);
+      // Pas de message en cours (« Manette déconnectée », laissé par un bloc précédent) sur la capture.
+      await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
+      await settle();
+      await shot('lecteur-video');
+      // Échap ferme et rend le focus là où il était.
+      await page.keyboard.press('Escape');
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      assert.ok(await page.evaluate((f) => document.activeElement === f, from));
+      assert.deepEqual(errors, []);
+    });
+
+    it('clavier : les flèches règlent la position et le volume, S change les sous-titres', async () => {
+      await openDemo();
+      // Position gardée en fermant (45 s) : la vidéo reprend là, avec un message.
+      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 45) < 2, PLAYER);
+      await page.waitForFunction(() => document.getElementById('toast')?.textContent.startsWith('Reprise à 0:45'));
+      await pause();
+      const start = await state();
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(([sel, t]) => document.querySelector(`${sel} video`).currentTime > t + 9, [PLAYER, start.time]);
+      await osdShows(/^\+10 s {2}0:5\d$/.source);
+      await page.waitForFunction(([sel, v]) => Number(document.querySelector(`${sel} .mire-video-player__seek input`).value) > v, [PLAYER, start.seek]);
+      await page.keyboard.press('ArrowUp');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
+      const louder = await state();
+      // La réglette du volume suit.
+      await rangeFollows();
+      await osdShows(`^Volume ${Math.round(louder.volume * 100)} %$`);
+      await page.keyboard.press('ArrowDown');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
+      // S : sous-titres suivants (après le français, aucun).
+      await page.keyboard.press('s');
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-video-player__subs`)?.textContent === 'Sous-titres : non', PLAYER);
+      await osdShows('^Sous-titres désactivés$');
+      // La réglette de position, à la souris : la vidéo va au milieu.
+      await page.evaluate((sel) => {
+        const input = document.querySelector(`${sel} .mire-video-player__seek input`);
+        input.value = '500';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, PLAYER);
+      await page.waitForFunction((sel) => Math.abs(document.querySelector(`${sel} video`).currentTime - 180) < 1, PLAYER);
+      assert.equal(await page.evaluate((sel) => document.activeElement === document.querySelector(sel), PLAYER), true);
+      // Le bouton de fermeture (ds-trigger vers le contrôleur).
+      await page.locator(`${PLAYER} ds-trigger[action="close"] button`).click();
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : RT et LT avancent et reculent d’une minute, la croix règle le volume, B ferme', async () => {
+      await connectPad();
+      await openDemo();
+      await pause();
+      await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('Sous-titres'));
+      const start = await state();
+      await padPress('rt');
+      await page.waitForFunction(([sel, t]) => document.querySelector(`${sel} video`).currentTime > t + 59, [PLAYER, start.time]);
+      await padPress('lt');
+      await page.waitForFunction(([sel, t]) => Math.abs(document.querySelector(`${sel} video`).currentTime - t) < 1, [PLAYER, start.time]);
+      await padPress('up');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume > v, [PLAYER, start.volume]);
+      await rangeFollows();
+      await padPress('down');
+      await page.waitForFunction(([sel, v]) => document.querySelector(`${sel} video`).volume === v, [PLAYER, start.volume]);
+      await padPress('b');
+      await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Jeux (P4-17)', () => {
+    const PAD = { a: 0, b: 1, x: 2, down: 13 };
+    const CENTRE = '#view mire-centre mire-centre-view';
+    const SEARCH = '#view mire-search mire-search-view';
+    const FORM = 'mire-dialogs mire-form';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const field = (label) => page.locator(`${FORM} ds-field`, { hasText: label });
+    const consoles = () => page.evaluate(async () => (await window.api.getConfig()).config.emulators);
+    const card = (name) => page.locator(`${CENTRE} .mire-centre-view__console`, { has: page.locator('.mire-centre-view__name', { hasText: name }) });
+    // Onglet des consoles du Centre, rendu.
+    const openConsoles = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'downloads' && document.querySelector(sel)?.classList.contains('hydrated'), CENTRE);
+      const tab = page.locator(`${CENTRE} .mire-centre-view__tab.hydrated[data-tab="consoles"]`);
+      await tab.click();
+      await page.waitForFunction((sel) => document.querySelector(sel)?.tab === 'consoles', CENTRE);
+      await page.locator(`${CENTRE} .mire-centre-view__new-console.hydrated`).waitFor();
+    };
+    // Un jeu de la Super Nintendo de démonstration trouvé par la Recherche : sa carte rendue.
+    const romCard = () => page.locator(`${SEARCH} mire-card ds-trigger.hydrated[data-key^="rom:"]`).first();
+    const findRom = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), SEARCH);
+      await page.locator(`${SEARCH} .mire-search-view__input`).fill('Course de karts');
+      await romCard().waitFor();
+      return romCard().getAttribute('data-key');
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('créer une console à la main, puis lui faire lancer ses jeux avec l’émulateur d’une autre', async () => {
+      await openConsoles();
+      await card('Super Nintendo').waitFor();
+      await page.locator(`${CENTRE} .mire-centre-view__new-console`).click();
+      assert.equal(await formOpen(), 'Créer une console');
+      const emulator = (await consoles())[0].path;
+      await field('Nom').locator('input').fill('Super Nintendo (bis)');
+      await field('Système').locator('select').selectOption('Nintendo - Super Nintendo Entertainment System');
+      await field('Émulateur (programme)').locator('input').fill(emulator);
+      await field('Arguments').locator('input').fill('--plein-ecran {rom}');
+      await button('Enregistrer').click();
+      await formClosed();
+      await card('Super Nintendo (bis)').waitFor();
+      const made = (await consoles()).find((e) => e.name === 'Super Nintendo (bis)');
+      assert.ok(made?.id);
+      assert.deepEqual(made.args, ['--plein-ecran', '{rom}']);
+      assert.equal(made.path, emulator);
+      await shot('centre-consoles');
+      // La console de démonstration lance ses jeux avec l'émulateur de la nouvelle.
+      const demo = (await consoles())[0];
+      const demoCard = page.locator(`${CENTRE} .mire-centre-view__console[data-key="${demo.id}"]`);
+      await demoCard.locator('.mire-centre-view__emulator').click();
+      assert.equal(await formOpen(), 'Émulateur de Super Nintendo');
+      await field('Émulateur').locator('select').selectOption(made.id);
+      await button('Enregistrer').click();
+      await formClosed();
+      await page.waitForFunction(async (id) => (await window.api.getConfig()).config.emulators[0].emulator === id, made.id);
+      await demoCard.getByText('celui de la console Super Nintendo (bis)').waitFor();
+      // Pour un jeu : la boîte du jeu (clic droit sur sa carte) garde un autre choix, enregistré par sa clé.
+      const key = await findRom();
+      await romCard().click({ button: 'right' });
+      assert.match(await formOpen(), /Course de karts/);
+      await field('Émulateur').locator('select').selectOption(demo.id);
+      await button('Enregistrer l’émulateur').click();
+      await formClosed();
+      const chosen = await page.evaluate((k) => window.api.gameEmulators(k), key);
+      assert.deepEqual([chosen.console, chosen.consoleDefault, chosen.game], [demo.id, made.id, demo.id]);
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : X ouvre la boîte d’un jeu, la croix la parcourt, A choisit Annuler, B ferme', async () => {
+      await connectPad();
+      const key = await findRom();
+      const before = await page.evaluate((k) => window.api.gameEmulators(k), key);
+      await romCard().focus();
+      await padPress('x');
+      assert.match(await formOpen(), /Course de karts/);
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      const first = await page.evaluateHandle(() => document.activeElement);
+      await padPress('down');
+      assert.ok(await page.evaluate((f) => document.activeElement !== f, first));
+      assert.ok(await page.evaluate((sel) => !!document.activeElement?.closest(sel), FORM));
+      await button('Annuler').focus();
+      await padPress('a');
+      await formClosed();
+      await romCard().focus();
+      await padPress('x');
+      await formOpen();
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel), FORM);
+      await padPress('b');
+      await formClosed();
+      await page.waitForFunction((sel) => document.activeElement?.closest(`${sel} mire-card`), SEARCH);
+      assert.deepEqual(await page.evaluate((k) => window.api.gameEmulators(k), key), before);
+      await disconnectPad();
+      // La console créée par le test est retirée : les blocs suivants retrouvent la configuration de démonstration.
+      await openConsoles();
+      await card('Super Nintendo (bis)').locator('ds-trigger', { hasText: 'Retirer' }).click();
+      assert.equal(await formOpen(), 'Retirer la console Super Nintendo (bis) ?');
+      await button('Retirer').click();
+      await formClosed();
+      await page.waitForFunction(async () => (await window.api.getConfig()).config.emulators.length === 1);
+      assert.equal((await consoles())[0].emulator, undefined);
+      assert.deepEqual(errors, []);
+    });
+  });
 
   describe('Réglages (P4-20)', () => {
     const PAD = { a: 0, b: 1, down: 13 };

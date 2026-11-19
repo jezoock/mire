@@ -1,25 +1,34 @@
 import { Component, Element, Host, Prop, h } from '@stencil/core';
 import { readJson, readList } from '../../utils/elements.ts';
 import { centreTab, idArgs } from '../../utils/centre.ts';
-import type { AppEmulator, AppGame, AppProgress, AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from '../../utils/centre.ts';
+import type { AppEmulator, AppGame, AppProgress, AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from '../../utils/centre.ts';
 
 /**
- * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
+ * Vue du Centre (P4-18) : trois onglets, Téléchargements, Apps et Consoles (P4-17).
  *
  * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
  *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
  * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
- *   rappel des BIOS), jeux libres et import de ses propres jeux.
+ *   rappel des BIOS), jeux libres et import de ses propres jeux ;
+ * - Consoles : créer une console à la main ; pour chacune, la modifier (dossiers, émulateur, arguments, sites de
+ *   jeux), choisir l'émulateur qui lance ses jeux, ouvrir ses sites de jeux, la retirer. Ces actions vont au
+ *   contrôleur `mire-games`, avec l'identifiant de la console.
  *
  * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
  * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
  * l'émulateur, de la console ou du jeu.
  */
+const TABS: [string, keyof CentreLabels][] = [
+  ['downloads', 'tabDownloads'],
+  ['apps', 'tabApps'],
+  ['consoles', 'tabConsoles'],
+];
+
 @Component({ tag: 'mire-centre-view', shadow: false })
 export class MireCentreView {
   @Element() host!: HTMLElement;
 
-  /** Onglet affiché : `downloads` ou `apps`. */
+  /** Onglet affiché : `downloads`, `apps` ou `consoles`. */
   @Prop({ reflect: true }) tab = 'downloads';
 
   /** Téléchargements en cours (actifs, en pause, en attente) puis les autres (voir `DownloadRow`). */
@@ -28,6 +37,9 @@ export class MireCentreView {
 
   /** Onglet des apps ; `null` tant que le catalogue n'est pas lu. */
   @Prop() apps: AppsView | string | null = null;
+
+  /** Cartes de l'onglet des consoles (voir `ConsoleCard`). */
+  @Prop() consoles: ConsoleCard[] | string = [];
 
   /** Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`). */
   @Prop() labels: CentreLabels | string = '';
@@ -42,28 +54,19 @@ export class MireCentreView {
   private renderTabs(tab: string, l: CentreLabels) {
     return (
       <div class="mire-centre-view__tabs" role="group" aria-label={l.tabs || undefined}>
-        <ds-trigger
-          class="mire-centre-view__tab"
-          type="button"
-          mods={tab === 'downloads' ? 'stl-1' : 'stl-2'}
-          aria-pressed={String(tab === 'downloads')}
-          data-tab="downloads"
-          target="mire-centre"
-          action='showTab:[{"tab":"downloads"}]'
-        >
-          {l.tabDownloads}
-        </ds-trigger>
-        <ds-trigger
-          class="mire-centre-view__tab"
-          type="button"
-          mods={tab === 'apps' ? 'stl-1' : 'stl-2'}
-          aria-pressed={String(tab === 'apps')}
-          data-tab="apps"
-          target="mire-centre"
-          action='showTab:[{"tab":"apps"}]'
-        >
-          {l.tabApps}
-        </ds-trigger>
+        {TABS.map(([id, label]) => (
+          <ds-trigger
+            class="mire-centre-view__tab"
+            type="button"
+            mods={tab === id ? 'stl-1' : 'stl-2'}
+            aria-pressed={String(tab === id)}
+            data-tab={id}
+            target="mire-centre"
+            action={`showTab:${JSON.stringify([{ tab: id }])}`}
+          >
+            {l[label]}
+          </ds-trigger>
+        ))}
       </div>
     );
   }
@@ -273,13 +276,72 @@ export class MireCentreView {
     ];
   }
 
+  private renderConsole(c: ConsoleCard, l: CentreLabels) {
+    const id = idArgs(c.id);
+    return (
+      <article key={c.id} class="mire-centre-view__card mire-centre-view__console" data-key={c.id}>
+        <div class="mire-centre-view__card-head">
+          <h3 class="mire-centre-view__name">{c.name}</h3>
+          {c.store && <span class="mire-centre-view__state --ok">{l.fromApps}</span>}
+        </div>
+        <p class="mire-centre-view__meta">{c.meta}</p>
+        <p class="mire-centre-view__desc">{c.emulator}</p>
+        <div class="mire-centre-view__actions">
+          <ds-trigger class="mire-centre-view__edit" type="button" mods="stl-1,sm" target="mire-games" action={`editConsole:${id}`}>
+            {l.editConsole}
+          </ds-trigger>
+          <ds-trigger class="mire-centre-view__emulator" type="button" mods="stl-2,sm" target="mire-games" action={`chooseEmulator:${id}`}>
+            {l.chooseEmulator}
+          </ds-trigger>
+          <ds-trigger type="button" mods="stl-2,sm" target="mire-games" action={`openSites:${id}`}>
+            {l.openSites}
+          </ds-trigger>
+          <ds-trigger type="button" mods="stl-3,sm" target="mire-games" action={`removeConsole:${id}`}>
+            {l.removeConsole}
+          </ds-trigger>
+        </div>
+      </article>
+    );
+  }
+
+  private renderConsoles(l: CentreLabels) {
+    const list = readList<ConsoleCard>(this.consoles);
+    return [
+      <section class="mire-centre-view__add">
+        <div class="mire-centre-view__buttons">
+          <ds-trigger class="mire-centre-view__new-console" type="button" mods="stl-1" target="mire-games" action="newConsole">
+            {l.newConsole}
+          </ds-trigger>
+        </div>
+        <p class="mire-centre-view__hint">{l.consolesHelp}</p>
+      </section>,
+      <section class="mire-centre-view__group" data-group="consoles">
+        {list.length ? (
+          <div class="mire-centre-view__cards">{list.map((c) => this.renderConsole(c, l))}</div>
+        ) : (
+          <p class="mire-centre-view__hint">{l.noConsoles}</p>
+        )}
+      </section>,
+    ];
+  }
+
+  private renderPanel(tab: string, l: CentreLabels) {
+    if (tab === 'apps') return this.renderApps(l);
+    if (tab === 'consoles') return this.renderConsoles(l);
+    return this.renderDownloads(l);
+  }
+
   render() {
     const tab = centreTab(this.tab);
     const l = readJson<CentreLabels>(this.labels) ?? {};
     return (
       <Host class={{ 'mire-centre-view': true, [`--${tab}`]: true }}>
         {this.renderTabs(tab, l)}
-        <div class="mire-centre-view__panel">{tab === 'apps' ? this.renderApps(l) : this.renderDownloads(l)}</div>
+        {/* Un panneau par onglet (clé) : un ds-trigger résout sa cible une seule fois, il ne doit pas passer d'un
+            onglet à l'autre (les boutons des consoles visent mire-games, les autres mire-centre). */}
+        <div key={tab} class="mire-centre-view__panel">
+          {this.renderPanel(tab, l)}
+        </div>
       </Host>
     );
   }

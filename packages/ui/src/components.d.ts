@@ -6,7 +6,7 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
-import { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+import { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 import { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -16,8 +16,9 @@ import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 import { SettingsLabels, SettingsPanelView } from "./utils/settings";
+import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
-export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+export { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -27,6 +28,7 @@ export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 export { SettingsLabels, SettingsPanelView } from "./utils/settings";
+export { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 export namespace Components {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -34,7 +36,8 @@ export namespace Components {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -116,22 +119,17 @@ export namespace Components {
      */
     interface MireCentre {
     }
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface MireCentreView {
         /**
           * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
           * @default null
          */
         "apps": AppsView | string | null;
+        /**
+          * Cartes de l'onglet des consoles (voir `ConsoleCard`).
+          * @default []
+         */
+        "consoles": ConsoleCard[] | string;
         /**
           * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
           * @default ''
@@ -151,7 +149,7 @@ export namespace Components {
          */
         "running": DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads` ou `apps`.
+          * Onglet affiché : `downloads`, `apps` ou `consoles`.
           * @default 'downloads'
          */
         "tab": string;
@@ -358,6 +356,15 @@ export namespace Components {
           * @default false
          */
         "wide": boolean;
+    }
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireGames {
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -937,6 +944,82 @@ export namespace Components {
          */
         "panels": SettingsPanelView[] | string;
     }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface MireVideoPlayer {
+        /**
+          * @default false
+         */
+        "hasNext": boolean;
+        /**
+          * Vidéos avant et après dans la liste.
+          * @default false
+         */
+        "hasPrev": boolean;
+        /**
+          * Titre et sous-titre de l'en-tête.
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "icons": VideoPlayerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment pendant la lecture : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle": boolean;
+        /**
+          * Textes (voir `VideoPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels": VideoPlayerLabels | string;
+        /**
+          * Message au centre de l'écran, et s'il est montré (il s'efface en fondu : le texte reste pendant ce temps).
+          * @default ''
+         */
+        "osd": string;
+        /**
+          * @default false
+         */
+        "osdShown": boolean;
+        /**
+          * La vidéo joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing": boolean;
+        /**
+          * @default 0
+         */
+        "position": number;
+        /**
+          * @default ''
+         */
+        "subheading": string;
+        /**
+          * Libellé du bouton des sous-titres ; vide : la vidéo n'en a pas, le bouton est caché.
+          * @default ''
+         */
+        "subtitles": string;
+        /**
+          * Position écrite (« 1:23 / 45:00 ») et proportion lue, de 0 à 1.
+          * @default ''
+         */
+        "time": string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume": number;
+    }
 }
 export interface MireDemoCustomEvent<T> extends CustomEvent<T> {
     detail: T;
@@ -966,6 +1049,10 @@ export interface MireSettingsViewCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireSettingsViewElement;
 }
+export interface MireVideoPlayerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireVideoPlayerElement;
+}
 declare global {
     /**
      * Coquille de l'application (P4-07) : le menu (`mire-rail`), l'en-tête (`mire-header`), l'écran affiché, l'aide de la
@@ -973,7 +1060,8 @@ declare global {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
@@ -1016,16 +1104,6 @@ declare global {
         prototype: HTMLMireCentreElement;
         new (): HTMLMireCentreElement;
     };
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface HTMLMireCentreViewElement extends Components.MireCentreView, HTMLStencilElement {
     }
     var HTMLMireCentreViewElement: {
@@ -1166,6 +1244,19 @@ declare global {
     var HTMLMireFormElement: {
         prototype: HTMLMireFormElement;
         new (): HTMLMireFormElement;
+    };
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireGamesElement extends Components.MireGames, HTMLStencilElement {
+    }
+    var HTMLMireGamesElement: {
+        prototype: HTMLMireGamesElement;
+        new (): HTMLMireGamesElement;
     };
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -1419,6 +1510,33 @@ declare global {
         prototype: HTMLMireSettingsViewElement;
         new (): HTMLMireSettingsViewElement;
     };
+    interface HTMLMireVideoPlayerElementEventMap {
+        "mireVideoSeek": { ratio: number; commit: boolean };
+        "mireVideoVolume": { value: number; commit: boolean };
+    }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface HTMLMireVideoPlayerElement extends Components.MireVideoPlayer, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireVideoPlayerElementEventMap>(type: K, listener: (this: HTMLMireVideoPlayerElement, ev: MireVideoPlayerCustomEvent<HTMLMireVideoPlayerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireVideoPlayerElementEventMap>(type: K, listener: (this: HTMLMireVideoPlayerElement, ev: MireVideoPlayerCustomEvent<HTMLMireVideoPlayerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireVideoPlayerElement: {
+        prototype: HTMLMireVideoPlayerElement;
+        new (): HTMLMireVideoPlayerElement;
+    };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
         "mire-backdrop": HTMLMireBackdropElement;
@@ -1433,6 +1551,7 @@ declare global {
         "mire-explorer-view": HTMLMireExplorerViewElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
         "mire-form": HTMLMireFormElement;
+        "mire-games": HTMLMireGamesElement;
         "mire-grid": HTMLMireGridElement;
         "mire-group-card": HTMLMireGroupCardElement;
         "mire-header": HTMLMireHeaderElement;
@@ -1449,6 +1568,7 @@ declare global {
         "mire-search-view": HTMLMireSearchViewElement;
         "mire-settings": HTMLMireSettingsElement;
         "mire-settings-view": HTMLMireSettingsViewElement;
+        "mire-video-player": HTMLMireVideoPlayerElement;
     }
 }
 declare namespace LocalJSX {
@@ -1458,7 +1578,8 @@ declare namespace LocalJSX {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -1540,22 +1661,17 @@ declare namespace LocalJSX {
      */
     interface MireCentre {
     }
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface MireCentreView {
         /**
           * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
           * @default null
          */
         "apps"?: AppsView | string | null;
+        /**
+          * Cartes de l'onglet des consoles (voir `ConsoleCard`).
+          * @default []
+         */
+        "consoles"?: ConsoleCard[] | string;
         /**
           * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
           * @default ''
@@ -1575,7 +1691,7 @@ declare namespace LocalJSX {
          */
         "running"?: DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads` ou `apps`.
+          * Onglet affiché : `downloads`, `apps` ou `consoles`.
           * @default 'downloads'
          */
         "tab"?: string;
@@ -1781,6 +1897,15 @@ declare namespace LocalJSX {
           * @default false
          */
         "wide"?: boolean;
+    }
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireGames {
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -2366,6 +2491,90 @@ declare namespace LocalJSX {
          */
         "panels"?: SettingsPanelView[] | string;
     }
+    /**
+     * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+     * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+     * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+     * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+     * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+     * tient : la position ne saute pas sous le pouce.
+     */
+    interface MireVideoPlayer {
+        /**
+          * @default false
+         */
+        "hasNext"?: boolean;
+        /**
+          * Vidéos avant et après dans la liste.
+          * @default false
+         */
+        "hasPrev"?: boolean;
+        /**
+          * Titre et sous-titre de l'en-tête.
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "icons"?: VideoPlayerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment pendant la lecture : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle"?: boolean;
+        /**
+          * Textes (voir `VideoPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels"?: VideoPlayerLabels | string;
+        /**
+          * La réglette de position bouge (`commit` faux) ou est lâchée (`commit` vrai) : proportion de 0 à 1.
+         */
+        "onMireVideoSeek"?: (event: MireVideoPlayerCustomEvent<{ ratio: number; commit: boolean }>) => void;
+        /**
+          * La réglette du volume bouge ou est lâchée : volume de 0 à 1.
+         */
+        "onMireVideoVolume"?: (event: MireVideoPlayerCustomEvent<{ value: number; commit: boolean }>) => void;
+        /**
+          * Message au centre de l'écran, et s'il est montré (il s'efface en fondu : le texte reste pendant ce temps).
+          * @default ''
+         */
+        "osd"?: string;
+        /**
+          * @default false
+         */
+        "osdShown"?: boolean;
+        /**
+          * La vidéo joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing"?: boolean;
+        /**
+          * @default 0
+         */
+        "position"?: number;
+        /**
+          * @default ''
+         */
+        "subheading"?: string;
+        /**
+          * Libellé du bouton des sous-titres ; vide : la vidéo n'en a pas, le bouton est caché.
+          * @default ''
+         */
+        "subtitles"?: string;
+        /**
+          * Position écrite (« 1:23 / 45:00 ») et proportion lue, de 0 à 1.
+          * @default ''
+         */
+        "time"?: string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume"?: number;
+    }
 
     interface MireBackdropAttributes {
         "src": string;
@@ -2387,6 +2596,7 @@ declare namespace LocalJSX {
         "running": DownloadRow[] | string;
         "others": DownloadRow[] | string;
         "apps": AppsView | string | null;
+        "consoles": ConsoleCard[] | string;
         "labels": CentreLabels | string;
         "rowLabels": DownloadRowLabels | string;
     }
@@ -2538,6 +2748,22 @@ declare namespace LocalJSX {
         "panels": SettingsPanelView[] | string;
         "labels": SettingsLabels | string;
     }
+    interface MireVideoPlayerAttributes {
+        "heading": string;
+        "subheading": string;
+        "time": string;
+        "position": number;
+        "volume": number;
+        "playing": boolean;
+        "hasPrev": boolean;
+        "hasNext": boolean;
+        "subtitles": string;
+        "osd": string;
+        "osdShown": boolean;
+        "idle": boolean;
+        "labels": VideoPlayerLabels | string;
+        "icons": VideoPlayerIcons | string;
+    }
 
     interface IntrinsicElements {
         "mire-app": MireApp;
@@ -2553,6 +2779,7 @@ declare namespace LocalJSX {
         "mire-explorer-view": Omit<MireExplorerView, keyof MireExplorerViewAttributes> & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes]?: MireExplorerView[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `attr:${K}`]?: MireExplorerViewAttributes[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `prop:${K}`]?: MireExplorerView[K] };
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
+        "mire-games": MireGames;
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
         "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
         "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
@@ -2569,6 +2796,7 @@ declare namespace LocalJSX {
         "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
         "mire-settings": MireSettings;
         "mire-settings-view": Omit<MireSettingsView, keyof MireSettingsViewAttributes> & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes]?: MireSettingsView[K] } & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes as `attr:${K}`]?: MireSettingsViewAttributes[K] } & { [K in keyof MireSettingsView & keyof MireSettingsViewAttributes as `prop:${K}`]?: MireSettingsView[K] };
+        "mire-video-player": Omit<MireVideoPlayer, keyof MireVideoPlayerAttributes> & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes]?: MireVideoPlayer[K] } & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes as `attr:${K}`]?: MireVideoPlayerAttributes[K] } & { [K in keyof MireVideoPlayer & keyof MireVideoPlayerAttributes as `prop:${K}`]?: MireVideoPlayer[K] };
     }
 }
 export { LocalJSX as JSX };
@@ -2581,7 +2809,8 @@ declare module "@stencil/core" {
              * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
              * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
              * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-             * pour les lecteurs, boîtes et messages de l'interface historique. La coquille ne se rend qu'une fois (aucun état) :
+             * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
+             * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
              * ce que la page place dans ces hôtes n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
@@ -2604,16 +2833,6 @@ declare module "@stencil/core" {
              * état, il ne se rend qu'une fois.
              */
             "mire-centre": LocalJSX.IntrinsicElements["mire-centre"] & JSXBase.HTMLAttributes<HTMLMireCentreElement>;
-            /**
-             * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-             * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-             *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-             * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-             *   rappel des BIOS), jeux libres et import de ses propres jeux.
-             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-             * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-             * l'émulateur, de la console ou du jeu.
-             */
             "mire-centre-view": LocalJSX.IntrinsicElements["mire-centre-view"] & JSXBase.HTMLAttributes<HTMLMireCentreViewElement>;
             /**
              * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -2673,6 +2892,14 @@ declare module "@stencil/core" {
              * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
              */
             "mire-form": LocalJSX.IntrinsicElements["mire-form"] & JSXBase.HTMLAttributes<HTMLMireFormElement>;
+            /**
+             * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+             * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+             * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+             * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+             * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-games": LocalJSX.IntrinsicElements["mire-games"] & JSXBase.HTMLAttributes<HTMLMireGamesElement>;
             /**
              * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
              * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent
@@ -2797,6 +3024,16 @@ declare module "@stencil/core" {
              * contrôleur `mire-settings` par `ds-trigger`, avec la clé du champ, l'identifiant de la palette ou de la liste.
              */
             "mire-settings-view": LocalJSX.IntrinsicElements["mire-settings-view"] & JSXBase.HTMLAttributes<HTMLMireSettingsViewElement>;
+            /**
+             * Lecteur vidéo plein écran (P4-14) : la vidéo et l'affichage par-dessus (titre, position, commandes, volume,
+             * sous-titres, message au centre). Hôte du contrôleur `mire-video-player` : ses boutons sont des `ds-trigger` vers ses
+             * actions (fermer, lecture, vidéo précédente ou suivante, sous-titres, plein écran, lecteur externe).
+             * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/video.ts`) pilote l'élément `<video>`
+             * qu'il contient (source, pistes de sous-titres), lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes
+             * (`mireVideoSeek`, `mireVideoVolume`). Les réglettes (`ds-range`) ne suivent la lecture que lorsque personne ne les
+             * tient : la position ne saute pas sous le pouce.
+             */
+            "mire-video-player": LocalJSX.IntrinsicElements["mire-video-player"] & JSXBase.HTMLAttributes<HTMLMireVideoPlayerElement>;
         }
     }
 }

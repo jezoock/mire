@@ -3,6 +3,7 @@
  * Racine de composition du processus principal : crée les services dans l'ordre, les relie entre eux, enregistre
  * l'IPC et ouvre la fenêtre. La logique vit dans les modules ; ici, seulement le câblage.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   app,
@@ -51,6 +52,7 @@ import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
 import { catalogFollow } from './files/follow.ts';
 import { managedRoots } from './files/roots.ts';
+import { createFolders } from './catalog/folders.ts';
 import { createFilesService } from './files/service.ts';
 import { registerMediaProtocol, registerMediaScheme } from './media-protocol/index.ts';
 import { createUserMeta } from './meta/user-meta.ts';
@@ -230,6 +232,12 @@ function start(pending: PendingFiles): Running {
   const lists = createLists({ file: files.catalogLists, engine: tags });
   lists.load();
   lists.onChange((ids) => toUi('lists:changed', { lists: ids }));
+  // Explorateur (P4-08) : parcours par source et par dossier, calculé à la demande.
+  const folders = createFolders({ catalog, engine: tags, roots: () => managedRoots(config.get()), fs: fs.promises });
+  folders.onChange(() => toUi('folders:changed', undefined));
+  config.onChange((next, prev) => {
+    if (JSON.stringify(managedRoots(next)) !== JSON.stringify(managedRoots(prev))) folders.changed();
+  });
   // Gestion des fichiers (P2-10) : seulement sous les dossiers locaux de la configuration ; suppression vers la
   // corbeille. Le catalogue suit ; les éléments déplacés reviennent sous leur nouvelle clé à l'analyse suivante,
   // lancée peu après la dernière opération (une sélection de plusieurs fichiers ne lance qu'une analyse).
@@ -355,6 +363,7 @@ function start(pending: PendingFiles): Running {
     tags,
     pages: catalogPages,
     lists,
+    folders,
     search,
     fileManager,
     plugins,
