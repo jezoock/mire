@@ -3,6 +3,10 @@ import { parseSites } from '../domain/index.ts';
 import { plural } from '../core/format.ts';
 import { isHomeList, moveChosen, toggleChosen, withChosen } from '../home/settings.ts';
 import { METADATA_PROVIDERS, SOURCE_KINDS } from '../settings/model.ts';
+import { openPageEditor } from '../settings/page-editor.ts';
+import { PAGES_LIST } from '../settings/pages.ts';
+import { pageName } from '../pages/model.ts';
+import type { PageDefinition } from '@mire/shared';
 import { CENTRE_VIEW } from '../shell/router.ts';
 import { Controller } from './base.ts';
 import type { Data } from './types.ts';
@@ -150,9 +154,53 @@ export class SettingsController extends Controller {
     await ui.settings.refresh();
   }
 
-  /** Retire l'élément `id` de la liste `key` : une source, un site, un jeu PC (son chemin), un site de jeux PC. */
+  // ---------- Administration des pages (P4-21) ----------
+
+  /** Crée un élément de la liste `key` dans une boîte de dialogue (`pages` : une nouvelle page). */
+  async createEntry({ key }: { key: string }): Promise<void> {
+    if (key !== PAGES_LIST) throw new Error(`Liste inconnue : ${key}`);
+    if (await openPageEditor(this.ctx, null)) await this.afterPagesChange();
+  }
+
+  /** Modifie l'élément `id` de la liste `key` dans une boîte de dialogue (`pages` : une page). */
+  async editEntry({ key, id }: { key: string; id: string }): Promise<void> {
+    if (key !== PAGES_LIST) throw new Error(`Liste inconnue : ${key}`);
+    if (await openPageEditor(this.ctx, String(id))) await this.afterPagesChange();
+  }
+
+  /** Remet l'élément `id` de la liste `key` comme à l'origine (`pages` : la page prête à l'emploi), après confirmation. */
+  async restoreEntry({ key, id }: { key: string; id: string }): Promise<void> {
+    if (key !== PAGES_LIST) throw new Error(`Liste inconnue : ${key}`);
+    const { api, ui, toast, t } = this.ctx;
+    const page = (await api.pagesGet(String(id))) as PageDefinition | null;
+    const name = page ? pageName(page, t) : String(id);
+    if (!(await ui.confirm(t('settingsView.pages.restoreTitle', { name }), t('settingsView.pages.restoreHelp'), t('settingsView.pages.restoreYes')))) return;
+    const back = (await api.pagesReset(String(id))) as PageDefinition | null;
+    if (back) toast(t('settingsView.pages.restored', { name: pageName(back, t) }));
+    await this.afterPagesChange();
+  }
+
+  /** Pages changées : le menu et l'écran Réglages suivent. */
+  private async afterPagesChange(): Promise<void> {
+    await this.ctx.ui.reloadPages?.();
+    await this.ctx.ui.settings.refresh();
+  }
+
+  /** Supprime une page après confirmation ; une page prête à l'emploi pourra revenir (« Revenir à l'origine »). */
+  private async removePage(id: string): Promise<void> {
+    const { api, ui, toast, t } = this.ctx;
+    const page = (await api.pagesGet(id)) as PageDefinition | null;
+    if (!page) return;
+    const name = pageName(page, t);
+    if (!(await ui.confirm(t('settingsView.pages.removeTitle', { name }), t('settingsView.pages.removeHelp'), t('settingsView.pages.removeYes')))) return;
+    if (await api.pagesRemove(id)) toast(t('settingsView.pages.removed', { name }));
+    await this.afterPagesChange();
+  }
+
+  /** Retire l'élément `id` de la liste `key` : une source, un site, un jeu PC (son chemin), un site de jeux PC, une page. */
   async removeEntry({ key, id }: { key: string; id: string }): Promise<void> {
     const { S, api, ui, toast, t } = this.ctx;
+    if (key === PAGES_LIST) return this.removePage(String(id));
     if (key.startsWith('sources:')) await ui.removeSource(sourceKind(key), id);
     else {
       const next = structuredClone(S.config) as Data;

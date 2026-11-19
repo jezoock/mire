@@ -1243,6 +1243,8 @@
       "browse": "Parcourir…",
       "add": "Ajouter",
       "remove": "Retirer",
+      "edit": "Modifier",
+      "restore": "Revenir à l’origine",
       "empty": "Aucun.",
       "secretSet": "Déjà saisi (tapez pour le remplacer)",
       "current": "active",
@@ -1400,6 +1402,95 @@
       "consoles": {
         "help": "Les consoles se créent et se modifient dans le Centre : émulateur, dossiers et sources de jeux, bannière.",
         "open": "Ouvrir les consoles du Centre"
+      },
+      "pages": {
+        "title": "Pages",
+        "help": "Les pages rangent vos éléments d’après leurs tags et leurs infos. Créez les vôtres, modifiez celles qui existent, ou revenez à une page prête à l’emploi telle qu’elle était.",
+        "count": {
+          "one": "{count} élément",
+          "other": "{count} éléments"
+        },
+        "origin": {
+          "builtin": "Prête à l’emploi",
+          "modified": "Prête à l’emploi, modifiée",
+          "user": "Créée par vous"
+        },
+        "inMenu": "Dans le menu",
+        "none": "Aucune page.",
+        "create": "Créer une page",
+        "gone": "Cette page n’existe plus.",
+        "createTitle": "Nouvelle page",
+        "editTitle": "Modifier la page « {name} »",
+        "save": "Enregistrer",
+        "countButton": "Compter les éléments",
+        "cancel": "Annuler",
+        "saved": "Page « {name} » enregistrée",
+        "preview": {
+          "one": "Cette page contiendrait {count} élément.",
+          "other": "Cette page contiendrait {count} éléments."
+        },
+        "restoreTitle": "Revenir à la page « {name} » d’origine ?",
+        "restoreHelp": "Vos changements sur cette page seront oubliés.",
+        "restoreYes": "Revenir à l’origine",
+        "restored": "Page « {name} » revenue comme à l’origine",
+        "removeTitle": "Supprimer la page « {name} » ?",
+        "removeHelp": "Vos fichiers ne sont pas touchés : seule la page disparaît. Une page prête à l’emploi peut revenir avec « Revenir à l’origine ».",
+        "removeYes": "Supprimer la page",
+        "removed": "Page « {name} » supprimée",
+        "errors": {
+          "name": "Donnez un nom à la page.",
+          "condition": "Une condition n’est pas complète : choisissez une valeur (pour « est entre », deux nombres pour une info comme l’année).",
+          "order": "La place dans le menu doit être un nombre.",
+          "invalid": "Cette page ne peut pas être enregistrée : vérifiez ses tags et ses conditions."
+        },
+        "form": {
+          "tabs": {
+            "general": "Général",
+            "content": "Éléments",
+            "arrange": "Rangement"
+          },
+          "name": "Nom de la page",
+          "namePlaceholder": "Films des années 90",
+          "display": "Affichage",
+          "displays": {
+            "posters": "Affiches",
+            "thumbnails": "Vignettes",
+            "list": "Liste",
+            "rows": "Rangées"
+          },
+          "pinned": "Afficher dans le menu",
+          "order": "Place dans le menu",
+          "orderPlaceholder": "1 pour la première",
+          "require": "Tags que les éléments portent tous",
+          "exclude": "Tags qu’aucun élément ne porte",
+          "tagsPlaceholder": "Nom d’un tag, puis Ajouter",
+          "noTags": "Aucun tag.",
+          "knownTags": "Tags connus : {tags}.",
+          "condition": "Condition {n}",
+          "noCondition": "Aucune condition",
+          "operator": "Comment",
+          "operators": {
+            "between": "est entre",
+            "equals": "est égal à",
+            "contains": "contient"
+          },
+          "value": "Valeur",
+          "to": "et",
+          "toPlaceholder": "pour « est entre »",
+          "level": "Regrouper par (niveau {n})",
+          "noGroup": "Pas de regroupement",
+          "sort": "Trier par (critère {n})",
+          "noSort": "Pas de tri",
+          "sortBy": {
+            "name": "Nom",
+            "added": "Date d’ajout"
+          },
+          "sortOrder": "Ordre",
+          "orders": {
+            "asc": "Croissant",
+            "desc": "Décroissant"
+          }
+        }
       }
     },
     "explorer": {

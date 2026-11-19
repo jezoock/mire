@@ -50,6 +50,10 @@ export function catalogHandlers(ctx: MainContext) {
     pagesGet: (id) => ctx.pages.get(id),
     pagesSave: (page) => ctx.pages.save(page),
     pagesRemove: (id) => ctx.pages.remove(id),
+    // Administration des pages (P4-21) : la définition est vérifiée par `validatePage` (forme, tailles, valeurs permises).
+    pagesOverview: () => ctx.pages.overview(),
+    pagesPreview: (page) => ctx.pages.preview(page),
+    pagesReset: (id) => ctx.pages.reset(id),
     catalogPage: (pageId, path, cursor) => (listIdOfPage(pageId) === null ? ctx.pages : ctx.lists).page(pageId, path, cursor),
     // Parcours par source et par dossier (explorateur, P4-08).
     catalogSources: () => ctx.folders.sources(),

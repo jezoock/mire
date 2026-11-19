@@ -410,3 +410,90 @@ describe('IPC', () => {
     ]);
   });
 });
+
+describe('administration des pages (P4-21)', () => {
+  const FILMS = ['/bib/Films/Le Grand Bleu (1988).mkv', '/bib/Films/Matrix (1999).mkv', '/bib/Films/Pulp Fiction (1994).mkv', '/bib/Films/Amélie (2001).mkv'];
+  const NINETIES = { id: 'films-des-annees-90', name: 'Films des années 90', require: ['video', 'movie'], where: [{ info: 'year', between: [1990, 1999] }] };
+
+  it('aperçu : nombre d’éléments d’une définition, sans l’enregistrer', () => {
+    const { catalog, pages } = setup();
+    catalog.setSource(
+      LIB,
+      FILMS.map((p) => file(p)),
+    );
+    assert.deepEqual(pages.preview(NINETIES), { ok: true, count: 2 });
+    assert.equal(pages.get(NINETIES.id), null);
+    assert.deepEqual(pages.preview({ ...NINETIES, where: [{ info: 'year', between: [1990, 2010] }] }), { ok: true, count: 3 });
+    const bad = pages.preview({ ...NINETIES, where: [{ info: 'year', entre: 1990 }] });
+    assert.equal(bad.ok, false);
+  });
+
+  it('origine et nombre d’éléments de chaque page', () => {
+    const { catalog, pages } = setup();
+    catalog.setSource(
+      LIB,
+      FILMS.map((p) => file(p)),
+    );
+    assert.ok(pages.save(NINETIES).ok);
+    assert.ok(pages.save({ ...pages.get('music')!, display: 'rows' }).ok);
+    const byId = new Map(pages.overview().map((o) => [o.page.id, o]));
+    assert.equal(byId.get('movies')?.origin, 'builtin');
+    assert.equal(byId.get('movies')?.count, 4);
+    assert.equal(byId.get('music')?.origin, 'modified');
+    assert.deepEqual([byId.get(NINETIES.id)?.origin, byId.get(NINETIES.id)?.count], ['user', 2]);
+  });
+
+  it('retour à la page prête à l’emploi d’origine, modifiée ou supprimée', () => {
+    const { file: f, pages, engine, catalog, t } = setup();
+    const events: string[][] = [];
+    pages.onChange((ids) => events.push(ids));
+    pages.save({ ...pages.get('movies')!, name: 'Mes films', groupBy: [] });
+    assert.deepEqual(pages.reset('movies'), BUILTIN_PAGES[0]);
+    assert.deepEqual(pages.get('movies'), BUILTIN_PAGES[0]);
+    assert.deepEqual(events.at(-1), ['movies']);
+    pages.remove('games');
+    assert.equal(pages.get('games'), null);
+    assert.equal(pages.reset('games')?.id, 'games');
+    assert.equal(pages.get('games')?.id, 'games');
+    // Gardé dans pages.json : une autre instance relit la même chose.
+    const again = createPages({ file: f, engine, catalog, translate: t, onIgnored: () => {} });
+    again.load();
+    assert.equal(again.overview().find((o) => o.page.id === 'movies')?.origin, 'builtin');
+    assert.equal(again.get('games')?.id, 'games');
+    // Une page créée par l'utilisateur n'a pas d'origine à retrouver.
+    pages.save(NINETIES);
+    assert.equal(pages.reset(NINETIES.id), null);
+    assert.equal(pages.reset(42), null);
+  });
+
+  it('tailles permises : tags, conditions, tris et textes', () => {
+    const many = (n: number) => Array.from({ length: n }, (_, i) => `t${i}`);
+    assert.equal(validatePage({ id: 'a', name: 'A', require: many(32) }).ok, true);
+    assert.deepEqual(validatePage({ id: 'a', name: 'A', require: many(33) }), { ok: false, errors: ['require'] });
+    assert.deepEqual(validatePage({ id: 'a', name: 'A', require: [], exclude: many(33) }), { ok: false, errors: ['exclude'] });
+    const where = Array.from({ length: 17 }, () => ({ info: 'year', equals: 1 }));
+    assert.deepEqual(validatePage({ id: 'a', name: 'A', require: [], where }), { ok: false, errors: ['where'] });
+    const sort = Array.from({ length: 9 }, () => ({ by: 'year' }));
+    assert.deepEqual(validatePage({ id: 'a', name: 'A', require: [], sort }), { ok: false, errors: ['sort'] });
+    assert.deepEqual(validatePage({ id: 'a', name: 'A', require: [], where: [{ info: 'title', contains: 'x'.repeat(201) }] }), {
+      ok: false,
+      errors: ['where.0'],
+    });
+  });
+
+  it('IPC : pagesOverview, pagesPreview et pagesReset vérifient leurs arguments', () => {
+    const { catalog, engine, pages } = setup();
+    catalog.setSource(
+      LIB,
+      FILMS.map((p) => file(p)),
+    );
+    const h = catalogHandlers({ tags: engine, pages } as unknown as MainContext);
+    assert.equal(h.pagesOverview().length, 7);
+    assert.deepEqual(h.pagesPreview(NINETIES as PageDefinition), { ok: true, count: 2 });
+    assert.equal(h.pagesPreview(null as unknown as PageDefinition).ok, false);
+    assert.equal(h.pagesPreview({ ...NINETIES, id: '../x' } as PageDefinition).ok, false);
+    assert.equal(h.pagesReset('movies')?.id, 'movies');
+    assert.equal(h.pagesReset({} as unknown as string), null);
+    assert.equal(h.pagesReset('inconnue'), null);
+  });
+});
