@@ -123,9 +123,13 @@
     overflow-wrap: anywhere;
   }
 
-  // Lignes à plusieurs boutons (pages, P4-21) : le nom prend la place, les boutons se serrent à droite.
-  &__entry > &__value {
-    flex: 1 1 auto;
+  // Lignes à plusieurs boutons (pages, P4-21) : le nom garde sa largeur, les boutons passent dessous s'il le faut.
+  &__group[data-list='pages'] &__entry {
+    flex-wrap: wrap;
+  }
+
+  &__group[data-list='pages'] &__entry > &__value {
+    flex: 1 1 16rem;
   }
 
   &__detail {
