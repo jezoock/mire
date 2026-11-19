@@ -32,6 +32,10 @@ Règles communes à chaque extraction :
   installer mis en attente et installés dès que la connexion le permet ; récapitulatif à l'utilisateur (installé,
   en attente, impossible) ; chaque tâche de la phase ajoute sa règle et son test.
 - **Critères d'acceptation** : tests avec `test/fixtures/config-v*.json` ; installation hors ligne puis en ligne.
+- **Fait** : table `CONTINUITY_RULES` (`src/main/config/migrations/continuity.ts`, migration v10) et service de
+  continuité (`src/main/plugins/continuity.ts`). **Ajouter sa règle (chaque tâche P5-xx)** : une entrée dans la table
+  (`id` = la tâche, `plugin` du dépôt officiel, `mode` `bundled` ou `install`, `applies(config)`, `settings` à déplacer
+  sous `plugins.<id>`), suivant le mode d'emploi en tête du fichier, et son test dans `test/config/continuity.test.ts`.
 
 ---
 
