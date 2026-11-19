@@ -112,6 +112,7 @@ export type UninstallResult =
 interface Known {
   id: string;
   origin: PluginOrigin;
+  repository: string | null;
   version: string | null;
   plugin: CheckedPlugin | null;
   refusal: Refusal | null;
@@ -389,7 +390,14 @@ export function createPluginService(opts: PluginServiceOptions) {
   /** Vérifie un plugin trouvé et le note ; un plugin inclus nouveau (ou d'une nouvelle version) est installé. */
   async function examine(c: ReturnType<typeof discoverPlugins>['candidates'][number]): Promise<Known> {
     const r = await checkPlugin(c, { appVersion: opts.appVersion, languages: opts.languages });
-    const k: Known = { id: c.id, origin: c.origin, version: c.version, plugin: r.ok ? r.plugin : null, refusal: r.ok ? null : r.refusal };
+    const k: Known = {
+      id: c.id,
+      origin: c.origin,
+      repository: c.repository,
+      version: c.version,
+      plugin: r.ok ? r.plugin : null,
+      refusal: r.ok ? null : r.refusal,
+    };
     known.set(c.id, k);
     if (k.refusal) log(c.id, 'warn', `Refusé : ${refusalMessage(c.id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
     else if (c.origin === 'bundled' && state.get(c.id).bundled !== k.plugin!.version) {
@@ -407,7 +415,9 @@ export function createPluginService(opts: PluginServiceOptions) {
       id: k.id,
       version: p?.version ?? k.version,
       origin: k.origin,
+      repository: k.repository,
       level: p?.manifest.level ?? null,
+      permissions: structuredClone({ ...(p?.manifest.permissions ?? {}) }),
       name: nameOf(k.id),
       enabled: s.enabled,
       status,
@@ -485,6 +495,36 @@ export function createPluginService(opts: PluginServiceOptions) {
       if (problem) back.refusal = dependencyRefusal(problem);
       if (!back.refusal && state.get(id).enabled) await activate(id);
       return { ok: true, keptData: keepData, restored: info(back) };
+    },
+
+    /**
+     * Reprend les plugins `ids` après une installation ou une mise à jour (P3-07) : ils sont arrêtés, retrouvés sur le
+     * disque, vérifiés (dépendances comprises) puis activés s'ils sont voulus actifs. Rend leur état ; un plugin refusé
+     * l'est avec sa raison (le client des dépôts revient alors à la version précédente).
+     */
+    async reload(ids: readonly string[]): Promise<PluginInfo[]> {
+      const wasActive = new Set(ids.filter((id) => active.has(id)));
+      for (const id of ids) deactivate(id);
+      for (const id of ids) known.delete(id);
+      const found = discoverPlugins(opts.roots).candidates.filter((c) => ids.includes(c.id));
+      for (const c of found) await examine(c);
+      const present = [...known.values()].flatMap((k) => (k.plugin && !k.refusal ? [nodeOf(k.plugin)] : []));
+      const { order, problems } = checkPresent(present);
+      for (const id of ids) {
+        const k = known.get(id);
+        const problem = problems.get(id);
+        if (k && problem && !k.refusal) {
+          k.refusal = dependencyRefusal(problem);
+          log(id, 'warn', `Refusé : ${refusalMessage(id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
+        }
+        const p = k?.plugin;
+        if (wasActive.has(id) && p && declaredKinds(p.manifest).some((kind) => RESTART_KINDS.includes(kind))) restartPending.add(id);
+      }
+      for (const id of order) if (state.get(id).enabled && !known.get(id)?.refusal) await activate(id);
+      return ids.flatMap((id) => {
+        const k = known.get(id);
+        return k ? [info(k)] : [];
+      });
     },
 
     /** Contributions actives d'une nature (registre). */

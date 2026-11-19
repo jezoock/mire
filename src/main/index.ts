@@ -70,6 +70,10 @@ import {
   pluginStorages,
   safeStorageBox,
 } from './plugins/index.ts';
+import { createInstaller } from './repos/installer.ts';
+import { createRepoClient } from './repos/client.ts';
+import { OFFICIAL_REPOSITORY } from './repos/official.ts';
+import { createRepositories } from './repos/repositories.ts';
 import * as http from './net/http.ts';
 import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers } from './platform/index.ts';
@@ -292,6 +296,17 @@ function start(pending: PendingFiles): Running {
     onTaggersChange: () => tags.setContributors(contributors()),
     refresh: (keys) => tags.refresh(keys),
   });
+  // Client des dépôts (P3-07) : index du dépôt officiel (clé intégrée, `repos/official.ts`) gardé en cache pour le
+  // hors ligne ; aucun accès réseau tant que l'interface ne demande pas de mise à jour (`reposRefresh`, Centre P4-18).
+  const repos = createRepoClient({
+    repositories: createRepositories({ cacheDir: files.repoCache, repositories: () => [OFFICIAL_REPOSITORY] }),
+    installer: createInstaller({ pluginsDir: files.plugins }),
+    plugins,
+    appVersion: app.getVersion(),
+    locale: () => i18n.language(),
+    translate: t,
+    onProgress: (p) => toUi('plugins:progress', p),
+  });
   pluginTaggers = plugins.taggerContributors;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
   plugins.onContributionsChange((kinds) => {
@@ -370,6 +385,7 @@ function start(pending: PendingFiles): Running {
     search,
     fileManager,
     plugins,
+    repos,
     access,
     window,
     pending,

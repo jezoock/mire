@@ -52,6 +52,8 @@ export interface DataPaths {
   pluginLogs: string;
   /** Données des plugins (`ctx.storage`, P3-04) : un dossier par plugin. */
   pluginData: string;
+  /** Index des dépôts de plugins gardés pour le hors ligne (`<dépôt>/index.json`, P3-07). */
+  repoCache: string;
 }
 
 export function dataPaths(root: string): DataPaths {
@@ -87,5 +89,6 @@ export function dataPaths(root: string): DataPaths {
     pluginState: at('plugins', 'state.json'),
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
+    repoCache: at('repos'),
   };
 }

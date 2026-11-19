@@ -5,8 +5,9 @@
  *   restent sous leur racine ;
  * - manifeste vérifié par `validatePluginDir` du SDK, identifiant et version d'accord avec le dossier,
  *   compatibilité `engines.mire`, niveau vérifié d'après ce que le dossier contient (jamais supposé) ;
- * - un plugin `privileged` n'est accepté que parmi les plugins inclus, tant que la signature et la confiance des
- *   dépôts n'existent pas (P3-07, P3-08) ;
+ * - un plugin installé note le dépôt qui l'a installé (`origin.json`, P3-07) ; venu du dépôt officiel (index signé
+ *   par la clé intégrée à Mire), il peut porter le préfixe `mire.` et être `privileged` comme un plugin inclus ; les
+ *   dépôts tiers et leur accord par plugin viendront avec P3-08 ;
  * - textes (`i18n`) et fichiers des contributions de données lus ici, par le cœur.
  */
 import fs from 'node:fs';
@@ -53,6 +54,8 @@ export interface PluginCandidate {
   origin: PluginOrigin;
   /** Chemin réel du dossier (liens résolus). */
   dir: string;
+  /** Plugin installé : dépôt qui l'a installé (`origin.json`), ou `null` (installé à la main, ou inclus). */
+  repository: string | null;
 }
 
 /** Plugin vérifié : manifeste, textes, données des contributions de données. */
@@ -61,6 +64,7 @@ export interface CheckedPlugin {
   version: string;
   origin: PluginOrigin;
   dir: string;
+  repository: string | null;
   manifest: PluginManifest;
   /** Textes du plugin par langue de Mire (`fr`, `en`) : arbre `messages` de son catalogue. */
   texts: Record<string, Messages>;
@@ -115,6 +119,22 @@ function resolveUnder(realRoot: string, dir: string): string | null {
   return real && inside(realRoot, real) && fs.statSync(real).isDirectory() ? real : null;
 }
 
+/** Identifiant du dépôt officiel (`repos/official.ts`). */
+export const OFFICIAL_REPOSITORY_ID = 'official';
+
+/** Dépôt noté dans `<id>/origin.json` pour cette version, ou `null`. */
+function repositoryOf(root: string, id: string, version: string): string | null {
+  try {
+    const o = JSON.parse(fs.readFileSync(path.join(root, id, 'origin.json'), 'utf8')) as { repository?: unknown; version?: unknown };
+    return typeof o?.repository === 'string' && o.version === version ? o.repository : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Plugin inclus, ou installé depuis le dépôt officiel : préfixe `mire.` et code sensible permis. */
+const trusted = (c: PluginCandidate): boolean => c.origin === 'bundled' || c.repository === OFFICIAL_REPOSITORY_ID;
+
 /** Plugins inclus et installés. Pour un même identifiant installé en plusieurs versions, la plus haute. */
 export function discoverPlugins(roots: DiscoveryRoots): Discovery {
   const found = new Map<string, PluginCandidate>();
@@ -133,7 +153,7 @@ export function discoverPlugins(roots: DiscoveryRoots): Discovery {
       if (!PLUGIN_ID_RE.test(name)) continue;
       const dir = resolveUnder(bundledRoot, where);
       if (!dir) skipped.push({ where, refusal: refusal('outside') });
-      else consider({ id: name, version: null, origin: 'bundled', dir });
+      else consider({ id: name, version: null, origin: 'bundled', dir, repository: null });
     }
   }
 
@@ -149,7 +169,7 @@ export function discoverPlugins(roots: DiscoveryRoots): Discovery {
       const where = path.join(installedRoot, name, versions[0]);
       const dir = resolveUnder(installedRoot, where);
       if (!dir) skipped.push({ where, refusal: refusal('outside') });
-      else consider({ id: name, version: versions[0], origin: 'installed', dir });
+      else consider({ id: name, version: versions[0], origin: 'installed', dir, repository: repositoryOf(installedRoot, name, versions[0]) });
     }
   }
   return { candidates: [...found.values()].sort((a, b) => a.id.localeCompare(b.id)), skipped };
@@ -242,7 +262,7 @@ export async function checkPlugin(c: PluginCandidate, { appVersion, languages }:
   if (!listed.ok) return { ok: false, refusal: listed.refusal };
   if (!listed.files.includes(MANIFEST_FILE)) return fail('invalid', { details: `${MANIFEST_FILE} absent` });
 
-  const result = await validatePluginDir(c.dir, { official: c.origin === 'bundled' });
+  const result = await validatePluginDir(c.dir, { official: trusted(c) });
   if (!result.ok)
     return fail('invalid', {
       details: result.issues
@@ -255,7 +275,7 @@ export async function checkPlugin(c: PluginCandidate, { appVersion, languages }:
   if (!satisfies(appVersion, m.engines.mire)) return fail('engine', { range: m.engines.mire, version: appVersion });
   const level = levelMatches(m, listed.files);
   if (level) return { ok: false, refusal: level };
-  if (m.level === 'privileged' && c.origin !== 'bundled') return fail('privileged');
+  if (m.level === 'privileged' && !trusted(c)) return fail('privileged');
 
   let texts: Record<string, Messages>;
   try {
@@ -269,7 +289,7 @@ export async function checkPlugin(c: PluginCandidate, { appVersion, languages }:
   } catch (err) {
     return fail('data', { details: (err as Error).message });
   }
-  return { ok: true, plugin: { id: m.id, version: m.version, origin: c.origin, dir: c.dir, manifest: m, texts, data } };
+  return { ok: true, plugin: { id: m.id, version: m.version, origin: c.origin, dir: c.dir, repository: c.repository, manifest: m, texts, data } };
 }
 
 /** Natures déclarées par le manifeste, dans l'ordre de la liste fermée. */

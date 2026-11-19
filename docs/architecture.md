@@ -71,6 +71,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `i18n/` | Langue de l'interface (`index.ts`), traduction des textes du processus principal (`current.ts`, fonction `t`), langue des fiches (`metadata.ts`). |
 | `fs/` | Parcours générique d'une arborescence de dossiers (`walk.ts`). |
 | `files/` | Gestion des fichiers (P2-10) : renommer, déplacer, mettre à la corbeille sous les dossiers locaux de la configuration (`service.ts`, `guard.ts`, `roots.ts`) ; le catalogue suit (`follow.ts`). |
+| `repos/` | Client des dépôts de plugins (P3-07) : index signé et clé officielle (`official.ts`), téléchargement, lecture des `.tgz`, cache hors ligne, installation en transaction. Voir « Dépôts de plugins ». |
 | `plugins/` | Hôte de plugins (P3-03) : découverte et vérification, état, journal par plugin, registre des contributions, tags automatiques des plugins, canal et runtime d'un plugin, hôte isolé (page et Worker dans `host/`, construits à part dans `dist/plugin-host/`), plugins sensibles dans ce processus, protocole `mire-plugin://`. Voir « Hôte de plugins ». |
 | `lib/` | Petites fonctions pures : chemin sous un dossier autorisé (`paths.ts`), arguments d'une ligne de commande (`args.ts`), texte (`text.ts`), entrées des vues web (`web-entry.ts`). |
 
@@ -248,9 +249,9 @@ ni dossier, ni fichier, ni hôte.
   avec le dossier, `engines.mire` (`satisfies` de `semver.ts`, écrit à la main : `^`, `~`, comparateurs, `1.x`, `*`,
   `||`, pré-publications à la manière de npm) contre `app.getVersion()`. Le niveau est vérifié d'après le contenu :
   un plugin `data` ne contient aucun fichier de code (`.js`, `.mjs`, `.cjs`, `.wasm`, `.node`) ; un plugin `code` ou
-  `privileged` a au moins une contribution de code. Un plugin `privileged` installé est refusé : seuls les plugins
-  inclus tournent dans le processus principal tant que la signature et la confiance des dépôts n'existent pas
-  (P3-07, P3-08). Textes (`i18n`, langues de Mire) et fichiers JSON des contributions de données (2 Mo au plus)
+  `privileged` a au moins une contribution de code. Un plugin installé depuis le dépôt officiel (`origin.json`, P3-07)
+  est traité comme un plugin inclus (`official`, `privileged` permis) ; tout autre plugin `privileged` installé est
+  refusé (dépôts tiers et accord par plugin : P3-08). Textes (`i18n`, langues de Mire) et fichiers JSON des contributions de données (2 Mo au plus)
   sont lus par le cœur. Un plugin refusé reste dans la liste, avec la raison (`plugins.refused.<code>`).
 - **Exécution** : `data`, rien ne s'exécute ; `code`, un Worker par plugin dans l'hôte isolé (`host.ts`), démarré à la
   première demande et arrêté quand il n'a plus de plugin ; `privileged`, le runtime dans le processus principal
@@ -311,6 +312,32 @@ ni dossier, ni fichier, ni hôte.
   des plugins actifs (identifiant `<plugin>/<contribution>` en minuscules, nom du plugin, natures). Ils rejoignent
   l'ordre des fournisseurs (`catalog.metadataProviders`) : après ceux du cœur, sauf ordre choisi ; leurs fiches
   contribuent aux infos des éléments dans cet ordre.
+
+## Dépôts de plugins
+
+`src/main/repos/` (P3-07). Format de l'index et chaîne de publication : `docs/index-format.md` de `jezoock/mire-addons`,
+dont `index-file.ts` et `tar.ts` reproduisent la vérification de référence (mêmes vecteurs dans `test/repos/`).
+
+- **Dépôts configurés** : pour l'instant le seul dépôt officiel (`official.ts`), dont la clé publique ed25519 est
+  intégrée à Mire à cet endroit seulement (empreinte vérifiée par `test/repos/index-file.test.ts`). Les dépôts tiers
+  viendront avec P3-08, par le même code.
+- **Index** (`repositories.ts`) : téléchargé à la demande (`reposRefresh` ; rien au démarrage), `https:` seulement,
+  redirections comprises, 8 Mo et 30 s au plus ; signature vérifiée avec la clé du dépôt, puis la structure (préfixe
+  `mire.` refusé hors du dépôt officiel). Gardé tel quel dans `userData/repos/<dépôt>/index.json` et vérifié de nouveau
+  à chaque lecture ; un index plus ancien que celui du cache est refusé. Sans réseau, le cache sert.
+- **Installation** (`installer.ts`, `client.ts`) : versions choisies par `resolveInstall` (P3-05) parmi celles
+  compatibles avec Mire ; chaque paquet est téléchargé (taille de l'index, 100 Mo et 5 min au plus), sa taille et son
+  sha256 comparés à l'index avant d'ouvrir l'archive ; l'archive n'est faite que de fichiers ordinaires aux chemins
+  relatifs sûrs ; le manifeste est validé par le SDK et identique à l'index (identifiant, version, niveau,
+  permissions, dépendances). Les fichiers sont écrits dans `userData/plugins/<id>/.staging-…/`, puis mis en place par
+  renommage quand TOUS les paquets de l'opération sont prêts ; l'hôte reprend les plugins (`reload`). Si l'un est
+  refusé, toute l'opération revient en arrière (version précédente remise). Une fois confirmée, les anciennes
+  versions sont effacées. Aucun code du paquet ne s'exécute pendant l'installation.
+- **Origine** : `userData/plugins/<id>/origin.json` (`{ repository, version, sha256, installedAt }`), lu par la
+  découverte et exposé dans `PluginSummary.repository`.
+- **API** : `reposList`, `reposRefresh`, `reposPlugins` (disponibles, version installée, mise à jour, niveau,
+  permissions, dépendances), `pluginsInstall`, `pluginsUpdate`, `pluginsUninstall`, événement `plugins:progress`.
+  Une opération à la fois. Erreurs : code stable et message `repos.errors.<code>`.
 
 ## Contrat IPC
 
@@ -646,7 +673,9 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `adblock/moteur.bin` | Moteur compilé du bloqueur de publicités | `src/main/web/adblock.ts` |
 | `adblock/listes.json` | Date de mise à jour et état des listes de filtres | `src/main/web/adblock.ts`, stockage JSON |
 | `cache/roms/` | Jeux en ligne téléchargés pour être lancés | jeux (`src/main/games/`) |
-| `plugins/<id>/<version>/` | Plugins installés (posés à la main pour l'instant ; installation par le Centre : P3-07) | — |
+| `plugins/<id>/<version>/` | Plugins installés (depuis un dépôt, P3-07, ou posés à la main) | client des dépôts (`src/main/repos/`) |
+| `plugins/<id>/origin.json` | Dépôt qui a installé le plugin : `{ repository, version, sha256, installedAt }` | `src/main/repos/installer.ts` |
+| `repos/<dépôt>/index.json` | Dernier index vérifié de chaque dépôt (octets reçus), pour le hors ligne | `src/main/repos/repositories.ts` |
 | `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver, dossiers accordés, version d'un plugin inclus installée (`{ version, plugins: { <id>: { enabled, fault?, folders?, bundled? } } }`) ; absent tant que rien n'a changé et qu'aucun plugin n'est inclus | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
 | `plugin-data/<id>/storage.json` | Stockage d'un plugin (`ctx.storage`) : `{ version, values }` | `src/main/plugins/plugin-storage.ts`, stockage JSON (écriture différée) |
 | `plugins/logs/<id>.log` | Journal de chaque plugin (son `ctx.log`, refus, pannes), 256 Ko au plus puis `<id>.log.1` | `src/main/plugins/journal.ts` |

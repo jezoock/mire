@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "repository": {
+    "name": {
+      "en": "Official Mire plugins",
+      "fr": "Plugins officiels de Mire"
+    },
+    "source": "https://github.com/jezoock/mire-addons",
+    "index": "https://github.com/jezoock/mire-addons/releases/download/index/index.json"
+  },
+  "generated": "2026-11-19T17:10:50.070Z",
+  "plugins": [
+    {
+      "id": "mire.exemple.donnees",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "engines": {
+            "mire": "^1.0.0"
+          },
+          "level": "data",
+          "contributes": ["packs"],
+          "permissions": {},
+          "dependencies": {},
+          "name": {
+            "en": "Example plugin",
+            "fr": "Plugin d'exemple"
+          },
+          "description": {
+            "en": "A data-only plugin that shows how plugins are published. It adds an empty pack.",
+            "fr": "Un plugin de données seules qui montre comment les plugins sont publiés. Il ajoute un pack vide."
+          },
+          "package": {
+            "url": "https://github.com/jezoock/mire-addons/releases/download/mire.exemple.donnees%401.0.0/mire.exemple.donnees-1.0.0.tgz",
+            "sha256": "56655efae10b3e1dc38a75b17a067188e672ef4e8a865c3411920390339d574b",
+            "size": 552
+          }
+        }
+      ]
+    }
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "keyId": "8aaa3d5816218d1ca8cbcb495175723a205f92b6e0727f71c62e9bb3e3396cd5",
+    "value": "tP5z6mPGUmigNCyB0A80VEgFeK+1PUaUHk/9DnehDbxcwInwNGRiomcbUtt9RJS05u+5mRkqTA4rlb3kiDvbDg=="
+  }
+}

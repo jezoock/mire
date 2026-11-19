@@ -805,7 +805,7 @@
         "mismatch": "The folder of “{name}” does not match its contents ({details}).",
         "engine": "“{name}” is made for another version of Mire ({range}); you have {version}.",
         "level": "“{name}” does not contain what its security level says.",
-        "privileged": "“{name}” asks for extended access to your computer: for now, only plugins that come with Mire may have it.",
+        "privileged": "“{name}” asks for extended access to your computer: for now, only plugins that come with Mire or from the official repository may have it.",
         "outside": "“{name}” contains a link to a file outside its folder.",
         "data": "A file of “{name}” is unreadable or too large: {details}",
         "texts": "The texts of “{name}” are unreadable: {details}",
@@ -822,6 +822,25 @@
       },
       "settings": {
         "refused": "{name} does not accept this value."
+      }
+    },
+    "repos": {
+      "errors": {
+        "url": "The repository address for “{name}” is not safe (https only): nothing was installed.",
+        "network": "The repository could not be reached for “{name}”. Check your connection and try again.",
+        "too-big": "The file received for “{name}” is too big: nothing was installed.",
+        "signature": "The repository’s plugin list is not signed with the right key: Mire ignored it for safety.",
+        "format": "The repository’s plugin list cannot be read: Mire ignored it.",
+        "rollback": "The plugin list received is older than the one Mire already has: Mire keeps the newer one.",
+        "checksum": "The file received for “{name}” does not match the published one: nothing was installed, for safety.",
+        "archive": "The file for “{name}” contains forbidden items: nothing was installed, for safety.",
+        "manifest": "The content of “{name}” does not match what the repository announces: nothing was installed.",
+        "unknown": "“{name}” is not offered by the repositories, or not in this version.",
+        "engine": "“{name}” has no version made for this version of Mire.",
+        "dependency": "“{name}” needs “{dependency}”, which cannot be installed in a suitable version.",
+        "refused": "“{name}” was installed but could not be loaded; the previous version was put back. {details}",
+        "busy": "An installation is already in progress. Wait for it to finish.",
+        "disk": "“{name}” could not be written to disk; the previous version was kept."
       }
     },
     "shell": {
