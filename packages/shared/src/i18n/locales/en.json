@@ -216,9 +216,18 @@
         "notInConsoleFolders": "This game isn't in the console's folders.",
         "noRomFolder": "No game folder set for {console}.",
         "invalidLink": "Invalid link or file.",
-        "bookmarkNotFound": "Bookmark not found."
+        "bookmarkNotFound": "Bookmark not found.",
+        "deleteNotGame": "This item isn't a game: it wasn't deleted."
       },
-      "romProgress": "{name} (file {index} of {total})"
+      "romProgress": "{name} (file {index} of {total})",
+      "consoles": {
+        "errors": {
+          "name": "Give the console a name.",
+          "path": "Choose the emulator program.",
+          "gone": "This console no longer exists.",
+          "emulator": "This emulator doesn't handle this console."
+        }
+      }
     },
     "web": {
       "romSites": "Games: {console}",
