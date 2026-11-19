@@ -109,3 +109,14 @@ export interface DeferredFocus<T> {
 export function deferredFocusStands<T>(req: DeferredFocus<T>, latest: number, now: T | null, body: T | null): boolean {
   return req.ticket === latest && (now === req.from || now === body || now === null);
 }
+
+/**
+ * Focus demandé au contenu avant qu'il soit chargé (`S.pendingFocus` : accueil, télévision), à donner une fois le
+ * contenu rendu. Comme pour `deferredFocusStands`, la demande cède si le focus a été placé ailleurs entre-temps (souris,
+ * script) : elle ne s'applique que si le focus est resté où il était au moment de la demande (`from`). Un focus perdu
+ * (`body`, aucun élément, élément retiré par le nouvel affichage) va au contenu, demandé ou non.
+ */
+export function pendingFocusDue<T>(pending: boolean, from: T | null, now: T | null, body: T | null, connected: boolean): boolean {
+  if (now === null || now === body || !connected) return true;
+  return pending && now === from;
+}
