@@ -51,6 +51,9 @@ export function catalogHandlers(ctx: MainContext) {
     pagesSave: (page) => ctx.pages.save(page),
     pagesRemove: (id) => ctx.pages.remove(id),
     catalogPage: (pageId, path, cursor) => (listIdOfPage(pageId) === null ? ctx.pages : ctx.lists).page(pageId, path, cursor),
+    // Parcours par source et par dossier (explorateur, P4-08).
+    catalogSources: () => ctx.folders.sources(),
+    catalogFolder: (source, path, cursor) => ctx.folders.folder(source, path, cursor),
     // Listes (P2-08).
     listsList: () => ctx.lists.list(),
     listsGet: (id) => ctx.lists.get(id),

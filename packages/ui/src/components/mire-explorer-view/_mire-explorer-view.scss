@@ -40,6 +40,8 @@
 
   &__rows {
     display: grid;
+    // Une ligne ne dépasse jamais la colonne : un nom trop long se termine par « … » (nom d'une source).
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
 

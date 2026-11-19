@@ -8,6 +8,7 @@ import type { Catalog } from '../catalog/index.ts';
 import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { Pages } from '../catalog/pages/index.ts';
 import type { Lists } from '../catalog/lists/index.ts';
+import type { Folders } from '../catalog/folders.ts';
 import type { Search } from '../catalog/search/index.ts';
 import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
@@ -49,6 +50,8 @@ export interface MainContext {
   readonly pages: Pages;
   /** Listes faites à la main (lists.json). */
   readonly lists: Lists;
+  /** Parcours par source et par dossier (explorateur). */
+  readonly folders: Folders;
   /** Recherche dans le catalogue (textes préparés à la première recherche). */
   readonly search: Search;
   /** Renommer, déplacer, supprimer sous les dossiers locaux de la configuration (P2-10). */

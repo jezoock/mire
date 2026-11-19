@@ -7,6 +7,7 @@ import type { Catalog } from '../catalog/index.ts';
 import type { TagEngine } from '../catalog/tags/engine.ts';
 import type { Pages } from '../catalog/pages/index.ts';
 import type { Lists } from '../catalog/lists/index.ts';
+import type { Folders } from '../catalog/folders.ts';
 import type { Search } from '../catalog/search/index.ts';
 import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
@@ -34,6 +35,7 @@ export interface MainServices {
   tags: TagEngine;
   pages: Pages;
   lists: Lists;
+  folders: Folders;
   search: Search;
   fileManager: FilesService;
   plugins: MainContext['plugins'];
@@ -66,6 +68,7 @@ export function mainContext(s: MainServices): MainContext {
     tags: s.tags,
     pages: s.pages,
     lists: s.lists,
+    folders: s.folders,
     search: s.search,
     fileManager: s.fileManager,
     plugins: s.plugins,

@@ -1229,8 +1229,25 @@
       "sections": {
         "pages": "Pages",
         "lists": "Lists",
-        "tags": "Tags"
+        "tags": "Tags",
+        "sources": "Sources",
+        "folders": "Folders"
       },
+      "sourceKinds": {
+        "src-local": "Folder",
+        "src-smb": "Network share",
+        "src-http": "Web server",
+        "src-m3u": "M3U playlist",
+        "tv-m3u": "TV",
+        "tv-web": "TV on the web",
+        "jeux-roms": "Console games",
+        "jeux-pc": "PC games",
+        "jeux-pc-manuel": "PC games added by hand",
+        "jeux-marque": "Games to download",
+        "web-perso": "Added sites",
+        "web-bm": "Bookmarks"
+      },
+      "sourceLabel": "{kind} · {place}",
       "columns": "Explorer columns",
       "empty": "Nothing here yet.",
       "unavailable": "Unavailable",

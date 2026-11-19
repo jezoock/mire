@@ -149,7 +149,7 @@ const search = createSearch({
   },
 });
 
-// Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags), puis l'aperçu d'un élément.
+// Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags, sources, dossiers), puis l'aperçu d'un élément.
 const explorer = createExplorer({
   t,
   plural: (key, count) => {
@@ -161,8 +161,10 @@ const explorer = createExplorer({
   tags: () => api.tagsList(),
   level: (id, path, cursor) => api.catalogPage(id, path, cursor),
   element: (key) => api.catalogElement(key),
+  sources: () => api.catalogSources(),
+  folder: (source, path, cursor) => api.catalogFolder(source, path, cursor),
   onLanguageChange: (listener) => i18n.onChange(listener),
-  onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); },
+  onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); api.onFoldersChange(listener); },
   shown: () => S.section === EXPLORER_VIEW,
   // Colonnes redessinées : le focus, s'il était sur une ligne retirée, revient à la première colonne.
   onRendered: () => {
