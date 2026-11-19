@@ -23,9 +23,25 @@ import type { ExplorerState } from '../../src/renderer/explorer/index.ts';
 import { fakeCatalog } from '../catalog/fake-catalog.ts';
 
 const N = 20_000;
-// Le tri par nom d'un niveau de 12 400 éléments (première ouverture, avant le cache) prend à lui seul ~70 ms.
+// Seuil d'une étape sur une machine rapide.
 const LIMIT = 100;
+// Seuil d'une étape en multiple de l'étalonnage (ci-dessous) : sur une machine lente ou chargée (CI), le seuil grandit
+// avec elle. Un vrai ralentissement (algorithme qui dégénère, cache perdu) dépasse quand même ce multiple.
+const RATIO = 3;
 const RUNS = 5;
+
+/**
+ * Étalonnage : le travail qui domine l'étape la plus lente (première ouverture d'un tag de 12 400 éléments), c'est-à-dire
+ * le tri de 12 400 noms avec `Intl.Collator`. Chronométré à chaque parcours, il mesure la vitesse de la machine au même
+ * moment que les étapes.
+ */
+function calibrate(): number {
+  const names = Array.from({ length: 12_400 }, (_, i) => `Série ${(i * 7919) % 97} S${i % 7}E${i % 24} (${i})`);
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  const start = performance.now();
+  names.sort((a, b) => collator.compare(a, b));
+  return performance.now() - start;
+}
 
 const median = (values: number[]): number => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] as number;
 
@@ -36,7 +52,7 @@ async function time(fn: () => Promise<unknown>): Promise<number> {
 }
 
 describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
-  it('chaque étape du parcours en moins de 100 ms', async (t) => {
+  it('chaque étape du parcours en moins de 100 ms, ou de 3 fois l’étalonnage sur une machine lente', async (t) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-explorer-bench-'));
     const { t: tr } = builtinTranslator('fr');
     const catalog = createCatalog({ dir: path.join(dir, 'sources'), debounceMs: 0, onIgnored: () => {} });
@@ -137,7 +153,14 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
     }
 
     const runs = [];
-    for (let i = 0; i < RUNS; i++) runs.push((await route()).times);
+    const calibrations: number[] = [];
+    for (let i = 0; i < RUNS; i++) {
+      calibrations.push(calibrate());
+      runs.push((await route()).times);
+    }
+    const unit = median(calibrations);
+    const limit = Math.max(LIMIT, RATIO * unit);
+    t.diagnostic(`étalonnage (tri de 12 400 noms) : ${unit.toFixed(1)} ms ; seuil d'une étape : ${limit.toFixed(0)} ms`);
     let worst = 0;
     for (const label of runs[0]?.keys() ?? []) {
       const ms = median(runs.map((r) => r.get(label) as number));
@@ -145,7 +168,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
       // Le total des 39 tranches n'est pas une étape : il n'entre pas dans le seuil.
       if (!label.includes('en tout')) worst = Math.max(worst, ms);
     }
-    assert.ok(worst < LIMIT, `étape trop lente : ${worst.toFixed(1)} ms`);
+    assert.ok(worst < limit, `étape trop lente : ${worst.toFixed(1)} ms (seuil ${limit.toFixed(0)} ms)`);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
