@@ -12,7 +12,7 @@ import { fold, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
-import { focusSelectorOf, isShown } from './nav/spatial.ts';
+import { focusSelectorOf } from './nav/spatial.ts';
 import { focusFirst } from './nav/focus.ts';
 import { initKeyboard } from './nav/keyboard.ts';
 import { initGamepad, startGamepad } from './nav/gamepad.ts';
@@ -31,6 +31,7 @@ import { CENTRE_VIEW, EXPLORER_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, SETTINGS
 import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
 import { createSearch } from './search/index.ts';
+import { createWeb, webHome as webHomeOf } from './web/index.ts';
 import { createExplorer } from './explorer/index.ts';
 import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
@@ -190,8 +191,12 @@ const settings = createSettings({
     adblockStatus: S.adblock ? adblockStatusText(S.adblock, t, (d) => i18n.engine?.formatDate(d) ?? d.toLocaleDateString()) : '',
     drmStatus: drmText,
     configPath: S.configPath,
+    sourceStatus: S.sourceStatus,
+    gameSourceStatus: S.gameSourceStatus,
+    scanning: !!S.scanning,
   }),
   plugins: () => api.pluginsSettings(),
+  providers: () => api.pluginsMetadataProviders(),
   onChange: (key, value) => C.settings.setValue({ key, value }).catch((err) => toast(err.message, { duration: 6000 })),
   onOrder: (kind, keys) => C.settings.setOrder({ kind, keys }).catch((err) => toast(err.message, { duration: 6000 })),
   onLanguageChange: (listener) => i18n.onChange(listener),
@@ -220,6 +225,7 @@ const pages = createPages({
   // Niveau rendu : titre de l'en-tête ; le focus, s'il était sur une carte retirée, va au premier élément du contenu.
   onLoaded: () => {
     if (S.section !== PAGE_VIEW) return;
+    loadChannelsForPage();
     render();
     const a = document.activeElement;
     if (!a || a === document.body || !a.isConnected) focusFirst();
@@ -245,6 +251,33 @@ const themeWatch = createThemeWatch({
 });
 pages.engine.onLoad((load) => themeWatch.load(load));
 api.onRescue((req) => rescue.request(req));
+
+// Vue web (P4-16) : barre du site et place de la vue native, d'après l'état publié par le processus principal.
+const web = createWeb({
+  t,
+  icons: { back: ICON.chevL, forward: ICON.chevR, reload: ICON.reload, search: ICON.search, shield: ICON.shield, shieldOff: ICON.shieldOff, star: ICON.star, fullscreen: ICON.fullscreen, globe: ICON.globe, close: ICON.close },
+  adblock: () => !!S.adblock?.enabled,
+  menu() {
+    if (!document.body.classList.contains('menu-auto') || !document.body.classList.contains('menu-open')) return null;
+    const r = $('#rail')?.getBoundingClientRect();
+    return r ? { box: { x: r.left, y: r.top, width: r.width, height: r.height }, side: menuSettings().position } : null;
+  },
+  shouldShow: () => webShouldShow(),
+  show: (id, bounds, focus) => api.webShow(id, bounds, focus),
+  bounds: (bounds) => api.webBounds(bounds),
+  hide: () => api.webHide(),
+  onSite: (id, site) => callAction('mire-page', 'openRomSites', { consoleId: String(id).slice(4), site }),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+});
+
+// Le focus arrive dans la barre (clic, flèches) : Mire a le clavier, la manette pilote la barre et non plus le site.
+web.host.addEventListener('focusin', () => { S.webFocused = false; });
+
+// La page Télévision affiche les chaînes du catalogue : elles y entrent quand leur liste est lue.
+function loadChannelsForPage() {
+  if (shell.router.current().target !== 'tv' || S.channels || S.tvWeb || S.tvLoading || S.tvError) return;
+  loadChannels();
+}
 
 function applyMenu() {
   // La place du menu voulue par le thème des pages l'emporte sur celle des réglages.
@@ -353,7 +386,7 @@ function back() {
   if (S.section === 'games' && S.romsOf != null) { closeRoms(); return; }
   if (S.section === PAGE_VIEW && pages.back()) return;
   if (S.section === EXPLORER_VIEW && explorer.back()) return;
-  if (S.section === 'web') { go(webHome(), { focus: 'content' }); return; }
+  if (S.section === 'web') { openWebHome(webHome()); return; }
   if (S.section !== HOME_VIEW) go(HOME_VIEW, { focus: 'content' });
 }
 
@@ -451,11 +484,11 @@ function render({ resetScroll = false } = {}) {
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, [DEMO_SECTION]: viewDemo };
+  const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, tv: viewTv, games: viewGames, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
   // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
   // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
-  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
+  const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
   // L'explorateur a au-dessus de lui le bandeau du mode secours (P4-10), vide hors du mode secours.
   const hostedAll = sec === EXPLORER_VIEW ? [rescue.host, hosted] : [hosted];
   if (hosted) { if (viewEl.childElementCount !== hostedAll.length || hostedAll.some((el, i) => viewEl.children[i] !== el)) viewEl.replaceChildren(...hostedAll); }
@@ -476,9 +509,9 @@ function render({ resetScroll = false } = {}) {
   if (sec === 'music') markPlaying();
   if (sec === SETTINGS_VIEW) { fillDrmStatus(); fillAdblock(); }
   if (sec === 'web') {
+    web.set(S.webActive, S.webStates[S.webActive] ?? null);
     requestAnimationFrame(() => {
-      attachWebSlot();
-      showWebInSlot(S.webFocusOnShow);
+      syncWeb(S.webFocusOnShow);
       S.webFocusOnShow = false;
     });
   }
@@ -988,6 +1021,7 @@ function sourcesHtml(kinds = ['video', 'audio', 'image', 'game']) {
 }
 function renderSources() {
   for (const box of $$('.sources-box')) box.innerHTML = sourcesHtml(box.dataset.kinds.split(','));
+  if (S.section === SETTINGS_VIEW) settings.refresh();
 }
 
 async function addSource(kind, location) {
@@ -1107,6 +1141,7 @@ async function scan() {
   if (S.scanning) return;
   S.scanning = true;
   if (['home', 'videos', 'music', 'images'].includes(S.section)) render();
+  if (S.section === SETTINGS_VIEW) settings.refresh();
   let items = [];
   try {
     const [lib, games] = await Promise.all([api.scanLibrary(), api.scanGameSources()]);
@@ -1123,7 +1158,7 @@ async function scan() {
   S.scanning = false;
   S.scanned = true;
   if (['home', 'videos', 'music', 'images', 'games'].includes(S.section)) render();
-  if (S.section === 'settings') renderSources();
+  renderSources();
   if (S.config.scrape?.auto !== false) startScrape(['videos', 'music', 'games'], { quiet: true });
 }
 
@@ -1275,10 +1310,10 @@ async function openWeb(id, url) {
   const w = S.config.web.find((x) => x.id === id);
   if (!w) return;
   const firstTime = !S.webSessions.some((x) => x.id === id);
-  if (firstTime) toast(`Ouverture de ${w.name}…`, { duration: 2500 });
+  if (firstTime) toast(t('webView.opening', { name: w.name }), { duration: 2500 });
   const r = await api.webOpen(id, url);
-  if (!r?.ok) { toast(r?.error || 'Ouverture impossible.', { duration: 7000 }); return; }
-  if (!r.integrated) { toast(`${w.name} s’ouvre dans le navigateur`); return; }
+  if (!r?.ok) { toast(r?.error || t('webView.openFailed'), { duration: 7000 }); return; }
+  if (!r.integrated) { toast(t('webView.inBrowser', { name: w.name })); return; }
   if (!w.background) audio.pause();
   S.webActive = id;
   if (r.state) S.webStates[id] = r.state;
@@ -1290,7 +1325,7 @@ async function openWeb(id, url) {
 async function openTvWeb(web) {
   const id = `tv:${web.id}`;
   const res = await api.webOpen(id);
-  if (!res?.ok) { toast(res?.error || 'Ouverture impossible.', { duration: 7000 }); return; }
+  if (!res?.ok) { toast(res?.error || t('webView.openFailed'), { duration: 7000 }); return; }
   audio.pause();
   S.webActive = id;
   if (res.state) S.webStates[id] = res.state;
@@ -1336,19 +1371,14 @@ async function openRomBrowser(i, { site, url } = {}) {
   if (S.section === 'web') render(); else go('web');
 }
 
-function pickVariant(c) {
-  const pref = (S.config.tv.services.find((t) => t.id === S.config.tv.active)?.quality) || 'hd';
-  const order = { hd: ['hd', 'sd', 'other', 'ld'], sd: ['sd', 'other', 'hd', 'ld'], ld: ['ld', 'sd', 'other', 'hd'] }[pref] || ['hd', 'sd', 'other', 'ld'];
-  return [...c.variants].sort((a, b) => order.indexOf(a.q) - order.indexOf(b.q))[0];
-}
-
+// Une chaîne est désignée par sa clé : le service de télévision du processus principal choisit sa variante (qualité
+// préférée) et ouvre le lecteur externe (P4-16).
 async function playChannel(c) {
-  if (!c) return;
-  const v = pickVariant(c);
-  toast(`Ouverture de ${c.name}…`, { duration: 2500 });
+  if (!c?.key) return;
+  toast(t('webView.channelOpening', { name: c.name }), { duration: 2500 });
   audio.pause();
-  const r = await api.playExternal(v.url, c.number != null ? `${c.number}. ${c.name}` : c.name, 0);
-  if (!r.ok) toast(r.error, { duration: 7000 });
+  const r = await api.tvWatch(c.key);
+  if (!r?.ok) toast(r?.error || t('webView.openFailed'), { duration: 7000 });
 }
 
 async function loadChannels() {
@@ -1477,135 +1507,43 @@ function renderRailSessions() {
 
 // Page d'où vient une vue web : Jeux pour les sites de jeux, Télévision pour les portails TV, sinon Streaming.
 function webHome(id = S.webActive) {
-  const s = String(id || '');
-  if (s.startsWith('rom:')) return 'games';
-  if (s.startsWith('tv:')) return 'tv';
-  return 'streaming';
+  return webHomeOf(id);
 }
 
-function viewWeb() {
-  const st = S.webStates[S.webActive] || {};
-  const rom = String(S.webActive || '').startsWith('rom:') ? st.rom : null;
-  const site = rom ? rom.sites[rom.site] : null;
-  // Un marque-page n'est pas un site enregistré : on reconstitue son entrée depuis la configuration.
-  const bm = String(S.webActive || '').startsWith('bm:') ? (S.config.bookmarks || []).find((b) => `bm:${b.id}` === S.webActive) : null;
-  // Portail TV (SFR, B.tv, Molotov) : entrée reconstituée depuis les services de télévision.
-  const tv = String(S.webActive || '').startsWith('tv:') ? S.config.tv.services.find((t) => `tv:${t.id}` === S.webActive) : null;
-  const w = rom ? { name: rom.consoleName, color: '#6E88F7', search: site?.search || '' }
-    : bm ? { name: bm.title || bm.site, color: '#9B6CF7', search: '' }
-    : tv ? { name: tv.name, color: '#E23B3B', search: '' }
-    : S.config.web.find((x) => x.id === S.webActive);
-  if (!w) return emptyBlock('Aucun site ouvert', 'Choisissez un service dans Streaming.', '<button class="btn focusable" data-action="go" data-go="streaming">Ouvrir Streaming</button>');
-  const color = safeColor(w.color);
-  // Ajouter des jeux : liste des sites de la console et recherche sur le site choisi.
-  const romTools = rom ? `<label class="wb-label" for="wb-sites">Site</label>
-      <select class="input wb-select focusable" id="wb-sites" aria-label="Site où chercher des jeux">${rom.sites.map((x, n) => `<option value="${n}"${n === rom.site ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : '';
-  return `<div class="webbar${st.loading ? ' loading' : ''}" style="--brand:${color}">
-    <button class="icon-btn focusable" id="wb-back" data-action="web-nav" data-id="back" aria-label="Page précédente"${st.canGoBack ? '' : ' disabled'}>${ICON.chevL}</button>
-    <button class="icon-btn focusable" id="wb-fwd" data-action="web-nav" data-id="forward" aria-label="Page suivante"${st.canGoForward ? '' : ' disabled'}>${ICON.chevR}</button>
-    <button class="icon-btn focusable" data-action="web-nav" data-id="reload" aria-label="Recharger la page">${ICON.reload}</button>
-    <div class="wb-title${rom ? ' rom' : ''}"><span class="wb-site">${esc(rom ? `Jeux : ${w.name}` : w.name)}</span>${rom ? romTools : `<span class="wb-page" id="wb-page">${esc(st.title || '')}</span>`}</div>
-    <div class="wb-tools">
-      <button class="icon-btn wb-btn focusable${w.search ? ' on' : ''}" id="wb-learn" data-action="web-learn" aria-label="${w.search ? 'Recherche mémorisée' : 'Mémoriser la recherche'}" title="${w.search ? 'Recherche mémorisée : ce site apparaît dans Rechercher. Pour la refaire, cherchez le mot « mire » sur le site puis appuyez ici.' : 'Mémoriser la recherche : cherchez le mot « mire » sur le site, puis appuyez ici.'}">${ICON.search}</button>
-      ${S.adblock?.enabled ? `<button class="icon-btn wb-btn focusable${st.adOn === false ? ' off' : ''}" id="wb-ad" data-action="web-adblock" aria-label="${esc(adLabel(st))}" title="${esc(adLabel(st))}. Appuyez pour désactiver ou réactiver le bloqueur sur ce site.">${st.adOn === false ? ICON.shieldOff : ICON.shield}<span class="badge" id="wb-ad-n"${st.adOn === false || !st.blocked ? ' hidden' : ''}>${st.blocked || 0}</span></button>` : ''}
-      ${rom ? `<button class="icon-btn wb-btn focusable" data-action="game-bookmark" aria-label="Ajouter ce jeu (à télécharger)" title="Ajouter ce jeu à la liste, à télécharger plus tard">${ICON.star}</button>` : `<button class="icon-btn wb-btn focusable" data-action="web-bookmark" aria-label="Ajouter cette page aux vidéos" title="Ajouter cette page aux vidéos (film ou série)">${ICON.star}</button>`}
-      <button class="icon-btn wb-btn focusable" data-action="web-nav" data-id="immersive" aria-label="Plein écran" title="Plein écran (F11)">${ICON.fullscreen}</button>
-      <button class="icon-btn wb-btn focusable" data-action="web-nav" data-id="browser" aria-label="Ouvrir dans le navigateur" title="Ouvrir cette page dans votre navigateur habituel, si le site refuse de fonctionner dans Mire">${ICON.globe}</button>
-      <button class="icon-btn wb-btn focusable" data-action="web-close" aria-label="Fermer le site" title="Fermer le site (Ctrl+W)">${ICON.close}</button>
-    </div>
-  </div>
-  <div class="web-slot" id="web-slot">${loading(`Chargement de ${w.name}…`)}</div>`;
-}
-
-let slotObserver = null;
-function slotRect() {
-  const r = $('#web-slot')?.getBoundingClientRect();
-  if (!r) return null;
-  let { left, top, right, bottom } = r;
-  if (document.body.classList.contains('menu-auto') && document.body.classList.contains('menu-open')) {
-    const m = $('#rail').getBoundingClientRect();
-    const pos = menuSettings().position;
-    if (pos === 'left') left = Math.max(left, m.right);
-    if (pos === 'right') right = Math.min(right, m.left);
-    if (pos === 'top') top = Math.max(top, m.bottom);
-    if (pos === 'bottom') bottom = Math.min(bottom, m.top);
-  }
-  return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
-}
 function webShouldShow() {
   return S.section === 'web' && !!S.webActive && !isVideoOpen() && !isImagesOpen() && !dialogs.dialogsOpen();
 }
-function showWebInSlot(focus = false) {
-  if (!webShouldShow()) { api.webHide(); return; }
-  const rect = slotRect();
-  if (rect) api.webShow(S.webActive, rect, focus);
-}
-function attachWebSlot() {
-  slotObserver?.disconnect();
-  const slot = $('#web-slot');
-  if (!slot) return;
-  slotObserver = new ResizeObserver(() => { const rect = slotRect(); if (rect && webShouldShow()) api.webBounds(rect); });
-  slotObserver.observe(slot);
-}
 // Une couche plein écran (vidéo locale, images) ou une boîte sur les composants (P4-06) passe devant : la vue web se
 // cache, puis revient.
-function syncWeb() {
-  if (webShouldShow()) showWebInSlot(false);
-  else if (S.section === 'web') api.webHide();
+function syncWeb(focus = false) {
+  if (S.section === 'web') web.sync(focus);
 }
 
-const adLabel = (st) => (st.adOn === false ? 'Bloqueur désactivé sur ce site' : `${plural(st.blocked || 0, 'publicité bloquée', 'publicités bloquées')} sur cette page`);
-function setAdButton(st) {
-  const ad = $('#wb-ad');
-  if (!ad) return;
-  const off = st.adOn === false;
-  ad.classList.toggle('off', off);
-  ad.innerHTML = `${off ? ICON.shieldOff : ICON.shield}<span class="badge" id="wb-ad-n"${off || !st.blocked ? ' hidden' : ''}>${st.blocked || 0}</span>`;
-  ad.title = `${adLabel(st)}. Appuyez pour désactiver ou réactiver le bloqueur sur ce site.`;
-  ad.setAttribute('aria-label', adLabel(st));
+// Retour d'un site : sa page d'origine (Streaming, Télévision, Jeux), dans la vue de page comme depuis le menu ;
+// la section historique si la page n'existe plus.
+function openWebHome(home) {
+  if (!shell.open(home, { focus: 'content' })) go(home, { focus: 'content' });
 }
 
-function updateWebBar(st) {
-  const bar = $('.webbar');
-  if (!bar) return;
-  setAdButton(st);
-  bar.classList.toggle('loading', !!st.loading);
-  const page = $('#wb-page');
-  if (page) page.textContent = st.title || '';
-  const backBtn = $('#wb-back');
-  const fwdBtn = $('#wb-fwd');
-  if (backBtn) backBtn.disabled = !st.canGoBack;
-  if (fwdBtn) fwdBtn.disabled = !st.canGoForward;
+// Barre du site redessinée d'après le dernier état publié (bloqueur changé, éléments bloqués).
+function refreshWebBar() {
+  if (S.section === 'web') web.set(S.webActive, S.webStates[S.webActive] ?? null);
 }
 
 async function learnSearch() {
   const r = await api.webLearnSearch(S.webActive);
-  if (!r?.ok) { toast(r?.error || 'Impossible de mémoriser la recherche.', { duration: 9000 }); return; }
+  if (!r?.ok) { toast(r?.error || t('webView.learnFailed'), { duration: 9000 }); return; }
   S.config = r.config;
-  const btn = $('#wb-learn');
-  if (btn) { btn.classList.add('on'); btn.setAttribute('aria-label', 'Recherche mémorisée'); btn.title = 'Recherche mémorisée : ce site apparaît dans Rechercher.'; }
-  toast('Recherche mémorisée : ce site apparaîtra dans les résultats de Rechercher.', { duration: 6000 });
+  // La barre se met à jour avec l'état publié (recherche mémorisée).
+  toast(t('webView.learned'), { duration: 6000 });
 }
 
 api.onWebState((st) => {
-  const prev = S.webStates[st.id];
   S.webStates[st.id] = st;
-  if (S.section !== 'web' || st.id !== S.webActive) return;
-  // Site de jeux changé (choix du site, recherche mémorisée) : la barre est redessinée.
-  if (st.rom && (!prev?.rom || prev.rom.site !== st.rom.site || JSON.stringify(prev.rom.sites) !== JSON.stringify(st.rom.sites))) {
-    const bar = $('.webbar');
-    if (bar) { const tmp = document.createElement('div'); tmp.innerHTML = viewWeb(); bar.replaceWith(tmp.firstElementChild); }
-    return;
-  }
-  updateWebBar(st);
+  if (S.section === 'web' && st.id === S.webActive) web.set(st.id, st);
 });
 viewEl.addEventListener('change', (e) => {
-  if (e.target.matches('[data-action="rom-source"]')) {
-    runLegacyAction(e.target, legacyView);
-    return;
-  }
-  if (e.target.id !== 'wb-sites') return;
-  callAction('mire-page', 'openRomSites', { consoleId: String(S.webActive).slice(4), site: Number(e.target.value) });
+  if (e.target.matches('[data-action="rom-source"]')) runLegacyAction(e.target, legacyView);
 });
 api.onWebSessions((list) => {
   S.webSessions = Array.isArray(list) ? list : [];
@@ -1617,13 +1555,13 @@ api.onWebClosed(({ id }) => {
   if (S.webActive === id) {
     const home = webHome(id);
     S.webActive = null;
-    if (S.section === 'web') go(home, { focus: 'content' });
+    if (S.section === 'web') openWebHome(home);
   }
 });
 api.onWebError(({ message }) => toast(message, { duration: 8000 }));
 api.onWebBlocked(({ id, count }) => {
-  if (S.webStates[id]) S.webStates[id].blocked = count;
-  if (S.section === 'web' && id === S.webActive && S.webStates[id]) setAdButton(S.webStates[id]);
+  if (S.webStates[id]) S.webStates[id] = { ...S.webStates[id], blocked: count };
+  if (id === S.webActive) refreshWebBar();
 });
 let lastAdToast = 0;
 api.onWebAdblocked(({ host }) => {
@@ -1635,7 +1573,7 @@ api.onWebFocus((focused) => { S.webFocused = !!focused; });
 api.onMireFocus(() => {
   S.webFocused = false;
   document.body.classList.remove('mouse');
-  const target = $$('.webbar .focusable').find(isShown) || $('.rail-item[aria-current]');
+  const target = (S.section === 'web' && web.firstButton()) || $('.rail-item[aria-current]');
   target?.focus();
 });
 
@@ -2469,7 +2407,7 @@ const legacyUi = {
   toggleAudio, openExternal, addRecent, video: videoUi,
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
-  openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,
+  openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
   getQueries, rememberQuery, search, explorer, settings,
   rescue: { themes: pageThemes, refresh: () => rescue.refresh() },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
@@ -2591,7 +2529,7 @@ initKeyboard({
   dialog: topDialog,
   overlayKey: (key, fromPad) => (isVideoOpen() ? videoKey(key, fromPad) : isImagesOpen() ? imageKey(key, fromPad) : null),
   webBarDown: (el) => {
-    if (S.section !== 'web' || !el?.closest('.webbar')) return false;
+    if (S.section !== 'web' || !el?.closest('mire-webbar')) return false;
     C.web.focusSite();
     return true;
   },

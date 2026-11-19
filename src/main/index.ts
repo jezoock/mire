@@ -28,7 +28,7 @@ import { runApp, setApplicationMenu, type PendingFiles, type Running } from './a
 import { createRescue } from './app/rescue.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
-import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
+import { METADATA_PROVIDERS, createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import type { Contributor } from './catalog/tags/engine.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
@@ -206,11 +206,13 @@ function start(pending: PendingFiles): Running {
   // configuration. Tags automatiques internes (séries, films, musique, consoles, photos), puis infos en ligne : le
   // moteur fait passer les infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
   // Tags automatiques des plugins actifs (P3-03) : branchés une fois l'hôte de plugins créé, plus bas.
+  // Fournisseurs d'infos des plugins actifs (P4-20) : après ceux du cœur, sauf ordre choisi dans les Réglages.
   let pluginTaggers: () => Contributor[] = () => [];
+  let pluginProviders: () => string[] = () => [];
   const contributors = () => [
     ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
     ...pluginTaggers(),
-    ...metadataContributors(metadata, metadataOrder(config.get().catalog)),
+    ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...METADATA_PROVIDERS, ...pluginProviders()])),
   ];
   const registry = createRegistry(t);
   const tags = createTagEngine({
@@ -291,6 +293,10 @@ function start(pending: PendingFiles): Running {
     refresh: (keys) => tags.refresh(keys),
   });
   pluginTaggers = plugins.taggerContributors;
+  pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
+  plugins.onContributionsChange((kinds) => {
+    if (kinds.includes('metadata')) tags.setContributors(contributors());
+  });
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));

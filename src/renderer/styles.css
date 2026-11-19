@@ -327,63 +327,11 @@ body[data-section="home"] .topbar .clock { visibility: hidden; }
 body.has-mini .view { padding-bottom: 140px; }
 
 /* ------------------------------------------------------------------
-   Vue web intégrée : la page du site est posée par Electron sur .web-slot
+   Vue web intégrée : la page du site est posée par Electron sur mire-web-slot (P4-16)
    ------------------------------------------------------------------ */
 body[data-section="web"] .view { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 body.has-mini[data-section="web"] .view { padding-bottom: 94px; }
-.webbar {
-  position: relative;
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  height: var(--header-h);
-  padding: 0 18px 0 12px;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-rail);
-}
-.webbar .icon-btn:disabled { opacity: .3; }
-.wb-title { display: flex; flex: 1; align-items: baseline; gap: 12px; min-width: 0; padding: 0 10px; }
-.wb-site {
-  flex: none;
-  padding-left: 12px;
-  border-left: 5px solid var(--brand);
-  font-size: 20px;
-  font-weight: 800;
-  font-stretch: 118%;
-  line-height: 1.1;
-}
-.wb-page { overflow: hidden; color: var(--muted); font-size: 15px; white-space: nowrap; text-overflow: ellipsis; }
-.webbar.loading::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  height: 3px;
-  width: 30%;
-  background: var(--brand);
-  animation: webload 1.2s ease-in-out infinite;
-}
-@keyframes webload { 0% { left: -30%; } 100% { left: 100%; } }
-.wb-tools { display: flex; flex: none; align-items: center; gap: 4px; }
-/* Ajouter des jeux : choix du site et recherche dans la barre */
-.wb-title.rom { align-items: center; gap: 10px; }
-.wb-title.rom .wb-site { flex: none; }
 .wb-label { flex: none; color: var(--muted); font-size: 14px; font-weight: 600; }
-.wb-select {
-  flex: none;
-  width: auto;
-  max-width: 200px;
-  height: 42px;
-  padding: 0 34px 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23A4ABA4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center / 18px;
-  color: var(--text);
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
 .wb-q {
   flex: 1 1 220px;
   min-width: 120px;
@@ -395,28 +343,8 @@ body.has-mini[data-section="web"] .view { padding-bottom: 94px; }
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5' fill='none' stroke='%23A4ABA4' stroke-width='2'/%3E%3Cpath d='M15.5 15.5L20 20' stroke='%23A4ABA4' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 14px center / 18px;
 }
 .site-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--muted); font-size: 15px; }
-.wb-btn { position: relative; width: 44px; height: 44px; }
-.wb-btn.on { color: var(--ring); }
-.wb-btn.off { color: var(--muted); }
-.wb-btn .badge {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: var(--ring);
-  color: var(--bg);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 18px;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
 .ad-btn { font-variant-numeric: tabular-nums; }
 .ad-btn.off { color: var(--muted); border-style: dashed; }
-.web-slot { position: relative; display: grid; flex: 1; place-items: center; min-height: 0; background: #000; }
 body[data-section="web"] .toast { top: 12px; bottom: auto; transform: translate(-50%, -12px); }
 body[data-section="web"] .toast.show { transform: translate(-50%, 0); }
 

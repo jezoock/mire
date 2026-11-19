@@ -84,9 +84,9 @@ export interface LegacyUi {
   // Bibliothèque et sources
   openFileDialog(): void;
   scan(): void;
-  addSourceFolder(kind: string): void;
-  askSourceAddress(kind: string): void;
-  removeSource(kind: string, id: string): void;
+  addSourceFolder(kind: string): Promise<void>;
+  askSourceAddress(kind: string): Promise<void>;
+  removeSource(kind: string, id: string): Promise<void>;
   startScrape(kinds: string[], opts?: { force?: boolean; quiet?: boolean }): void;
   updateScrapeButton(): void;
   reloadScrape(): Promise<void>;
@@ -110,7 +110,7 @@ export interface LegacyUi {
   launchRom(rom: Data | undefined, consoleId?: unknown): void;
   downloadGameBookmark(id: string | undefined): void;
   cleanupGames(): void;
-  addGame(): void;
+  addGame(): Promise<void>;
   openEmu(consoleId: unknown): void;
   closeRoms(): void;
   openRomBrowser(consoleId: unknown, opts?: { site?: number; url?: string }): void;
@@ -123,7 +123,8 @@ export interface LegacyUi {
   bookmarkCurrentGame(): void;
   learnSearch(): void;
   syncWeb(): void;
-  setAdButton(state: Data): void;
+  /** Barre du site redessinée d'après le dernier état publié (P4-16). */
+  refreshWebBar(): void;
   // Recherche (P4-13)
   getQueries(): string[];
   rememberQuery(query: string): void;

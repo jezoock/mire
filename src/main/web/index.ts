@@ -3,7 +3,18 @@
  * entrées, session, extensions, identité, raccourcis, recherche mémorisée et Widevine.
  */
 export { createWebManager, downloadContextOf, roundRect, windowOpenAction, WEB_PREFERENCES, type WebManager } from './manager.ts';
-export { BUILTIN_RESOLVERS, consoleName, consoleSites, createEntryRegistry, romEntryFor, type EntryRegistry } from './entries.ts';
+export {
+  BUILTIN_RESOLVERS,
+  brandColor,
+  consoleName,
+  consoleSites,
+  createEntryRegistry,
+  NEUTRAL_COLOR,
+  romEntryFor,
+  viewKindOf,
+  type EntryRegistry,
+  type WebViewKind,
+} from './entries.ts';
 export { BEFORE_PAGE_CHANNEL, isPermissionAllowed, setupWebSession, WEB_PARTITION, WEB_PERMISSIONS, type WebSessionDeps } from './session.ts';
 export {
   beforePageScriptOf,

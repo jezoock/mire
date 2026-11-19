@@ -12,7 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
-import type { PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import type { PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -554,6 +554,19 @@ export function createPluginService(opts: PluginServiceOptions) {
         const { values, secrets } = opts.settings?.view(k.id, declared) ?? { values: {}, secrets: [] };
         return [{ id: k.id, name: nameOf(k.id), settings: structuredClone(declared), values, secrets }];
       });
+    },
+
+    /**
+     * Fournisseurs d'infos des plugins actifs (contributions `metadata`), pour l'ordre des fournisseurs (P4-20) :
+     * identifiant `<plugin>/<contribution>` en minuscules, comme la source de leurs fiches.
+     */
+    metadataProviders(): PluginMetadataProvider[] {
+      return registry.list('metadata').map((e) => ({
+        id: `${e.pluginId}/${e.id}`.toLowerCase(),
+        plugin: e.pluginId,
+        name: nameOf(e.pluginId),
+        kinds: Array.isArray(e.declaration.kinds) ? e.declaration.kinds.filter((k): k is string => typeof k === 'string') : [],
+      }));
     },
 
     /** Dossiers accordés à un plugin (`ctx.files`). */

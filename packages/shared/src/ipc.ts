@@ -230,6 +230,17 @@ export interface PluginSettingsInfo {
   secrets: string[];
 }
 
+/** Fournisseur d'infos en ligne d'un plugin actif (contribution `metadata`), pour l'ordre des fournisseurs (P4-20). */
+export interface PluginMetadataProvider {
+  /** `<plugin>/<contribution>`, en minuscules : la clé de ses fiches et de `catalog.metadataProviders`. */
+  id: string;
+  plugin: string;
+  /** Nom du plugin (textes du plugin), ou son identifiant. */
+  name: string;
+  /** Natures d'éléments décrites (`video`, `album`, `rom`, `pc`). */
+  kinds: string[];
+}
+
 export interface Bounds {
   x: number;
   y: number;
@@ -275,6 +286,8 @@ export interface IpcMethods {
   // Lecteur externe et télévision
   playExternal(target: string, title?: string, start?: number): Outcome;
   tvChannels(): Outcome<Record<string, unknown>>;
+  /** Regarde une chaîne du service choisi, désignée par sa clé d'élément : la variante est choisie par le service. */
+  tvWatch(key: string): Outcome;
   tvDetect(): { id: string; name: string };
   tvSetActive(id: string): MireConfig;
 
@@ -442,6 +455,8 @@ export interface IpcMethods {
   // Rend les réglages du plugin, ou l'erreur à afficher (valeur refusée) ; jamais la valeur d'un secret.
   pluginsSettings(): PluginSettingsInfo[];
   pluginsSetSetting(id: string, key: string, value: unknown): Outcome<{ plugin: PluginSettingsInfo }>;
+  // Fournisseurs d'infos des plugins actifs (P4-20) : ils rejoignent l'ordre des fournisseurs des Réglages.
+  pluginsMetadataProviders(): PluginMetadataProvider[];
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -611,8 +626,10 @@ export const IPC_METHODS = {
   filesRemove: 'files:remove',
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  tvWatch: 'tv:watch',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
+  pluginsMetadataProviders: 'plugins:metadataProviders',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];

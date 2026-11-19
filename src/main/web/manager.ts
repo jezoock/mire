@@ -6,7 +6,7 @@
  */
 import type { WebState, WebSession } from '@mire/shared/ipc';
 import { GAME_FILE_RE, hostOf, isHttpUrl, siteOf } from '@mire/shared';
-import { consoleName, consoleSites, createEntryRegistry, romEntryFor } from './entries.ts';
+import { brandColor, consoleName, consoleSites, createEntryRegistry, romEntryFor, viewKindOf } from './entries.ts';
 import { searchTemplate, withSearchTemplate } from './learn-search.ts';
 import { padInputEvents, shortcutAction } from './shortcuts.ts';
 import type { KeyInput, Rect, ViewLike, WebContentsLike, WebEntry, WebManagerDeps } from './types.ts';
@@ -77,10 +77,13 @@ export function createWebManager(deps: WebManagerDeps) {
     const { entry } = w;
     const ext = deps.extensions();
     const rc = entry.romConsole;
+    // Nom et couleur viennent de l'entrée résolue ici (site, console, marque-page, service TV) : l'interface les
+    // affiche tels quels, sans relire la configuration.
     return {
       id,
-      name: entry.name,
-      color: entry.color,
+      kind: viewKindOf(id),
+      name: String(entry.name || ''),
+      color: brandColor(entry.color),
       title: wc.getTitle(),
       url: wc.getURL(),
       canGoBack: wc.navigationHistory.canGoBack(),

@@ -175,6 +175,7 @@ const ADDED_METHODS: Record<string, string> = {
   // P3-03 : plugins
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  tvWatch: 'tv:watch', // P4-16 : chaîne désignée par sa clé, variante choisie par le service
   consoleSave: 'consoles:save', // P4-17 : consoles créées à la main et émulateur choisi
   consoleRemove: 'consoles:remove',
   consoleEmulators: 'consoles:emulators',
@@ -185,6 +186,8 @@ const ADDED_METHODS: Record<string, string> = {
   gameDeleteElement: 'games:deleteElement',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
+  // P4-20 : fournisseurs d'infos des plugins
+  pluginsMetadataProviders: 'plugins:metadataProviders',
   // P4-10 : mode secours
   rescueStart: 'rescue:start',
   rescueThemeOk: 'rescue:themeOk',

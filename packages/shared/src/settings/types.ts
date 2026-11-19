@@ -42,11 +42,15 @@ export interface ChoiceOption {
   label: SettingsText;
 }
 
-/** Liste de choix. `optionsFrom` : options ajoutées selon la configuration (identifiant connu de l'interface). */
+/**
+ * Liste de choix. `optionsFrom` : options ajoutées selon la configuration (identifiant connu de l'interface).
+ * `buttons` : peu d'options, aux noms courts, affichées en boutons plutôt qu'en liste (position du menu).
+ */
 export interface ChoiceField extends PathField<string> {
   type: 'choice';
   options: ChoiceOption[];
   optionsFrom?: string;
+  buttons?: true;
 }
 
 /** Case à cocher. */

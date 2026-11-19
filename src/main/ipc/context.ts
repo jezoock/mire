@@ -58,7 +58,7 @@ export interface MainContext {
   /** Renommer, déplacer, supprimer sous les dossiers locaux de la configuration (P2-10). */
   readonly fileManager: FilesService;
   /** Hôte de plugins (P3-03). */
-  readonly plugins: Pick<PluginService, 'list' | 'setEnabled' | 'settingsList' | 'setSetting'>;
+  readonly plugins: Pick<PluginService, 'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders'>;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;
@@ -92,6 +92,8 @@ export interface MainContext {
   playExternal: Fn;
   detectTvService: Fn;
   fetchChannels: Fn;
+  /** Flux d'une chaîne du service choisi, par sa clé (variante de la qualité préférée). */
+  channelStream: Fn;
 
   // Vues web (src/main/web) : leur état est interne au gestionnaire.
   readonly web: WebManager;

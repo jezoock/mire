@@ -120,6 +120,27 @@ describe('service des plugins', () => {
     assert.match(readFileSync(path.join(t.installed, 'logs', 'org.exemple.annees.log'), 'utf8'), /INFO Activé : taggers\/annee/);
   });
 
+  it('fournisseurs d’infos des plugins actifs (P4-20) : identifiant, nom du plugin, natures', async () => {
+    const t = setup();
+    opened.push(t);
+    plugin(
+      t.installed,
+      'org.exemple.films',
+      'code',
+      { metadata: [{ id: 'infos', main: 'infos.mjs', kinds: ['video', 'album'] }] },
+      {
+        'infos.mjs': "export default () => ({ id: 'infos', collect() { return []; }, scrape() { return null; } });",
+      },
+    );
+    await t.service.start();
+    assert.equal(statuses(t.service)['org.exemple.films'], 'active', t.service.list().find((p) => p.id === 'org.exemple.films')?.message ?? '');
+    assert.deepEqual(t.service.metadataProviders(), [
+      { id: 'org.exemple.films/infos', plugin: 'org.exemple.films', name: 'org.exemple.films (fr)', kinds: ['video', 'album'] },
+    ]);
+    await t.service.setEnabled('org.exemple.films', false);
+    assert.deepEqual(t.service.metadataProviders(), []);
+  });
+
   it('désactive et réactive à chaud ; l’état est mémorisé', async () => {
     const t = setup();
     opened.push(t);

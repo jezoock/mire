@@ -48,7 +48,55 @@ export interface OrderListView {
   toggle: boolean;
 }
 
-export type SettingsFieldKind = 'text' | 'secret' | 'choice' | 'toggle' | 'path' | 'list' | 'themes' | 'order' | 'page';
+export type SettingsFieldKind = 'text' | 'secret' | 'choice' | 'segmented' | 'toggle' | 'path' | 'list' | 'themes' | 'order' | 'entries' | 'link';
+
+/** Ligne d'une liste d'éléments (source, site, jeu, service) ; `sub` : détail, `error` s'il signale un problème. */
+export interface SettingsEntryView {
+  id: string;
+  label: string;
+  sub?: string;
+  error?: boolean;
+  /** Liste à choix (`choose`) : la ligne choisie. */
+  current?: boolean;
+}
+
+/** Actions des boutons d'une liste d'éléments (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */
+export type SettingsEntryAction = 'addEntry' | 'addSourceFolder' | 'addSourceAddress' | 'addPcGame' | 'detectTvBox' | 'reloadTv';
+
+export interface SettingsEntryButton {
+  label: string;
+  action: SettingsEntryAction;
+  ghost?: boolean;
+}
+
+/** Champ à remplir avant « Ajouter » (`addEntry`) ; son brouillon a pour clé `<clé de la liste>.<id>`. */
+export interface SettingsEntryInput {
+  id: string;
+  label: string;
+  placeholder?: string;
+}
+
+/**
+ * Liste d'éléments d'un bloc propre aux pages : `key` la désigne auprès du contrôleur (`sources:video`, `web`,
+ * `games`, `pcSites`, `tv`). Avec `remove`, chaque ligne a son bouton « Retirer » (`removeEntry`) ; avec `choose`,
+ * une ligne se choisit (bouton radio, `mireSettingChange` avec la clé `<key>.active`).
+ */
+export interface SettingsEntryGroup {
+  key: string;
+  label?: string;
+  entries: SettingsEntryView[];
+  empty: string;
+  remove?: boolean;
+  choose?: boolean;
+  inputs?: SettingsEntryInput[];
+  buttons?: SettingsEntryButton[];
+}
+
+/** Lien vers un onglet du Centre (`openCentreTab`), là où un bloc se règle déjà. */
+export interface SettingsLinkView {
+  tab: string;
+  label: string;
+}
 
 export interface SettingsFieldView {
   /** Clé du champ : chemin de la configuration, ou `plugin:<id>:<réglage>`. */
@@ -68,15 +116,10 @@ export interface SettingsFieldView {
   pageThemes?: PageThemeView[];
   /** `order` : une ou plusieurs listes. */
   lists?: OrderListView[];
-  /** `page` : réglage fait dans les réglages d'une page (son onglet), un bouton par page. */
-  links?: PageLinkView[];
-}
-
-/** Bouton qui ouvre les réglages d'une page à un onglet (`openPageSettings` du contrôleur). */
-export interface PageLinkView {
-  page: string;
-  tab?: string;
-  label: string;
+  /** `entries` : une ou plusieurs listes d'éléments. */
+  groups?: SettingsEntryGroup[];
+  /** `link` : lien vers un onglet du Centre. */
+  link?: SettingsLinkView;
 }
 
 /** Actions des boutons d'un panneau (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */

@@ -2,9 +2,17 @@ import { parsePluginFieldKey } from '@mire/ui/utils';
 import { parseSites } from '../domain/index.ts';
 import { plural } from '../core/format.ts';
 import { isHomeList, moveChosen, toggleChosen, withChosen } from '../home/settings.ts';
-import { METADATA_PROVIDERS } from '../settings/model.ts';
+import { METADATA_PROVIDERS, SOURCE_KINDS } from '../settings/model.ts';
+import { CENTRE_VIEW } from '../shell/router.ts';
 import { Controller } from './base.ts';
 import type { Data } from './types.ts';
+
+/** Nature des sources d'une liste de l'écran Réglages (`sources:video` → `video`). */
+function sourceKind(key: string): string {
+  const kind = key.startsWith('sources:') ? key.slice('sources:'.length) : '';
+  if (!(SOURCE_KINDS as readonly string[]).includes(kind)) throw new Error(`Liste de sources inconnue : ${key}`);
+  return kind;
+}
 
 /** Listes de la configuration modifiées par les boutons « Ajouter » et « Retirer » des Réglages. */
 const ADBLOCK_LISTS: Readonly<Record<string, string>> = { 'adblock.allowlist': 'allowlist', 'adblock.customLists': 'customLists' };
@@ -33,7 +41,11 @@ export class SettingsController extends Controller {
       await ui.settings.refresh({ plugins: true });
       return;
     }
-    if (key === 'adblock.enabled') {
+    if (key === 'tv.active') {
+      await this.setTvService({ id: String(value) });
+      toast(t('settingsView.saved'), { duration: 1500 });
+    } else if (key === 'tv.playlist') await this.setTvPlaylist(String(value));
+    else if (key === 'adblock.enabled') {
       await ui.afterAdblockChange(await api.adblockSetEnabled(!!value));
       toast(t(value ? 'settingsView.adblock.on' : 'settingsView.adblock.off'));
     } else await ui.setCfg(key, value);
@@ -89,8 +101,13 @@ export class SettingsController extends Controller {
   async setOrder({ kind, keys }: { kind: string; keys: string[] }): Promise<void> {
     const { ui } = this.ctx;
     if (kind === 'providers') {
-      const ids = keys.filter((k) => (METADATA_PROVIDERS as readonly string[]).includes(k));
-      await ui.setCfg('catalog.metadataProviders', ids);
+      // Ceux du cœur, et ceux des plugins actifs (P4-20).
+      const plugins = (((await this.ctx.api.pluginsMetadataProviders()) as { id: string }[] | null) ?? []).map((p) => p.id);
+      const known = [...METADATA_PROVIDERS, ...plugins];
+      await ui.setCfg(
+        'catalog.metadataProviders',
+        keys.filter((k) => known.includes(k)),
+      );
     } else {
       if (!isHomeList(kind)) throw new Error(`Liste inconnue : ${kind}`);
       await ui.saveUi((u) => {
@@ -100,10 +117,110 @@ export class SettingsController extends Controller {
     await ui.settings.refresh();
   }
 
-  /** Ouvre les réglages d'une page (`page` : son identifiant), à un onglet. */
-  openPageSettings({ page, tab }: { page: string; tab?: string }): void {
+  // ---------- Blocs propres aux pages (P4-20, partie 2) ----------
+
+  /** Ouvre le Centre à un onglet (`consoles` : là où les consoles se créent et se modifient). */
+  openCentreTab({ tab }: { tab: string }): void {
     const { ui } = this.ctx;
-    if (ui.open(page)) ui.openPageSettings(tab);
+    if (ui.open(CENTRE_VIEW)) ui.showCentreTab(tab);
+  }
+
+  /** Ajoute une source de la nature de la liste `key` (`sources:<nature>`) : un dossier choisi par le processus principal. */
+  async addSourceFolder({ key }: { key: string }): Promise<void> {
+    await this.ctx.ui.addSourceFolder(sourceKind(key));
+    await this.ctx.ui.settings.refresh();
+  }
+
+  /** Ajoute une adresse (partage réseau, serveur web, liste M3U) comme source de la liste `key`. */
+  async addSourceAddress({ key }: { key: string }): Promise<void> {
+    await this.ctx.ui.askSourceAddress(sourceKind(key));
+    await this.ctx.ui.settings.refresh();
+  }
+
+  /** Ajoute un élément à la liste `key` (`web`, `pcSites`) d'après les champs remplis à côté (brouillons). */
+  async addEntry({ key }: { key: string }): Promise<void> {
+    const { ui } = this.ctx;
+    const draft = (id: string) => (ui.settings.draft(`${key}.${id}`) ?? '').trim();
+    const fields = key === 'web' ? ['name', 'url'] : key === 'pcSites' ? ['name', 'url', 'search'] : null;
+    if (!fields) throw new Error(`Liste inconnue : ${key}`);
+    const done =
+      key === 'web' ? await this.addSite({ name: draft('name'), url: draft('url') }) : await this.addPcSite(draft('name'), draft('url'), draft('search'));
+    if (!done) return;
+    for (const id of fields) ui.settings.clearDraft(`${key}.${id}`);
+    await ui.settings.refresh();
+  }
+
+  /** Retire l'élément `id` de la liste `key` : une source, un site, un jeu PC (son chemin), un site de jeux PC. */
+  async removeEntry({ key, id }: { key: string; id: string }): Promise<void> {
+    const { S, api, ui, toast, t } = this.ctx;
+    if (key.startsWith('sources:')) await ui.removeSource(sourceKind(key), id);
+    else {
+      const next = structuredClone(S.config) as Data;
+      if (key === 'web') next.web = next.web.filter((x: Data) => x.id !== id);
+      else if (key === 'games') next.games = next.games.filter((x: Data) => x.path !== id);
+      else if (key === 'pcSites') next.pcSites = (next.pcSites ?? []).filter((x: Data) => (x.url || x.name) !== id);
+      else throw new Error(`Liste inconnue : ${key}`);
+      S.config = (await api.saveConfig(next as never)) as typeof S.config;
+      toast(t('settingsView.removed'), { duration: 1500 });
+    }
+    await ui.settings.refresh();
+  }
+
+  /** Ajoute un jeu PC à la main (programme choisi par le processus principal). */
+  async addPcGame(): Promise<void> {
+    await this.ctx.ui.addGame();
+    await this.ctx.ui.settings.refresh();
+  }
+
+  /** Cherche la box sur le réseau ; le service trouvé devient le service actif. */
+  async detectTvBox(): Promise<void> {
+    const { S, api, ui, toast, t } = this.ctx;
+    toast(t('settingsView.tv.detecting'), { duration: 3000 });
+    const r = (await api.tvDetect()) as Data | null;
+    S.config = ((await api.getConfig()) as Data).config;
+    if (r?.id) {
+      this.resetChannels();
+      toast(t('settingsView.tv.detected', { name: r.name }));
+    } else toast(t('settingsView.tv.notDetected'), { duration: 6000 });
+    await ui.settings.refresh();
+  }
+
+  /** Recharge les chaînes du service actif. */
+  reloadTv(): void {
+    this.resetChannels();
+    this.ctx.toast(this.ctx.t('settingsView.tv.reloaded'), { duration: 1500 });
+  }
+
+  private resetChannels(): void {
+    const { S, ui } = this.ctx;
+    S.channels = null;
+    S.tvWeb = null;
+    S.tvError = null;
+    if (S.section === 'tv') ui.loadChannels();
+  }
+
+  /** Adresse de la playlist du service de télévision actif. */
+  private async setTvPlaylist(url: string): Promise<void> {
+    const { S, api, toast, t } = this.ctx;
+    const tv = (S.config as Data).tv as Data;
+    const services = tv.services.map((x: Data) => (x.id === tv.active ? { ...x, url } : x));
+    S.config = (await api.saveConfig({ ...S.config, tv: { ...tv, services } } as never)) as typeof S.config;
+    this.resetChannels();
+    toast(t('settingsView.saved'), { duration: 1500 });
+  }
+
+  /** Ajoute un site de jeux PC ; vrai s'il a été ajouté. */
+  private async addPcSite(name: string, url: string, search: string): Promise<boolean> {
+    const { S, api, toast, t } = this.ctx;
+    const site = parseSites([name, url, search].filter(Boolean).join(' | '))[0];
+    if (!site?.url) {
+      toast(t('settingsView.pcSites.missing'));
+      return false;
+    }
+    const sites = [...(((S.config as Data).pcSites as Data[] | undefined) ?? []).filter((x) => x.url !== site.url), site];
+    S.config = (await api.saveConfig({ ...S.config, pcSites: sites } as never)) as typeof S.config;
+    toast(t('settingsView.saved'), { duration: 1500 });
+    return true;
   }
 
   /** Enregistre l'éditeur JSON « Sites, jeux et consoles » (le seul champ qui a son bouton « Enregistrer »). */
@@ -241,14 +358,14 @@ export class SettingsController extends Controller {
   async addSite({ name, url }: { name: string; url: string }): Promise<boolean> {
     const { S, api, toast } = this.ctx;
     if (!name || !url) {
-      toast('Indiquez un nom et une adresse.');
+      toast(this.ctx.t('settingsView.web.missing'));
       return false;
     }
     if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
     const next = structuredClone(S.config) as Data;
     next.web.push({ name, url, mode: 'integrated', color: '#59625B', search: '' });
     S.config = (await api.saveConfig(next as never)) as typeof S.config;
-    toast(`${name} ajouté dans Streaming`);
+    toast(this.ctx.t('settingsView.web.added', { name }));
     return true;
   }
 
@@ -327,6 +444,7 @@ export class SettingsController extends Controller {
     S.tvError = null;
     ui.refreshPanel();
     if (S.section === 'tv') ui.loadChannels();
+    await ui.settings.refresh();
   }
 
   /** Choisit le dossier des téléchargements. */

@@ -8,6 +8,7 @@ export function pluginsHandlers(ctx: MainContext) {
     pluginsList: () => ctx.plugins.list(),
     pluginsSetEnabled: (id, enabled) => ctx.plugins.setEnabled(id, enabled),
     pluginsSettings: () => ctx.plugins.settingsList(),
+    pluginsMetadataProviders: () => ctx.plugins.metadataProviders(),
     pluginsSetSetting: (id, key, value) => {
       const name = () => ctx.plugins.settingsList().find((p) => p.id === id)?.name ?? id;
       try {

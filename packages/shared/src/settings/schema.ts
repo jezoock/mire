@@ -26,6 +26,7 @@ interface RawField {
   placeholder?: true;
   options?: readonly string[];
   optionsFrom?: string;
+  buttons?: true;
   pick?: 'program' | 'folder';
   component?: string;
   paths?: string[];
@@ -67,7 +68,7 @@ export const SETTINGS_SCHEMA: SettingsSchema = keyed([
     help: true,
     fields: [
       { id: 'theme', type: 'custom', component: 'themes', paths: ['ui.theme', 'ui.pageTheme'] },
-      { id: 'menuPosition', type: 'choice', path: 'ui.menu.position', default: 'left', help: true, options: ['left', 'right', 'top', 'bottom'] },
+      { id: 'menuPosition', type: 'choice', path: 'ui.menu.position', default: 'left', help: true, buttons: true, options: ['left', 'right', 'top', 'bottom'] },
       { id: 'menuAutohide', type: 'toggle', path: 'ui.menu.autohide', default: false },
     ],
   },
@@ -76,7 +77,7 @@ export const SETTINGS_SCHEMA: SettingsSchema = keyed([
     fields: [
       // Puis les langues disponibles (catalogues de Mire et packs de langue), sous leur propre nom.
       { id: 'interface', type: 'choice', path: 'ui.language', default: 'auto', options: ['auto'], optionsFrom: 'languages' },
-      { id: 'metadata', type: 'choice', path: 'search.language', default: '', help: true, options: ['', 'fr-FR', 'en-US'] },
+      { id: 'metadata', type: 'choice', path: 'search.language', default: '', help: true, buttons: true, options: ['', 'fr-FR', 'en-US'] },
     ],
   },
   {

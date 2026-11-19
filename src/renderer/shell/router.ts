@@ -8,7 +8,7 @@
  * Centre (`CENTRE_VIEW`, `mire-centre`, P4-18), l'explorateur (`EXPLORER_VIEW`, `mire-explorer`, P4-08) et les Réglages
  * (`SETTINGS_VIEW`, `mire-settings`, P4-20) dans les leurs, avec l'habillage du cœur. Les sections historiques des pages
  * prêtes à l'emploi restent ouvrables
- * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (P4-16, P4-17). Sans DOM.
+ * (« Ancienne vue », `LEGACY_PAGE_SECTIONS`) tant que la vue de page n'en reprend pas tout (choix de la box et ajout de sites : P4-20 ; consoles : P4-17). Sans DOM.
  */
 import { formatTarget, parseTarget } from '@mire/shared';
 import type { PagePath } from '@mire/shared';
