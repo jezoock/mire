@@ -1248,7 +1248,6 @@
       "show": "Afficher",
       "hide": "Masquer",
       "hidden": "Masqués :",
-      "openPage": "Régler dans {name}",
       "start": {
         "sites": "Directement sur un service"
       },
@@ -1259,7 +1258,8 @@
         "tmdb": "TMDB (films et séries)",
         "musicbrainz": "MusicBrainz (musique)",
         "libretro": "libretro (jeux de console)",
-        "steam": "Steam (jeux PC)"
+        "steam": "Steam (jeux PC)",
+        "plugin": "{name} (plugin)"
       },
       "plugin": {
         "help": "Réglages de ce plugin. Ils s’appliquent tout de suite."
@@ -1321,6 +1321,83 @@
         "cancelled": "{label} revenu en position {index} sur {count}.",
         "moveBefore": "Placer {label} avant {other}",
         "moveAfter": "Placer {label} après {other}"
+      },
+      "removed": "Retiré",
+      "sources": {
+        "kinds": {
+          "video": "Vidéos",
+          "audio": "Musique",
+          "image": "Images",
+          "game": "Jeux PC"
+        },
+        "type": {
+          "folder": "Dossier",
+          "network": "Réseau",
+          "web": "Web"
+        },
+        "count": {
+          "video": {
+            "one": "{count} vidéo",
+            "other": "{count} vidéos"
+          },
+          "audio": {
+            "one": "{count} morceau",
+            "other": "{count} morceaux"
+          },
+          "image": {
+            "one": "{count} image",
+            "other": "{count} images"
+          },
+          "game": {
+            "one": "{count} jeu",
+            "other": "{count} jeux"
+          }
+        },
+        "scanning": "Analyse…",
+        "none": "Aucune source.",
+        "addFolder": "Ajouter un dossier",
+        "addAddress": "Ajouter une adresse réseau ou web"
+      },
+      "tv": {
+        "web": "Portail web",
+        "playlist": "Playlist M3U",
+        "none": "Aucun service.",
+        "detect": "Détecter ma box",
+        "reload": "Recharger les chaînes",
+        "reloaded": "Les chaînes seront rechargées.",
+        "url": "Adresse de la playlist « {name} »",
+        "detecting": "Recherche de votre box sur le réseau…",
+        "detected": "{name} détecté.",
+        "notDetected": "Aucune box reconnue. Choisissez votre service dans la liste."
+      },
+      "web": {
+        "none": "Aucun site.",
+        "name": "Nom",
+        "namePlaceholder": "Arte",
+        "url": "Adresse",
+        "urlPlaceholder": "https://www.arte.tv/fr/",
+        "missing": "Indiquez un nom et une adresse.",
+        "added": "{name} ajouté dans Streaming"
+      },
+      "pcGames": {
+        "none": "Aucun jeu ajouté à la main.",
+        "add": "Ajouter un jeu à la main"
+      },
+      "pcSites": {
+        "help": "Mire ne propose aucun site d’office. « Ajouter des jeux PC » ouvre ceux que vous ajoutez ici dans un navigateur intégré, avec recherche et téléchargement.",
+        "none": "Aucun site.",
+        "name": "Nom",
+        "url": "Adresse",
+        "search": "Adresse de recherche (avec {q})",
+        "missing": "Indiquez au moins l’adresse du site (https://…)."
+      },
+      "store": {
+        "help": "Les jeux de console téléchargés depuis les apps du Centre y sont rangés, un dossier par console.",
+        "placeholder": "Documents/Mire/ROMs"
+      },
+      "consoles": {
+        "help": "Les consoles se créent et se modifient dans le Centre : émulateur, dossiers et sources de jeux, bannière.",
+        "open": "Ouvrir les consoles du Centre"
       }
     },
     "explorer": {

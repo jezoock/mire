@@ -206,6 +206,14 @@ describe('ordre des fournisseurs', () => {
     assert.deepEqual(normalizeCatalogSettings({}), {});
   });
 
+  it('fournisseurs des plugins actifs (P4-20) : après ceux du cœur, sauf ordre choisi ; ignorés une fois le plugin désactivé', () => {
+    const known = ['tmdb', 'musicbrainz', 'libretro', 'steam', 'org.films/infos'];
+    assert.deepEqual(metadataOrder(undefined, known), known);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'tmdb'] }, known), ['org.films/infos', 'tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'tmdb'] }), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(normalizeCatalogSettings({ metadataProviders: ['Org.Films/Infos'] }), { metadataProviders: ['org.films/infos'] });
+  });
+
   it('pour une même info, le premier fournisseur de la liste l’emporte', () => {
     const { catalog, metadata, engine } = setup(null);
     catalog.setSource(FILMS, [local('/films/Jeu.mkv')]);

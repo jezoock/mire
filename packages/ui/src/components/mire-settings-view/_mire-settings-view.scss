@@ -117,7 +117,70 @@
   }
 
   &__value {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
     overflow-wrap: anywhere;
+  }
+
+  &__detail {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  &__entry.--error &__detail {
+    color: var(--danger, var(--text));
+  }
+
+  // Listes d'éléments des blocs propres aux pages (sources, sites, jeux PC, services de télévision).
+  &__group {
+    display: grid;
+    gap: ds-spacing(2);
+    min-width: 0;
+  }
+
+  &__group + &__group {
+    margin-top: ds-spacing(2);
+  }
+
+  &__inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    gap: ds-spacing(2);
+  }
+
+  // Choix courts (position du menu) et liste à choix (service de télévision) : boutons radio groupés.
+  &__segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: ds-spacing(2);
+  }
+
+  &__choices {
+    display: grid;
+    gap: ds-spacing(1);
+  }
+
+  &__segment,
+  &__choice {
+    display: flex;
+    align-items: center;
+    gap: ds-spacing(2);
+    padding: ds-spacing(1) ds-spacing(3);
+    background: var(--surface-2);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  &__segment[aria-pressed='true'],
+  &__choice[aria-pressed='true'] {
+    outline: 2px solid var(--text);
+    font-weight: 700;
+  }
+
+  &__choice > .mire-settings-view__value {
+    flex: 1;
   }
 
   // Palettes : l'aperçu est dessiné avec les jetons de chaque palette (data-palette).

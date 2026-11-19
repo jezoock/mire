@@ -3,7 +3,7 @@
  * d'après le schéma des réglages et les manifestes des plugins (`model.ts`). Chaque champ changé est enregistré aussitôt
  * (`onChange`) ; le texte à ajouter à une liste et celui de l'éditeur JSON sont gardés ici (`draft`) jusqu'au bouton.
  */
-import type { PluginSettingsInfo } from '@mire/shared/ipc';
+import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
 import { settingsDomId } from '@mire/ui/utils';
 import { settingsLabels, settingsPanels } from './model.ts';
 import type { PanelSources } from './model.ts';
@@ -15,21 +15,26 @@ export {
   advancedJson,
   drmStatusText,
   fieldView,
+  fieldViews,
+  locationType,
   pluginPanels,
   providerOrder,
+  SOURCE_KINDS,
   schemaPanels,
   settingsLabels,
   settingsPanels,
 } from './model.ts';
-export type { AdblockState, PanelSources } from './model.ts';
+export type { AdblockState, PanelSources, SourceStatus } from './model.ts';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 export interface SettingsOptions {
   t: Translate;
   /** Ce que les panneaux affichent (configuration, langues, listes de l'accueil, informations) ; les plugins à part. */
-  sources(): Omit<PanelSources, 't' | 'plugins'>;
+  sources(): Omit<PanelSources, 't' | 'plugins' | 'providers'>;
   plugins(): Promise<PluginSettingsInfo[]>;
+  /** Fournisseurs d'infos des plugins actifs (relus avec les réglages des plugins). */
+  providers(): Promise<PluginMetadataProvider[]>;
   /** Un champ a changé (clé : chemin de la configuration ou `plugin:<id>:<réglage>`). */
   onChange(key: string, value: string | boolean): Promise<unknown>;
   /** Nouvel ordre d'une liste (`rows`, `bars`, `sites`, `providers`). */
@@ -58,13 +63,18 @@ export function createSettings(opts: SettingsOptions, doc: Document = document):
   host.append(view);
   const drafts = new Map<string, string>();
   let plugins: PluginSettingsInfo[] = [];
+  let providers: PluginMetadataProvider[] = [];
+  let loaded = false;
   let seq = 0;
 
   async function refresh({ plugins: reload = false } = {}) {
     const id = ++seq;
-    if (reload || !plugins.length) plugins = await opts.plugins().catch(() => plugins);
+    if (reload || !loaded) {
+      [plugins, providers] = await Promise.all([opts.plugins().catch(() => plugins), opts.providers().catch(() => providers)]);
+      loaded = true;
+    }
     if (id !== seq) return;
-    const panels = settingsPanels({ ...opts.sources(), t: opts.t, plugins });
+    const panels = settingsPanels({ ...opts.sources(), t: opts.t, plugins, providers });
     Object.assign(view, { panels, labels: JSON.stringify(settingsLabels(opts.t)) });
     // Le texte de l'éditeur JSON suit la configuration enregistrée.
     drafts.delete('advanced');

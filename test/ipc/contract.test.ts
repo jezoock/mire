@@ -185,6 +185,8 @@ const ADDED_METHODS: Record<string, string> = {
   gameDeleteElement: 'games:deleteElement',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
+  // P4-20 : fournisseurs d'infos des plugins
+  pluginsMetadataProviders: 'plugins:metadataProviders',
 };
 
 // Événements ajoutés après P1-08.

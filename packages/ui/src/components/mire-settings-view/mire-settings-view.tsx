@@ -2,7 +2,16 @@ import { Component, Element, Event, Host, Prop, h } from '@stencil/core';
 import type { EventEmitter } from '@stencil/core';
 import { readJson, readList } from '../../utils/elements.ts';
 import { settingsArgs, settingsDomId } from '../../utils/settings.ts';
-import type { OrderListView, SettingsActionView, SettingsFieldView, SettingsLabels, SettingsOptionView, SettingsPanelView } from '../../utils/settings.ts';
+import type {
+  OrderListView,
+  SettingsActionView,
+  SettingsEntryButton,
+  SettingsEntryGroup,
+  SettingsFieldView,
+  SettingsLabels,
+  SettingsOptionView,
+  SettingsPanelView,
+} from '../../utils/settings.ts';
 
 /**
  * Vue des Réglages (P4-20) : un panneau par bloc du schéma des réglages, puis un par plugin qui déclare des réglages.
@@ -213,6 +222,167 @@ export class MireSettingsView {
     );
   }
 
+  /**
+   * Choix court (position du menu) : boutons à bascule d'un `ds-toggle-group`, un seul choisi, enregistré au choix.
+   * Pas de boutons radio : leur groupe garde les flèches pour lui (et choisit en se déplaçant), la croix de la manette
+   * doit pouvoir en sortir.
+   */
+  private renderSegmented(f: SettingsFieldView) {
+    const id = settingsDomId(f.key);
+    const value = String(f.value ?? '');
+    return (
+      <div class="mire-settings-view__field">
+        <span class="mire-settings-view__label" id={`${id}-label`}>
+          {f.label}
+        </span>
+        <ds-toggle-group
+          class="mire-settings-view__segmented"
+          id={id}
+          type="icon"
+          count="[1, 1]"
+          aria-labelledby={`${id}-label`}
+          onToggleValueChange={(e: CustomEvent<{ value: string[] }>) => e.detail.value[0] !== undefined && this.change(f.key, String(e.detail.value[0]))}
+        >
+          {(f.options ?? []).map((o) => (
+            <ds-toggle class="mire-settings-view__segment" value={o.value} checked={o.value === value} data-key={o.value}>
+              {o.label}
+            </ds-toggle>
+          ))}
+        </ds-toggle-group>
+        {f.help && <p class="mire-settings-view__hint">{f.help}</p>}
+      </div>
+    );
+  }
+
+  // Chaque action est écrite telle quelle (le script de P4-04 vérifie qu'elle existe dans le contrôleur).
+  private renderEntryButton(b: SettingsEntryButton, key: string) {
+    const mods = b.ghost ? 'stl-3' : 'stl-2';
+    const args = settingsArgs({ key });
+    switch (b.action) {
+      case 'addEntry':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action={`addEntry:${args}`}>
+            {b.label}
+          </ds-trigger>
+        );
+      case 'addSourceFolder':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action={`addSourceFolder:${args}`}>
+            {b.label}
+          </ds-trigger>
+        );
+      case 'addSourceAddress':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action={`addSourceAddress:${args}`}>
+            {b.label}
+          </ds-trigger>
+        );
+      case 'addPcGame':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="addPcGame">
+            {b.label}
+          </ds-trigger>
+        );
+      case 'detectTvBox':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="detectTvBox">
+            {b.label}
+          </ds-trigger>
+        );
+      case 'reloadTv':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="reloadTv">
+            {b.label}
+          </ds-trigger>
+        );
+      default:
+        return null;
+    }
+  }
+
+  /** Lignes d'une liste à choix : boutons à bascule d'un `ds-toggle-group`, un seul choisi (voir `renderSegmented`). */
+  private renderChoices(g: SettingsEntryGroup) {
+    const id = settingsDomId(g.key);
+    return (
+      <ds-toggle-group
+        class="mire-settings-view__choices"
+        id={id}
+        type="icon"
+        count="[1, 1]"
+        label={g.label}
+        onToggleValueChange={(e: CustomEvent<{ value: string[] }>) =>
+          e.detail.value[0] !== undefined && this.change(`${g.key}.active`, String(e.detail.value[0]))
+        }
+      >
+        {g.entries.map((x) => (
+          <ds-toggle class="mire-settings-view__choice" value={x.id} checked={!!x.current} data-key={x.id} key={x.id}>
+            <span class="mire-settings-view__value">{x.label}</span>
+            {x.sub && <span class="mire-settings-view__detail">{x.sub}</span>}
+          </ds-toggle>
+        ))}
+      </ds-toggle-group>
+    );
+  }
+
+  private renderGroup(g: SettingsEntryGroup, l: SettingsLabels) {
+    const id = settingsDomId(g.key);
+    return (
+      <div class="mire-settings-view__group" data-list={g.key} role="group" aria-labelledby={g.label ? `${id}-label` : undefined}>
+        {g.label && (
+          <h3 class="mire-settings-view__sub" id={`${id}-label`}>
+            {g.label}
+          </h3>
+        )}
+        {g.choose && g.entries.length > 0 ? (
+          this.renderChoices(g)
+        ) : (
+          <ul class="mire-settings-view__entries">
+            {g.entries.length ? (
+              g.entries.map((x) => (
+                <li class={{ 'mire-settings-view__entry': true, '--error': !!x.error }} key={x.id} data-key={x.id}>
+                  <span class="mire-settings-view__value">
+                    {x.label}
+                    {x.sub && <span class="mire-settings-view__detail">{x.sub}</span>}
+                  </span>
+                  {g.remove && (
+                    <ds-trigger
+                      type="button"
+                      mods="stl-3"
+                      target="mire-settings"
+                      action={`removeEntry:${settingsArgs({ key: g.key, id: x.id })}`}
+                      aria-label={`${l.remove ?? ''} : ${x.label}`}
+                    >
+                      {l.remove}
+                    </ds-trigger>
+                  )}
+                </li>
+              ))
+            ) : (
+              <li class="mire-settings-view__entry --none">{g.empty}</li>
+            )}
+          </ul>
+        )}
+        {g.inputs && g.inputs.length > 0 && (
+          <div class="mire-settings-view__inputs">
+            {g.inputs.map((i) => (
+              <ds-field label={i.label}>
+                <input
+                  type="text"
+                  id={settingsDomId(`${g.key}.${i.id}`)}
+                  placeholder={i.placeholder}
+                  autocomplete="off"
+                  spellcheck={false}
+                  onInput={(e) => this.mireSettingDraft.emit({ key: `${g.key}.${i.id}`, value: (e.target as HTMLInputElement).value })}
+                />
+              </ds-field>
+            ))}
+          </div>
+        )}
+        {g.buttons && g.buttons.length > 0 && <div class="mire-settings-view__buttons">{g.buttons.map((b) => this.renderEntryButton(b, g.key))}</div>}
+      </div>
+    );
+  }
+
   private renderField(f: SettingsFieldView, l: SettingsLabels) {
     const id = settingsDomId(f.key);
     const hint = f.help ?? '';
@@ -251,17 +421,27 @@ export class MireSettingsView {
             {(f.lists ?? []).map((list) => this.renderOrderList(list, l))}
           </div>
         );
-      case 'page':
+      case 'segmented':
+        return this.renderSegmented(f);
+      case 'entries':
+        return (
+          <div class="mire-settings-view__field --full">
+            {hint && <p class="mire-settings-view__hint">{hint}</p>}
+            {(f.groups ?? []).map((g) => this.renderGroup(g, l))}
+          </div>
+        );
+      case 'link':
         return (
           <div class="mire-settings-view__field --full">
             <span class="mire-settings-view__label">{f.label}</span>
-            <div class="mire-settings-view__buttons">
-              {(f.links ?? []).map((k) => (
-                <ds-trigger type="button" mods="stl-3" target="mire-settings" action={`openPageSettings:${settingsArgs({ page: k.page, tab: k.tab })}`}>
-                  {k.label}
+            {hint && <p class="mire-settings-view__hint">{hint}</p>}
+            {f.link && (
+              <div class="mire-settings-view__buttons">
+                <ds-trigger type="button" mods="stl-3" target="mire-settings" action={`openCentreTab:${settingsArgs({ tab: f.link.tab })}`}>
+                  {f.link.label}
                 </ds-trigger>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         );
       default: {

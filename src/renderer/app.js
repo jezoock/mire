@@ -189,8 +189,12 @@ const settings = createSettings({
     adblockStatus: S.adblock ? adblockStatusText(S.adblock, t, (d) => i18n.engine?.formatDate(d) ?? d.toLocaleDateString()) : '',
     drmStatus: drmText,
     configPath: S.configPath,
+    sourceStatus: S.sourceStatus,
+    gameSourceStatus: S.gameSourceStatus,
+    scanning: !!S.scanning,
   }),
   plugins: () => api.pluginsSettings(),
+  providers: () => api.pluginsMetadataProviders(),
   onChange: (key, value) => C.settings.setValue({ key, value }).catch((err) => toast(err.message, { duration: 6000 })),
   onOrder: (kind, keys) => C.settings.setOrder({ kind, keys }).catch((err) => toast(err.message, { duration: 6000 })),
   onLanguageChange: (listener) => i18n.onChange(listener),
@@ -966,6 +970,7 @@ function sourcesHtml(kinds = ['video', 'audio', 'image', 'game']) {
 }
 function renderSources() {
   for (const box of $$('.sources-box')) box.innerHTML = sourcesHtml(box.dataset.kinds.split(','));
+  if (S.section === SETTINGS_VIEW) settings.refresh();
 }
 
 async function addSource(kind, location) {
@@ -1085,6 +1090,7 @@ async function scan() {
   if (S.scanning) return;
   S.scanning = true;
   if (['home', 'videos', 'music', 'images'].includes(S.section)) render();
+  if (S.section === SETTINGS_VIEW) settings.refresh();
   let items = [];
   try {
     const [lib, games] = await Promise.all([api.scanLibrary(), api.scanGameSources()]);
@@ -1101,7 +1107,7 @@ async function scan() {
   S.scanning = false;
   S.scanned = true;
   if (['home', 'videos', 'music', 'images', 'games'].includes(S.section)) render();
-  if (S.section === 'settings') renderSources();
+  renderSources();
   if (S.config.scrape?.auto !== false) startScrape(['videos', 'music', 'games'], { quiet: true });
 }
 
