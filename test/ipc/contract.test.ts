@@ -188,6 +188,9 @@ const ADDED_METHODS: Record<string, string> = {
   pluginsSetSetting: 'plugins:setSetting',
   // P4-20 : fournisseurs d'infos des plugins
   pluginsMetadataProviders: 'plugins:metadataProviders',
+  // P4-10 : mode secours
+  rescueStart: 'rescue:start',
+  rescueThemeOk: 'rescue:themeOk',
 };
 
 // Événements ajoutés après P1-08.
@@ -196,6 +199,7 @@ const ADDED_EVENTS: Record<string, string> = {
   onPagesChange: 'pages:changed', // P2-07 : contenu d'une page changé
   onListsChange: 'lists:changed', // P2-08 : liste changée
   onFoldersChange: 'folders:changed', // P4-08 : sources ou dossiers changés (explorateur)
+  onRescue: 'rescue:open', // P4-10 : ouvrir l'explorateur en mode secours
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.

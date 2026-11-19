@@ -41,6 +41,7 @@ import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romPr
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
 import { activeDownloads } from './shell/menu.ts';
+import { createRescue, createThemeWatch } from './rescue/index.ts';
 
 /* ------------------------------------------------------------------ */
 /* Outils                                                              */
@@ -232,6 +233,24 @@ const pages = createPages({
 
 home.attach(pages.engine);
 
+// Mode secours (P4-10) : bandeau au-dessus de l'explorateur, qui s'ouvre sur une demande ou quand le thème ne
+// s'affiche pas (introuvable, fichier en échec, délai dépassé). Un thème affiché sans souci le signale au processus
+// principal, pour qui les plantages précédents ne comptent plus.
+const pageThemes = () => pages.engine.list().map((th) => ({ id: th.id, name: themeText(th.name) }));
+const rescue = createRescue({
+  t,
+  themes: () => { const cur = pages.engine.current().id; return pageThemes().map((th) => ({ ...th, current: th.id === cur })); },
+  themeName: (id) => pageThemes().find((th) => th.id === id)?.name ?? id,
+  openExplorer: () => go(EXPLORER_VIEW, { focus: 'content' }),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+});
+const themeWatch = createThemeWatch({
+  onFail: (req) => rescue.request(req),
+  onStable: () => { api.rescueThemeOk(); },
+});
+pages.engine.onLoad((load) => themeWatch.load(load));
+api.onRescue((req) => rescue.request(req));
+
 // Vue web (P4-16) : barre du site et place de la vue native, d'après l'état publié par le processus principal.
 const web = createWeb({
   t,
@@ -342,6 +361,7 @@ function go(section, { focus = 'keep' } = {}) {
     S.romsOf = null;
     S.draft = null;
   }
+  if (changed && section !== EXPLORER_VIEW) rescue.leave();
   S.section = section;
   document.body.dataset.section = section;
   shell.setSection(section, webHome());
@@ -480,7 +500,9 @@ function render({ resetScroll = false } = {}) {
   // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
   // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
   const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
-  if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
+  // L'explorateur a au-dessus de lui le bandeau du mode secours (P4-10), vide hors du mode secours.
+  const hostedAll = sec === EXPLORER_VIEW ? [rescue.host, hosted] : [hosted];
+  if (hosted) { if (viewEl.childElementCount !== hostedAll.length || hostedAll.some((el, i) => viewEl.children[i] !== el)) viewEl.replaceChildren(...hostedAll); }
   else viewEl.innerHTML = views[sec]();
   if (sec === HOME_VIEW) home.refresh();
   if (sec === SEARCH_VIEW) search.refresh();
@@ -2397,6 +2419,7 @@ const legacyUi = {
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
   getQueries, rememberQuery, search, explorer, settings,
+  rescue: { themes: pageThemes, refresh: () => rescue.refresh() },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),
@@ -2525,6 +2548,8 @@ initKeyboard({
 initGamepad({
   context: padContext,
   dialog: topDialog,
+  // Mode secours (P4-10) : Affichage + Menu ouvrent l'explorateur, quel que soit le thème.
+  rescue: () => rescue.request({ reason: 'pad' }),
 }, C);
 
 if ('mediaSession' in navigator) {
@@ -2602,6 +2627,8 @@ function tick() {
   setVolume(S.usage.volume);
 
   go(HOME_VIEW, { focus: 'content' });
+  // Mode secours (P4-10) : premier écran demandé (option, touche maintenue, plantages) ou thème déjà en échec.
+  rescue.start(await api.rescueStart().catch(() => null));
   tick();
   setInterval(tick, 5000);
 

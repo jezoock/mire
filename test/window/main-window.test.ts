@@ -6,7 +6,8 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createMainWindow, readPaletteMeta, themeBackground } from '../../src/main/window/main-window.ts';
+import { RESCUE_CHANNEL, createMainWindow, readPaletteMeta, themeBackground } from '../../src/main/window/main-window.ts';
+import { createRescue } from '../../src/main/app/rescue.ts';
 
 // Les palettes du cœur, telles que la construction les copie à côté de la page (dist/renderer/palettes/).
 const RENDERER = path.join(import.meta.dirname, '..', '..', 'src', 'renderer');
@@ -49,6 +50,10 @@ class FakeContents extends EventEmitter {
   }
   toggleDevTools() {
     this.devTools++;
+  }
+  reloads = 0;
+  reload() {
+    this.reloads++;
   }
 }
 
@@ -96,7 +101,7 @@ class FakeWindow extends EventEmitter {
   }
 }
 
-function setup(ui: Record<string, unknown> = { theme: 'jour', fullscreen: false }) {
+function setup(ui: Record<string, unknown> = { theme: 'jour', fullscreen: false }, rescue?: ReturnType<typeof createRescue>) {
   const opened: string[] = [];
   const events: string[] = [];
   let closed = 0;
@@ -112,6 +117,7 @@ function setup(ui: Record<string, unknown> = { theme: 'jour', fullscreen: false 
       onWindowClosed: () => void events.push('closed'),
     }),
     onClosed: () => void closed++,
+    rescue,
   });
   return { window, opened, events, closed: () => closed };
 }
@@ -168,6 +174,45 @@ describe('createMainWindow', () => {
     key('a');
     assert.equal(w.full, true);
     assert.equal(prevented, 2);
+  });
+
+  it('mode secours : le raccourci est lu avant la page et ouvre l’explorateur ; Maj au lancement aussi', () => {
+    const rescue = createRescue({ argv: ['mire', '--explorateur'] });
+    const { window } = setup(undefined, rescue);
+    window.open();
+    const w = FakeWindow.last;
+    let prevented = 0;
+    const key = (k: string, mods: Record<string, boolean> = {}) =>
+      w.webContents.emit('before-input-event', { preventDefault: () => prevented++ }, { type: 'keyDown', key: k, ...mods });
+    key('Shift');
+    key('E', { control: true, shift: true });
+    key('e');
+    assert.deepEqual(w.webContents.sent, [
+      [RESCUE_CHANNEL, { reason: 'key' }],
+      [RESCUE_CHANNEL, { reason: 'shortcut' }],
+    ]);
+    assert.equal(prevented, 1);
+    // L'option et la touche ne changent que le premier écran : les réglages de la fenêtre restent les mêmes.
+    assert.deepEqual(w.options.webPreferences, { preload: '/dist/preload/preload.js', contextIsolation: true, sandbox: true, nodeIntegration: false });
+    assert.deepEqual(rescue.takeStart(), { reason: 'option' });
+  });
+
+  it('mode secours : interface plantée rechargée ; deux fois de suite, sur l’explorateur ; fermeture normale ignorée', () => {
+    const rescue = createRescue({ argv: [] });
+    const { window } = setup(undefined, rescue);
+    window.open();
+    const wc = FakeWindow.last.webContents;
+    wc.emit('render-process-gone', {}, { reason: 'clean-exit' });
+    assert.equal(wc.reloads, 0);
+    wc.emit('render-process-gone', {}, { reason: 'crashed' });
+    assert.equal(wc.reloads, 1);
+    assert.equal(rescue.takeStart(), null);
+    wc.emit('render-process-gone', {}, { reason: 'oom' });
+    assert.equal(wc.reloads, 2);
+    assert.deepEqual(rescue.takeStart(), { reason: 'crash' });
+    wc.emit('render-process-gone', {}, { reason: 'crashed' });
+    wc.emit('render-process-gone', {}, { reason: 'crashed' });
+    assert.equal(wc.reloads, 3, 'plus de rechargement après trop de plantages');
   });
 
   it('messages vers l’interface : envoyés tant que la fenêtre existe', () => {

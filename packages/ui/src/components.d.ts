@@ -14,6 +14,7 @@ import { PageGroup } from "@mire/shared";
 import { HomeLabels, HomeSection } from "./utils/home";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
+import { RescueLabels, RescueTheme } from "./components/mire-rescue-view/mire-rescue-view";
 import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 import { SettingsLabels, SettingsPanelView } from "./utils/settings";
 import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
@@ -27,6 +28,7 @@ export { PageGroup } from "@mire/shared";
 export { HomeLabels, HomeSection } from "./utils/home";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
+export { RescueLabels, RescueTheme } from "./components/mire-rescue-view/mire-rescue-view";
 export { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./utils/search";
 export { SettingsLabels, SettingsPanelView } from "./utils/settings";
 export { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
@@ -807,6 +809,39 @@ export namespace Components {
         "sessions": Record<string, RailSession[]> | string;
     }
     /**
+     * Hôte du mode secours (P4-10) : ses méthodes sont les actions du contrôleur `mire-rescue` (choisir un autre thème,
+     * aller à l'accueil), qui vit avec l'état de l'interface (`src/renderer/controllers/rescue.ts`). Il contient la vue
+     * du mode secours (`mire-rescue-view`, placée par la page, au-dessus de l'explorateur). Une seule balise dans la page.
+     */
+    interface MireRescue {
+    }
+    /**
+     * Bandeau du mode secours (P4-10), au-dessus de l'explorateur : la raison de son ouverture, le choix d'un autre thème
+     * et le retour à l'accueil. Habillage du cœur et palette des réglages (D-16) ; aucun texte écrit ici. Sans message, il
+     * n'affiche rien.
+     */
+    interface MireRescueView {
+        /**
+          * Le message signale un problème (thème cassé, plantage).
+          * @default false
+         */
+        "failure": boolean;
+        /**
+          * @default ''
+         */
+        "labels": RescueLabels | string;
+        /**
+          * Raison de l'ouverture, déjà rédigée.
+          * @default ''
+         */
+        "message": string;
+        /**
+          * Thèmes proposés, en propriété ou en JSON.
+          * @default []
+         */
+        "themes": RescueTheme[] | string;
+    }
+    /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
      * focus. Cartes et actions comme `mire-card` (clé de l'élément).
@@ -1476,6 +1511,28 @@ declare global {
         new (): HTMLMireRailElement;
     };
     /**
+     * Hôte du mode secours (P4-10) : ses méthodes sont les actions du contrôleur `mire-rescue` (choisir un autre thème,
+     * aller à l'accueil), qui vit avec l'état de l'interface (`src/renderer/controllers/rescue.ts`). Il contient la vue
+     * du mode secours (`mire-rescue-view`, placée par la page, au-dessus de l'explorateur). Une seule balise dans la page.
+     */
+    interface HTMLMireRescueElement extends Components.MireRescue, HTMLStencilElement {
+    }
+    var HTMLMireRescueElement: {
+        prototype: HTMLMireRescueElement;
+        new (): HTMLMireRescueElement;
+    };
+    /**
+     * Bandeau du mode secours (P4-10), au-dessus de l'explorateur : la raison de son ouverture, le choix d'un autre thème
+     * et le retour à l'accueil. Habillage du cœur et palette des réglages (D-16) ; aucun texte écrit ici. Sans message, il
+     * n'affiche rien.
+     */
+    interface HTMLMireRescueViewElement extends Components.MireRescueView, HTMLStencilElement {
+    }
+    var HTMLMireRescueViewElement: {
+        prototype: HTMLMireRescueViewElement;
+        new (): HTMLMireRescueViewElement;
+    };
+    /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
      * focus. Cartes et actions comme `mire-card` (clé de l'élément).
@@ -1678,6 +1735,8 @@ declare global {
         "mire-page-view": HTMLMirePageViewElement;
         "mire-pick": HTMLMirePickElement;
         "mire-rail": HTMLMireRailElement;
+        "mire-rescue": HTMLMireRescueElement;
+        "mire-rescue-view": HTMLMireRescueViewElement;
         "mire-row": HTMLMireRowElement;
         "mire-search": HTMLMireSearchElement;
         "mire-search-view": HTMLMireSearchViewElement;
@@ -2462,6 +2521,39 @@ declare namespace LocalJSX {
         "sessions"?: Record<string, RailSession[]> | string;
     }
     /**
+     * Hôte du mode secours (P4-10) : ses méthodes sont les actions du contrôleur `mire-rescue` (choisir un autre thème,
+     * aller à l'accueil), qui vit avec l'état de l'interface (`src/renderer/controllers/rescue.ts`). Il contient la vue
+     * du mode secours (`mire-rescue-view`, placée par la page, au-dessus de l'explorateur). Une seule balise dans la page.
+     */
+    interface MireRescue {
+    }
+    /**
+     * Bandeau du mode secours (P4-10), au-dessus de l'explorateur : la raison de son ouverture, le choix d'un autre thème
+     * et le retour à l'accueil. Habillage du cœur et palette des réglages (D-16) ; aucun texte écrit ici. Sans message, il
+     * n'affiche rien.
+     */
+    interface MireRescueView {
+        /**
+          * Le message signale un problème (thème cassé, plantage).
+          * @default false
+         */
+        "failure"?: boolean;
+        /**
+          * @default ''
+         */
+        "labels"?: RescueLabels | string;
+        /**
+          * Raison de l'ouverture, déjà rédigée.
+          * @default ''
+         */
+        "message"?: string;
+        /**
+          * Thèmes proposés, en propriété ou en JSON.
+          * @default []
+         */
+        "themes"?: RescueTheme[] | string;
+    }
+    /**
      * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
      * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le
      * focus. Cartes et actions comme `mire-card` (clé de l'élément).
@@ -2890,6 +2982,12 @@ declare namespace LocalJSX {
         "labels": RailLabels | string;
         "icons": Record<string, string> | string;
     }
+    interface MireRescueViewAttributes {
+        "message": string;
+        "failure": boolean;
+        "themes": RescueTheme[] | string;
+        "labels": RescueLabels | string;
+    }
     interface MireRowAttributes {
         "heading": string;
         "elements": CardElement[] | string;
@@ -2967,6 +3065,8 @@ declare namespace LocalJSX {
         "mire-page-view": Omit<MirePageView, keyof MirePageViewAttributes> & { [K in keyof MirePageView & keyof MirePageViewAttributes]?: MirePageView[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `attr:${K}`]?: MirePageViewAttributes[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `prop:${K}`]?: MirePageView[K] };
         "mire-pick": Omit<MirePick, keyof MirePickAttributes> & { [K in keyof MirePick & keyof MirePickAttributes]?: MirePick[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `attr:${K}`]?: MirePickAttributes[K] } & { [K in keyof MirePick & keyof MirePickAttributes as `prop:${K}`]?: MirePick[K] };
         "mire-rail": Omit<MireRail, keyof MireRailAttributes> & { [K in keyof MireRail & keyof MireRailAttributes]?: MireRail[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `attr:${K}`]?: MireRailAttributes[K] } & { [K in keyof MireRail & keyof MireRailAttributes as `prop:${K}`]?: MireRail[K] };
+        "mire-rescue": MireRescue;
+        "mire-rescue-view": Omit<MireRescueView, keyof MireRescueViewAttributes> & { [K in keyof MireRescueView & keyof MireRescueViewAttributes]?: MireRescueView[K] } & { [K in keyof MireRescueView & keyof MireRescueViewAttributes as `attr:${K}`]?: MireRescueViewAttributes[K] } & { [K in keyof MireRescueView & keyof MireRescueViewAttributes as `prop:${K}`]?: MireRescueView[K] };
         "mire-row": Omit<MireRow, keyof MireRowAttributes> & { [K in keyof MireRow & keyof MireRowAttributes]?: MireRow[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `attr:${K}`]?: MireRowAttributes[K] } & { [K in keyof MireRow & keyof MireRowAttributes as `prop:${K}`]?: MireRow[K] };
         "mire-search": MireSearch;
         "mire-search-view": Omit<MireSearchView, keyof MireSearchViewAttributes> & { [K in keyof MireSearchView & keyof MireSearchViewAttributes]?: MireSearchView[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `attr:${K}`]?: MireSearchViewAttributes[K] } & { [K in keyof MireSearchView & keyof MireSearchViewAttributes as `prop:${K}`]?: MireSearchView[K] };
@@ -3163,6 +3263,18 @@ declare module "@stencil/core" {
              * quand le menu rétractable s'ouvre ou se ferme, la page en tire la mise en page (classes du document, vue web).
              */
             "mire-rail": LocalJSX.IntrinsicElements["mire-rail"] & JSXBase.HTMLAttributes<HTMLMireRailElement>;
+            /**
+             * Hôte du mode secours (P4-10) : ses méthodes sont les actions du contrôleur `mire-rescue` (choisir un autre thème,
+             * aller à l'accueil), qui vit avec l'état de l'interface (`src/renderer/controllers/rescue.ts`). Il contient la vue
+             * du mode secours (`mire-rescue-view`, placée par la page, au-dessus de l'explorateur). Une seule balise dans la page.
+             */
+            "mire-rescue": LocalJSX.IntrinsicElements["mire-rescue"] & JSXBase.HTMLAttributes<HTMLMireRescueElement>;
+            /**
+             * Bandeau du mode secours (P4-10), au-dessus de l'explorateur : la raison de son ouverture, le choix d'un autre thème
+             * et le retour à l'accueil. Habillage du cœur et palette des réglages (D-16) ; aucun texte écrit ici. Sans message, il
+             * n'affiche rien.
+             */
+            "mire-rescue-view": LocalJSX.IntrinsicElements["mire-rescue-view"] & JSXBase.HTMLAttributes<HTMLMireRescueViewElement>;
             /**
              * Rangée défilante d'éléments (P4-05) : un titre et des `mire-card` dans un `ds-scroller` horizontal. Les flèches et
              * la manette passent d'une carte à l'autre par le service de navigation ; la rangée montre la carte qui reçoit le

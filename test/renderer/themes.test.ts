@@ -163,3 +163,51 @@ describe('moteur', () => {
     assert.equal(activeTheme(broken).page.background, 'none');
   });
 });
+
+describe('moteur : suivi des chargements (mode secours, P4-10)', () => {
+  const watch = (linked?: string[]) => {
+    const host = fakeHost(linked);
+    const errors: Array<() => void> = [];
+    host.addTokens = (_id, ready, error) => {
+      host.pending.push(ready);
+      if (error) errors.push(error);
+    };
+    const engine = createThemeEngine([BUILTIN_THEMES[0]!, entry({ id: 'velours', palette: 'velours' })], host);
+    const seen: string[] = [];
+    engine.onLoad((l) => seen.push(`${l.theme}:${l.state}`));
+    return { host, engine, seen, errors };
+  };
+
+  it('thème sans palette : prêt tout de suite ; thème introuvable : signalé une fois, le thème par défaut s’affiche', () => {
+    const { engine, seen } = watch();
+    engine.set('mire');
+    engine.set('casse');
+    engine.set('casse');
+    assert.equal(engine.current().id, 'mire');
+    assert.deepEqual(seen, ['mire:loading', 'mire:ready', 'casse:missing']);
+  });
+
+  it('palette chargée plus tard : prêt alors ; palette en échec : échec ; demande remplacée : sans suite', () => {
+    const { host, engine, seen, errors } = watch([]);
+    engine.set('velours');
+    assert.deepEqual(seen, ['velours:loading']);
+    host.pending.shift()!();
+    assert.deepEqual(seen, ['velours:loading', 'velours:ready']);
+    engine.set('mire');
+    engine.set('velours');
+    errors.at(-1)!();
+    assert.deepEqual(seen.slice(-2), ['velours:loading', 'velours:failed']);
+    engine.set('mire');
+    engine.set('velours');
+    engine.set('mire');
+    errors.at(-1)!();
+    assert.equal(seen.at(-1), 'mire:ready');
+  });
+
+  it('le thème demandé est déjà affiché : son état est redit', () => {
+    const { engine, seen } = watch();
+    engine.set(undefined);
+    engine.set('mire');
+    assert.deepEqual(seen, ['mire:loading', 'mire:ready', 'mire:ready']);
+  });
+});

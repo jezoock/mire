@@ -71,6 +71,10 @@ describe('raccourcis', () => {
     assert.equal(shortcutAction(key('W', { meta: true }), idle), 'close');
     assert.equal(shortcutAction(key('ArrowLeft', { alt: true }), idle), 'back');
     assert.equal(shortcutAction(key('ArrowRight', { alt: true }), idle), 'forward');
+    // Mode secours (P4-10) : l'explorateur, aussi depuis un site.
+    assert.equal(shortcutAction(key('E', { control: true, shift: true }), idle), 'explorer');
+    assert.equal(shortcutAction(key('e', { meta: true, shift: true }), idle), 'explorer');
+    assert.equal(shortcutAction(key('e', { control: true }), idle), null);
   });
 
   test('touches laissées à la page', () => {

@@ -16,6 +16,7 @@ import type { ListsChange, ListSummary, ListView } from './lists.ts';
 import type { SearchOptions, SearchResult } from './search.ts';
 import type { CatalogSources, FolderLevel } from './browse.ts';
 import type { Catalog, CatalogMeta } from './i18n/types.ts';
+import type { RescueRequest } from './rescue.ts';
 
 // Types de la configuration, exposés aussi par le contrat sous leurs noms d'origine.
 export type { Bookmark, ConsoleRef, GameBookmark };
@@ -460,6 +461,11 @@ export interface IpcMethods {
   // Fenêtre et application
   toggleFullscreen(): boolean;
   quit(): boolean;
+
+  // Mode secours (P4-10) : premier écran demandé au démarrage (option, touche maintenue, plantages), lu une fois ;
+  // thème affiché sans souci (les plantages précédents ne comptent plus).
+  rescueStart(): RescueRequest | null;
+  rescueThemeOk(): boolean;
 }
 
 export type IpcMethodName = keyof IpcMethods;
@@ -572,6 +578,9 @@ export const IPC_METHODS = {
   toggleFullscreen: 'window:fullscreen',
   quit: 'app:quit',
 
+  rescueStart: 'rescue:start',
+  rescueThemeOk: 'rescue:themeOk',
+
   usageGet: 'usage:get',
   usageMigrate: 'usage:migrate',
   usageAddRecent: 'usage:addRecent',
@@ -673,6 +682,8 @@ export interface IpcEvents {
   onListsChange: ListsChange;
   /** Les sources, les dossiers autorisés ou leur contenu ont pu changer : à redemander (explorateur). */
   onFoldersChange: undefined;
+  /** Ouvrir l'explorateur en mode secours (raccourci clavier, touche maintenue au lancement). */
+  onRescue: RescueRequest;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -700,6 +711,7 @@ export const IPC_EVENTS = {
   onPagesChange: 'pages:changed',
   onListsChange: 'lists:changed',
   onFoldersChange: 'folders:changed',
+  onRescue: 'rescue:open',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

@@ -15,5 +15,11 @@ export function appHandlers(ctx: MainContext) {
       ctx.electron.app.quit();
       return true;
     },
+    // Mode secours (P4-10) : sans argument ; rien de ce qui vient de la page n'est lu.
+    rescueStart: () => ctx.rescue.takeStart(),
+    rescueThemeOk: () => {
+      ctx.rescue.themeOk();
+      return true;
+    },
   } satisfies Partial<IpcImplementations>;
 }

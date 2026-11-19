@@ -44,9 +44,12 @@ export interface ThemeScope {
 export interface ThemeHost {
   /** Élément que le thème habille (ou plusieurs, réunis par `sharedScope`). */
   scope: ThemeScope;
-  /** Feuille de la palette déjà liée ? Sinon `addTokens` la lie et appelle `onReady` une fois chargée. */
+  /**
+   * Feuille de la palette déjà liée ? Sinon `addTokens` la lie et appelle `onReady` une fois chargée, ou `onError` si
+   * elle ne peut pas l'être.
+   */
   hasTokens(id: string): boolean;
-  addTokens(id: string, onReady: () => void): void;
+  addTokens(id: string, onReady: () => void, onError?: () => void): void;
   /** Charge une police ; vrai si elle est prête. */
   loadFont(family: string, url: string): Promise<boolean>;
   /** Joue un son (sans erreur s'il ne peut pas l'être). */
@@ -58,6 +61,16 @@ export interface ThemeHost {
   absolute?(url: string): string;
 }
 
+/**
+ * Chargement d'un thème, suivi par le mode secours (P4-10) : `loading` puis `ready` (sa palette est en place) ou
+ * `failed` (sa palette n'a pas pu être chargée) ; `missing` : le thème demandé est introuvable ou invalide (le thème
+ * par défaut s'affiche à sa place). Une demande remplacée par une autre pendant le chargement n'a pas de suite.
+ */
+export interface ThemeLoad {
+  theme: string;
+  state: 'loading' | 'ready' | 'failed' | 'missing';
+}
+
 export interface ThemeEngine {
   /** Applique le thème d'un réglage (un thème inconnu donne le thème par défaut). */
   set(setting: unknown): ActiveTheme;
@@ -67,6 +80,8 @@ export interface ThemeEngine {
   /** Joue un son du thème (`move`, `select`, `back`), s'il en a un. */
   play(sound: 'move' | 'select' | 'back'): void;
   onChange(listener: (active: ActiveTheme) => void): () => void;
+  /** Suivi du chargement des thèmes (mode secours). */
+  onLoad(listener: (load: ThemeLoad) => void): () => void;
 }
 
 /**
@@ -127,20 +142,35 @@ export function createThemeEngine(entries: readonly ThemeEntry[], host: ThemeHos
   let active = activeTheme(fallback);
   let generation = 0;
   const listeners = new Set<(a: ActiveTheme) => void>();
+  const loads = new Set<(l: ThemeLoad) => void>();
   const { scope } = host;
+  // Dernier réglage reçu : un thème introuvable n'est signalé qu'une fois par demande.
+  let requested: string | null = null;
+  // État du chargement du thème affiché, redit à une nouvelle demande du même thème.
+  let status: ThemeLoad['state'] = 'loading';
+  const loaded = (theme: string, state: ThemeLoad['state']) => {
+    if (theme === active.id && state !== 'missing') status = state;
+    loads.forEach((l) => l({ theme, state }));
+  };
 
   function applyPalette(theme: ThemeDefinition, gen: number) {
     const id = theme.palette;
     if (!id) {
       delete scope.dataset.palette;
+      loaded(theme.id, 'ready');
       return;
     }
     const show = () => {
       // Un autre thème a été choisi pendant le chargement de la feuille.
-      if (gen === generation) scope.dataset.palette = id;
+      if (gen !== generation) return;
+      scope.dataset.palette = id;
+      loaded(theme.id, 'ready');
+    };
+    const fail = () => {
+      if (gen === generation) loaded(theme.id, 'failed');
     };
     if (host.hasTokens(id)) show();
-    else host.addTokens(id, show);
+    else host.addTokens(id, show, fail);
   }
 
   function applyFonts(entry: ThemeEntry, gen: number) {
@@ -165,6 +195,7 @@ export function createThemeEngine(entries: readonly ThemeEntry[], host: ThemeHos
     const gen = ++generation;
     active = activeTheme(entry);
     scope.dataset.theme = entry.theme.id;
+    loaded(entry.theme.id, 'loading');
     applyPalette(entry.theme, gen);
     applyFonts(entry, gen);
     const bg = active.images.background;
@@ -176,7 +207,13 @@ export function createThemeEngine(entries: readonly ThemeEntry[], host: ThemeHos
   return {
     set(setting) {
       const entry = byId.get(resolveTheme(setting, [...byId.keys()])) ?? fallback;
+      const wanted = typeof setting === 'string' ? setting : '';
+      const changed = wanted !== requested;
+      requested = wanted;
+      if (changed && wanted && wanted !== entry.theme.id) loaded(wanted, 'missing');
       if (entry.theme.id !== active.id || scope.dataset.theme !== entry.theme.id) apply(entry);
+      // Le thème demandé est déjà affiché : son état est redit à qui suit les chargements.
+      else if (changed && wanted === entry.theme.id) loaded(entry.theme.id, status);
       return active;
     },
     current: () => active,
@@ -189,6 +226,10 @@ export function createThemeEngine(entries: readonly ThemeEntry[], host: ThemeHos
     onChange(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    onLoad(listener) {
+      loads.add(listener);
+      return () => loads.delete(listener);
     },
   };
 }

@@ -3382,4 +3382,106 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Mode secours (P4-10)', () => {
+    const VIEW = '#view mire-rescue mire-rescue-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(() => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    // Bandeau du mode secours affiché au-dessus de l'explorateur, rendu, avec ce message.
+    const rescueShown = (message) =>
+      page.waitForFunction(
+        ([sel, text]) => {
+          const v = document.querySelector(sel);
+          if (document.body.dataset.section !== 'explorer' || !v?.classList.contains('hydrated')) return false;
+          const triggers = [...v.querySelectorAll('ds-trigger')];
+          return (
+            v.querySelector('.mire-rescue-view__message')?.textContent === text &&
+            triggers.length > 0 &&
+            triggers.every((t) => t.classList.contains('hydrated'))
+          );
+        },
+        [VIEW, message],
+      );
+    const savedPageTheme = () => page.evaluate(() => window.api.getConfig().then((r) => r.config.ui.pageTheme));
+
+    it('un thème cassé fait revenir à l’explorateur, avec un message ; un autre thème s’y choisit', async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await page.waitForFunction(() => typeof document.querySelector('mire-settings')?.setPageTheme === 'function');
+      // Thème volontairement cassé : son theme.json est introuvable (un theme.json invalide est écarté de même).
+      await page.evaluate(() => document.querySelector('mire-settings').setPageTheme({ id: 'casse' }));
+      await rescueShown('Le thème « casse » est introuvable. Mire est revenu à l’explorateur.');
+      assert.equal(await page.evaluate(() => document.querySelector('#view mire-explorer mire-explorer-view') !== null), true);
+      const themes = await page.$$eval(`${VIEW} .mire-rescue-view__theme`, (ts) => ts.map((t) => [t.dataset.key, t.textContent.trim()]));
+      assert.deepEqual(themes, [
+        ['mire', 'Mire'],
+        ['papier', 'Papier'],
+      ]);
+      await settle();
+      await page.locator(VIEW).screenshot({ path: path.join(SHOTS, 'rescue-banner.png') });
+      // Choix d'un autre thème depuis l'explorateur : enregistré, puis l'accueil.
+      await page.locator(`${VIEW} .mire-rescue-view__theme.hydrated[data-key="mire"]`).click();
+      await page.waitForFunction(async () => (await window.api.getConfig()).config.ui.pageTheme === 'mire');
+      await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      assert.equal(await page.evaluate(() => document.querySelector('#view mire-rescue')), null);
+      assert.equal(await savedPageTheme(), 'mire');
+      assert.deepEqual(errors, []);
+    });
+
+    it('le raccourci clavier (Ctrl+Maj+E), capté par le processus principal, ouvre l’explorateur', async () => {
+      await page.locator('.mire-home-view__bar.hydrated').first().waitFor();
+      // Touche envoyée par la fenêtre (comme le clavier), et non injectée dans la page : elle passe par
+      // `before-input-event` du processus principal, qui la lit avant la page.
+      await app.evaluate(({ BrowserWindow }) => {
+        const wc = BrowserWindow.getAllWindows()[0].webContents;
+        for (const type of ['keyDown', 'keyUp']) wc.sendInputEvent({ type, keyCode: 'E', modifiers: ['control', 'shift'] });
+      });
+      await rescueShown('Explorateur ouvert par le raccourci du mode secours.');
+      await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      assert.deepEqual(errors, []);
+    });
+
+    it('la combinaison de la manette (Affichage + Menu) ouvre l’explorateur', async () => {
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.evaluate(() => {
+        window.__pad.buttons[8] = { pressed: true, value: 1 };
+        window.__pad.buttons[9] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      });
+      await page.evaluate(() => {
+        window.__pad.buttons[8] = { pressed: false, value: 0 };
+        window.__pad.buttons[9] = { pressed: false, value: 0 };
+      });
+      await rescueShown('Explorateur ouvert par la combinaison de la manette.');
+      await page.evaluate(() => {
+        navigator.getGamepads = () => [];
+        window.dispatchEvent(new Event('gamepaddisconnected'));
+        delete window.__pad;
+      });
+      await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
+      assert.deepEqual(errors, []);
+    });
+  });
 });

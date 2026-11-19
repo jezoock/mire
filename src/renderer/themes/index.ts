@@ -14,7 +14,7 @@ import { sharedScope } from './engine.ts';
 import type { ThemeEntry, ThemeHost } from './engine.ts';
 
 export { createThemeEngine, activeTheme, sharedScope, DEFAULT_PAGE_LAYOUT } from './engine.ts';
-export type { ActiveTheme, ThemeEngine, ThemeEntry, ThemeHost, ThemeScope } from './engine.ts';
+export type { ActiveTheme, ThemeEngine, ThemeEntry, ThemeHost, ThemeLoad, ThemeScope } from './engine.ts';
 
 /** Lit les `theme.json` intégrés ; un thème invalide est écarté (avec un message dans la console). */
 export function readThemes(sources: Readonly<Record<string, unknown>>, base = 'themes'): ThemeEntry[] {
@@ -39,7 +39,7 @@ export function documentThemeHost(scopes: HTMLElement | readonly HTMLElement[], 
   return {
     scope: list.length === 1 ? (list[0] as HTMLElement) : sharedScope(list),
     hasTokens: (id) => palettes.hasTokens(id),
-    addTokens: (id, onReady) => palettes.addTokens(id, paletteHref(id), onReady),
+    addTokens: (id, onReady, onError) => palettes.addTokens(id, paletteHref(id), onReady, onError),
     async loadFont(family, url) {
       try {
         const face = new FontFace(family, `url("${url}")`);
