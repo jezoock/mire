@@ -396,9 +396,91 @@
         "notInConsoleFolders": "Ce jeu ne se trouve pas dans les dossiers de la console.",
         "noRomFolder": "Aucun dossier de jeux indiqué pour {console}.",
         "invalidLink": "Lien ou fichier invalide.",
-        "bookmarkNotFound": "Marque-page introuvable."
+        "bookmarkNotFound": "Marque-page introuvable.",
+        "deleteNotGame": "Cet élément n’est pas un jeu : il n’a pas été supprimé."
       },
-      "romProgress": "{name} (fichier {index} sur {total})"
+      "romProgress": "{name} (fichier {index} sur {total})",
+      "consoles": {
+        "errors": {
+          "name": "Donnez un nom à la console.",
+          "path": "Choisissez le programme de l’émulateur.",
+          "gone": "Cette console n’existe plus.",
+          "emulator": "Cet émulateur ne gère pas cette console."
+        }
+      },
+      "ui": {
+        "failed": "L’opération n’a pas abouti.",
+        "consoleGone": "Cette console n’existe plus.",
+        "consoleSaved": "Console enregistrée",
+        "consoleCreated": "Console créée",
+        "consoleRemoved": "Console retirée",
+        "form": {
+          "newTitle": "Créer une console",
+          "editTitle": "Modifier la console {name}",
+          "help": "Une console, c’est un émulateur et les dossiers où sont ses jeux. Les dossiers peuvent aussi être des partages réseau ou des adresses web (une page qui liste les fichiers).",
+          "save": "Enregistrer",
+          "cancel": "Annuler",
+          "name": "Nom",
+          "system": "Système (pour les jaquettes et le choix de l’émulateur)",
+          "systemGuess": "Deviner d’après le nom",
+          "path": "Émulateur (programme)",
+          "args": "Arguments ({rom} = chemin du jeu)",
+          "romsDir": "Dossier principal des jeux (téléchargements et imports)",
+          "sources": "Autres dossiers de jeux",
+          "sourcesHint": "\\\\NAS\\Jeux, smb://nas/jeux ou http://…/jeux/",
+          "extensions": "Extensions des jeux (séparées par des virgules)",
+          "sites": "Sites de jeux : un par ligne, « Nom | adresse | adresse de recherche avec {q} »",
+          "sitesHint": "Laissez vide pour les sites proposés par Mire."
+        },
+        "remove": {
+          "title": "Retirer la console {name} ?",
+          "help": "Seule la console disparaît de Mire : l’émulateur et vos jeux restent sur le disque.",
+          "yes": "Retirer"
+        },
+        "emulators": {
+          "consoleTitle": "Émulateur de {name}",
+          "consoleHelp": "Les jeux de cette console se lancent avec l’émulateur choisi ici. Vous pouvez en choisir un autre pour un jeu.",
+          "alone": "Aucune autre console de ce système : installez un autre émulateur dans les apps du Centre, ou créez une console du même système.",
+          "label": "Émulateur",
+          "saved": "Émulateur enregistré",
+          "own": "{name}",
+          "other": "{name} (console {console})",
+          "followConsole": "Celui de la console ({name})"
+        },
+        "game": {
+          "help": "Choisissez l’émulateur de ce jeu, puis lancez-le.",
+          "alone": "Ce jeu se lance avec l’émulateur de sa console.",
+          "launch": "Lancer",
+          "save": "Enregistrer l’émulateur",
+          "edit": "Modifier les infos",
+          "delete": "Supprimer le jeu",
+          "launching": "Lancement de {name}…"
+        },
+        "delete": {
+          "title": "Supprimer « {name} » ?",
+          "rom": "Le fichier du jeu sera supprimé de l’ordinateur.",
+          "pc": "Le jeu sera retiré de la liste.",
+          "yes": "Supprimer",
+          "done": "Jeu supprimé"
+        },
+        "bookmark": {
+          "help": "Ce jeu attend d’être téléchargé.",
+          "download": "Télécharger",
+          "remove": "Retirer",
+          "removeTitle": "Retirer « {name} » ?",
+          "removeHelp": "Le marque-page et son téléchargement en attente seront retirés.",
+          "removed": "Jeu retiré"
+        },
+        "consoles": {
+          "noSystem": "Système à deviner",
+          "folders": {
+            "one": "{count} dossier",
+            "other": "{count} dossiers"
+          },
+          "emulator": "Émulateur : {name}",
+          "emulatorOf": "Émulateur : {name}, celui de la console {console}"
+        }
+      }
     },
     "web": {
       "romSites": "Jeux : {console}",
@@ -892,7 +974,8 @@
       "tabs": {
         "label": "Sections du Centre",
         "downloads": "Téléchargements",
-        "apps": "Apps"
+        "apps": "Apps",
+        "consoles": "Consoles"
       },
       "downloads": {
         "add": "Ajouter un lien",
@@ -1079,6 +1162,16 @@
         "romReady": "{name} est prêt, lancement…",
         "romProgress": "Téléchargement de {name} : {percent} %",
         "romProgressUnknown": "Téléchargement de {name}…"
+      },
+      "consoles": {
+        "help": "Créez une console à la main, ou choisissez l’émulateur qui lance ses jeux quand plusieurs consoles ont le même système.",
+        "new": "Créer une console",
+        "none": "Aucune console. Les apps du Centre les installent en un clic, ou créez-en une à la main.",
+        "edit": "Modifier",
+        "emulator": "Émulateur",
+        "sites": "Sites de jeux",
+        "remove": "Retirer",
+        "fromApps": "Installée par les apps"
       }
     },
     "editors": {

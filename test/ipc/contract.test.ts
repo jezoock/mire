@@ -175,6 +175,14 @@ const ADDED_METHODS: Record<string, string> = {
   // P3-03 : plugins
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
+  consoleSave: 'consoles:save', // P4-17 : consoles créées à la main et émulateur choisi
+  consoleRemove: 'consoles:remove',
+  consoleEmulators: 'consoles:emulators',
+  consoleSetEmulator: 'consoles:setEmulator',
+  gameEmulators: 'games:emulators',
+  gameSetEmulator: 'games:setEmulator',
+  gameLaunch: 'games:launchElement',
+  gameDeleteElement: 'games:deleteElement',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
 };

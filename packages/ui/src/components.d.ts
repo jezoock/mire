@@ -6,7 +6,7 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
-import { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+import { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 import { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -18,7 +18,7 @@ import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./util
 import { SettingsLabels, SettingsPanelView } from "./utils/settings";
 import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
-export { AppsView, CentreLabels, DownloadRow, DownloadRowLabels } from "./utils/centre";
+export { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -119,22 +119,17 @@ export namespace Components {
      */
     interface MireCentre {
     }
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface MireCentreView {
         /**
           * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
           * @default null
          */
         "apps": AppsView | string | null;
+        /**
+          * Cartes de l'onglet des consoles (voir `ConsoleCard`).
+          * @default []
+         */
+        "consoles": ConsoleCard[] | string;
         /**
           * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
           * @default ''
@@ -154,7 +149,7 @@ export namespace Components {
          */
         "running": DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads` ou `apps`.
+          * Onglet affiché : `downloads`, `apps` ou `consoles`.
           * @default 'downloads'
          */
         "tab": string;
@@ -361,6 +356,15 @@ export namespace Components {
           * @default false
          */
         "wide": boolean;
+    }
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireGames {
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -1100,16 +1104,6 @@ declare global {
         prototype: HTMLMireCentreElement;
         new (): HTMLMireCentreElement;
     };
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface HTMLMireCentreViewElement extends Components.MireCentreView, HTMLStencilElement {
     }
     var HTMLMireCentreViewElement: {
@@ -1250,6 +1244,19 @@ declare global {
     var HTMLMireFormElement: {
         prototype: HTMLMireFormElement;
         new (): HTMLMireFormElement;
+    };
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface HTMLMireGamesElement extends Components.MireGames, HTMLStencilElement {
+    }
+    var HTMLMireGamesElement: {
+        prototype: HTMLMireGamesElement;
+        new (): HTMLMireGamesElement;
     };
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -1544,6 +1551,7 @@ declare global {
         "mire-explorer-view": HTMLMireExplorerViewElement;
         "mire-focus-info": HTMLMireFocusInfoElement;
         "mire-form": HTMLMireFormElement;
+        "mire-games": HTMLMireGamesElement;
         "mire-grid": HTMLMireGridElement;
         "mire-group-card": HTMLMireGroupCardElement;
         "mire-header": HTMLMireHeaderElement;
@@ -1653,22 +1661,17 @@ declare namespace LocalJSX {
      */
     interface MireCentre {
     }
-    /**
-     * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-     * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-     *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-     * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-     *   rappel des BIOS), jeux libres et import de ses propres jeux.
-     * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-     * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-     * l'émulateur, de la console ou du jeu.
-     */
     interface MireCentreView {
         /**
           * Onglet des apps ; `null` tant que le catalogue n'est pas lu.
           * @default null
          */
         "apps"?: AppsView | string | null;
+        /**
+          * Cartes de l'onglet des consoles (voir `ConsoleCard`).
+          * @default []
+         */
+        "consoles"?: ConsoleCard[] | string;
         /**
           * Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`).
           * @default ''
@@ -1688,7 +1691,7 @@ declare namespace LocalJSX {
          */
         "running"?: DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads` ou `apps`.
+          * Onglet affiché : `downloads`, `apps` ou `consoles`.
           * @default 'downloads'
          */
         "tab"?: string;
@@ -1894,6 +1897,15 @@ declare namespace LocalJSX {
           * @default false
          */
         "wide"?: boolean;
+    }
+    /**
+     * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+     * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+     * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+     * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+     * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+     */
+    interface MireGames {
     }
     /**
      * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
@@ -2584,6 +2596,7 @@ declare namespace LocalJSX {
         "running": DownloadRow[] | string;
         "others": DownloadRow[] | string;
         "apps": AppsView | string | null;
+        "consoles": ConsoleCard[] | string;
         "labels": CentreLabels | string;
         "rowLabels": DownloadRowLabels | string;
     }
@@ -2766,6 +2779,7 @@ declare namespace LocalJSX {
         "mire-explorer-view": Omit<MireExplorerView, keyof MireExplorerViewAttributes> & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes]?: MireExplorerView[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `attr:${K}`]?: MireExplorerViewAttributes[K] } & { [K in keyof MireExplorerView & keyof MireExplorerViewAttributes as `prop:${K}`]?: MireExplorerView[K] };
         "mire-focus-info": Omit<MireFocusInfo, keyof MireFocusInfoAttributes> & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes]?: MireFocusInfo[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `attr:${K}`]?: MireFocusInfoAttributes[K] } & { [K in keyof MireFocusInfo & keyof MireFocusInfoAttributes as `prop:${K}`]?: MireFocusInfo[K] };
         "mire-form": Omit<MireForm, keyof MireFormAttributes> & { [K in keyof MireForm & keyof MireFormAttributes]?: MireForm[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `attr:${K}`]?: MireFormAttributes[K] } & { [K in keyof MireForm & keyof MireFormAttributes as `prop:${K}`]?: MireForm[K] };
+        "mire-games": MireGames;
         "mire-grid": Omit<MireGrid, keyof MireGridAttributes> & { [K in keyof MireGrid & keyof MireGridAttributes]?: MireGrid[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `attr:${K}`]?: MireGridAttributes[K] } & { [K in keyof MireGrid & keyof MireGridAttributes as `prop:${K}`]?: MireGrid[K] };
         "mire-group-card": Omit<MireGroupCard, keyof MireGroupCardAttributes> & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes]?: MireGroupCard[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `attr:${K}`]?: MireGroupCardAttributes[K] } & { [K in keyof MireGroupCard & keyof MireGroupCardAttributes as `prop:${K}`]?: MireGroupCard[K] };
         "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
@@ -2819,16 +2833,6 @@ declare module "@stencil/core" {
              * état, il ne se rend qu'une fois.
              */
             "mire-centre": LocalJSX.IntrinsicElements["mire-centre"] & JSXBase.HTMLAttributes<HTMLMireCentreElement>;
-            /**
-             * Vue du Centre (P4-18) : deux onglets, Téléchargements et Apps.
-             * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
-             *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
-             * - Apps : dossier des jeux, émulateurs (installer, mettre à jour, désinstaller ; consoles de RetroArch à cocher ;
-             *   rappel des BIOS), jeux libres et import de ses propres jeux.
-             * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
-             * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
-             * l'émulateur, de la console ou du jeu.
-             */
             "mire-centre-view": LocalJSX.IntrinsicElements["mire-centre-view"] & JSXBase.HTMLAttributes<HTMLMireCentreViewElement>;
             /**
              * Composant de démonstration de `@mire/ui` (P4-01) : prouve la chaîne Stencil en light DOM, l'habillage compilé
@@ -2888,6 +2892,14 @@ declare module "@stencil/core" {
              * clic à côté, elle émet `mireDialogClose`. Textes : ceux de l'appelant, et `labels` tirés des catalogues.
              */
             "mire-form": LocalJSX.IntrinsicElements["mire-form"] & JSXBase.HTMLAttributes<HTMLMireFormElement>;
+            /**
+             * Hôte des jeux (P4-17) : ses méthodes sont les actions du contrôleur `mire-games` (consoles créées à la main,
+             * émulateur choisi pour une console ou pour un jeu, sites de jeux, marque-pages « à télécharger », suppression d'un
+             * jeu désigné par sa clé), qui vit avec l'état de l'interface (`src/renderer/controllers/games.ts`). Les formulaires
+             * sont les boîtes de P4-06 (`mire-form`, dans `mire-dialogs`). Une seule balise dans la page, pour que les
+             * `ds-trigger` la trouvent ; sans état, il ne se rend qu'une fois.
+             */
+            "mire-games": LocalJSX.IntrinsicElements["mire-games"] & JSXBase.HTMLAttributes<HTMLMireGamesElement>;
             /**
              * Grille d'éléments (P4-05), en groupes facultatifs (titre et cartes), avec « Afficher plus » quand un groupe dépasse
              * `limit`. Virtualisée : seules les lignes visibles, et deux lignes de chaque côté, sont rendues ; des marges tiennent

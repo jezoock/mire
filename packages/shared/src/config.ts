@@ -164,6 +164,10 @@ export interface Emulator {
   /** Console installée par la boutique : « émulateur:système ». */
   store?: string;
   banner?: string;
+  /** Émulateur par défaut (D-21) : identifiant d'une autre console du même système dont l'émulateur lance les jeux. */
+  emulator?: string;
+  /** Émulateur choisi pour un jeu (D-21) : clé de l'élément → identifiant d'une console du même système. */
+  gameEmulators?: Record<string, string>;
   [key: string]: unknown;
 }
 

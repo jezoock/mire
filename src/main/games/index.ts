@@ -6,7 +6,7 @@
 import type { GameRef, GameBookmarkInput } from '@mire/shared/ipc';
 import * as bookmarks from './bookmarks.ts';
 import { cleanupGames } from './cleanup.ts';
-import { deleteGame } from './delete.ts';
+import { deleteGame, deleteGameElement } from './delete.ts';
 import { addGame, launchGame, launchGamePath } from './pc/launch.ts';
 import { localPcProvider, scanGameSources } from './pc/scanner.ts';
 import { downloadGame } from './roms/download.ts';
@@ -44,9 +44,10 @@ export function createGames(deps: GamesDeps) {
     addGame: () => addGame(deps),
     consoleLocations,
     listRoms: (consoleId: unknown, opts?: ListOptions) => listRoms({ ...deps, onScanned }, consoleId, opts),
-    launchRom: (consoleId: unknown, romPath: string) => launchRom(deps, consoleId, romPath),
+    launchRom: (consoleId: unknown, romPath: string, emulator?: unknown) => launchRom(deps, consoleId, romPath, emulator),
     downloadGame: (consoleId: string, url: string) => downloadGame(deps, consoleId, url),
     deleteGame: (ref: GameRef) => deleteGame(deps, ref),
+    deleteGameElement: (lookup: Parameters<typeof deleteGameElement>[1], key: string) => deleteGameElement(deps, lookup, key),
     cleanup: (online?: boolean) => cleanupGames(deps, online),
     // Marque-pages : l'ajout est immédiat ; seule la recherche de la fiche est asynchrone.
     async addBookmark(data: GameBookmarkInput) {

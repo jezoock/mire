@@ -2,6 +2,8 @@ import { Controller } from './base.ts';
 import { openEditor } from '../editors/editor.ts';
 import { openGroupEditor } from '../editors/group-editor.ts';
 import type { PagePath } from '@mire/shared';
+import { isGameBookmarkKey, isGameKey } from '../games/model.ts';
+import { callAction } from './registry.ts';
 import type { ItemRef } from './types.ts';
 
 /** `mire-app` : écrans, menu, réglages de la page, édition de l'élément sélectionné, notifications. */
@@ -75,7 +77,9 @@ export class AppController extends Controller {
   editSelection(): boolean {
     const key = this.ctx.ui.selectedKey?.();
     if (key) {
-      void openEditor(this.ctx, key);
+      // Un jeu ouvre sa boîte (P4-17) : émulateur, lancer, modifier ses infos, supprimer.
+      if (isGameKey(key) || isGameBookmarkKey(key)) void callAction('mire-games', 'gameOptions', { key });
+      else void openEditor(this.ctx, key);
       return true;
     }
     const group = this.ctx.ui.selectedGroup?.();
