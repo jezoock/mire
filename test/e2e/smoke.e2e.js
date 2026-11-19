@@ -3128,7 +3128,12 @@ describe('Test de fumée de Mire', () => {
 
     it('le raccourci clavier (Ctrl+Maj+E), capté par le processus principal, ouvre l’explorateur', async () => {
       await page.locator('.mire-home-view__bar.hydrated').first().waitFor();
-      await page.keyboard.press('Control+Shift+E');
+      // Touche envoyée par la fenêtre (comme le clavier), et non injectée dans la page : elle passe par
+      // `before-input-event` du processus principal, qui la lit avant la page.
+      await app.evaluate(({ BrowserWindow }) => {
+        const wc = BrowserWindow.getAllWindows()[0].webContents;
+        for (const type of ['keyDown', 'keyUp']) wc.sendInputEvent({ type, keyCode: 'E', modifiers: ['control', 'shift'] });
+      });
       await rescueShown('Explorateur ouvert par le raccourci du mode secours.');
       await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
       await page.waitForFunction(() => document.body.dataset.section === 'home');
