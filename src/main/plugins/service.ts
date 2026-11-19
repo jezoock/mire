@@ -17,7 +17,17 @@ import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
 import { CHANNEL_ERRORS, ChannelError, type Channel, type RequestHandler } from './channel.ts';
-import { checkPlugin, declaredKinds, discoverPlugins, type CheckedPlugin, type DiscoveryRoots, type PluginOrigin, type Refusal } from './discovery.ts';
+import {
+  checkPlugin,
+  declaredKinds,
+  discoverPlugins,
+  OFFICIAL_REPOSITORY_ID,
+  type CheckedPlugin,
+  type ConsentCheck,
+  type DiscoveryRoots,
+  type PluginOrigin,
+  type Refusal,
+} from './discovery.ts';
 import type { createContextHandler } from './context.ts';
 import { checkPresent, dependentsOf, type DependencyNode, type DependencyProblem } from './dependencies.ts';
 import type { PluginEndpoint } from './host.ts';
@@ -97,6 +107,8 @@ export interface PluginServiceOptions {
   flush?: () => Promise<void>;
   /** Désinstallation sans garder les données : effacer `userData/plugin-data/<id>/` (stockage fermé d'abord). */
   dropData?: (id: string) => Promise<void>;
+  /** Accord de l'utilisateur pour un plugin tiers de code sensible (P3-08) ; sans lui, aucun n'est chargé. */
+  consented?: (c: ConsentCheck) => boolean;
   /** Délai d'une requête à un plugin (ms). */
   requestTimeout?: number;
   /** Chien de garde : intervalle des pings et délai de réponse (ms). 0 : pas de chien de garde. */
@@ -124,6 +136,10 @@ interface Active {
   /** Requêtes en cours (pour désigner le fautif si l'hôte plante). */
   busy: number;
 }
+
+/** Confiance d'un plugin d'après son origine (P3-08). */
+const trustOf = (k: Pick<Known, 'origin' | 'repository'>): PluginInfo['trust'] =>
+  k.origin === 'bundled' ? 'bundled' : k.repository === OFFICIAL_REPOSITORY_ID ? 'official' : k.repository ? 'third-party' : 'local';
 
 const DEFAULT_TIMEOUT = 5000;
 // ADR 0002 : ping toutes les 250 ms. Délai porté de 500 ms à 1 s : un lot de 500 éléments ou une pause du
@@ -389,7 +405,7 @@ export function createPluginService(opts: PluginServiceOptions) {
 
   /** Vérifie un plugin trouvé et le note ; un plugin inclus nouveau (ou d'une nouvelle version) est installé. */
   async function examine(c: ReturnType<typeof discoverPlugins>['candidates'][number]): Promise<Known> {
-    const r = await checkPlugin(c, { appVersion: opts.appVersion, languages: opts.languages });
+    const r = await checkPlugin(c, { appVersion: opts.appVersion, languages: opts.languages, consented: opts.consented });
     const k: Known = {
       id: c.id,
       origin: c.origin,
@@ -416,6 +432,7 @@ export function createPluginService(opts: PluginServiceOptions) {
       version: p?.version ?? k.version,
       origin: k.origin,
       repository: k.repository,
+      trust: trustOf(k),
       level: p?.manifest.level ?? null,
       permissions: structuredClone({ ...(p?.manifest.permissions ?? {}) }),
       name: nameOf(k.id),

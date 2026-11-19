@@ -32,7 +32,22 @@ export type RepoErrorCode =
   /** Une installation est déjà en cours. */
   | 'busy'
   /** Écriture sur le disque impossible. */
-  | 'disk';
+  | 'disk'
+  // Dépôts tiers et confiance (P3-08)
+  /** Clé publique illisible : PEM d'une clé ed25519 attendu. */
+  | 'key'
+  /** L'empreinte confirmée par l'utilisateur n'est pas celle de la clé fournie. */
+  | 'fingerprint'
+  /** Ce dépôt (même clé ou même adresse) est déjà configuré, ou c'est le dépôt officiel. */
+  | 'exists'
+  /** Trop de dépôts tiers. */
+  | 'limit'
+  /** Dépôt inconnu (retrait d'un dépôt qui n'est pas configuré, ou dépôt officiel). */
+  | 'repository'
+  /** Le plugin est déjà installé depuis un autre dépôt : seul ce dépôt peut le mettre à jour ou le remplacer. */
+  | 'owner'
+  /** Plugin tiers de code sensible : l'accord de l'utilisateur est nécessaire pour cette version. */
+  | 'consent';
 
 export class RepoError extends Error {
   code: RepoErrorCode;

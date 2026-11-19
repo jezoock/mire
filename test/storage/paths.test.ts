@@ -41,5 +41,6 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),
+    repoTrust: at('repos', 'trust.json'),
   });
 });

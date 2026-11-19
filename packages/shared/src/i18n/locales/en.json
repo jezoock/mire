@@ -805,7 +805,8 @@
         "mismatch": "The folder of “{name}” does not match its contents ({details}).",
         "engine": "“{name}” is made for another version of Mire ({range}); you have {version}.",
         "level": "“{name}” does not contain what its security level says.",
-        "privileged": "“{name}” asks for extended access to your computer: for now, only plugins that come with Mire or from the official repository may have it.",
+        "privileged": "“{name}” asks for extended access to your computer: only plugins that come with Mire or from a repository (the official one, or a third-party one with your approval) may have it.",
+        "consent": "“{name}” asks for extended access to your computer and comes from a third-party repository: it is not loaded without your approval for this version.",
         "outside": "“{name}” contains a link to a file outside its folder.",
         "data": "A file of “{name}” is unreadable or too large: {details}",
         "texts": "The texts of “{name}” are unreadable: {details}",
@@ -839,8 +840,15 @@
         "engine": "“{name}” has no version made for this version of Mire.",
         "dependency": "“{name}” needs “{dependency}”, which cannot be installed in a suitable version.",
         "refused": "“{name}” was installed but could not be loaded; the previous version was put back. {details}",
-        "busy": "An installation is already in progress. Wait for it to finish.",
-        "disk": "“{name}” could not be written to disk; the previous version was kept."
+        "busy": "An installation or another repository operation is already in progress. Wait for it to finish.",
+        "disk": "“{name}” could not be written to disk; the previous version was kept.",
+        "key": "The key given for “{name}” is not valid: the repository’s public key is needed (a “BEGIN PUBLIC KEY” block).",
+        "fingerprint": "The key fingerprint changed since you checked it: the repository “{name}” was not added.",
+        "exists": "The repository “{name}” is already in your list.",
+        "limit": "You already have too many repositories: remove one before adding “{name}”.",
+        "repository": "The repository of “{name}” is not (or no longer) in your list: it cannot be updated from there.",
+        "owner": "“{name}” was installed from the repository “{repository}”: only that repository can update or replace it.",
+        "consent": "“{name}” comes from a third-party repository and asks for extended access to your computer: it is only installed with your approval."
       }
     },
     "continuity": {

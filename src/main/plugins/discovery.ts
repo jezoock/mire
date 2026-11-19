@@ -30,6 +30,8 @@ export type RefusalCode =
   | 'engine'
   | 'level'
   | 'privileged'
+  // Plugin tiers de code sensible sans l'accord de l'utilisateur pour cette version (P3-08).
+  | 'consent'
   | 'outside'
   | 'data'
   | 'texts'
@@ -134,6 +136,15 @@ function repositoryOf(root: string, id: string, version: string): string | null 
 
 /** Plugin inclus, ou installé depuis le dépôt officiel : préfixe `mire.` et code sensible permis. */
 const trusted = (c: PluginCandidate): boolean => c.origin === 'bundled' || c.repository === OFFICIAL_REPOSITORY_ID;
+
+/** Ce que l'accord de l'utilisateur doit couvrir pour qu'un plugin tiers de code sensible soit chargé. */
+export interface ConsentCheck {
+  plugin: string;
+  repository: string;
+  version: string;
+  level: PluginManifest['level'];
+  permissions: Record<string, unknown>;
+}
 
 /** Plugins inclus et installés. Pour un même identifiant installé en plusieurs versions, la plus haute. */
 export function discoverPlugins(roots: DiscoveryRoots): Discovery {
@@ -253,10 +264,12 @@ export interface CheckOptions {
   appVersion: string;
   /** Langues de Mire dont on charge les textes du plugin. */
   languages: readonly string[];
+  /** Accord de l'utilisateur pour un plugin tiers de code sensible (P3-08) ; sans lui, aucun n'est chargé. */
+  consented?: (c: ConsentCheck) => boolean;
 }
 
 /** Vérifie un candidat : rend le plugin lu, ou la raison du refus. */
-export async function checkPlugin(c: PluginCandidate, { appVersion, languages }: CheckOptions): Promise<CheckResult> {
+export async function checkPlugin(c: PluginCandidate, { appVersion, languages, consented }: CheckOptions): Promise<CheckResult> {
   const fail = (code: RefusalCode, vars: Record<string, string> = {}): CheckResult => ({ ok: false, refusal: refusal(code, vars) });
   const listed = await listFiles(c.dir).catch((err: Error) => ({ ok: false as const, refusal: refusal('invalid', { details: err.message }) }));
   if (!listed.ok) return { ok: false, refusal: listed.refusal };
@@ -275,7 +288,15 @@ export async function checkPlugin(c: PluginCandidate, { appVersion, languages }:
   if (!satisfies(appVersion, m.engines.mire)) return fail('engine', { range: m.engines.mire, version: appVersion });
   const level = levelMatches(m, listed.files);
   if (level) return { ok: false, refusal: level };
-  if (m.level === 'privileged' && !trusted(c)) return fail('privileged');
+  if (m.level === 'privileged' && !trusted(c)) {
+    // Version d'après le dossier (`c.version`, déjà comparée au manifeste) et dépôt d'après `origin.json`.
+    const request =
+      c.repository && c.version
+        ? { plugin: c.id, repository: c.repository, version: c.version, level: m.level, permissions: { ...(m.permissions ?? {}) } }
+        : null;
+    if (!request) return fail('privileged');
+    if (!consented?.(request)) return fail('consent');
+  }
 
   let texts: Record<string, Messages>;
   try {

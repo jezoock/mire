@@ -62,7 +62,20 @@ export interface MainContext {
   /** Hôte de plugins (P3-03). */
   readonly plugins: Pick<PluginService, 'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders' | 'uninstall'>;
   /** Client des dépôts (P3-07) : index vérifiés, installation, mise à jour. */
-  readonly repos: Pick<RepoClient, 'repositories' | 'refresh' | 'available' | 'knows' | 'install' | 'update'>;
+  readonly repos: Pick<
+    RepoClient,
+    | 'repositories'
+    | 'refresh'
+    | 'available'
+    | 'knows'
+    | 'hasRepository'
+    | 'install'
+    | 'update'
+    | 'consent'
+    | 'inspectRepository'
+    | 'addRepository'
+    | 'removeRepository'
+  >;
   /** Continuité pour les installations existantes (P5-01) : récapitulatif, reprise après la mise à jour des index. */
   readonly continuity: Pick<Continuity, 'summary' | 'seen' | 'afterRefresh'>;
 

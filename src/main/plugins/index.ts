@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import { MessageChannelMain, type BrowserWindow, type Dialog, type SafeStorage } from 'electron';
 import { createIsolatedHost } from './host.ts';
+import { createHostPool } from './host-pool.ts';
 import { fileBase, startInProcess } from './in-process.ts';
 import { PLUGIN_SCHEME } from './protocol.ts';
 import { createPluginStorage, pluginDataDir, type PluginStorage } from './plugin-storage.ts';
@@ -62,27 +63,30 @@ export function folderPicker(dialog: Dialog, window: () => BrowserWindow | null,
 }
 
 /**
- * Runners d'Electron : un hôte isolé pour les plugins installés (un par dépôt tiers viendra avec P3-08), démarré à la
- * première demande et arrêté quand il n'a plus de plugin ; le processus principal pour les plugins inclus `privileged`.
+ * Runners d'Electron : un hôte isolé pour les plugins inclus, officiels ou installés à la main, et un par dépôt tiers
+ * (P3-08, `host-pool.ts`), chacun démarré à la première demande et arrêté quand il n'a plus de plugin ; le processus
+ * principal pour les plugins `privileged` (inclus, officiels, ou tiers acceptés par l'utilisateur).
  */
 export function electronRunners(hostDir: string): (events: RunnerEvents) => Runners {
   return (events) => {
-    const host = createIsolatedHost({
-      group: 'installed',
-      hostDir,
-      onGone: (reason, plugins) => events.hostGone(plugins, reason),
-      onWorkerError: (id, message) => events.workerError(id, message),
-    });
+    const hosts = createHostPool((group) =>
+      createIsolatedHost({
+        group,
+        hostDir,
+        onGone: (reason, plugins) => events.hostGone(plugins, reason),
+        onWorkerError: (id, message) => events.workerError(id, message),
+      }),
+    );
     return {
       async isolated(p, endpoint, timeout) {
-        const channel = await host.start(p.id, p.dir, endpoint, timeout);
-        return { channel, stop: () => host.stop(p.id) };
+        const channel = await hosts.start(p, endpoint, timeout);
+        return { channel, stop: () => hosts.stop(p.id) };
       },
       async inProcess(_p, endpoint, timeout) {
         return startInProcess(endpoint, timeout, () => new MessageChannelMain());
       },
       base: (p) => (p.manifest.level === 'privileged' ? fileBase(p.dir) : `${PLUGIN_SCHEME}://${p.id}/`),
-      shutdown: () => host.shutdown(),
+      shutdown: () => hosts.shutdown(),
     };
   };
 }
