@@ -4,10 +4,10 @@
  */
 
 /**
- * Texte affiché à l'utilisateur. En français tant que la localisation (P1-28) n'existe pas ; il sera ensuite
- * remplacé par la clé de catalogue tirée des identifiants (voir `settingsTextKey`).
+ * Texte affiché à l'utilisateur : la clé de catalogue tirée des identifiants (`settingsTextKey`, P4-20), traduite par
+ * l'interface (`settings.home.clock.label`).
  */
-export type SettingsText = string;
+export type SettingsText = `settings.${string}`;
 
 /** Types de champ admis. */
 export type SettingsFieldType = 'text' | 'secret' | 'choice' | 'toggle' | 'path' | 'list' | 'custom';
@@ -75,6 +75,8 @@ export interface CustomField extends FieldBase {
   type: 'custom';
   component: string;
   paths: string[];
+  /** Chemins absents de la configuration tant qu'on ne les a pas changés (`catalog.metadataProviders`). */
+  optional?: boolean;
 }
 
 export type SettingsField = TextField | SecretField | ChoiceField | ToggleField | PathPickerField | ListField | CustomField;

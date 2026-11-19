@@ -10,3 +10,4 @@ export * from './home.ts';
 export * from './centre.ts';
 export * from './search.ts';
 export * from './explorer.ts';
+export * from './settings.ts';

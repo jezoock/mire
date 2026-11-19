@@ -26,6 +26,8 @@ export interface UiI18n {
   raw(key: string): unknown;
   /** Langue courante (code BCP 47) ; chaîne vide avant le démarrage. */
   readonly language: string;
+  /** Langues disponibles (catalogues et packs), sous leur propre nom ; vide avant le démarrage. */
+  readonly available: readonly { code: string; name: string }[];
   /** Moteur de la langue courante (formats compris), ou `null` avant le démarrage. */
   readonly engine: I18n | null;
   /** Prévient à chaque changement de langue ; rend la fonction de désabonnement. */
@@ -70,6 +72,9 @@ export function createUiI18n(doc: LangDocument | null = typeof document === 'und
     },
     get language() {
       return engine?.locale ?? '';
+    },
+    get available() {
+      return info?.available ?? [];
     },
     get engine() {
       return engine;

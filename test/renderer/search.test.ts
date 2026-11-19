@@ -8,7 +8,7 @@ import { MAX_RECENT, pageOfResult, searchGroups, siteViews, watchTargets, watchV
 import type { WatchResult, WatchState } from '../../src/renderer/search/index.ts';
 import { SearchController } from '../../src/renderer/controllers/search.ts';
 import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
-import { LEGACY_VIEWS, SCREEN_VIEWS, SEARCH_TARGET, SEARCH_VIEW, targetOfLegacyView, viewOf } from '../../src/renderer/shell/router.ts';
+import { SCREEN_VIEWS, SEARCH_TARGET, SEARCH_VIEW, targetOfLegacyView, viewOf } from '../../src/renderer/shell/router.ts';
 import { PAGE, S } from '../../src/renderer/state/index.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
@@ -238,7 +238,6 @@ describe('Recherche : contrôleur mire-search', () => {
 describe('Recherche : coquille', () => {
   it('la Recherche a sa vue, elle n’est plus une vue historique', () => {
     assert.ok(SCREEN_VIEWS.some(([t, s]) => t === SEARCH_TARGET && s === SEARCH_VIEW));
-    assert.ok(!LEGACY_VIEWS.some(([t]) => t === SEARCH_TARGET));
     assert.equal(viewOf('screen:search'), 'search');
     assert.equal(targetOfLegacyView('search'), 'screen:search');
   });
