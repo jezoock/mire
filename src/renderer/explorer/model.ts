@@ -218,8 +218,9 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
     blocked = null;
     void src.check(items.map((x) => x?.path as string)).then((r) => {
       if (id !== checkSeq) return;
-      const at = r ? r.findIndex((x) => x !== null) : 0;
-      blocked = at < 0 ? '' : t('explorer.files.blockedNamed', { name: items[at]?.name ?? '', reason: r?.[at] ?? t('files.errors.invalid') });
+      const at = Array.isArray(r) && r.length === items.length ? r.findIndex((x) => x !== null) : 0;
+      blocked =
+        at < 0 ? '' : t('explorer.files.blockedNamed', { name: items[at]?.name ?? '', reason: (Array.isArray(r) && r[at]) || t('files.errors.invalid') });
       onUpdate(state());
     });
   }
@@ -328,7 +329,9 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
     if (!el) return null;
     const path = filePath(el);
     known.set(el.key, { key: el.key, name: el.name, path });
-    const reason = path ? ((await src.check([path]))?.[0] ?? null) : t('explorer.files.notFile');
+    // Sans réponse du contrôle (erreur), les actions restent désactivées.
+    const checked = path ? await src.check([path]) : null;
+    const reason = !path ? t('explorer.files.notFile') : Array.isArray(checked) ? (checked[0] ?? null) : t('files.errors.invalid');
     return { ...elementPreview(el, tags ?? [], t), files: { allowed: !!path && reason === null, reason: reason ?? '' } };
   }
 

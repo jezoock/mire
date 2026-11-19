@@ -47,8 +47,9 @@ const LIST_HINTS: ReadonlyArray<readonly [string, string]> = [
  */
 export const PAD_HINTS: Readonly<Partial<Record<PadContext, ReadonlyArray<readonly [string, string]>>>> = {
   list: LIST_HINTS,
-  // Colonnes (explorateur) : mêmes commandes que les listes ; la croix change de ligne et de colonne.
-  columns: LIST_HINTS,
+  // Colonnes (explorateur) : comme les listes, mais Y choisit un élément (sélection multiple, P4-09) ; la croix change
+  // de ligne et de colonne.
+  columns: LIST_HINTS.map(([b, k]) => (b === 'y' ? ['y', 'pick'] : [b, k])),
   video: [
     ['a', 'pause'],
     ['lt rt', 'minute'],

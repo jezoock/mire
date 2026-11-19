@@ -25,6 +25,8 @@ import {
 import { createExplorerModel, folderNode } from '../../src/renderer/explorer/index.ts';
 import { filePath } from '../../src/renderer/explorer/model.ts';
 import type { ExplorerState } from '../../src/renderer/explorer/index.ts';
+import { ExplorerController } from '../../src/renderer/controllers/explorer.ts';
+import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
 
@@ -262,5 +264,141 @@ describe('Explorateur : sélection et actions permises', () => {
     await model.show('local:');
     assert.equal(last().preview?.files?.allowed, false);
     assert.match(last().preview?.files?.reason ?? '', /n’est pas un fichier/);
+  });
+});
+
+describe('Explorateur : contrôleur des fichiers et de la sélection', () => {
+  type Form = { title: string; help?: string; fields?: { id: string; options?: [string, string][] }[] };
+  /** `answers` : réponses successives des boîtes (la dernière se répète). */
+  function ctl(answers: { action: string; values?: Record<string, unknown> }[], picked: { key: string; name: string; path: string | null }[] = []) {
+    const calls: unknown[][] = [];
+    const toasts: string[] = [];
+    const forms: Form[] = [];
+    let n = 0;
+    const known: Record<string, { key: string; name: string; path: string | null }> = {
+      'local:/bib/Images/Montagne.jpg': { key: 'local:/bib/Images/Montagne.jpg', name: 'Montagne', path: '/bib/Images/Montagne.jpg' },
+      'local:/ailleurs/x.jpg': { key: 'local:/ailleurs/x.jpg', name: 'X', path: '/ailleurs/x.jpg' },
+      site: { key: 'site', name: 'Site', path: null },
+    };
+    const explorer = {
+      fileOf: (key: string) => known[key] ?? null,
+      picked: () => picked,
+      clearPicks: () => calls.push(['clear']),
+      focusedRowKey: () => 'local:/bib/Images/Montagne.jpg',
+      pick: (key: string) => (calls.push(['pick', key]), true),
+    };
+    const api = {
+      filesCheck: async (paths: string[]) => paths.map((p) => (p.startsWith('/bib/') ? null : 'Hors de vos dossiers.')),
+      filesRename: async (p: string, name: string) => (calls.push(['rename', p, name]), { ok: true, path: name }),
+      filesMove: async (p: string, folder: string) => (calls.push(['move', p, folder]), { ok: true, path: folder }),
+      filesRemove: async (p: string) => (calls.push(['remove', p]), p.includes('refus') ? { ok: false, error: 'Non.' } : { ok: true, path: p }),
+      catalogElement: async (key: string) =>
+        ({ key, name: key, tags: key.endsWith('2') ? ['image', 'a-revoir'] : ['image'], open: { kind: 'file', path: `/bib/${key}` } }) as unknown as Element,
+      catalogSetTags: async (key: string, changes: unknown) => (calls.push(['tags', key, changes]), {}),
+      catalogSources: async () => ({ sources: [], folders: [{ id: 'd1', place: '/bib', count: 2 }] }),
+      catalogFolder: async (_s: string, p: string) =>
+        p === ''
+          ? { source: 'd1', path: '', total: 1, next: null, elements: [], folders: [{ name: 'Images', path: 'Images', count: 1 }] }
+          : { source: 'd1', path: p, total: 0, next: null, elements: [], folders: [] },
+      tagsList: async () => [
+        { id: 'image', name: 'Image', origin: 'core', count: 2 },
+        { id: 'a-revoir', name: 'À revoir', origin: 'user', count: 1 },
+      ],
+      listsList: async () => [{ id: 'favoris', name: 'Favoris', count: 0 }],
+      listsAdd: async (id: string, keys: string[]) => (calls.push(['list', id, keys]), keys.length),
+    };
+    const dialogs = {
+      form: async (f: Form) => {
+        forms.push(f);
+        return answers[Math.min(n++, answers.length - 1)] as { action: string; values: Record<string, unknown> };
+      },
+    };
+    const ctx = { api, ui: { explorer }, toast: (m: string) => toasts.push(m), t: tFr, plural: pFr, dialogs } as unknown as ControllerContext;
+    return { c: new ExplorerController(ctx), calls, toasts, forms };
+  }
+  const MONTAGNE = { key: 'local:/bib/Images/Montagne.jpg' };
+
+  it('renommer : abandon au nom, abandon à la confirmation, puis confirmé ; la confirmation dit tout', async () => {
+    let r = ctl([{ action: 'cancel' }]);
+    assert.equal(await r.c.rename(MONTAGNE), false);
+    assert.deepEqual(r.calls, []);
+    r = ctl([{ action: 'next', values: { name: 'Sommet.jpg' } }, { action: 'no' }]);
+    assert.equal(await r.c.rename(MONTAGNE), false);
+    assert.equal(r.forms[1]?.help, '« Montagne.jpg » s’appellera « Sommet.jpg ». Il reste dans le dossier /bib/Images.');
+    assert.deepEqual(r.calls, []);
+    r = ctl([{ action: 'next', values: { name: 'Sommet.jpg' } }, { action: 'yes' }]);
+    assert.equal(await r.c.rename(MONTAGNE), true);
+    assert.deepEqual(r.calls, [['rename', '/bib/Images/Montagne.jpg', 'Sommet.jpg']]);
+    assert.deepEqual(r.toasts, ['Renommé en « Sommet.jpg ».']);
+  });
+
+  it('hors des dossiers autorisés, ou pas un fichier : aucune boîte, la raison est affichée', async () => {
+    for (const key of ['local:/ailleurs/x.jpg', 'site']) {
+      const r = ctl([{ action: 'yes' }]);
+      assert.equal(await r.c.rename({ key }), false);
+      assert.equal(await r.c.move({ key }), false);
+      assert.equal(await r.c.remove({ key }), 0);
+      assert.deepEqual(r.forms, []);
+      assert.deepEqual(r.calls, []);
+      assert.equal(r.toasts.length, 3);
+    }
+  });
+
+  it('déplacer : seuls les autres dossiers autorisés sont proposés, puis confirmation', async () => {
+    const r = ctl([{ action: 'next', values: { folder: '/bib' } }, { action: 'yes' }]);
+    assert.equal(await r.c.move(MONTAGNE), true);
+    assert.deepEqual(r.forms[0]?.fields?.[0]?.options, [['/bib', 'bib']]);
+    assert.equal(r.forms[1]?.help, '« Montagne.jpg » quittera le dossier /bib/Images pour le dossier /bib.');
+    assert.deepEqual(r.calls, [['move', '/bib/Images/Montagne.jpg', '/bib']]);
+    // Un dossier qui n'a pas été proposé n'est pas envoyé.
+    const r2 = ctl([{ action: 'next', values: { folder: '/etc' } }]);
+    assert.equal(await r2.c.move(MONTAGNE), false);
+    assert.deepEqual(r2.calls, []);
+  });
+
+  it('sélection : corbeille confirmée par les noms, un échec est dit ; bloquée hors des dossiers', async () => {
+    const picks = [
+      { key: 'a', name: 'A', path: '/bib/a.jpg' },
+      { key: 'b', name: 'B', path: '/bib/refus.jpg' },
+    ];
+    let r = ctl([{ action: 'yes' }], picks);
+    assert.equal(await r.c.removePicked(), 1);
+    assert.equal(r.forms[0]?.title, 'Mettre ces 2 fichiers à la corbeille ?');
+    assert.match(r.forms[0]?.help ?? '', /« a\.jpg », « refus\.jpg » iront dans la corbeille/);
+    assert.deepEqual(r.calls, [['remove', '/bib/a.jpg'], ['remove', '/bib/refus.jpg'], ['clear']]);
+    assert.deepEqual(r.toasts, ['« refus.jpg » : Non.', '1 fichier mis à la corbeille.']);
+    r = ctl([{ action: 'yes' }], [...picks, { key: 'x', name: 'X', path: '/ailleurs/x.jpg' }]);
+    assert.equal(await r.c.removePicked(), 0);
+    assert.deepEqual(r.forms, []);
+    assert.deepEqual(r.toasts, ['« X » : Hors de vos dossiers.']);
+  });
+
+  it('sélection : ajouter un tag (existant ou nouveau), retirer un tag porté, ranger dans une liste', async () => {
+    const picks = [
+      { key: 'k1', name: 'Un', path: '/bib/k1' },
+      { key: 'k2', name: 'Deux', path: '/bib/k2' },
+    ];
+    let r = ctl([{ action: 'go', values: { tag: 'a-revoir', name: '' } }], picks);
+    assert.equal(await r.c.addTagToPicked(), 2);
+    assert.deepEqual(r.calls, [
+      ['tags', 'k1', { 'a-revoir': true }],
+      ['tags', 'k2', { 'a-revoir': true }],
+    ]);
+    r = ctl([{ action: 'go', values: { tag: '_new', name: 'Vacances 2025' } }], picks);
+    assert.equal(await r.c.addTagToPicked(), 2);
+    assert.deepEqual(r.calls[0], ['tags', 'k1', { 'Vacances 2025': true }]);
+    r = ctl([{ action: 'go', values: { tag: 'a-revoir' } }], picks);
+    assert.equal(await r.c.removeTagFromPicked(), 1);
+    assert.deepEqual(r.calls, [['tags', 'k2', { 'a-revoir': false }]]);
+    r = ctl([{ action: 'add', values: { list: 'favoris', name: '' } }], picks);
+    assert.equal(await r.c.addPickedToList(), 2);
+    assert.deepEqual(r.calls, [['list', 'favoris', ['k1', 'k2']]]);
+    assert.equal(r.forms[0]?.help, 'Les 2 éléments choisis seront ajoutés à la fin de la liste choisie.');
+  });
+
+  it('Y de la manette choisit l’élément qui a le focus', () => {
+    const r = ctl([]);
+    assert.equal(r.c.pickFocused(), true);
+    assert.deepEqual(r.calls, [['pick', 'local:/bib/Images/Montagne.jpg']]);
   });
 });

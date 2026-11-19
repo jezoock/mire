@@ -5,11 +5,12 @@
  * `mire-explorer`). B revient à la colonne précédente.
  */
 import { createExplorerModel } from './model.ts';
-import type { ExplorerSources, ExplorerState } from './model.ts';
+import type { ExplorerSources, ExplorerState, Picked } from './model.ts';
 
 export {
   createExplorerModel,
   elementPreview,
+  filePath,
   folderNode,
   levelNode,
   locationOf,
@@ -21,7 +22,7 @@ export {
   SECTIONS,
   sourceLabel,
 } from './model.ts';
-export type { ExplorerModel, ExplorerSources, ExplorerState } from './model.ts';
+export type { ExplorerModel, ExplorerSources, ExplorerState, Picked } from './model.ts';
 
 /** Pause après l'arrivée du focus sur une ligne avant de montrer ce qu'elle ouvre (parcours rapide au clavier). */
 export const FOLLOW_PAUSE = 90;
@@ -50,6 +51,14 @@ export interface Explorer {
   selectedKey(): string | null;
   /** Donne le focus à la première colonne (ligne choisie, sinon la première). */
   focusFirst(): void;
+  /** Choisit ou retire un élément (sélection multiple) ; faux s'il n'est pas affiché. */
+  pick(key: string, opts?: { range?: boolean }): boolean;
+  /** Clé de l'élément dont la ligne a le focus ; `null` sinon (bouton Y de la manette). */
+  focusedRowKey(): string | null;
+  picked(): Picked[];
+  clearPicks(): void;
+  /** Nom et fichier d'un élément affiché. */
+  fileOf(key: string): Picked | null;
 }
 
 type ViewEl = HTMLElement & Record<string, unknown>;
@@ -61,7 +70,11 @@ export function createExplorer(opts: ExplorerOptions, doc: Document = document):
   let follow: ReturnType<typeof setTimeout> | undefined;
   let started = false;
 
-  const model = createExplorerModel(opts, (s: ExplorerState) => Object.assign(view, { columns: s.columns, preview: s.preview }));
+  const selection = (s: ExplorerState) =>
+    s.picked.length ? { count: opts.plural('explorer.selection.count', s.picked.length), blocked: s.blocked ?? '', checking: s.blocked === null } : null;
+  const model = createExplorerModel(opts, (s: ExplorerState) =>
+    Object.assign(view, { columns: s.columns, preview: s.preview, picked: s.picked, selection: selection(s) }),
+  );
 
   function labels() {
     const { t } = opts;
@@ -79,6 +92,17 @@ export function createExplorer(opts: ExplorerOptions, doc: Document = document):
       editTags: t('explorer.actions.tags'),
       addToList: t('explorer.actions.addToList'),
       unavailable: t('explorer.unavailable'),
+      rename: t('explorer.actions.rename'),
+      move: t('explorer.actions.move'),
+      remove: t('explorer.actions.remove'),
+      filesBlocked: t('explorer.files.blocked'),
+      selection: t('explorer.selection.label'),
+      picked: t('explorer.selection.picked'),
+      addTag: t('explorer.selection.addTag'),
+      removeTag: t('explorer.selection.removeTag'),
+      toList: t('explorer.selection.toList'),
+      removePicked: t('explorer.selection.remove'),
+      clearPicks: t('explorer.selection.clear'),
     };
   }
 
@@ -101,6 +125,10 @@ export function createExplorer(opts: ExplorerOptions, doc: Document = document):
     clearTimeout(follow);
     const { node, key } = (e as CustomEvent<{ node?: string; key?: string }>).detail;
     follow = setTimeout(() => void (node ? model.open(node) : key ? model.show(key) : null), FOLLOW_PAUSE);
+  });
+  view.addEventListener('mireExplorerPick', (e) => {
+    const { key, range } = (e as CustomEvent<{ key: string; range: boolean }>).detail;
+    model.pick(key, { range });
   });
   view.addEventListener('mireExplorerRender', () => {
     // Colonne ajoutée : elle est amenée en vue.
@@ -169,5 +197,13 @@ export function createExplorer(opts: ExplorerOptions, doc: Document = document):
     focusFirst() {
       focusWhenReady(() => rowOf(columnEls()[0], '.mire-explorer-view__row'));
     },
+    pick: (key, o) => model.pick(key, o),
+    focusedRowKey() {
+      const row = (doc.activeElement as HTMLElement | null)?.closest<HTMLElement>('.mire-explorer-view__row[data-key]');
+      return row && !row.hasAttribute('data-unavailable') && view.contains(row) ? (row.dataset.key ?? null) : null;
+    },
+    picked: () => model.picked(),
+    clearPicks: () => model.clearPicks(),
+    fileOf: (key) => model.fileOf(key),
   };
 }

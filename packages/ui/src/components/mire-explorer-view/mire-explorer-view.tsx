@@ -211,21 +211,18 @@ export class MireExplorerView {
     if (!p.files) return null;
     const off = !p.files.allowed;
     const described = off ? 'mire-explorer-files-reason' : undefined;
-    const action = (name: string, label: string | undefined, id: string) => (
-      <ds-trigger
-        class="mire-explorer-view__action"
-        type="button"
-        mods="stl-3"
-        target="mire-explorer"
-        action={`${name}:${args}`}
-        data-preview-action={id}
-        disabled={off}
-        aria-describedby={described}
-      >
-        {label}
-      </ds-trigger>
-    );
-    return [action('rename', l.rename, 'rename'), action('move', l.move, 'move'), action('remove', l.remove, 'remove')];
+    const common = { class: 'mire-explorer-view__action', type: 'button' as const, mods: 'stl-3', disabled: off, 'aria-describedby': described };
+    return [
+      <ds-trigger {...common} target="mire-explorer" action={`rename:${args}`} data-preview-action="rename">
+        {l.rename}
+      </ds-trigger>,
+      <ds-trigger {...common} target="mire-explorer" action={`move:${args}`} data-preview-action="move">
+        {l.move}
+      </ds-trigger>,
+      <ds-trigger {...common} target="mire-explorer" action={`remove:${args}`} data-preview-action="remove">
+        {l.remove}
+      </ds-trigger>,
+    ];
   }
 
   /** Barre des éléments choisis : combien, et ce qu'on peut en faire. */

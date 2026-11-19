@@ -152,12 +152,15 @@ const search = createSearch({
 });
 
 // Explorateur (P4-08) : tout le catalogue en colonnes (pages, listes, tags, sources, dossiers), puis l'aperçu d'un élément.
+// Texte au pluriel des nouveaux écrans (explorateur, et ses actions).
+function explorerPlural(key, count) {
+  const forms = i18n.raw(key);
+  return forms && typeof forms === 'object' ? pluralLabel(forms, count, i18n.language || 'fr') : '';
+}
+
 const explorer = createExplorer({
   t,
-  plural: (key, count) => {
-    const forms = i18n.raw(key);
-    return forms && typeof forms === 'object' ? pluralLabel(forms, count, i18n.language || 'fr') : '';
-  },
+  plural: explorerPlural,
   pages: () => shell.pages(),
   lists: () => api.listsList(),
   tags: () => api.tagsList(),
@@ -165,6 +168,10 @@ const explorer = createExplorer({
   element: (key) => api.catalogElement(key),
   sources: () => api.catalogSources(),
   folder: (source, path, cursor) => api.catalogFolder(source, path, cursor),
+  check: async (paths) => {
+    const r = await api.filesCheck(paths);
+    return Array.isArray(r) ? r : null;
+  },
   onLanguageChange: (listener) => i18n.onChange(listener),
   onPagesChange: (listener) => { api.onPagesChange(listener); api.onListsChange(listener); api.onFoldersChange(listener); },
   shown: () => S.section === EXPLORER_VIEW,
@@ -2474,7 +2481,7 @@ dialogs.initDialogs({
   toastWithAction: (message, opts) => toast(message, opts),
 });
 initDemoDialogs({ openForm });
-const C = createControllers({ S, api, toast, t, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
+const C = createControllers({ S, api, toast, t, plural: explorerPlural, ui: legacyUi, page: PAGE, dialogs: { act: dialogs.dialogAction, form: dialogs.openForm, pick: dialogs.pickCandidate } });
 // Jeux (P4-17) : hôte des actions de `mire-games` ; un jeu ouvre sa boîte (émulateur, lancer, infos, supprimer).
 document.body.appendChild(document.createElement('mire-games'));
 initEditors(document, (key) => (isGameKey(key) || isGameBookmarkKey(key) ? C.games.gameOptions({ key }) : C.editor.edit({ key })), (node) => {
