@@ -486,6 +486,11 @@ Autres points d'extension du même genre, plus internes :
   dans le navigateur du système.
 - `media://` ne sert que ce qu'autorise la politique d'accès. Les commandes qui lancent un programme ou suppriment un
   jeu vérifient aussi le chemin (`isAllowed`, ou `isInside` sur les dossiers de la console).
+- Mode secours (P4-10, `app/rescue.ts`) : l'option `--explorateur`, la touche Maj maintenue au lancement, le raccourci
+  Ctrl+Maj+E (lu par `before-input-event`, avant la page) et les plantages de l'interface (`render-process-gone` :
+  rechargée ; deux fois de suite, sur l'explorateur) ne choisissent que le premier écran ou ouvrent l'explorateur. Ils
+  ne changent jamais `webPreferences`, la CSP ni les dossiers autorisés. Côté page, `rescue/` ouvre l'explorateur si
+  le thème est introuvable, si sa palette échoue ou dépasse son délai.
 
 ### Vues web
 
