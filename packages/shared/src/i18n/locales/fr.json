@@ -851,6 +851,22 @@
         "consent": "« {name} » vient d’un dépôt tiers et demande un accès étendu à votre ordinateur : il n’est installé qu’avec votre accord."
       }
     },
+    "continuity": {
+      "notice": {
+        "installed": {
+          "one": "{count} fonction que vous utilisiez est maintenant un plugin : Mire l’a activé pour vous.",
+          "other": "{count} fonctions que vous utilisiez sont maintenant des plugins : Mire les a activés pour vous."
+        },
+        "pending": {
+          "one": "{count} fonction que vous utilisiez est maintenant un plugin à installer : Mire l’installera dès que la connexion le permettra.",
+          "other": "{count} fonctions que vous utilisiez sont maintenant des plugins à installer : Mire les installera dès que la connexion le permettra."
+        },
+        "failed": "La fonction reprise par « {name} » n’a pas pu être gardée. {reason}"
+      },
+      "reasons": {
+        "missing": "« {name} » n’est pas livré avec cette version de Mire."
+      }
+    },
     "shell": {
       "brand": "Mire",
       "views": {

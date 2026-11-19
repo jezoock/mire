@@ -318,6 +318,26 @@ export type RepositoryOutcome = { ok: true; repository: RepositoryPreview; repos
 export type RepositoryRemoveOutcome =
   { ok: true; uninstalled: string[]; kept: { id: string; by: string[] }[]; repositories: RepositoryInfo[] } | { ok: false; code: string; error: string };
 
+/**
+ * Continuité (P5-01) : plugin qui reprend une fonction qu'une installation existante utilisait. `installed` : activé
+ * (plugin inclus) ou installé ; `pending` : à installer dès que la connexion le permet ; `failed` : impossible, avec la raison.
+ */
+export interface ContinuityItem {
+  plugin: string;
+  /** Nom du plugin dans la langue de l'interface, sinon son identifiant. */
+  name: string;
+  /** Livré avec Mire (activé) plutôt qu'installé depuis le dépôt officiel. */
+  bundled: boolean;
+  status: 'installed' | 'pending' | 'failed';
+  reason: string | null;
+}
+
+/** Récapitulatif de la continuité ; `notice` : message à montrer (ce qui a changé depuis le dernier vu), ou `null`. */
+export interface ContinuitySummary {
+  items: ContinuityItem[];
+  notice: string | null;
+}
+
 /** Résultat d'une désinstallation : refusée si un autre plugin en a besoin, ou s'il est livré avec Mire. */
 export type UninstallOutcome =
   | { ok: true; keptData: boolean; restored: PluginSummary | null }
@@ -620,6 +640,10 @@ export interface IpcMethods {
   pluginsConsent(id: string, repository: string, version: string): PluginConsentRequest | null;
   pluginsUpdate(id: string): PluginsOutcome | null;
   pluginsUninstall(id: string, keepData: boolean): UninstallOutcome | null;
+  // Continuité (P5-01) : fonctions devenues des plugins (activés, installés, en attente, impossibles) ; récapitulatif
+  // montré (son message ne revient plus jusqu'au prochain changement).
+  pluginsContinuity(): ContinuitySummary;
+  pluginsContinuitySeen(): boolean;
 
   // Fenêtre et application
   toggleFullscreen(): boolean;
@@ -813,6 +837,8 @@ export const IPC_METHODS = {
   pluginsConsent: 'plugins:consent',
   pluginsUpdate: 'plugins:update',
   pluginsUninstall: 'plugins:uninstall',
+  pluginsContinuity: 'plugins:continuity',
+  pluginsContinuitySeen: 'plugins:continuitySeen',
 } as const satisfies Record<IpcMethodName, string>;
 
 export type IpcChannel = (typeof IPC_METHODS)[IpcMethodName];
@@ -869,6 +895,8 @@ export interface IpcEvents {
   onRescue: RescueRequest;
   /** Avancement d'une installation de plugin depuis un dépôt (P3-07). */
   onPluginsProgress: PluginsProgress;
+  /** Récapitulatif de la continuité changé (plugin activé, installé, devenu impossible) : son message à montrer. */
+  onPluginsContinuity: ContinuitySummary;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -898,6 +926,7 @@ export const IPC_EVENTS = {
   onFoldersChange: 'folders:changed',
   onRescue: 'rescue:open',
   onPluginsProgress: 'plugins:progress',
+  onPluginsContinuity: 'plugins:continuity-changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */
