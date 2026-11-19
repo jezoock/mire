@@ -3,6 +3,8 @@
  * et correspondance bouton → touche selon le contexte. Sans DOM : testé tel quel.
  * Croix ou stick gauche, A valider, B retour, Start lecture/pause, LB/RB précédent/suivant.
  */
+import { isRescueCombo } from '@mire/shared';
+
 export type PadFamily = 'xbox' | 'ps' | 'nintendo';
 export type PadButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select' | 'start' | 'home';
 export type PadContext = 'dialog' | 'video' | 'image' | 'web' | 'list' | 'columns';
@@ -179,6 +181,23 @@ export const REPEAT_RATE = 110;
 export interface PadMemory {
   prev: Partial<Record<string, boolean>>;
   repeatAt: Partial<Record<string, number>>;
+  /** Combinaison du mode secours tenue (elle ne compte qu'une fois tant qu'on ne la relâche pas). */
+  combo?: boolean;
+}
+
+/**
+ * Combinaison du mode secours (P4-10, Affichage + Menu) : vrai si elle vient d'être faite. Tant qu'elle est tenue, ses
+ * boutons sont marqués comme déjà enfoncés, pour qu'ils ne déclenchent pas en plus leur action habituelle.
+ */
+export function rescueCombo(state: PadState, mem: PadMemory): boolean {
+  if (!isRescueCombo(state)) {
+    mem.combo = false;
+    return false;
+  }
+  for (const [b, pressed] of Object.entries(state)) if (pressed) mem.prev[b] = true;
+  if (mem.combo) return false;
+  mem.combo = true;
+  return true;
 }
 
 /**

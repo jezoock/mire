@@ -1413,6 +1413,23 @@
         },
         "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
       }
+    },
+    "rescue": {
+      "title": "Safe mode",
+      "intro": "The explorer is always available, whatever the theme.",
+      "reasons": {
+        "option": "Mire started on the explorer, as requested.",
+        "key": "Mire started on the explorer: the Shift key was held at launch.",
+        "shortcut": "Explorer opened with the safe mode shortcut.",
+        "pad": "Explorer opened with the controller combination.",
+        "crash": "The display stopped twice in a row. Mire went back to the explorer.",
+        "missing": "The “{theme}” theme can’t be found. Mire went back to the explorer.",
+        "failed": "The “{theme}” theme couldn’t load. Mire went back to the explorer.",
+        "timeout": "The “{theme}” theme is taking too long to load. Mire went back to the explorer."
+      },
+      "themes": "Choose another theme",
+      "home": "Go to Home",
+      "chosen": "“{theme}” theme chosen."
     }
   }
 }

@@ -1,0 +1,41 @@
+@use '../../theme/tokens' as *;
+
+// Bandeau du mode secours (P4-10), au-dessus de l'explorateur : habillage du cœur et palette des réglages (D-16).
+.mire-rescue-view {
+  display: block;
+  margin-bottom: ds-spacing(3);
+  padding: ds-spacing(3) ds-spacing(4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 12px);
+  background: var(--surface);
+
+  &.--failure {
+    border-color: var(--line-strong);
+  }
+
+  &__title {
+    margin: 0 0 ds-spacing(1);
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    font-weight: 700;
+  }
+
+  &__message {
+    margin: 0 0 ds-spacing(2);
+  }
+
+  &__themes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(2);
+  }
+
+  &__label {
+    color: var(--muted);
+  }
+
+  &__home {
+    margin-left: auto;
+  }
+}

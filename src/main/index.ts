@@ -25,6 +25,7 @@ import { MIME, type SystemHint } from '@mire/shared';
 import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
+import { createRescue } from './app/rescue.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
@@ -132,7 +133,9 @@ function start(pending: PendingFiles): Running {
   // Fenêtre fermée : l'application se ferme, sauf sous macOS.
   const onClosed = () => (PLATFORM === 'darwin' ? undefined : app.quit());
   const pages = { preload: dist('preload', 'preload.js'), html: dist('renderer', 'index.html') };
-  const window = createMainWindow({ BrowserWindow, shell, nativeTheme, config, files: pages, web: () => web, onClosed });
+  // Mode secours (P4-10) : ne choisit que le premier écran ; aucune option ne change la fenêtre, la CSP ni les accès.
+  const rescue = createRescue({ argv: process.argv });
+  const window = createMainWindow({ BrowserWindow, shell, nativeTheme, config, files: pages, web: () => web, onClosed, rescue });
   const { toUi } = window;
 
   // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments.
@@ -375,7 +378,7 @@ function start(pending: PendingFiles): Running {
     adblock,
   };
   const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
-  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming }));
+  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
   // Code sensible des plugins inclus (P3-05) : extensions des vues web et moteurs de téléchargement, branchés une fois,

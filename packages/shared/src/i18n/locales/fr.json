@@ -1413,6 +1413,23 @@
         },
         "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe"
       }
+    },
+    "rescue": {
+      "title": "Mode secours",
+      "intro": "L’explorateur reste toujours accessible, quel que soit le thème.",
+      "reasons": {
+        "option": "Mire a démarré sur l’explorateur, comme demandé.",
+        "key": "Mire a démarré sur l’explorateur : la touche Maj était maintenue au lancement.",
+        "shortcut": "Explorateur ouvert par le raccourci du mode secours.",
+        "pad": "Explorateur ouvert par la combinaison de la manette.",
+        "crash": "L’affichage s’est arrêté deux fois de suite. Mire est revenu à l’explorateur.",
+        "missing": "Le thème « {theme} » est introuvable. Mire est revenu à l’explorateur.",
+        "failed": "Le thème « {theme} » n’a pas pu se charger. Mire est revenu à l’explorateur.",
+        "timeout": "Le thème « {theme} » met trop de temps à se charger. Mire est revenu à l’explorateur."
+      },
+      "themes": "Choisir un autre thème",
+      "home": "Aller à l’accueil",
+      "chosen": "Thème « {theme} » choisi."
     }
   }
 }
