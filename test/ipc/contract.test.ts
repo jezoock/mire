@@ -180,6 +180,8 @@ const ADDED_METHODS: Record<string, string> = {
   gameSetEmulator: 'games:setEmulator',
   gameLaunch: 'games:launchElement',
   gameDeleteElement: 'games:deleteElement',
+  pluginsSettings: 'plugins:settings',
+  pluginsSetSetting: 'plugins:setSetting',
 };
 
 // Événements ajoutés après P1-08.

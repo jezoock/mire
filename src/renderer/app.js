@@ -27,11 +27,12 @@ import { createControllers } from './controllers/index.ts';
 import { runLegacyAction } from './controllers/bridge.ts';
 import { callAction, setActionErrorHandler } from './controllers/registry.ts';
 import { i18n, t } from './i18n/index.ts';
-import { CENTRE_VIEW, EXPLORER_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
+import { CENTRE_VIEW, EXPLORER_VIEW, HOME_VIEW, PAGE_VIEW, SEARCH_VIEW, SETTINGS_VIEW, createShell, legacySectionOf, targetOfLegacyView } from './shell/index.ts';
 import { createPages } from './pages/index.ts';
 import { createHome, homeOptions } from './home/index.ts';
 import { createSearch } from './search/index.ts';
 import { createExplorer } from './explorer/index.ts';
+import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
 import { consoleCards, isGameBookmarkKey, isGameKey } from './games/model.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
@@ -55,15 +56,6 @@ const allLocalGames = () => D.allLocalGames({ games: S.config.games, autoGames: 
 /* ------------------------------------------------------------------ */
 
 // S, Q, V et I sont déclarés dans state/.
-
-const THEMES = [
-  { id: 'auto', name: 'Automatique', desc: 'Clair ou sombre, comme le système' },
-  { id: 'ecran', name: 'Écran éteint', desc: 'Gris-vert sombre, le thème d’origine' },
-  { id: 'jour', name: 'Plein jour', desc: 'Clair, pour les pièces lumineuses' },
-  { id: 'minuit', name: 'Minuit', desc: 'Bleu nuit profond' },
-  { id: 'velours', name: 'Velours', desc: 'Brun chaud de salle de cinéma' },
-  { id: 'contraste', name: 'Contraste élevé', desc: 'Noir et blanc, lisible de loin' },
-];
 
 // Le réglage « thème » désigne une palette (P4-02) ; le chargeur suit aussi le mode du système (« Automatique »).
 const palette = createPaletteLoader();
@@ -181,6 +173,34 @@ const explorer = createExplorer({
     if (!a || a === document.body || !a.isConnected) explorer.focusFirst();
   },
 });
+// Réglages (P4-20) : panneaux générés depuis le schéma des réglages et les manifestes des plugins, enregistrés dès
+// qu'ils changent.
+const settings = createSettings({
+  t,
+  sources: () => ({
+    config: S.config,
+    languages: i18n.available,
+    sites: S.config?.web ?? [],
+    pageThemes: pages.engine.list().map((th) => ({ id: th.id, name: themeText(th.name), description: th.description ? themeText(th.description) : '' })),
+    currentPageTheme: pages.engine.current().id,
+    homeLists: ['rows', 'bars', 'sites'].map((kind) => ({ kind, label: t(`home.settings.${kind}`), items: homeOptions(S.config.ui.home, kind, { t, pages: shell.pages(), lists: home.lists(), sites: S.config.web, color: safeColor }) })),
+    adblockStatus: S.adblock ? adblockStatusText(S.adblock, t, (d) => i18n.engine?.formatDate(d) ?? d.toLocaleDateString()) : '',
+    drmStatus: drmText,
+    configPath: S.configPath,
+  }),
+  plugins: () => api.pluginsSettings(),
+  onChange: (key, value) => C.settings.setValue({ key, value }).catch((err) => toast(err.message, { duration: 6000 })),
+  onOrder: (kind, keys) => C.settings.setOrder({ kind, keys }).catch((err) => toast(err.message, { duration: 6000 })),
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  // Réglages redessinés : le focus, s'il était sur un bouton retiré, va au premier élément du contenu.
+  onRendered: () => {
+    if (S.section !== SETTINGS_VIEW) return;
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) focusFirst();
+  },
+});
+// Nom et description d'un thème des pages : une clé de catalogue, ou un texte tel quel.
+const themeText = (n) => (typeof n === 'string' ? n : t(n.key));
 
 // Pages de la coquille (P4-11) : la vue de page, remplie d'après la route et le thème choisi.
 const pages = createPages({
@@ -409,16 +429,18 @@ function render({ resetScroll = false } = {}) {
   headerToolsEl.innerHTML = headerTools(sec);
   headerToolsRightEl.innerHTML = headerToolsRight(sec);
 
-  const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, settings: viewSettings, [DEMO_SECTION]: viewDemo };
+  const views = { videos: viewVideos, music: viewMusic, images: viewImages, streaming: viewStreaming, web: viewWeb, tv: viewTv, games: viewGames, [DEMO_SECTION]: viewDemo };
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
-  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13) et le Centre (P4-18).
-  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : null;
+  // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
+  // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
+  const hosted = sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
   if (hosted) { if (viewEl.firstElementChild !== hosted || viewEl.childElementCount !== 1) viewEl.replaceChildren(hosted); }
   else viewEl.innerHTML = views[sec]();
   if (sec === HOME_VIEW) home.refresh();
   if (sec === SEARCH_VIEW) search.refresh();
   if (sec === CENTRE_VIEW) centre.refresh();
   if (sec === EXPLORER_VIEW) explorer.refresh();
+  if (sec === SETTINGS_VIEW) settings.refresh({ plugins: true });
   if (resetScroll) viewEl.scrollTop = 0;
 
   if (hadFocus) {
@@ -428,7 +450,7 @@ function render({ resetScroll = false } = {}) {
   }
   if (sec === 'home') tick();
   if (sec === 'music') markPlaying();
-  if (sec === 'settings') { fillDrmStatus(); fillAdblock(); }
+  if (sec === SETTINGS_VIEW) { fillDrmStatus(); fillAdblock(); }
   if (sec === 'web') {
     requestAnimationFrame(() => {
       attachWebSlot();
@@ -921,10 +943,6 @@ api.onDownloadFinished(async (d) => {
   if (res?.action === 'run') C.centre.runInstaller({ id: d.id, file: installer });
 });
 
-function pathField(id, label, value, placeholder, kind) {
-  return `<div class="field"><label for="${id}">${esc(label)}</label><div class="field-row"><input class="input focusable" id="${id}" value="${esc(value)}" placeholder="${esc(placeholder)}"><button type="button" class="btn focusable" data-action="browse" data-id="${id}" data-kind="${kind}">Parcourir</button></div></div>`;
-}
-
 const SOURCE_GROUPS = [
   ['video', 'Vidéos', ['vidéo']], ['audio', 'Musique', ['morceau', 'morceaux']], ['image', 'Images', ['image']], ['game', 'Jeux PC', ['jeu', 'jeux']],
 ];
@@ -973,15 +991,6 @@ async function askSourceAddress(kind) {
     actions: [{ id: 'ok', label: 'Ajouter', kind: 'primary' }, { id: 'cancel', label: 'Annuler', kind: 'ghost' }],
   });
   if (res?.action === 'ok' && res.values.location) await addSource(kind, res.values.location.trim());
-}
-
-function themeCards() {
-  const current = S.config.ui.theme || 'ecran';
-  const preview = (id) => `<span class="tc-pane" data-palette="${id}"><span class="tc-rail"></span><span class="tc-body"><span class="tc-clock">20:45</span><span class="tc-bars bars7" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="tc-line"></span></span></span>`;
-  return THEMES.map((t) => `<button type="button" class="theme-card focusable" data-action="theme" data-id="${t.id}" aria-pressed="${t.id === current}">
-    <span class="tc-preview">${t.id === 'auto' ? preview('ecran') + preview('jour') : preview(t.id)}</span>
-    <span class="tc-name">${esc(t.name)}</span><span class="tc-desc">${esc(t.desc)}</span>
-  </button>`).join('');
 }
 
 function startOptions() {
@@ -1065,110 +1074,6 @@ function onUiChange(e) {
   }
 }
 viewEl.addEventListener('change', onUiChange);
-
-function viewSettings() {
-  const c = S.config;
-  const advanced = JSON.stringify({ web: c.web, games: c.games, emulators: c.emulators }, null, 2);
-
-  return `<form class="settings" id="settings-form" autocomplete="off" spellcheck="false">
-    <section class="set-block set-wide" id="set-theme">
-      <h2>Apparence</h2>
-      <p class="set-help">Le thème s’applique tout de suite.</p>
-      <div class="theme-grid" id="theme-grid">${themeCards()}</div>
-      ${pageThemeBlock()}
-      ${menuBlock()}
-    </section>
-
-    <section class="set-block" id="set-home">
-      <h2>Page d’accueil</h2>
-      <p class="set-help">Les changements s’appliquent tout de suite. Les flèches changent l’ordre d’affichage.</p>
-      <div class="field"><label for="set-start">Au démarrage, ouvrir</label><select class="input focusable" id="set-start" data-ui="start">${startOptions()}</select></div>
-      ${homeSettingsBlock()}
-    </section>
-
-    <section class="set-block" id="set-sources">
-      <h2>Sources</h2>
-      <p class="set-help">Autant de sources que vous voulez pour chaque type : dossiers du disque, partages réseau (\\\\NAS\\Films, smb://nas/films) ou serveurs web (une page qui liste les fichiers, ou une liste M3U). Les changements s’appliquent tout de suite. Les dossiers de jeux de chaque console se règlent avec « Modifier la console », dans Jeux.</p>
-      <div class="sources-box" data-kinds="video,audio,image,game">${sourcesHtml()}</div>
-      <div class="btn-row"><button type="button" class="btn btn-ghost focusable" data-action="rescan">Analyser à nouveau</button></div>
-    </section>
-
-    <section class="set-block">
-      <h2>Lecteur externe</h2>
-      <p class="set-help">Sert pour la télévision et pour les fichiers que le lecteur intégré ne lit pas (AVI, WMV, pistes audio AC3 ou DTS…). Laissez vide pour détecter mpv ou VLC automatiquement.</p>
-      ${pathField('set-player', 'Programme', c.externalPlayer.path, 'Détection automatique', 'program')}
-    </section>
-
-    <section class="set-block">
-      <h2>Navigateur de secours</h2>
-      <p class="set-help">Tous les sites s’ouvrent dans Mire. Ce navigateur ne sert qu’aux sites dont le « mode » vaut "browser" dans la liste ci-dessous, par exemple si un service refuse de fonctionner dans Mire. Laissez vide pour utiliser Edge ou Chrome automatiquement.</p>
-      ${pathField('set-browser', 'Navigateur', c.browser.path, 'Détection automatique', 'program')}
-    </section>
-
-    <section class="set-block">
-      <h2>Télévision</h2>
-      <p class="set-help">Le service de télévision se choisit dans la page Télévision (rouage en haut à droite). Mire reconnaît votre box automatiquement au premier lancement.</p>
-    </section>
-
-    <section class="set-block">
-      <h2>Affichage</h2>
-      <label class="check"><input type="checkbox" class="focusable" id="set-fs"${c.ui.fullscreen ? ' checked' : ''}> Afficher Mire en plein écran</label>
-      <label class="check"><input type="checkbox" class="focusable" data-ui="backdrop"${c.ui.backdrop !== false ? ' checked' : ''}> Afficher le fond d’écran de l’élément sélectionné dans les listes</label>
-    </section>
-
-    <section class="set-block">
-      <h2>Recherche dans les catalogues de streaming</h2>
-      <p class="set-help">Avec une clé gratuite de TMDB, Rechercher affiche les films et séries correspondants et indique sur quel service les regarder (données JustWatch). Créez un compte sur themoviedb.org, puis copiez le « jeton d’accès en lecture à l’API » depuis Paramètres, rubrique API.</p>
-      <div class="field"><label for="set-tmdb">Clé ou jeton TMDB</label><input class="input focusable" id="set-tmdb" type="password" value="${esc(c.search.tmdbToken)}" placeholder="Facultatif"></div>
-      <div class="field"><label for="set-region">Pays des disponibilités</label><select class="input focusable" id="set-region">${[['FR', 'France'], ['BE', 'Belgique'], ['CH', 'Suisse'], ['LU', 'Luxembourg'], ['CA', 'Canada']].map(([v, l]) => `<option value="${v}"${v === (c.search.region || 'FR') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-    </section>
-
-    <section class="set-block">
-      <h2>Infos et affiches</h2>
-      <p class="set-help">Mire cherche en ligne une image et quelques infos pour vos fichiers : affiches et résumés des films et séries (TMDB, avec la clé ci-dessus), pochettes d’albums (MusicBrainz), jaquettes des jeux de console (libretro) et des jeux PC (Steam). Les images restent dans les données de Mire ; rien n’est écrit dans vos dossiers. Une image placée à côté d’un fichier reste prioritaire.</p>
-      <label class="check"><input type="checkbox" class="focusable" id="set-scrape-auto"${c.scrape?.auto !== false ? ' checked' : ''}> Récupérer automatiquement après chaque analyse de la bibliothèque</label>
-      <div class="btn-row"><button type="button" class="btn focusable" data-action="scrape-all">Tout récupérer à nouveau</button><button type="button" class="btn btn-ghost focusable" data-action="scrape-clear">Effacer les infos récupérées</button></div>
-    </section>
-
-    <section class="set-block" id="set-adblock">
-      <h2>Bloqueur de publicités</h2>
-      <p class="set-help">Bloque les publicités, le pistage, les fenêtres surgissantes et les redirections vers des pages de pub dans les sites ouverts dans Mire. Il utilise les listes d’Adblock Plus (EasyList, EasyPrivacy, Liste FR) et celles d’uBlock Origin, mises à jour tous les quatre jours. Les changements s’appliquent tout de suite.</p>
-      <label class="check"><input type="checkbox" class="focusable" data-ui="adblock"${c.adblock?.enabled !== false ? ' checked' : ''}> Bloquer les publicités dans les sites</label>
-      <p class="set-help" id="adblock-status">Vérification…</p>
-      <div class="btn-row"><button type="button" class="btn btn-sm focusable" data-action="adblock-update">Mettre à jour les listes</button></div>
-      <h3 class="set-sub">Sites où le bloqueur est désactivé</h3>
-      <ul class="folder-list" id="adblock-allow"></ul>
-      <h3 class="set-sub">Listes de filtres supplémentaires</h3>
-      <ul class="folder-list" id="adblock-lists"></ul>
-      <div class="field-row"><input class="input focusable" id="adblock-new" placeholder="Adresse d’une liste au format Adblock Plus ou uBlock (https://…)"><button type="button" class="btn btn-sm focusable" data-action="adblock-add-list">Ajouter</button></div>
-    </section>
-
-    <section class="set-block">
-      <h2>Lecture protégée</h2>
-      <p class="set-help" id="drm-status">Vérification…</p>
-    </section>
-
-    <section class="set-block">
-      <h2>Sites, jeux et consoles</h2>
-      <p class="set-help">Liste au format JSON. Pour un site, « search » est son adresse de recherche ({q} est remplacé par les mots cherchés) et « background »: true laisse la lecture continuer quand on quitte le site. Pour un jeu, « image » peut pointer vers une jaquette. Pour une console, {rom} est remplacé par le chemin du jeu. Le fichier README donne des exemples.</p>
-      <textarea class="input code focusable" id="set-adv" rows="18">${esc(advanced)}</textarea>
-    </section>
-
-    <section class="set-block">
-      <h2>Configuration</h2>
-      <p class="set-help">Toute votre installation (sites de streaming, consoles, jeux PC, sources, sites de téléchargement) tient dans un fichier. Exportez-le pour le sauvegarder ou le réutiliser sur un autre ordinateur. À l’import, « remplacer » écrase la configuration actuelle, « compléter » ajoute ce qui manque sans rien supprimer.</p>
-      <div class="btn-row"><button type="button" class="btn focusable" data-action="config-export">Exporter la configuration</button>
-      <button type="button" class="btn focusable" data-action="config-import" data-mode="replace">Importer (remplacer)</button>
-      <button type="button" class="btn btn-ghost focusable" data-action="config-import" data-mode="merge">Importer (compléter)</button></div>
-    </section>
-
-    <div class="set-actions">
-      <button type="submit" class="btn btn-primary focusable">Enregistrer</button>
-      <button type="button" class="btn btn-ghost focusable" data-action="reveal-config">Afficher le fichier de configuration</button>
-      <span class="config-path">${esc(S.configPath)}</span>
-    </div>
-  </form>`;
-}
 
 /* ------------------------------------------------------------------ */
 /* Actions                                                             */
@@ -1536,38 +1441,6 @@ async function removeSource(kind, id) {
   scan();
 }
 
-async function saveSettings() {
-  let adv;
-  try { adv = JSON.parse($('#set-adv').value); } catch (e) {
-    toast(`La liste JSON contient une erreur : ${e.message}`, { duration: 8000 });
-    $('#set-adv').focus();
-    return;
-  }
-  if (!adv || typeof adv !== 'object') { toast('La liste JSON doit être un objet { "web": [...], "games": [...], "emulators": [...] }.'); return; }
-  for (const k of ['web', 'games', 'emulators']) {
-    if (k in adv && !Array.isArray(adv[k])) { toast(`« ${k} » doit être une liste entre crochets [ ].`); return; }
-  }
-
-  const prev = S.config;
-  const next = structuredClone(prev);
-  next.externalPlayer.path = $('#set-player').value.trim();
-  next.browser.path = $('#set-browser').value.trim();
-  next.ui.fullscreen = $('#set-fs').checked;
-  next.search.tmdbToken = $('#set-tmdb').value.trim();
-  next.scrape = { ...(next.scrape || {}), auto: $('#set-scrape-auto').checked };
-  next.search.region = $('#set-region').value;
-  for (const k of ['web', 'games', 'emulators']) if (k in adv) next[k] = adv[k];
-
-  const saved = await api.saveConfig(next);
-  if (!saved || saved.ok === false) { toast(saved?.error || 'Enregistrement impossible.'); return; }
-  S.config = saved;
-
-  S.romsCache = {};
-  search.resetWatch();
-  $('#set-adv').value = JSON.stringify({ web: saved.web, games: saved.games, emulators: saved.emulators }, null, 2);
-  toast('Réglages enregistrés');
-}
-
 /* ------------------------------------------------------------------ */
 /* Vue web intégrée                                                    */
 /* ------------------------------------------------------------------ */
@@ -1756,14 +1629,10 @@ function rememberQuery(q) {
 async function fillAdblock(fresh) {
   const st = fresh || await api.adblockStatus();
   S.adblock = st;
+  if (S.section === SETTINGS_VIEW) settings.refresh();
   const el = $('#adblock-status');
   if (!el || !st) return;
-  const date = st.updated ? new Date(st.updated).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  let text = st.updating ? 'Mise à jour des listes en cours…'
-    : st.ready ? `${plural(st.loaded, 'liste chargée', 'listes chargées')}${date ? `, mises à jour le ${date}` : ''}.`
-      : 'Les listes se téléchargent au premier lancement (connexion Internet nécessaire).';
-  if (st.failed?.length) text += ` Indisponible pour l’instant : ${st.failed.map((u) => u.split('/').pop()).join(', ')}.`;
-  el.textContent = text;
+  el.textContent = adblockStatusText(st, t, (d) => i18n.engine?.formatDate(d) ?? d.toLocaleDateString());
   const row = (value, kind) => `<li><span class="src-loc">${esc(value)}</span><button type="button" class="btn btn-ghost btn-sm focusable" data-action="adblock-remove" data-kind="${kind}" data-id="${esc(value)}">Retirer</button></li>`;
   $('#adblock-allow').innerHTML = st.allowlist.length ? st.allowlist.map((h) => row(h, 'allowlist')).join('') : '<li class="none">Aucun : le bloqueur agit partout. Le bouton « Pubs bloquées » de la barre d’un site permet de le désactiver sur ce site.</li>';
   $('#adblock-lists').innerHTML = st.customLists.length ? st.customLists.map((u) => row(u, 'customLists')).join('') : '<li class="none">Aucune.</li>';
@@ -1775,21 +1644,12 @@ async function afterAdblockChange(st) {
   await fillAdblock(st || undefined);
 }
 
+// État de la lecture protégée, rédigé pour les Réglages (P4-20).
+let drmText = '';
 async function fillDrmStatus() {
-  const el = $('#drm-status');
-  if (!el) return;
   const d = await api.drmStatus();
-  if (!d || !$('#drm-status')) return;
-  let text;
-  if (!d.ecs) {
-    text = 'Cette version d’Electron ne contient pas Widevine : Netflix, Prime Video et Amazon Music ne pourront pas lire leurs contenus. Réinstallez Mire avec npm install (voir le README).';
-  } else if (d.widevine?.version) {
-    text = `Widevine est installé (version ${d.widevine.version}).`;
-    if (d.platform !== 'linux') text += ' Si Netflix ou Prime Video refusent la lecture, signez Mire une fois avec npm run drm:signer (voir le README).';
-  } else {
-    text = 'Widevine s’installe au premier lancement (connexion Internet nécessaire). Redémarrez Mire si la lecture échoue.';
-  }
-  el.textContent = text;
+  drmText = drmStatusText(d, t);
+  if (S.section === SETTINGS_VIEW) settings.refresh();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1883,16 +1743,6 @@ function scrapeBlock(kind, help) {
     <p class="set-help" id="scrape-state">${esc(scrapeStateText())}</p>
     <label class="check"><input type="checkbox" class="focusable" data-cfg-bool="scrape.auto"${S.config.scrape?.auto !== false ? ' checked' : ''}> Récupérer automatiquement après chaque analyse</label>
     <p class="set-help">Pour corriger un élément mal reconnu : « Modifier » (ou clic droit, touche E, bouton X), puis « Rechercher en ligne » et choisissez la bonne fiche.</p></section>`;
-}
-
-// Thème des pages (P4-11) : textes tirés des catalogues, dans la langue de l'interface (la vue reste en français).
-function pageThemeBlock() {
-  const cur = pages.engine.current().id;
-  const text = (n) => (typeof n === 'string' ? n : t(n.key));
-  const lang = esc(document.documentElement.lang || 'fr');
-  return `<section class="pset" lang="${lang}"><h3 class="pset-h">${esc(t('themes.setting.title'))}</h3>
-    <p class="set-help">${esc(t('themes.setting.help'))}</p>
-    <div class="seg" role="group" aria-label="${esc(t('themes.setting.title'))}">${pages.engine.list().map((th) => `<button type="button" class="seg-btn focusable" data-action="page-theme" data-id="${esc(th.id)}" aria-pressed="${th.id === cur}" title="${esc(th.description ? text(th.description) : '')}">${esc(text(th.name))}</button>`).join('')}</div></section>`;
 }
 
 function menuBlock() {
@@ -2068,7 +1918,11 @@ async function setCfg(pathStr, value) {
   if (pathStr.startsWith('tv.')) { S.channels = null; S.tvError = null; }
   if (pathStr.startsWith('search.')) search.resetWatch();
   if (pathStr.startsWith('downloads.')) S.dlSettings = { ...S.dlSettings, ...(S.config.downloads || {}) };
-  toast('Enregistré', { duration: 1500 });
+  // Réglages de l'interface (écran Réglages, P4-20) : appliqués tout de suite, comme depuis l'ancienne vue.
+  if (pathStr.startsWith('ui.')) applyTheme();
+  if (pathStr.startsWith('ui.menu.')) applyMenu();
+  if (pathStr === 'ui.backdrop' && !value) hideBackdrop();
+  toast(t('settingsView.saved'), { duration: 1500 });
 }
 document.addEventListener('change', (e) => {
   const t = e.target;
@@ -2567,10 +2421,8 @@ const legacyUi = {
   render, go, back, nextSection, webHome, openPageSettings, refreshPanel, confirm: confirmDialog,
   isPanelOpen: () => panel.open,
   revealSettings(blockId) {
-    go('settings');
-    const block = $(`#${blockId}`);
-    block?.scrollIntoView({ block: 'start' });
-    block?.querySelector('.focusable')?.focus({ preventScroll: true });
+    go(SETTINGS_VIEW);
+    settings.focus(blockId.replace(/^set-/, ''));
   },
   selectedRef: () => refFromEl(document.activeElement),
   selectedKey: () => cardKeyOf() ?? (S.section === EXPLORER_VIEW ? explorer.selectedKey() : null),
@@ -2594,7 +2446,7 @@ const legacyUi = {
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, setAdButton,
-  getQueries, rememberQuery, search, explorer,
+  getQueries, rememberQuery, search, explorer, settings,
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   open: (target, opts) => shell.open(target, opts),
@@ -2643,7 +2495,6 @@ function onActionClick(e) {
 }
 viewEl.addEventListener('click', onActionClick);
 panelBody.addEventListener('click', onActionClick);
-viewEl.addEventListener('submit', (e) => { e.preventDefault(); saveSettings(); });
 
 let searchTimer = 0;
 // Menus déroulants de l'en-tête (filtres Jeux, service de télé).

@@ -142,7 +142,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-17 | Jeux : consoles et émulateurs | M | P4-11, P4-06 | 🧑 | faite | [#84](https://github.com/jezoock/mire/pull/84) |
 | P4-18 | Centre : téléchargements et apps | M | P4-07, P4-06 |  | faite | [#75](https://github.com/jezoock/mire/pull/75) |
 | P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | à faire | |
-| P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | à faire | |
+| P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | en cours (partie 1 : [#80](https://github.com/jezoock/mire/pull/80)) | |
 | P4-21 | Administration des tags, des pages et des listes | M | P4-20, P2-07, P2-08 |  | à faire | |
 | P4-22 | Éditeurs | M | P4-06, P4-11 |  | faite | [#78](https://github.com/jezoock/mire/pull/78), [#81](https://github.com/jezoock/mire/pull/81) |
 | P4-23 | Assistant du premier lancement | M | P4-19, P4-20 | 🧑 | à faire | |

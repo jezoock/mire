@@ -132,9 +132,189 @@
       "contraste": "Contraste élevé"
     },
     "settings": {
+      "appearance": {
+        "title": "Apparence",
+        "help": "La palette et le thème s’appliquent tout de suite.",
+        "theme": {
+          "label": "Palette et thème"
+        },
+        "menuPosition": {
+          "label": "Menu principal",
+          "help": "À gauche ou à droite, le menu est une barre latérale ; en haut ou en bas, c’est un carrousel qu’on fait défiler.",
+          "options": {
+            "left": "À gauche",
+            "right": "À droite",
+            "top": "En haut",
+            "bottom": "En bas"
+          }
+        },
+        "menuAutohide": {
+          "label": "Menu rétractable : il se cache et réapparaît quand on approche du bord ou qu’on y revient avec les flèches"
+        }
+      },
       "language": {
-        "label": "Langue",
-        "auto": "Langue du système"
+        "title": "Langue",
+        "interface": {
+          "label": "Langue de l’interface",
+          "options": {
+            "auto": "Automatique (langue du système)"
+          }
+        },
+        "metadata": {
+          "label": "Langue des fiches",
+          "help": "Langue des résumés et des titres récupérés en ligne.",
+          "options": {
+            "empty": "Comme l’interface",
+            "fr-FR": "Français",
+            "en-US": "Anglais"
+          }
+        }
+      },
+      "home": {
+        "title": "Page d’accueil",
+        "help": "Les changements s’appliquent tout de suite.",
+        "start": {
+          "label": "Au démarrage, ouvrir",
+          "options": {
+            "home": "Accueil",
+            "search": "Rechercher",
+            "videos": "Vidéos",
+            "music": "Musique",
+            "images": "Images",
+            "streaming": "Streaming",
+            "tv": "Télévision",
+            "games": "Jeux"
+          }
+        },
+        "clock": {
+          "label": "Afficher l’heure et la date"
+        },
+        "rows": {
+          "label": "Rangées, barres de la mire et sites épinglés"
+        }
+      },
+      "sources": {
+        "title": "Sources",
+        "help": "Dossiers du disque, partages réseau (\\\\NAS\\Films, smb://nas/films) ou serveurs web. Les changements s’appliquent tout de suite.",
+        "sources": {
+          "label": "Sources"
+        }
+      },
+      "display": {
+        "title": "Affichage",
+        "fullscreen": {
+          "label": "Afficher Mire en plein écran"
+        },
+        "backdrop": {
+          "label": "Afficher le fond d’écran de l’élément sélectionné dans les listes"
+        }
+      },
+      "programs": {
+        "title": "Programmes externes",
+        "player": {
+          "label": "Lecteur externe",
+          "help": "Sert pour la télévision et pour les fichiers que le lecteur intégré ne lit pas (AVI, WMV, pistes audio AC3 ou DTS…). Laissez vide pour détecter mpv ou VLC automatiquement.",
+          "placeholder": "Détection automatique"
+        },
+        "browser": {
+          "label": "Navigateur de secours",
+          "help": "Ne sert qu’aux sites dont le « mode » vaut \"browser\". Laissez vide pour utiliser Edge ou Chrome automatiquement.",
+          "placeholder": "Détection automatique"
+        }
+      },
+      "tv": {
+        "title": "Télévision",
+        "help": "Au premier lancement, Mire reconnaît votre box sur le réseau. Vous pouvez aussi choisir le service à la main.",
+        "service": {
+          "label": "Service de télévision"
+        }
+      },
+      "search": {
+        "title": "Recherche dans les catalogues de streaming",
+        "help": "Avec une clé gratuite de TMDB, Rechercher affiche les films et séries correspondants et indique sur quel service les regarder.",
+        "tmdbToken": {
+          "label": "Clé ou jeton TMDB",
+          "help": "Créez un compte sur themoviedb.org, puis copiez le « jeton d’accès en lecture à l’API » depuis Paramètres, rubrique API.",
+          "placeholder": "Facultatif"
+        },
+        "region": {
+          "label": "Pays des disponibilités",
+          "options": {
+            "FR": "France",
+            "BE": "Belgique",
+            "CH": "Suisse",
+            "LU": "Luxembourg",
+            "CA": "Canada"
+          }
+        }
+      },
+      "scrape": {
+        "title": "Infos et affiches",
+        "help": "Mire cherche en ligne une image et quelques infos pour vos fichiers. Les images restent dans les données de Mire ; rien n’est écrit dans vos dossiers.",
+        "auto": {
+          "label": "Récupérer automatiquement après chaque analyse de la bibliothèque"
+        },
+        "providers": {
+          "label": "Ordre des fournisseurs d’infos",
+          "help": "Pour une même info, le premier de la liste l’emporte."
+        }
+      },
+      "adblock": {
+        "title": "Bloqueur de publicités",
+        "help": "Bloque les publicités, le pistage, les fenêtres surgissantes et les redirections vers des pages de pub dans les sites ouverts dans Mire.",
+        "enabled": {
+          "label": "Bloquer les publicités dans les sites"
+        },
+        "allowlist": {
+          "label": "Sites où le bloqueur est désactivé",
+          "placeholder": "Nom du site (exemple.com)"
+        },
+        "customLists": {
+          "label": "Listes de filtres supplémentaires",
+          "placeholder": "Adresse d’une liste au format Adblock Plus ou uBlock (https://…)"
+        }
+      },
+      "streaming": {
+        "title": "Sites de streaming",
+        "sites": {
+          "label": "Sites"
+        }
+      },
+      "games": {
+        "title": "Jeux",
+        "consoles": {
+          "label": "Consoles"
+        },
+        "store": {
+          "label": "Boutique"
+        },
+        "pcGames": {
+          "label": "Jeux PC ajoutés à la main"
+        },
+        "pcSites": {
+          "label": "Sites pour télécharger des jeux PC"
+        },
+        "autoOnline": {
+          "label": "Afficher d’emblée les jeux en ligne en ouvrant une console (sans cliquer sur « Afficher »)"
+        }
+      },
+      "downloads": {
+        "title": "Téléchargements",
+        "torrentClient": {
+          "label": "Client torrent",
+          "help": "Avec un logiciel installé, Mire lui confie le lien ou le fichier : le téléchargement se suit alors dans ce logiciel.",
+          "options": {
+            "mire": "Intégré à Mire (progression suivie ici)",
+            "system": "Logiciel installé sur l’ordinateur (qBittorrent, Transmission…)"
+          }
+        },
+        "seed": {
+          "label": "Continuer à partager un torrent une fois téléchargé (tant que Mire est ouvert)"
+        },
+        "dir": {
+          "label": "Dossier des téléchargements",
+          "placeholder": "Téléchargements/Mire"
+        }
       }
     },
     "library": {
@@ -638,6 +818,9 @@
       "uninstall": {
         "needed": "« {name} » ne peut pas être désinstallé : « {by} » en a besoin.",
         "bundled": "« {name} » est livré avec Mire : on peut le désactiver, pas le désinstaller."
+      },
+      "settings": {
+        "refused": "{name} n’accepte pas cette valeur."
       }
     },
     "shell": {
@@ -1044,6 +1227,94 @@
         "mixed": "Plusieurs valeurs",
         "nameRequired": "Donnez un nom à ce regroupement.",
         "gone": "Ce regroupement n’est plus dans la bibliothèque."
+      }
+    },
+    "settingsView": {
+      "checking": "Vérification…",
+      "saved": "Enregistré",
+      "browse": "Parcourir…",
+      "add": "Ajouter",
+      "remove": "Retirer",
+      "empty": "Aucun.",
+      "secretSet": "Déjà saisi (tapez pour le remplacer)",
+      "current": "active",
+      "save": "Enregistrer",
+      "show": "Afficher",
+      "hide": "Masquer",
+      "hidden": "Masqués :",
+      "openPage": "Régler dans {name}",
+      "start": {
+        "sites": "Directement sur un service"
+      },
+      "palettes": {
+        "auto": "Automatique"
+      },
+      "providers": {
+        "tmdb": "TMDB (films et séries)",
+        "musicbrainz": "MusicBrainz (musique)",
+        "libretro": "libretro (jeux de console)",
+        "steam": "Steam (jeux PC)"
+      },
+      "plugin": {
+        "help": "Réglages de ce plugin. Ils s’appliquent tout de suite."
+      },
+      "drm": {
+        "title": "Lecture protégée",
+        "noWidevine": "Cette version d’Electron ne contient pas Widevine : Netflix, Prime Video et Amazon Music ne pourront pas lire leurs contenus. Réinstallez Mire avec npm install (voir le README).",
+        "installed": "Widevine est installé (version {version}).",
+        "sign": "Si Netflix ou Prime Video refusent la lecture, signez Mire une fois avec npm run drm:signer (voir le README).",
+        "pending": "Widevine s’installe au premier lancement (connexion Internet nécessaire). Redémarrez Mire si la lecture échoue."
+      },
+      "adblock": {
+        "updating": "Mise à jour des listes en cours…",
+        "loaded": {
+          "one": "{count} liste chargée.",
+          "other": "{count} listes chargées."
+        },
+        "loadedOn": {
+          "one": "{count} liste chargée, mise à jour le {date}.",
+          "other": "{count} listes chargées, mises à jour le {date}."
+        },
+        "notLoaded": "Les listes se téléchargent quand le bloqueur est activé.",
+        "failed": "Indisponible pour l’instant : {lists}.",
+        "on": "Bloqueur activé. Les sites ouverts se rechargent.",
+        "off": "Bloqueur désactivé.",
+        "badList": "Indiquez l’adresse complète de la liste (https://…)."
+      },
+      "advanced": {
+        "title": "Sites, jeux et consoles",
+        "help": "Liste au format JSON. Pour un site, « search » est son adresse de recherche ({q} est remplacé par les mots cherchés) et « background »: true laisse la lecture continuer quand on quitte le site. Pour un jeu, « image » peut pointer vers une jaquette. Pour une console, {rom} est remplacé par le chemin du jeu. Le fichier README donne des exemples.",
+        "error": "La liste JSON contient une erreur : {message}",
+        "notObject": "La liste JSON doit être un objet { \"web\": […], \"games\": […], \"emulators\": […] }.",
+        "notList": "« {key} » doit être une liste entre crochets [ ].",
+        "saved": "Sites, jeux et consoles enregistrés"
+      },
+      "config": {
+        "title": "Configuration",
+        "help": "Toute votre installation (sites de streaming, consoles, jeux PC, sources, sites de téléchargement) tient dans un fichier. Exportez-le pour le sauvegarder ou le réutiliser sur un autre ordinateur. À l’import, « remplacer » écrase la configuration actuelle, « compléter » ajoute ce qui manque sans rien supprimer.",
+        "exported": "Configuration exportée.",
+        "exportFailed": "Export impossible.",
+        "imported": "Configuration importée.",
+        "importFailed": "Import impossible."
+      },
+      "actions": {
+        "rescan": "Analyser à nouveau",
+        "scrapeAll": "Tout récupérer à nouveau",
+        "scrapeClear": "Effacer les infos récupérées",
+        "adblockUpdate": "Mettre à jour les listes",
+        "export": "Exporter la configuration",
+        "importReplace": "Importer (remplacer)",
+        "importMerge": "Importer (compléter)",
+        "reveal": "Afficher le fichier de configuration"
+      },
+      "sortable": {
+        "instructions": "Espace ou Entrée pour saisir, flèches pour déplacer, Espace ou Entrée pour poser, Échap pour annuler.",
+        "grabbed": "{label} saisi, position {index} sur {count}.",
+        "moved": "{label} déplacé en position {index} sur {count}.",
+        "dropped": "{label} posé en position {index} sur {count}.",
+        "cancelled": "{label} revenu en position {index} sur {count}.",
+        "moveBefore": "Placer {label} avant {other}",
+        "moveAfter": "Placer {label} après {other}"
       }
     },
     "explorer": {

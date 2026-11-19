@@ -12,7 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
-import type { PluginSummary } from '@mire/shared/ipc';
+import type { PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -68,6 +68,7 @@ export interface RunnerEvents {
 
 /** Ce que l'interface (et le futur Centre) voit d'un plugin (contrat IPC `pluginsList`). */
 export type PluginInfo = PluginSummary;
+export type { PluginSettingsInfo };
 
 export interface PluginServiceOptions {
   roots: DiscoveryRoots;
@@ -540,6 +541,19 @@ export function createPluginService(opts: PluginServiceOptions) {
       opts.settings.set(id, p.manifest.settings ?? [], key, value);
       const v = opts.settings.values(id, p.manifest.settings)[key];
       active.get(id)?.runner?.channel.event('settings', { key, value: v });
+    },
+
+    /**
+     * Plugins qui déclarent des réglages, pour l'écran Réglages (P4-20) : leurs déclarations, et leurs valeurs sans
+     * celles des secrets (`view` de `settings.ts`). Les textes sont dans les catalogues (`pluginTexts.<id>.settings.…`).
+     */
+    settingsList(): PluginSettingsInfo[] {
+      return [...known.values()].flatMap((k) => {
+        const declared = k.plugin?.manifest.settings ?? [];
+        if (!declared.length) return [];
+        const { values, secrets } = opts.settings?.view(k.id, declared) ?? { values: {}, secrets: [] };
+        return [{ id: k.id, name: nameOf(k.id), settings: structuredClone(declared), values, secrets }];
+      });
     },
 
     /** Dossiers accordés à un plugin (`ctx.files`). */

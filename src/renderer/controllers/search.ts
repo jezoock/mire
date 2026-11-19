@@ -71,8 +71,9 @@ export class SearchController extends Controller {
   }
 
   /** Ouvre les réglages où se saisit la clé du catalogue de « Où regarder ». */
-  addKey(): void {
+  async addKey(): Promise<void> {
     this.ctx.ui.go('settings', { focus: 'content' });
+    await this.ctx.ui.settings.focus('search.tmdbToken');
   }
 
   /** Cherche la recherche en cours sur un site de streaming. */
