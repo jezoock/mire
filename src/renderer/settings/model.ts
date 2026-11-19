@@ -63,10 +63,6 @@ export interface SourceStatus {
 /** Natures des sources, dans l'ordre de l'écran ; `game` : dossiers de jeux PC (`gameSources`). */
 export const SOURCE_KINDS = ['video', 'audio', 'image', 'game'] as const;
 
-/** Les choix d'au plus tant d'options courtes s'affichent en boutons (`ds-toggle-group`). */
-const SHORT_CHOICES = 4;
-const SHORT_LABEL = 20;
-
 const asText = (v: unknown): string => (typeof v === 'string' ? v : '');
 
 function choiceOptions(field: Extract<SettingsField, { type: 'choice' }>, src: PanelSources): SettingsOptionView[] {
@@ -307,11 +303,14 @@ function simpleField(field: Exclude<SettingsField, { type: 'custom' }>, src: Pan
       return { ...view, value: typeof raw === 'boolean' ? raw : field.default };
     case 'list':
       return { ...view, value: Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [] };
-    case 'choice': {
-      const options = choiceOptions(field, src);
-      const short = !field.optionsFrom && options.length <= SHORT_CHOICES && options.every((o) => o.label.length <= SHORT_LABEL);
-      return { ...view, kind: short ? 'segmented' : 'choice', value: typeof raw === 'string' ? raw : field.default, options };
-    }
+    case 'choice':
+      // Choix marqués `buttons` dans le schéma : en boutons (`ds-toggle-group`), quelle que soit la langue.
+      return {
+        ...view,
+        kind: field.buttons ? 'segmented' : 'choice',
+        value: typeof raw === 'string' ? raw : field.default,
+        options: choiceOptions(field, src),
+      };
     case 'path':
       return { ...view, value: asText(raw), pick: field.pick };
     default:

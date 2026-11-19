@@ -26,7 +26,7 @@ aussi :
 | --- | --- | --- | --- |
 | `text` | Texte libre | texte | `placeholder` |
 | `secret` | Texte masqué (clé, jeton) | texte | `placeholder` |
-| `choice` | Liste de choix | texte | `options` (`value`, `label`) ; `optionsFrom` pour des choix tirés de la configuration |
+| `choice` | Liste de choix | texte | `options` (`value`, `label`) ; `optionsFrom` pour des choix tirés de la configuration ; `buttons` pour un affichage en boutons |
 | `toggle` | Case à cocher | oui / non | |
 | `path` | Programme ou dossier sur l'ordinateur, avec « Parcourir » | texte | `pick` : `program` ou `folder` ; `placeholder` |
 | `list` | Liste de textes ajoutés ou retirés un à un | liste de textes | `placeholder` |
@@ -66,8 +66,9 @@ modifie (`paths`). Les composants connus sont dans `SETTINGS_COMPONENTS` :
 À l'écran (P4-20), `sources`, `tv-services`, `web-sites`, `pc-games` et `link-sites` sont des listes d'éléments avec
 « Retirer » et de quoi ajouter (le service de télévision se choisit parmi les autres) ; `store` est un champ de
 dossier ; `consoles` mène à l'onglet « Consoles » du Centre, où elles se créent et se modifient. Les fournisseurs
-d'infos des plugins actifs rejoignent la liste de `catalog.metadataProviders`. Un choix (`choice`) d'au plus quatre
-options courtes, sans `optionsFrom`, s'affiche en boutons (`ds-toggle-group`) plutôt qu'en liste de choix.
+d'infos des plugins actifs rejoignent la liste de `catalog.metadataProviders`. Un choix (`choice`) marqué `buttons: true`
+(peu d'options aux noms courts : position du menu, langue des infos) s'affiche en boutons (`ds-toggle-group`)
+plutôt qu'en liste de choix.
 
 ## Règles
 

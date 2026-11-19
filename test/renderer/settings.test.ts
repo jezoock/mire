@@ -141,6 +141,9 @@ describe('panneaux générés depuis le schéma', () => {
       menu.options?.map((o) => o.label),
       ['À gauche', 'À droite', 'En haut', 'En bas'],
     );
+    // Le même affichage dans toutes les langues.
+    assert.equal(fieldOf(schemaPanels(sources({ t: en.t })), 'search.language').kind, 'segmented');
+    assert.equal(fieldOf(panels, 'search.language').kind, 'segmented');
     assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
     assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
     assert.equal(fieldOf(panels, 'search.region').kind, 'choice');
