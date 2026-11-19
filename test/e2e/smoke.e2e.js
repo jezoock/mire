@@ -42,7 +42,7 @@ const FILLED = {
   tv: 'Chaîne Deux',
   games: 'Super Nintendo',
   downloads: 'Manuel de démonstration',
-  settings: 'Thème',
+  settings: 'Apparence',
 };
 
 // Téléchargement de Widevine par castLabs Electron (composant Google) : seule requête attendue.
@@ -331,7 +331,7 @@ describe('Test de fumée de Mire', () => {
     await page.evaluate(() => (window.__sansRechargement = true));
     for (const theme of THEMES.slice(1)) {
       await goByKeyboard('settings');
-      await page.locator(`.theme-card[data-id="${theme}"]`).click();
+      await page.locator(`#view .mire-settings-view__palette.hydrated[data-key="${theme}"]`).click();
       await page.waitForFunction((t) => document.documentElement.dataset.palette === t, theme);
       // Couleur de fond de la palette (palette.json), appliquée tout de suite.
       const bg = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', theme, 'palette.json'), 'utf8')).background;
@@ -1122,10 +1122,14 @@ describe('Test de fumée de Mire', () => {
       // Par l'action du contrôleur (routeur de la coquille) : le menu rétractable peut être caché.
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
       await page.waitForFunction(() => document.body.dataset.section === 'settings');
-      await page.locator(`#view [data-action="menu-pos"][data-id="${position}"]`).click();
+      // Écran Réglages (P4-20) : liste de choix et interrupteur, enregistrés dès qu'ils changent.
+      await page.waitForSelector('#view mire-settings-view.hydrated ds-select.hydrated select#set-ui-menu-position');
+      if (!(await page.evaluate((p) => document.body.classList.contains(`menu-${p}`), position))) {
+        await page.locator('#view select#set-ui-menu-position').selectOption(position);
+      }
       await page.waitForFunction((p) => document.body.classList.contains(`menu-${p}`), position);
-      const box = page.locator('#view [data-ui="menu-autohide"]');
-      if ((await box.isChecked()) !== autohide) await box.setChecked(autohide);
+      const box = page.locator('#view ds-toggle.hydrated#set-ui-menu-autohide');
+      if ((await box.evaluate((e) => !!e.checked)) !== autohide) await box.click();
       await page.waitForFunction((a) => document.body.classList.contains('menu-auto') === a, autohide);
       await settle();
     }
@@ -1178,7 +1182,7 @@ describe('Test de fumée de Mire', () => {
 
     it('rétractable : caché, il s’ouvre quand le focus y arrive et se referme quand il part', async () => {
       await setMenu('left', true);
-      await page.locator('#view .focusable').first().focus();
+      await page.locator('#view .mire-settings-view__palette.hydrated').first().focus();
       await page.waitForFunction(() => !document.body.classList.contains('menu-open'));
       await settle();
       assert.ok((await layout()).rail.right <= 0, 'le menu est caché');
@@ -1186,7 +1190,7 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => document.body.classList.contains('menu-open'));
       await settle();
       assert.equal((await layout()).rail.left, 0, 'le menu est ouvert');
-      await page.locator('#view .focusable').first().focus();
+      await page.locator('#view .mire-settings-view__palette.hydrated').first().focus();
       await page.waitForFunction(() => !document.body.classList.contains('menu-open'));
       await setMenu('left', false);
       assert.deepEqual(errors, []);
@@ -1291,9 +1295,9 @@ describe('Test de fumée de Mire', () => {
     // Thème des pages, choisi dans les réglages : appliqué sans redémarrage.
     async function setTheme(id) {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.locator(`#view .mire-settings-view__theme[data-key="${id}"]`).click();
       await page.waitForFunction(
-        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        (t) => document.querySelector(`#view .mire-settings-view__theme[data-key="${t}"]`)?.getAttribute('aria-pressed') === 'true',
         id,
       );
     }
@@ -1460,9 +1464,9 @@ describe('Test de fumée de Mire', () => {
     // Thème des pages et de l'accueil, choisi dans les réglages ; une rangée de l'accueil, montrée ou cachée.
     async function setTheme(id) {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      await page.locator(`#view [data-action="page-theme"][data-id="${id}"]`).click();
+      await page.locator(`#view .mire-settings-view__theme[data-key="${id}"]`).click();
       await page.waitForFunction(
-        (t) => document.querySelector(`#view [data-action="page-theme"][data-id="${t}"]`)?.getAttribute('aria-pressed') === 'true',
+        (t) => document.querySelector(`#view .mire-settings-view__theme[data-key="${t}"]`)?.getAttribute('aria-pressed') === 'true',
         id,
       );
     }
@@ -1475,10 +1479,18 @@ describe('Test de fumée de Mire', () => {
       await page.evaluate(() => (document.getElementById('view').scrollTop = 0));
     }
     async function setRow(kind, id, on) {
+      // Écran Réglages (P4-20) : une valeur montrée est dans la liste ordonnable, une valeur cachée a son bouton « Afficher ».
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
-      const box = page.locator(`#view [data-order="${kind}"][data-id="${id}"]`);
-      if ((await box.isChecked()) !== on) await box.click();
-      await page.waitForFunction(([k, i, o]) => document.querySelector(`#view [data-order="${k}"][data-id="${i}"]`)?.checked === o, [kind, id, on]);
+      const shown = ([k, i]) => !!document.querySelector(`#view ds-sortable[data-list="${k}"] [data-key="${CSS.escape(i)}"]`);
+      await page.waitForSelector('#view mire-settings-view.hydrated ds-sortable');
+      if ((await page.evaluate(shown, [kind, id])) !== on) {
+        const list = on ? '.mire-settings-view__hidden' : 'ds-sortable';
+        await page.locator(`#view .mire-settings-view__order[data-list="${kind}"] ${list} ds-trigger[action*='"id":"${id}"']`).click();
+      }
+      await page.waitForFunction(
+        ([k, i, o]) => !!document.querySelector(`#view ds-sortable[data-list="${k}"] [data-key="${CSS.escape(i)}"]`) === o,
+        [kind, id, on],
+      );
     }
 
     before(async () => {
@@ -2611,6 +2623,155 @@ describe('Test de fumée de Mire', () => {
       await padPress('b');
       await page.waitForFunction((sel) => document.querySelector(sel).hidden, PLAYER);
       await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Réglages (P4-20)', () => {
+    const PAD = { a: 0, b: 1, down: 13 };
+    const VIEW = '#view mire-settings mire-settings-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    // Écran Réglages affiché, ses panneaux et leurs composants rendus (classe hydrated).
+    const openSettings = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await page.waitForFunction(
+        (sel) =>
+          document.body.dataset.section === 'settings' &&
+          document.querySelector(`${sel}.hydrated .mire-settings-view__panel`) &&
+          [...document.querySelectorAll(`${sel} ds-toggle, ${sel} ds-select, ${sel} ds-sortable, ${sel} ds-trigger`)].every((e) =>
+            e.classList.contains('hydrated'),
+          ),
+        VIEW,
+      );
+    };
+    // Valeur enregistrée dans la configuration (processus principal), au chemin donné.
+    const saved = (p) => page.evaluate(async (q) => q.split('.').reduce((o, k) => o?.[k], (await window.api.getConfig()).config), p);
+    const waitSaved = (p, v) =>
+      page.waitForFunction(
+        async ([q, w]) => JSON.stringify(q.split('.').reduce((o, k) => o?.[k], (await window.api.getConfig()).config)) === JSON.stringify(w),
+        [p, v],
+      );
+    const palette = (id) => page.locator(`${VIEW} .mire-settings-view__palette[data-key="${id}"]`);
+    const providers = () => page.$$eval(`${VIEW} ds-sortable[data-list="providers"] [data-key]`, (els) => els.map((e) => e.dataset.key));
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('un réglage s’enregistre dès qu’il change ; une palette s’applique tout de suite', async () => {
+      await openSettings();
+      // Interrupteur : enregistré aussitôt, sans bouton « Enregistrer ».
+      const clock = await saved('ui.home.clock');
+      await page.locator(`${VIEW} ds-toggle#set-ui-home-clock`).click();
+      await waitSaved('ui.home.clock', !clock);
+      await page.locator(`${VIEW} ds-toggle#set-ui-home-clock`).click();
+      await waitSaved('ui.home.clock', clock);
+      // Liste de choix.
+      await page.locator(`${VIEW} select#set-search-region`).selectOption('BE');
+      await waitSaved('search.region', 'BE');
+      await page.locator(`${VIEW} select#set-search-region`).selectOption('FR');
+      await waitSaved('search.region', 'FR');
+      // Palette : l'aperçu porte ses propres jetons ; choisie, elle s'applique au document.
+      assert.equal(await page.locator(`${VIEW} .mire-settings-view__palette[data-key="minuit"] [data-palette="minuit"]`).count(), 1);
+      await palette('minuit').click();
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'minuit');
+      await page.waitForFunction(
+        (sel) => document.querySelector(`${sel} .mire-settings-view__palette[data-key="minuit"]`)?.getAttribute('aria-pressed') === 'true',
+        VIEW,
+      );
+      await waitSaved('ui.theme', 'minuit');
+      await palette('ecran').click();
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'ecran');
+      await waitSaved('ui.theme', 'ecran');
+      assert.deepEqual(errors, []);
+    });
+
+    it('l’ordre d’une liste change au clavier (ds-sortable) : celui des fournisseurs d’infos', async () => {
+      await openSettings();
+      assert.deepEqual(await providers(), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+      const item = (key) => page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="${key}"]`);
+      await item('musicbrainz').scrollIntoViewIfNeeded();
+      await item('musicbrainz').focus();
+      await page.keyboard.press('Space');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('Space');
+      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'tmdb', 'libretro', 'steam']);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'musicbrainz', VIEW);
+      await page.locator(`${VIEW} ds-sortable[data-list="providers"]`).scrollIntoViewIfNeeded();
+      await settle();
+      await page.locator(`${VIEW} [data-panel="scrape"]`).screenshot({ path: path.join(SHOTS, 'settings-order.png') });
+      // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
+      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="tmdb"] button`).first().click();
+      await waitSaved('catalog.metadataProviders', ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+      assert.deepEqual(errors, []);
+    });
+
+    it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.locator('#view mire-search-view .mire-search-view__input').fill('démonstration');
+      const add = page.locator('#view mire-search-view ds-trigger[action="addKey"].hydrated');
+      await add.click();
+      await page.waitForFunction(() => document.body.dataset.section === 'settings' && document.activeElement?.id === 'set-search-tmdbToken');
+      assert.deepEqual(errors, []);
+    });
+
+    it('manette : la croix parcourt les réglages, A choisit une palette, B quitte l’écran', async () => {
+      await connectPad();
+      await openSettings();
+      await palette('auto').focus();
+      // Croix vers le bas : le focus reste dans les réglages, sur un autre élément.
+      await padPress('down');
+      await page.waitForFunction((sel) => document.activeElement?.closest(sel) && !document.activeElement.closest('[data-key="auto"]'), VIEW);
+      // A sur une palette : elle s'applique.
+      await palette('jour').focus();
+      await padPress('a');
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'jour');
+      await waitSaved('ui.theme', 'jour');
+      // B : le focus quitte les réglages (retour au menu).
+      await padPress('b');
+      await page.waitForFunction((sel) => !document.activeElement?.closest(sel), VIEW);
+      await disconnectPad();
+      await openSettings();
+      await palette('ecran').click();
+      await waitSaved('ui.theme', 'ecran');
       assert.deepEqual(errors, []);
     });
   });
