@@ -64,7 +64,8 @@ export function tgz(entries: TarEntry[]): Buffer {
   return gz;
 }
 
-const catalog = (code: string, name: string) => JSON.stringify({ meta: { code, name: code, app: '1.0.0' }, messages: { plugin: { name } } });
+const catalog = (code: string, name: string, tags = false) =>
+  JSON.stringify({ meta: { code, name: code, app: '1.0.0' }, messages: { plugin: { name }, ...(tags ? { tags: { essai: 'Essai' } } : {}) } });
 
 export interface PluginSpec {
   id: string;
@@ -77,6 +78,9 @@ export interface PluginSpec {
   extra?: TarEntry[];
   /** Paquet fourni tel quel (archive piégée). */
   bytes?: Buffer;
+  /** Plugin de code (une contribution `taggers`) de ce niveau, avec ces permissions (P3-08). */
+  level?: 'code' | 'privileged';
+  permissions?: Record<string, unknown>;
 }
 
 /** Fichiers d'un plugin de données valide (`packs`), comme `writePlugin` des tests de `mire-addons`. */
@@ -90,10 +94,16 @@ export function pluginEntries(spec: PluginSpec): TarEntry[] {
     i18n: 'i18n/',
     ...(spec.dependencies ? { dependencies: spec.dependencies } : {}),
   };
+  if (spec.level) {
+    manifest.level = spec.level;
+    manifest.contributes = { taggers: [{ id: 't', main: 't.js', tags: ['essai'] }] };
+    if (spec.permissions) manifest.permissions = spec.permissions;
+  }
   spec.edit?.(manifest);
   return [
-    { path: 'i18n/en.json', data: catalog('en', `Test ${spec.id}`) },
-    { path: 'i18n/fr.json', data: catalog('fr', `Essai ${spec.id}`) },
+    ...(spec.level ? [{ path: 't.js', data: 'export default () => ({ computeBatch: () => [] });' }] : []),
+    { path: 'i18n/en.json', data: catalog('en', `Test ${spec.id}`, !!spec.level) },
+    { path: 'i18n/fr.json', data: catalog('fr', `Essai ${spec.id}`, !!spec.level) },
     { path: 'mire-plugin.json', data: JSON.stringify(manifest) },
     { path: 'packs/p.json', data: JSON.stringify({ channels: [], sites: [], games: [] }) },
     ...(spec.extra ?? []),
@@ -104,6 +114,8 @@ export const BASE = 'https://github.com/o/r/releases/download';
 export const INDEX_URL = `${BASE}/index/index.json`;
 
 export interface TestRepo {
+  /** Adresse de l'index. */
+  indexUrl: string;
   publicKey: string;
   privateKey: KeyObject;
   /** Index signé (objet) et ses octets publiés. */
@@ -125,9 +137,12 @@ export function signIndex(index: Omit<RepoIndex, 'signature'>, privateKey: KeyOb
 }
 
 /** Dépôt de test : paquets aux adresses `<BASE>/<id>@<version>/…` servis par une redirection vers `storage.example`. */
-export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:00.000Z' } = {}): TestRepo {
+export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:00.000Z', base = BASE } = {}): TestRepo {
   const { privateKey, publicKey } = keys();
+  const storage = base.replace('https://github.com/', 'https://storage.example/');
+  const indexUrl = `${base}/index/index.json`;
   const repo: TestRepo = {
+    indexUrl,
     publicKey: pem(publicKey),
     privateKey,
     index: null as unknown as RepoIndex,
@@ -138,8 +153,8 @@ export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:
       repo.requests.push(url);
       if (repo.offline) throw new TypeError('fetch failed');
       if (init?.redirect !== 'manual') throw new Error('Les redirections doivent être suivies par le client.');
-      if (url.startsWith(BASE)) return new Response(null, { status: 302, headers: { location: url.replace(BASE, 'https://storage.example/r') } });
-      const data = repo.files.get(url.replace('https://storage.example/r', BASE));
+      if (url.startsWith(base)) return new Response(null, { status: 302, headers: { location: url.replace(base, storage) } });
+      const data = repo.files.get(url.replace(storage, base));
       return data
         ? new Response(new Uint8Array(data), { status: 200, headers: { 'content-length': String(data.length) } })
         : new Response('absent', { status: 404 });
@@ -149,14 +164,14 @@ export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:
       const byId = new Map<string, IndexVersion[]>();
       for (const spec of list) {
         const bytes = spec.bytes ?? tgz(pluginEntries(spec));
-        const url = `${BASE}/${spec.id}%40${spec.version}/${spec.id}-${spec.version}.tgz`;
+        const url = `${base}/${spec.id}%40${spec.version}/${spec.id}-${spec.version}.tgz`;
         repo.files.set(url, bytes);
         const v: IndexVersion = {
           version: spec.version,
           engines: { mire: spec.engines ?? '^1.0.0' },
-          level: 'data',
-          contributes: ['packs'],
-          permissions: {},
+          level: spec.level ?? 'data',
+          contributes: spec.level ? ['taggers'] : ['packs'],
+          permissions: spec.level ? (spec.permissions ?? {}) : {},
           dependencies: spec.dependencies ?? {},
           name: { en: `Test ${spec.id}`, fr: `Essai ${spec.id}` },
           package: { url, sha256: sha256(bytes), size: bytes.length },
@@ -165,7 +180,7 @@ export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:
       }
       const index = {
         format: 1,
-        repository: { name: { en: 'Test repository', fr: 'Dépôt de test' }, source: 'https://github.com/o/r', index: INDEX_URL },
+        repository: { name: { en: 'Test repository', fr: 'Dépôt de test' }, source: 'https://github.com/o/r', index: indexUrl },
         generated: g,
         plugins: [...byId.keys()]
           .sort()
@@ -174,7 +189,7 @@ export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:
       const signed = signIndex(index, signer, publicKey);
       alter?.(signed);
       repo.index = signed;
-      repo.files.set(INDEX_URL, Buffer.from(JSON.stringify(signed, null, 2)));
+      repo.files.set(indexUrl, Buffer.from(JSON.stringify(signed, null, 2)));
     },
   };
   repo.publish(plugins);

@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import type { PluginLevel } from '@mire/plugin-sdk';
-import { PRIVILEGED_PERMISSIONS } from '../../../packages/plugin-sdk/src/manifest.ts';
+import { PLUGIN_LEVELS, PRIVILEGED_PERMISSIONS } from '../../../packages/plugin-sdk/src/manifest.ts';
 import { canonicalJson, keyId, loadPublicKey } from './index-file.ts';
 import type { RepositoryConfig } from './repositories.ts';
 
@@ -142,7 +142,7 @@ function validConsent(c: unknown): c is Consent {
     typeof c.repository === 'string' &&
     THIRD_PARTY_ID_RE.test(c.repository) &&
     typeof c.version === 'string' &&
-    (c.level === 'data' || c.level === 'code' || c.level === 'privileged') &&
+    PLUGIN_LEVELS.includes(c.level as PluginLevel) &&
     isObject(c.permissions) &&
     typeof c.at === 'number'
   );
