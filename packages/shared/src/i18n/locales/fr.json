@@ -243,6 +243,7 @@
         "playlistUnreachable": "{service} ne répond pas. La télévision par playlist fonctionne seulement quand l’ordinateur est sur le réseau de la box (Wi-Fi ou câble).",
         "playlistFileNotFound": "Fichier de playlist introuvable : {path}",
         "noChannels": "La playlist ne contient aucune chaîne.",
+        "channelGone": "Cette chaîne n’est plus dans la liste. Rechargez les chaînes.",
         "noService": "Aucun service de télévision choisi. Choisissez-en un dans les réglages de la page Télévision."
       }
     },

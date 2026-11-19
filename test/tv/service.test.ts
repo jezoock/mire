@@ -7,6 +7,8 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import type { Config, TvService, TvSettings } from '@mire/shared';
 import { createTv, detectTvService } from '../../src/main/tv/index.ts';
+import { groupChannels, parseM3U, pickVariant } from '../../src/main/tv/channels.ts';
+import { channelElements } from '../../src/main/tv/element-sources.ts';
 import * as http from '../../src/main/net/http.ts';
 
 const freebox = readFileSync(new URL('../fixtures/tv/freebox.m3u', import.meta.url), 'utf8');
@@ -136,5 +138,52 @@ test.describe('chaînes du service actif', () => {
     const r = await tv.channels();
     assert.deepEqual(read, ['C:\\TV\\chaines.m3u']);
     assert.ok(r.ok && 'channels' in r && r.channels.length === 5);
+  });
+});
+
+// P4-16 : la variante d'une chaîne (qualité préférée) est choisie ici ; l'interface ne donne que la clé de la chaîne.
+test.describe('variante d’une chaîne', () => {
+  const v = (q: 'hd' | 'sd' | 'ld' | 'other') => ({ q, url: q, label: q });
+
+  test('la qualité préférée d’abord, puis la plus proche ; « hd » par défaut', () => {
+    assert.equal(pickVariant([v('ld'), v('sd'), v('hd')], 'hd')?.q, 'hd');
+    assert.equal(pickVariant([v('ld'), v('hd')], 'sd')?.q, 'hd');
+    assert.equal(pickVariant([v('ld'), v('other'), v('hd')], 'sd')?.q, 'other');
+    assert.equal(pickVariant([v('hd'), v('sd'), v('ld')], 'ld')?.q, 'ld');
+    assert.equal(pickVariant([v('ld'), v('sd')], undefined)?.q, 'sd');
+    assert.equal(pickVariant([v('ld'), v('sd')], 'inconnue')?.q, 'sd');
+    assert.equal(pickVariant([], 'hd'), null);
+  });
+
+  test('à qualité égale, la première de la liste', () => {
+    const a = { q: 'hd' as const, url: 'a', label: '' };
+    const b = { q: 'hd' as const, url: 'b', label: '' };
+    assert.equal(pickVariant([a, b], 'hd'), a);
+  });
+
+  test('watch : la chaîne désignée par sa clé, dans la qualité du service', async () => {
+    const box = { ...svc('freebox', 'playlist', `${base}/freeboxtv/playlist.m3u`), quality: 'sd' as const };
+    const { tv } = setup([box], 'freebox');
+    // Sans lecture préalable : la liste est lue à la demande.
+    const r = await tv.watch('tv:freebox|2');
+    assert.deepEqual(r, { ok: true, url: 'rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=201&flavour=sd', title: '2. France 2' });
+    const r3 = await tv.watch('tv:freebox|3');
+    assert.equal(r3.ok && r3.url.endsWith('flavour=hd'), true);
+  });
+
+  test('watch : une clé inconnue, d’un autre service, ou sans service choisi est refusée', async () => {
+    const box = svc('freebox', 'playlist', `${base}/freeboxtv/playlist.m3u`);
+    const { tv } = setup([box], 'freebox');
+    assert.equal((await tv.watch('tv:freebox|4242')).ok, false);
+    assert.equal((await tv.watch('tv:orange|2')).ok, false);
+    assert.equal((await tv.watch({ toString: () => 'tv:freebox|2' })).ok, false);
+    const none = setup([box], '');
+    assert.equal((await none.tv.watch('tv:freebox|2')).ok, false);
+  });
+
+  test('l’élément d’une chaîne s’ouvre sur la même variante', () => {
+    const box = { ...svc('freebox', 'playlist', ''), quality: 'ld' as const };
+    const [fr2] = channelElements(box, groupChannels(parseM3U(freebox)));
+    assert.equal(fr2.open.kind === 'stream' && fr2.open.url.endsWith('flavour=ld'), true);
   });
 });

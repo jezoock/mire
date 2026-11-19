@@ -55,6 +55,21 @@ export function romEntryFor(config: Config, consoleId: string, siteIndex: number
   return romEntry(config, consoleId, consoleSites(config, consoleId, defaults), siteIndex);
 }
 
+/** Genre d'une vue web, d'après le préfixe de son identifiant : la barre du site en dépend (choix du site, étoile). */
+export type WebViewKind = 'site' | 'rom' | 'bookmark' | 'tv';
+
+export function viewKindOf(id: unknown): WebViewKind {
+  const s = String(id);
+  if (s.startsWith('rom:')) return 'rom';
+  if (s.startsWith('bm:')) return 'bookmark';
+  if (s.startsWith('tv:')) return 'tv';
+  return 'site';
+}
+
+/** Couleur publiée pour une vue : une couleur `#rrggbb` (ou abrégée) de l'entrée, sinon la couleur neutre. */
+export const NEUTRAL_COLOR = '#59625B';
+export const brandColor = (c: unknown): string => (typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c) ? c : NEUTRAL_COLOR);
+
 /** Nom de la console d'une vue de sites de jeux. */
 export function consoleName(config: Config, consoleId: string): string {
   return consoleId === 'pc' ? t('games.pcGames') : findConsole(config, consoleId)?.name || '';

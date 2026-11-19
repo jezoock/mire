@@ -34,6 +34,9 @@ export interface Channel {
 export type ChannelsResult =
   { ok: true; channels: Channel[] } | { ok: true; web: { id: string; url: string; name: string | undefined } } | { ok: false; error: string };
 
+/** Réponse de `watch` : l'adresse du flux choisi et le titre à donner au lecteur, ou une erreur à afficher. */
+export type ChannelStream = { ok: true; url: string; title: string } | { ok: false; error: string };
+
 /** Client HTTP du service (celui de `net/http.ts`, simulable dans les tests). */
 export interface TvHttp {
   request(url: string, opts?: { timeout?: number }): Promise<unknown>;

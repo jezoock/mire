@@ -5,10 +5,11 @@
 import fsp from 'node:fs/promises';
 import { isHttpUrl, type TvService } from '@mire/shared';
 import * as netHttp from '../net/http.ts';
-import { groupChannels, parseM3U } from './channels.ts';
+import { groupChannels, parseM3U, pickVariant } from './channels.ts';
 import { detectTvService } from './detect.ts';
+import { tvChannelKey } from '../catalog/keys.ts';
 import { channelElements } from './element-sources.ts';
-import type { Channel, ChannelsResult, TvDeps, TvProvider, TvProviderContext } from './types.ts';
+import type { Channel, ChannelsResult, ChannelStream, TvDeps, TvProvider, TvProviderContext } from './types.ts';
 import { t } from '../i18n/current.ts';
 
 /** Playlist M3U lue dans Mire : adresse sur le réseau de la box, ou fichier local. */
@@ -73,14 +74,39 @@ export function createTv(deps: TvDeps) {
     return services.find((t) => t.id === id) || null;
   }
 
+  // Dernières chaînes lues, et leur service : `watch` y retrouve une chaîne par sa clé sans relire la liste.
+  let last: { service: string; channels: Channel[] } | null = null;
+
   async function channels(): Promise<ChannelsResult> {
     const svc = active();
     if (!svc) return { ok: false, error: t('tv.errors.noService') };
     // Un service d'un autre genre que « web » est lu comme une playlist, comme avant l'introduction des fournisseurs.
     const provider = providers.find((p) => p.kind === svc.kind) || playlistProvider;
     const r = await provider.channels(svc, ctx);
-    if (deps.catalog && r.ok && 'channels' in r) feed(deps.catalog, svc, r.channels);
+    if (r.ok && 'channels' in r) {
+      last = { service: svc.id, channels: r.channels };
+      if (deps.catalog) feed(deps.catalog, svc, r.channels);
+    }
     return r;
+  }
+
+  /**
+   * Flux à regarder pour une chaîne du service choisi, désignée par sa clé d'élément (`tv:<service>|<numéro>`) : la
+   * variante de la qualité préférée du service (`pickVariant`). L'interface ne donne que la clé : l'adresse vient de
+   * la liste lue ici, jamais de l'interface.
+   */
+  async function watch(key: unknown): Promise<ChannelStream> {
+    const svc = active();
+    if (!svc) return { ok: false, error: t('tv.errors.noService') };
+    if (last?.service !== svc.id) {
+      const r = await channels();
+      if (!r.ok) return r;
+    }
+    const keyOf = (c: Channel) => tvChannelKey(svc.id, { number: c.number, urls: c.variants.map((v) => v.url) });
+    const ch = last?.service === svc.id ? last.channels.find((c) => c.variants.length && keyOf(c) === key) : undefined;
+    const v = ch && pickVariant(ch.variants, svc.quality);
+    if (!ch || !v) return { ok: false, error: t('tv.errors.channelGone') };
+    return { ok: true, url: v.url, title: ch.number != null ? `${ch.number}. ${ch.name}` : ch.name };
   }
 
   /** Chaînes lues → catalogue d'éléments (`element-sources.ts`) ; une erreur du catalogue ne gêne jamais la réponse. */
@@ -92,7 +118,7 @@ export function createTv(deps: TvDeps) {
     }
   }
 
-  return { detect, detectOnce, active, channels };
+  return { detect, detectOnce, active, channels, watch };
 }
 
 export type Tv = ReturnType<typeof createTv>;

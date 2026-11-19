@@ -50,7 +50,7 @@ export interface MainServices {
   downloads: MainContext['downloads'];
   adblock: MainContext['adblock'];
   players: { playExternal: Fn };
-  tv: { detect: Fn; channels: Fn };
+  tv: { detect: Fn; channels: Fn; watch: Fn };
   drm: Pick<Drm, 'status'>;
   searchStreaming: Fn;
   games: Games;
@@ -103,6 +103,7 @@ export function mainContext(s: MainServices): MainContext {
     playExternal: s.players.playExternal,
     detectTvService: s.tv.detect,
     fetchChannels: s.tv.channels,
+    channelStream: s.tv.watch,
     drmStatus: s.drm.status,
     searchStreaming: s.searchStreaming,
     games: s.games,

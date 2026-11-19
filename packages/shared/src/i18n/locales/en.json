@@ -243,6 +243,7 @@
         "playlistUnreachable": "{service} isn't responding. Playlist TV only works when the computer is on the box's network (Wi-Fi or cable).",
         "playlistFileNotFound": "Playlist file not found: {path}",
         "noChannels": "The playlist has no channels.",
+        "channelGone": "This channel is no longer in the list. Reload the channels.",
         "noService": "No TV service chosen. Choose one in the TV page settings."
       }
     },

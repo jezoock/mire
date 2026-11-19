@@ -80,3 +80,24 @@ export function groupChannels(entries: readonly M3uEntry[]): Channel[] {
     return a.name.localeCompare(b.name, 'fr');
   });
 }
+
+/**
+ * Ordre de préférence des qualités pour chaque qualité choisie dans le service : la qualité choisie d'abord, puis la
+ * plus proche. Une qualité inconnue vaut « hd », comme dans l'interface historique.
+ */
+export const QUALITY_ORDER: Readonly<Record<string, readonly Quality[]>> = {
+  hd: ['hd', 'sd', 'other', 'ld'],
+  sd: ['sd', 'other', 'hd', 'ld'],
+  ld: ['ld', 'sd', 'other', 'hd'],
+};
+
+/** Variante d'une chaîne à regarder selon la qualité préférée du service ; `null` pour une chaîne sans flux. */
+export function pickVariant<V extends { q: Quality }>(variants: readonly V[], quality: string | undefined): V | null {
+  const order = QUALITY_ORDER[quality || 'hd'] || QUALITY_ORDER.hd;
+  const rank = (v: V) => {
+    const i = order.indexOf(v.q);
+    return i < 0 ? order.length : i;
+  };
+  // Tri stable : à qualité égale, la première de la liste.
+  return [...variants].sort((a, b) => rank(a) - rank(b))[0] ?? null;
+}
