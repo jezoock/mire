@@ -60,6 +60,8 @@ export interface SettingsEntryView {
   current?: boolean;
   /** Bouton « Revenir à l'origine » (`restoreEntry`) : une page prête à l'emploi modifiée (P4-21). */
   restore?: boolean;
+  /** Pas de bouton « Retirer » sur cette ligne, même si la liste en a (un tag du cœur, P4-21). */
+  keep?: boolean;
 }
 
 /** Actions des boutons d'une liste d'éléments (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */

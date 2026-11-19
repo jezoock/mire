@@ -5,8 +5,10 @@ import { isHomeList, moveChosen, toggleChosen, withChosen } from '../home/settin
 import { METADATA_PROVIDERS, SOURCE_KINDS } from '../settings/model.ts';
 import { openPageEditor } from '../settings/page-editor.ts';
 import { PAGES_LIST } from '../settings/pages.ts';
+import { openListEditor, openTagEditor } from '../settings/tag-editor.ts';
+import { FILE_RULES_LIST, LISTS_LIST, TAGS_LIST, listName, withFileRule, withoutFileRule } from '../settings/tags.ts';
 import { pageName } from '../pages/model.ts';
-import type { PageDefinition } from '@mire/shared';
+import type { ListSummary, PageDefinition, TagOverview, TagSummary } from '@mire/shared';
 import { CENTRE_VIEW } from '../shell/router.ts';
 import { Controller } from './base.ts';
 import type { Data } from './types.ts';
@@ -104,7 +106,9 @@ export class SettingsController extends Controller {
    */
   async setOrder({ kind, keys }: { kind: string; keys: string[] }): Promise<void> {
     const { ui } = this.ctx;
-    if (kind === 'providers') {
+    if (kind === LISTS_LIST) {
+      await this.ctx.api.listsReorder(keys.map(String));
+    } else if (kind === 'providers') {
       // Ceux du cœur, et ceux des plugins actifs (P4-20).
       const plugins = (((await this.ctx.api.pluginsMetadataProviders()) as { id: string }[] | null) ?? []).map((p) => p.id);
       const known = [...METADATA_PROVIDERS, ...plugins];
@@ -145,10 +149,14 @@ export class SettingsController extends Controller {
   async addEntry({ key }: { key: string }): Promise<void> {
     const { ui } = this.ctx;
     const draft = (id: string) => (ui.settings.draft(`${key}.${id}`) ?? '').trim();
-    const fields = key === 'web' ? ['name', 'url'] : key === 'pcSites' ? ['name', 'url', 'search'] : null;
+    const fields = key === 'web' ? ['name', 'url'] : key === 'pcSites' ? ['name', 'url', 'search'] : key === FILE_RULES_LIST ? ['ext', 'tags'] : null;
     if (!fields) throw new Error(`Liste inconnue : ${key}`);
     const done =
-      key === 'web' ? await this.addSite({ name: draft('name'), url: draft('url') }) : await this.addPcSite(draft('name'), draft('url'), draft('search'));
+      key === FILE_RULES_LIST
+        ? await this.addFileRule()
+        : key === 'web'
+          ? await this.addSite({ name: draft('name'), url: draft('url') })
+          : await this.addPcSite(draft('name'), draft('url'), draft('search'));
     if (!done) return;
     for (const id of fields) ui.settings.clearDraft(`${key}.${id}`);
     await ui.settings.refresh();
@@ -156,16 +164,68 @@ export class SettingsController extends Controller {
 
   // ---------- Administration des pages (P4-21) ----------
 
-  /** Crée un élément de la liste `key` dans une boîte de dialogue (`pages` : une nouvelle page). */
+  /** Crée un élément de la liste `key` dans une boîte de dialogue (`pages` : une page ; `lists` : une liste). */
   async createEntry({ key }: { key: string }): Promise<void> {
-    if (key !== PAGES_LIST) throw new Error(`Liste inconnue : ${key}`);
-    if (await openPageEditor(this.ctx, null)) await this.afterPagesChange();
+    if (key === PAGES_LIST) {
+      if (await openPageEditor(this.ctx, null)) await this.afterPagesChange();
+    } else if (key === LISTS_LIST) {
+      if (await openListEditor(this.ctx, null)) await this.ctx.ui.settings.refresh();
+    } else throw new Error(`Liste inconnue : ${key}`);
   }
 
-  /** Modifie l'élément `id` de la liste `key` dans une boîte de dialogue (`pages` : une page). */
+  /** Modifie l'élément `id` de la liste `key` dans une boîte de dialogue : une page, un tag, une liste. */
   async editEntry({ key, id }: { key: string; id: string }): Promise<void> {
-    if (key !== PAGES_LIST) throw new Error(`Liste inconnue : ${key}`);
-    if (await openPageEditor(this.ctx, String(id))) await this.afterPagesChange();
+    if (key === PAGES_LIST) {
+      if (await openPageEditor(this.ctx, String(id))) await this.afterPagesChange();
+    } else if (key === TAGS_LIST) {
+      if (await openTagEditor(this.ctx, String(id))) await this.afterTagsChange();
+    } else if (key === LISTS_LIST) {
+      const list = (((await this.ctx.api.listsList()) as ListSummary[] | null) ?? []).find((l) => l.id === String(id));
+      if (list && (await openListEditor(this.ctx, list))) await this.ctx.ui.settings.refresh();
+    } else throw new Error(`Liste inconnue : ${key}`);
+  }
+
+  /** Tags changés : les pages et la recherche suivent par le moteur ; l'écran Réglages se relit. */
+  private async afterTagsChange(): Promise<void> {
+    this.ctx.ui.afterEdit?.();
+    await this.ctx.ui.settings.refresh();
+  }
+
+  /** Supprime un tag de l'utilisateur, après confirmation : il quitte chaque élément. */
+  private async removeTag(id: string): Promise<void> {
+    const { api, ui, toast, t } = this.ctx;
+    const tag = (((await api.tagsOverview()) as TagOverview[] | null) ?? []).find((x) => x.id === id);
+    if (!tag || tag.origin !== 'user') return;
+    const help = t('settingsView.tags.removeHelp', { count: tag.count });
+    if (!(await ui.confirm(t('settingsView.tags.removeTitle', { name: tag.name }), help, t('settingsView.tags.removeYes')))) return;
+    if (await api.tagsRemove(id)) toast(t('settingsView.tags.removed', { name: tag.name }));
+    await this.afterTagsChange();
+  }
+
+  /** Supprime une liste, après confirmation ; ses éléments restent dans le catalogue. */
+  private async removeList(id: string): Promise<void> {
+    const { api, ui, toast, t } = this.ctx;
+    const list = (((await api.listsList()) as ListSummary[] | null) ?? []).find((l) => l.id === id);
+    if (!list) return;
+    const name = listName(list, t);
+    if (!(await ui.confirm(t('settingsView.lists.removeTitle', { name }), t('settingsView.lists.removeHelp'), t('settingsView.lists.removeYes')))) return;
+    if (await api.listsRemove(id)) toast(t('settingsView.lists.removed', { name }));
+    await ui.settings.refresh();
+  }
+
+  /** Règle par type de fichier ajoutée ou changée, d'après les champs remplis à côté (brouillons). */
+  private async addFileRule(): Promise<boolean> {
+    const { S, api, ui, toast, t } = this.ctx;
+    const known = ((await api.tagsList()) as TagSummary[] | null) ?? [];
+    const draft = (id: string) => ui.settings.draft(`${FILE_RULES_LIST}.${id}`) ?? '';
+    const rules = withFileRule(S.config, draft('ext'), draft('tags'), known);
+    if (!rules) {
+      toast(t('settingsView.tags.rules.badExt'));
+      return false;
+    }
+    await ui.setCfg('catalog.fileTags', rules);
+    toast(t('settingsView.saved'), { duration: 1500 });
+    return true;
   }
 
   /** Remet l'élément `id` de la liste `key` comme à l'origine (`pages` : la page prête à l'emploi), après confirmation. */
@@ -201,6 +261,13 @@ export class SettingsController extends Controller {
   async removeEntry({ key, id }: { key: string; id: string }): Promise<void> {
     const { S, api, ui, toast, t } = this.ctx;
     if (key === PAGES_LIST) return this.removePage(String(id));
+    if (key === TAGS_LIST) return this.removeTag(String(id));
+    if (key === LISTS_LIST) return this.removeList(String(id));
+    if (key === FILE_RULES_LIST) {
+      await ui.setCfg('catalog.fileTags', withoutFileRule(S.config, String(id)));
+      toast(t('settingsView.removed'), { duration: 1500 });
+      return ui.settings.refresh();
+    }
     if (key.startsWith('sources:')) await ui.removeSource(sourceKind(key), id);
     else {
       const next = structuredClone(S.config) as Data;

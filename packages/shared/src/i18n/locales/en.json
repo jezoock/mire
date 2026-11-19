@@ -1491,6 +1491,95 @@
             "desc": "Descending"
           }
         }
+      },
+      "tags": {
+        "title": "Tags",
+        "help": "Tags describe your items and are used to build pages. Mire’s and plugins’ tags are set automatically: you can change their color and icon. Your own tags can be renamed, merged and deleted.",
+        "none": "No tags.",
+        "setBy": "Set by {who}",
+        "by": {
+          "core": "Mire",
+          "user": "you",
+          "none": "Set by an old setting"
+        },
+        "colors": {
+          "red": "Red",
+          "orange": "Orange",
+          "yellow": "Yellow",
+          "green": "Green",
+          "blue": "Blue",
+          "purple": "Purple",
+          "pink": "Pink",
+          "grey": "Grey"
+        },
+        "icons": {
+          "star": "Star",
+          "folder": "Folder",
+          "globe": "Globe",
+          "play": "Play",
+          "layers": "Layers",
+          "shield": "Shield",
+          "search": "Magnifier",
+          "download": "Download"
+        },
+        "form": {
+          "name": "Tag name",
+          "color": "Color",
+          "noColor": "No color",
+          "icon": "Icon",
+          "noIcon": "No icon",
+          "merge": "Merge into another tag",
+          "noMerge": "Do not merge",
+          "userHelp": "Merge: the items with this tag get the other tag, then this one goes away.",
+          "autoHelp": "This tag is set automatically: its name does not change, but you can choose its color and icon."
+        },
+        "errors": {
+          "name": "Give the tag a name of 1 to 64 characters.",
+          "failed": "This change could not be saved."
+        },
+        "gone": "This tag no longer exists.",
+        "editTitle": "Edit the “{name}” tag",
+        "saved": "“{name}” tag saved",
+        "merged": {
+          "one": "“{name}” merged into “{into}” ({count} item)",
+          "other": "“{name}” merged into “{into}” ({count} items)"
+        },
+        "removeTitle": "Delete the “{name}” tag?",
+        "removeHelp": {
+          "one": "It will be removed from {count} item. Your files are not touched.",
+          "other": "It will be removed from {count} items. Your files are not touched."
+        },
+        "removeYes": "Delete the tag",
+        "removed": "“{name}” tag deleted",
+        "rules": {
+          "label": "Tags by file type",
+          "help": "By default, each known file type gets Video, Music or Image. Add a rule to change an extension’s tags; remove it to go back to the default rule.",
+          "noTag": "No tag",
+          "none": "No changed rules: the default rules apply.",
+          "ext": "Extension",
+          "tags": "Tags set",
+          "tagsPlaceholder": "Video, Movies (separated by commas)",
+          "badExt": "Write an extension, for example .mkv."
+        }
+      },
+      "lists": {
+        "title": "Lists",
+        "help": "Your hand-made lists. Their order is the one used by the explorer and the home screen.",
+        "none": "No lists.",
+        "create": "Create a list",
+        "order": "Order of the lists",
+        "createTitle": "New list",
+        "renameTitle": "Rename the “{name}” list",
+        "name": "List name",
+        "errors": {
+          "name": "Give the list a name of 1 to 200 characters."
+        },
+        "created": "“{name}” list created",
+        "renamed": "List renamed “{name}”",
+        "removeTitle": "Delete the “{name}” list?",
+        "removeHelp": "Its items stay in your pages and your files are not touched.",
+        "removeYes": "Delete the list",
+        "removed": "“{name}” list deleted"
       }
     },
     "explorer": {

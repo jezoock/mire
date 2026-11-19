@@ -372,7 +372,7 @@ export class MireSettingsView {
                       {l.restore}
                     </ds-trigger>
                   )}
-                  {g.remove && (
+                  {g.remove && !x.keep && (
                     <ds-trigger
                       type="button"
                       mods="stl-3"
