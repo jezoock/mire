@@ -123,6 +123,11 @@
     overflow-wrap: anywhere;
   }
 
+  // Lignes à plusieurs boutons (pages, P4-21) : le nom prend la place, les boutons se serrent à droite.
+  &__entry > &__value {
+    flex: 1 1 auto;
+  }
+
   &__detail {
     color: var(--muted);
     font-size: 14px;

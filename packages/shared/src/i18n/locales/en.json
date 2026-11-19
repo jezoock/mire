@@ -1243,6 +1243,8 @@
       "browse": "Browse…",
       "add": "Add",
       "remove": "Remove",
+      "edit": "Edit",
+      "restore": "Go back to the original",
       "empty": "None.",
       "secretSet": "Already entered (type to replace it)",
       "current": "active",
@@ -1400,6 +1402,95 @@
       "consoles": {
         "help": "Consoles are created and changed in the Centre: emulator, game folders and sources, banner.",
         "open": "Open the consoles of the Centre"
+      },
+      "pages": {
+        "title": "Pages",
+        "help": "Pages sort your items by their tags and info. Create your own, change the existing ones, or go back to a ready-made page as it was.",
+        "count": {
+          "one": "{count} item",
+          "other": "{count} items"
+        },
+        "origin": {
+          "builtin": "Ready-made",
+          "modified": "Ready-made, changed",
+          "user": "Created by you"
+        },
+        "inMenu": "In the menu",
+        "none": "No pages.",
+        "create": "Create a page",
+        "gone": "This page no longer exists.",
+        "createTitle": "New page",
+        "editTitle": "Edit the “{name}” page",
+        "save": "Save",
+        "countButton": "Count the items",
+        "cancel": "Cancel",
+        "saved": "“{name}” page saved",
+        "preview": {
+          "one": "This page would hold {count} item.",
+          "other": "This page would hold {count} items."
+        },
+        "restoreTitle": "Go back to the original “{name}” page?",
+        "restoreHelp": "Your changes to this page will be forgotten.",
+        "restoreYes": "Go back to the original",
+        "restored": "“{name}” page is back to the original",
+        "removeTitle": "Delete the “{name}” page?",
+        "removeHelp": "Your files are not touched: only the page goes away. A ready-made page can come back with “Go back to the original”.",
+        "removeYes": "Delete the page",
+        "removed": "“{name}” page deleted",
+        "errors": {
+          "name": "Give the page a name.",
+          "condition": "A condition is not complete: choose a value (for “is between”, two numbers for info such as the year).",
+          "order": "The place in the menu must be a number.",
+          "invalid": "This page cannot be saved: check its tags and conditions."
+        },
+        "form": {
+          "tabs": {
+            "general": "General",
+            "content": "Items",
+            "arrange": "Arrangement"
+          },
+          "name": "Page name",
+          "namePlaceholder": "90s movies",
+          "display": "Display",
+          "displays": {
+            "posters": "Posters",
+            "thumbnails": "Thumbnails",
+            "list": "List",
+            "rows": "Rows"
+          },
+          "pinned": "Show in the menu",
+          "order": "Place in the menu",
+          "orderPlaceholder": "1 for the first",
+          "require": "Tags every item has",
+          "exclude": "Tags no item has",
+          "tagsPlaceholder": "Tag name, then Add",
+          "noTags": "No tags.",
+          "knownTags": "Known tags: {tags}.",
+          "condition": "Condition {n}",
+          "noCondition": "No condition",
+          "operator": "How",
+          "operators": {
+            "between": "is between",
+            "equals": "is equal to",
+            "contains": "contains"
+          },
+          "value": "Value",
+          "to": "and",
+          "toPlaceholder": "for “is between”",
+          "level": "Group by (level {n})",
+          "noGroup": "No grouping",
+          "sort": "Sort by (criterion {n})",
+          "noSort": "No sorting",
+          "sortBy": {
+            "name": "Name",
+            "added": "Date added"
+          },
+          "sortOrder": "Order",
+          "orders": {
+            "asc": "Ascending",
+            "desc": "Descending"
+          }
+        }
       }
     },
     "explorer": {

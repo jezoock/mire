@@ -58,10 +58,12 @@ export interface SettingsEntryView {
   error?: boolean;
   /** Liste à choix (`choose`) : la ligne choisie. */
   current?: boolean;
+  /** Bouton « Revenir à l'origine » (`restoreEntry`) : une page prête à l'emploi modifiée (P4-21). */
+  restore?: boolean;
 }
 
 /** Actions des boutons d'une liste d'éléments (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */
-export type SettingsEntryAction = 'addEntry' | 'addSourceFolder' | 'addSourceAddress' | 'addPcGame' | 'detectTvBox' | 'reloadTv';
+export type SettingsEntryAction = 'addEntry' | 'addSourceFolder' | 'addSourceAddress' | 'addPcGame' | 'detectTvBox' | 'reloadTv' | 'createEntry';
 
 export interface SettingsEntryButton {
   label: string;
@@ -87,6 +89,8 @@ export interface SettingsEntryGroup {
   entries: SettingsEntryView[];
   empty: string;
   remove?: boolean;
+  /** Chaque ligne a son bouton « Modifier » (`editEntry`), qui ouvre une boîte de dialogue (pages, P4-21). */
+  edit?: boolean;
   choose?: boolean;
   inputs?: SettingsEntryInput[];
   buttons?: SettingsEntryButton[];
@@ -152,6 +156,8 @@ export interface SettingsLabels {
   browse?: string;
   add?: string;
   remove?: string;
+  edit?: string;
+  restore?: string;
   empty?: string;
   secretSet?: string;
   current?: string;

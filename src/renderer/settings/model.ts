@@ -5,6 +5,8 @@
 import { SETTINGS_SCHEMA, valueAtPath } from '@mire/shared/settings/schema';
 import type { SettingsBlock, SettingsField, SettingsSchema } from '@mire/shared/settings/schema';
 import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
+import type { PageOverview } from '@mire/shared';
+import { pagesGroup } from './pages.ts';
 import { pluginFieldKey } from '@mire/ui/utils';
 import type {
   OrderListView,
@@ -51,6 +53,8 @@ export interface PanelSources {
   adblockStatus?: string;
   drmStatus?: string;
   configPath?: string;
+  /** Pages, avec leur origine et leur nombre d'éléments (`pages.overview`, P4-21) ; absent tant qu'elles manquent. */
+  pages?: readonly PageOverview[];
 }
 
 /** État d'une source après l'analyse : nombre de fichiers trouvés, ou l'erreur. */
@@ -404,6 +408,12 @@ export function settingsPanels(src: PanelSources): SettingsPanelView[] {
   const { t } = src;
   return [
     ...schemaPanels(src),
+    {
+      id: 'pages',
+      title: t('settingsView.pages.title'),
+      help: t('settingsView.pages.help'),
+      fields: [{ key: 'pages', kind: 'entries', label: t('settingsView.pages.title'), groups: [pagesGroup(src.pages ?? [], t)] }],
+    },
     { id: 'drm', title: t('settingsView.drm.title'), fields: [], notes: [src.drmStatus || t('settingsView.checking')] },
     { id: 'advanced', title: t('settingsView.advanced.title'), help: t('settingsView.advanced.help'), fields: [], json: advancedJson(src.config) },
     {
@@ -462,6 +472,8 @@ export function settingsLabels(t: Translate): SettingsLabels {
     browse: k('browse'),
     add: k('add'),
     remove: k('remove'),
+    edit: k('edit'),
+    restore: k('restore'),
     empty: k('empty'),
     secretSet: k('secretSet'),
     current: k('current'),

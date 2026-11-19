@@ -295,6 +295,12 @@ export class MireSettingsView {
             {b.label}
           </ds-trigger>
         );
+      case 'createEntry':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action={`createEntry:${args}`}>
+            {b.label}
+          </ds-trigger>
+        );
       default:
         return null;
     }
@@ -344,6 +350,28 @@ export class MireSettingsView {
                     {x.label}
                     {x.sub && <span class="mire-settings-view__detail">{x.sub}</span>}
                   </span>
+                  {g.edit && (
+                    <ds-trigger
+                      type="button"
+                      mods="stl-2"
+                      target="mire-settings"
+                      action={`editEntry:${settingsArgs({ key: g.key, id: x.id })}`}
+                      aria-label={`${l.edit ?? ''} : ${x.label}`}
+                    >
+                      {l.edit}
+                    </ds-trigger>
+                  )}
+                  {x.restore && (
+                    <ds-trigger
+                      type="button"
+                      mods="stl-3"
+                      target="mire-settings"
+                      action={`restoreEntry:${settingsArgs({ key: g.key, id: x.id })}`}
+                      aria-label={`${l.restore ?? ''} : ${x.label}`}
+                    >
+                      {l.restore}
+                    </ds-trigger>
+                  )}
                   {g.remove && (
                     <ds-trigger
                       type="button"
