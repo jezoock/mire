@@ -1,0 +1,160 @@
+// Mini-lecteur de musique (P4-15) : bande en bas de l'écran, au-dessus de la vue. Habillage du cœur ; l'allure reprend
+// celle du mini-lecteur historique (.mini, .mini-*, dans styles.css).
+.mire-mini-player {
+  --accent: var(--bar-cyan);
+  --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000);
+
+  position: fixed;
+  right: var(--cr);
+  bottom: var(--cb);
+  left: var(--cl);
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) auto minmax(200px, 2fr) 150px auto;
+  align-items: center;
+  gap: 24px;
+  height: 94px;
+  padding: 0 28px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  background: var(--surface);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  &__cover {
+    flex: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 3px;
+    background: var(--surface-2);
+    object-fit: cover;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  &__text {
+    min-width: 0;
+  }
+
+  &__title,
+  &__sub {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  &__sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__seek {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__volume {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+  }
+
+  // Réglettes : piste fine, remplie de la couleur du lecteur jusqu'à la valeur, pouce de la couleur du texte.
+  ds-range {
+    --ds-range-thumb-size: 14px;
+    --ds-range-track-height: 4px;
+    --ds-range-track-color: color-mix(in srgb, var(--text) 22%, transparent);
+    --ds-range-fill-color: var(--ring);
+    --ds-range-thumb-color: var(--text);
+    --ds-range-thumb-border-color: var(--text);
+  }
+
+  &__range {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__volume-icon {
+    display: inline-grid;
+    flex: none;
+    width: 22px;
+    height: 22px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__trigger {
+    display: contents;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--text);
+    background: transparent;
+
+    &:hover {
+      background: color-mix(in srgb, var(--text) 12%, transparent);
+    }
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    &--big {
+      width: 52px;
+      height: 52px;
+      color: var(--bg);
+      background: var(--text);
+
+      &:hover {
+        background: color-mix(in srgb, var(--text) 85%, var(--bg));
+      }
+    }
+  }
+
+  @media (max-width: 1180px) {
+    grid-template-columns: minmax(150px, 1fr) auto minmax(160px, 1.4fr) auto;
+
+    &__volume {
+      display: none;
+    }
+  }
+}

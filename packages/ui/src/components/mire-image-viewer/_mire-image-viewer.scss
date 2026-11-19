@@ -1,0 +1,171 @@
+// Visionneuse d'images (P4-15) : plein écran sur fond noir, affichage par-dessus l'image. Habillage du cœur ; l'allure
+// reprend celle de la visionneuse historique (.layer, .vp-*, .iv-*, .text-btn, dans styles.css).
+.mire-image-viewer {
+  --accent: var(--bar-green);
+  --text: #f4f4f0;
+  --muted: #b8b8b2;
+  --bg: #000;
+  --ring-mix: 100%;
+  --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000);
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: block;
+  color-scheme: dark;
+  color: var(--text);
+  background: #000;
+  outline: none;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  &__ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  &[idle] {
+    cursor: none;
+  }
+
+  &[idle] &__ui {
+    opacity: 0;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 24px 40px;
+    background: linear-gradient(rgba(0, 0, 0, 0.78), transparent);
+    pointer-events: auto;
+  }
+
+  &__heading {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    overflow: hidden;
+    font-size: 26px;
+    font-weight: 700;
+    font-stretch: 112%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__sub {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 15px;
+  }
+
+  &__trigger {
+    display: contents;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: transparent;
+
+    &:hover {
+      background: color-mix(in srgb, var(--text) 12%, transparent);
+    }
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__text-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+  }
+
+  &__text-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  &__nav {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
+    transform: translateY(-50%);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    svg {
+      width: 30px;
+      height: 30px;
+    }
+
+    &--prev {
+      left: 28px;
+    }
+
+    &--next {
+      right: 28px;
+    }
+  }
+
+  @media (max-width: 1180px) {
+    &__top {
+      padding-right: 24px;
+      padding-left: 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ui {
+      transition: none;
+    }
+  }
+}

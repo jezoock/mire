@@ -38,6 +38,3 @@ export function preloadPath(list: readonly Viewable[], index: number): string | 
 export function imageSubheading(index: number, count: number, folder: string, t: Translate): string {
   return t('player.images.position', { index: index + 1, count, folder });
 }
-
-/** Libellé du bouton du diaporama, selon qu'il tourne ou non. */
-export const slideshowLabel = (running: boolean, t: Translate): string => t(running ? 'player.images.slideshowStop' : 'player.images.slideshow');

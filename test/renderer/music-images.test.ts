@@ -3,7 +3,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { RESTART_AFTER, stepInQueue, trackSubheading } from '../../src/renderer/players/music-model.ts';
-import { imageSubheading, preloadPath, slideshowLabel, viewerList, wrapStep } from '../../src/renderer/players/images-model.ts';
+import { imageSubheading, preloadPath, viewerList, wrapStep } from '../../src/renderer/players/images-model.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
 
@@ -68,11 +68,8 @@ describe('visionneuse d’images', () => {
     assert.equal(preloadPath([a, b], 0), null);
   });
 
-  it('textes : place de l’image et bouton du diaporama', () => {
+  it('texte : place de l’image et dossier', () => {
     assert.equal(imageSubheading(0, 2, 'Vacances', tFr), '1 sur 2, Vacances');
     assert.equal(imageSubheading(1, 2, 'Holidays', tEn), '2 of 2, Holidays');
-    assert.equal(slideshowLabel(false, tFr), 'Diaporama');
-    assert.equal(slideshowLabel(true, tFr), 'Arrêter le diaporama');
-    assert.equal(slideshowLabel(true, tEn), 'Stop the slideshow');
   });
 });
