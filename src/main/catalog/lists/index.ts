@@ -137,7 +137,7 @@ export function createLists({ file, engine, onIgnored = logIgnored, newId: makeI
   return {
     load,
 
-    /** Listes, dans l'ordre de création (`lists.list`). */
+    /** Listes, dans l'ordre choisi (`lists.list` ; celui de création tant qu'on ne l'a pas changé). */
     list: (): ListSummary[] => data.lists.map(summary),
 
     /** Une liste et ses éléments, disponibles ou non (`lists.get`), ou `null`. */
@@ -170,6 +170,20 @@ export function createLists({ file, engine, onIgnored = logIgnored, newId: makeI
       if (!list || !isListName(name)) return false;
       list.name = structuredClone(name);
       changed(list);
+      return true;
+    },
+
+    /**
+     * Nouvel ordre des listes (`lists.reorder`, P4-21) : `ids` d'abord, dans cet ordre, puis les autres, sans changer
+     * leur ordre. Faux si `ids` n'est pas une liste d'identifiants de listes existantes, sans doublon.
+     */
+    reorder(ids: unknown): boolean {
+      if (!Array.isArray(ids) || ids.length > data.lists.length || new Set(ids).size !== ids.length) return false;
+      const chosen = ids.map((id) => find(id));
+      if (!chosen.every((l): l is ListDefinition => !!l)) return false;
+      data.lists = [...chosen, ...data.lists.filter((l) => !chosen.includes(l))];
+      store.set(data);
+      emit(data.lists.map((l) => l.id));
       return true;
     },
 

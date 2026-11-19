@@ -155,6 +155,8 @@ export function createRegistry(translate: (key: string) => string) {
     infoType: (id: string): InfoType | undefined => declaration(id)?.type,
     /** Ce que la recherche lit de l'info (`searchedAs`). */
     infoSearch: (id: string): ReturnType<typeof searchedAs> => searchedAs(declaration(id)),
+    /** Plugins actifs qui déclarent un tag (identifiants, dans l'ordre d'activation ; P4-21). */
+    pluginsOf: (id: string): string[] => [...plugins].filter(([, p]) => p.tags.includes(id)).map(([pid]) => pid),
     /** Tag déclaré par un plugin actif. */
     isPluginTag: (id: string): boolean => !core.has(id) && !!pluginTag(id),
     /** Infos déclarées par un plugin actif (en plus de celles du cœur). */

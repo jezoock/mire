@@ -247,3 +247,35 @@ describe('Listes', () => {
     assert.equal(h.listsRemove(id), true);
   });
 });
+
+describe('Listes : ordre (P4-21)', () => {
+  it('les listes nommées passent d’abord, dans cet ordre ; les autres suivent', () => {
+    const s = setup();
+    for (const n of ['A', 'B', 'C']) s.lists.create(n);
+    assert.equal(s.lists.reorder(['l3', 'l1']), true);
+    assert.deepEqual(
+      s.lists.list().map((l) => l.name),
+      ['C', 'A', 'B'],
+    );
+    assert.deepEqual(s.events.at(-1), ['l3', 'l1', 'l2']);
+    const again = setup(s.dir);
+    assert.deepEqual(
+      again.lists.list().map((l) => l.id),
+      ['l3', 'l1', 'l2'],
+    );
+  });
+
+  it('refusé : identifiant inconnu, doublon, trop d’identifiants, autre chose qu’une liste', () => {
+    const s = setup();
+    for (const n of ['A', 'B']) s.lists.create(n);
+    assert.equal(s.lists.reorder(['l1', 'x']), false);
+    assert.equal(s.lists.reorder(['l1', 'l1']), false);
+    assert.equal(s.lists.reorder(['l1', 'l2', 'l3']), false);
+    assert.equal(s.lists.reorder('l1'), false);
+    assert.equal(s.lists.reorder([{}]), false);
+    assert.deepEqual(
+      s.lists.list().map((l) => l.id),
+      ['l1', 'l2'],
+    );
+  });
+});

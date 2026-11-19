@@ -5,8 +5,9 @@
 import { SETTINGS_SCHEMA, valueAtPath } from '@mire/shared/settings/schema';
 import type { SettingsBlock, SettingsField, SettingsSchema } from '@mire/shared/settings/schema';
 import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
-import type { PageOverview } from '@mire/shared';
+import type { ListSummary, PageOverview, TagOverview } from '@mire/shared';
 import { pagesGroup } from './pages.ts';
+import { fileRulesGroup, listsGroup, listsOrder, tagsGroup } from './tags.ts';
 import { pluginFieldKey } from '@mire/ui/utils';
 import type {
   OrderListView,
@@ -55,6 +56,10 @@ export interface PanelSources {
   configPath?: string;
   /** Pages, avec leur origine et leur nombre d'éléments (`pages.overview`, P4-21) ; absent tant qu'elles manquent. */
   pages?: readonly PageOverview[];
+  /** Tags avec leur apparence et qui les pose (`tags.overview`), listes, et noms des plugins par identifiant (P4-21). */
+  tags?: readonly TagOverview[];
+  lists?: readonly ListSummary[];
+  pluginNames?: Readonly<Record<string, string>>;
 }
 
 /** État d'une source après l'analyse : nombre de fichiers trouvés, ou l'erreur. */
@@ -403,6 +408,37 @@ export function advancedJson(config: unknown): string {
   return JSON.stringify({ web: c.web, games: c.games, emulators: c.emulators }, null, 2);
 }
 
+/** Panneau « Tags » (P4-21) : les tags, puis les règles par type de fichier. */
+function tagsPanel(src: PanelSources): SettingsPanelView {
+  const { t } = src;
+  const tags = src.tags ?? [];
+  return {
+    id: 'tags',
+    title: t('settingsView.tags.title'),
+    help: t('settingsView.tags.help'),
+    fields: [
+      { key: 'tags', kind: 'entries', label: t('settingsView.tags.title'), groups: [tagsGroup(tags, src.pluginNames ?? {}, t)] },
+      {
+        key: 'fileTags',
+        kind: 'entries',
+        label: t('settingsView.tags.rules.label'),
+        help: t('settingsView.tags.rules.help'),
+        groups: [fileRulesGroup(src.config, tags, t)],
+      },
+    ],
+  };
+}
+
+/** Panneau « Listes » (P4-21) : leur ordre (à partir de deux listes), puis chacune avec Modifier et Retirer. */
+function listsPanel(src: PanelSources): SettingsPanelView {
+  const { t } = src;
+  const lists = src.lists ?? [];
+  const fields: SettingsFieldView[] = [];
+  if (lists.length > 1) fields.push({ key: 'lists.order', kind: 'order', label: t('settingsView.lists.order'), lists: [listsOrder(lists, t)] });
+  fields.push({ key: 'lists', kind: 'entries', label: t('settingsView.lists.title'), groups: [listsGroup(lists, t)] });
+  return { id: 'lists', title: t('settingsView.lists.title'), help: t('settingsView.lists.help'), fields };
+}
+
 /** Tous les panneaux : le schéma, la lecture protégée, l'éditeur JSON, la configuration, puis les plugins. */
 export function settingsPanels(src: PanelSources): SettingsPanelView[] {
   const { t } = src;
@@ -414,6 +450,8 @@ export function settingsPanels(src: PanelSources): SettingsPanelView[] {
       help: t('settingsView.pages.help'),
       fields: [{ key: 'pages', kind: 'entries', label: t('settingsView.pages.title'), groups: [pagesGroup(src.pages ?? [], t)] }],
     },
+    tagsPanel(src),
+    listsPanel(src),
     { id: 'drm', title: t('settingsView.drm.title'), fields: [], notes: [src.drmStatus || t('settingsView.checking')] },
     { id: 'advanced', title: t('settingsView.advanced.title'), help: t('settingsView.advanced.help'), fields: [], json: advancedJson(src.config) },
     {

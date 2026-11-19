@@ -3826,4 +3826,182 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Réglages : tags et listes (P4-21)', () => {
+    const VIEW = '#view mire-settings mire-settings-view';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const group = (key) => page.locator(`${VIEW} .mire-settings-view__group[data-list="${key}"]`);
+    const row = (key, id) => group(key).locator(`li.mire-settings-view__entry[data-key="${id}"]`);
+    // Écran Réglages et listes des tags rendus (classe hydrated) : attendus avant chaque touche.
+    const hydrated = () =>
+      page.waitForFunction(
+        (sel) =>
+          document.body.dataset.section === 'settings' &&
+          document.querySelector(`${sel}.hydrated .mire-settings-view__group[data-list="tags"] li`) &&
+          [...document.querySelectorAll(`${sel} [data-panel="tags"] ds-trigger, ${sel} [data-panel="lists"] ds-trigger, ${sel} ds-sortable`)].every((e) =>
+            e.classList.contains('hydrated'),
+          ),
+        VIEW,
+      );
+    const openSettings = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:settings' }));
+      await hydrated();
+    };
+    const boxOpen = () =>
+      page.waitForFunction(() => {
+        const b = [...document.querySelectorAll('mire-form')].at(-1);
+        return (
+          b?.classList.contains('hydrated') &&
+          b.querySelector('ds-modal')?.shown &&
+          [...b.querySelectorAll('ds-trigger, ds-select, ds-field')].every((d) => d.classList.contains('hydrated')) &&
+          document.activeElement?.closest('mire-form') === b
+        );
+      });
+    const boxClosed = () => page.waitForFunction(() => !document.querySelector('mire-form'));
+    const button = (re) => page.locator('mire-form ds-trigger', { hasText: re });
+    const confirmYes = async (re) => {
+      const yes = page.locator('#dlg[open] [data-dlg="yes"]');
+      await yes.waitFor();
+      assert.match(await yes.textContent(), re);
+      await yes.click();
+      await page.waitForFunction(() => !document.querySelector('#dlg[open]'));
+    };
+    const tags = () => page.evaluate(() => window.api.tagsOverview());
+    const tag = async (id) => (await tags()).find((x) => x.id === id);
+    const lists = () => page.evaluate(async () => (await window.api.listsList()).map((l) => l.name));
+    const edit = async (key, id) => {
+      await row(key, id).locator('ds-trigger[action^="editEntry"]').click();
+      await boxOpen();
+      await settle();
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(() => {
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('tags : couleur et icône d’un tag de Mire ; renommer, fusionner puis supprimer vos tags', async () => {
+      // Deux tags de l'utilisateur posés sur un film, comme le ferait l'éditeur (P4-22).
+      await page.evaluate(async () => {
+        const lvl = await window.api.catalogPage('tag:movie', [], null);
+        await window.api.catalogSetTags(lvl.elements[0].key, { 'Vus en e2e': true, 'Favoris e2e': true });
+      });
+      await openSettings();
+      assert.match(await row('tags', 'video').locator('.mire-settings-view__detail').textContent(), /^\d+ éléments? · Posé par Mire$/);
+      assert.equal(await row('tags', 'video').locator('ds-trigger[action^="removeEntry"]').count(), 0);
+      // Tag de Mire : seulement la couleur et l'icône.
+      await edit('tags', 'video');
+      assert.equal(await page.locator('mire-form input[name="name"]').count(), 0);
+      await page.locator('mire-form select[name="color"]').selectOption('blue');
+      await page.locator('mire-form select[name="icon"]').selectOption('play');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      assert.deepEqual((await tag('video')).look, { color: 'blue', icon: 'play' });
+      await hydrated();
+      await page.waitForFunction(
+        (sel) => /Bleu · Lecture$/.test(document.querySelector(`${sel} [data-list="tags"] [data-key="video"] .mire-settings-view__detail`)?.textContent ?? ''),
+        VIEW,
+      );
+      // Votre tag : renommé.
+      await edit('tags', 'vus-en-e2e');
+      await page.locator('mire-form input[name="name"]').fill('Déjà vus e2e');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      assert.equal((await tag('vus-en-e2e')).name, 'Déjà vus e2e');
+      // Fusionné dans l'autre : il disparaît, l'autre reste sur le film.
+      await hydrated();
+      await edit('tags', 'vus-en-e2e');
+      await page.locator('mire-form select[name="merge"]').selectOption('favoris-e2e');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      assert.equal(await tag('vus-en-e2e'), undefined);
+      assert.equal((await tag('favoris-e2e')).count, 1);
+      await row('tags', 'vus-en-e2e').waitFor({ state: 'detached' });
+      await hydrated();
+      await page.locator(`${VIEW} [data-panel="tags"]`).evaluate((e) => e.scrollIntoView({ block: 'start' }));
+      await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
+      await settle();
+      await shot('settings-tags');
+      // Supprimé, après confirmation.
+      await row('tags', 'favoris-e2e').locator('ds-trigger[action^="removeEntry"]').click();
+      await confirmYes(/^Supprimer le tag$/);
+      await row('tags', 'favoris-e2e').waitFor({ state: 'detached' });
+      assert.equal(await tag('favoris-e2e'), undefined);
+      // La couleur de Vidéo revient à aucune.
+      await hydrated();
+      await edit('tags', 'video');
+      await page.locator('mire-form select[name="color"]').selectOption('');
+      await page.locator('mire-form select[name="icon"]').selectOption('');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      assert.deepEqual((await tag('video')).look, {});
+      assert.deepEqual(errors, []);
+    });
+
+    it('règles par type de fichier : ajouter une extension, puis la retirer', async () => {
+      await openSettings();
+      await page.locator('#set-fileTags-ext').fill('XYZ');
+      await page.locator('#set-fileTags-tags').fill('Vidéo, Films');
+      await group('fileTags').locator('ds-trigger[action^="addEntry"]').click();
+      await page.waitForFunction(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{".xyz":["video","movie"]}');
+      await row('fileTags', '.xyz').waitFor();
+      assert.equal(await row('fileTags', '.xyz').locator('.mire-settings-view__detail').textContent(), 'Vidéo, Films');
+      await hydrated();
+      await row('fileTags', '.xyz').locator('ds-trigger[action^="removeEntry"]').click();
+      await page.waitForFunction(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{}');
+      await row('fileTags', '.xyz').waitFor({ state: 'detached' });
+      assert.deepEqual(errors, []);
+    });
+
+    it('listes : créer, renommer, ordonner au clavier, supprimer', async () => {
+      await openSettings();
+      const before = await lists();
+      for (const name of ['Pour ce soir', 'Plus tard']) {
+        await group('lists').locator('ds-trigger[action^="createEntry"]').click();
+        await boxOpen();
+        await page.locator('mire-form input[name="name"]').fill(name);
+        await button(/^Enregistrer$/).click();
+        await boxClosed();
+        await hydrated();
+      }
+      assert.deepEqual(await lists(), [...before, 'Pour ce soir', 'Plus tard']);
+      const ids = await page.evaluate(async () => (await window.api.listsList()).map((l) => l.id));
+      const [tonight, later] = ids.slice(-2);
+      await edit('lists', later);
+      await page.locator('mire-form input[name="name"]').fill('Un autre jour');
+      await button(/^Enregistrer$/).click();
+      await boxClosed();
+      assert.deepEqual((await lists()).slice(-2), ['Pour ce soir', 'Un autre jour']);
+      // Ordre au clavier : « Un autre jour » monte d'un rang.
+      await hydrated();
+      const item = page.locator(`${VIEW} ds-sortable[data-list="lists"] [data-key="${later}"]`);
+      await item.scrollIntoViewIfNeeded();
+      await item.focus();
+      await page.keyboard.press('Space');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('Space');
+      await page.waitForFunction(
+        async ([a, b]) => {
+          const order = (await window.api.listsList()).map((l) => l.id);
+          return order.indexOf(a) === order.indexOf(b) - 1;
+        },
+        [later, tonight],
+      );
+      // Supprimées, après confirmation : on revient aux listes du départ.
+      for (const id of [tonight, later]) {
+        await hydrated();
+        await row('lists', id).locator('ds-trigger[action^="removeEntry"]').click();
+        await confirmYes(/^Supprimer la liste$/);
+        await row('lists', id).waitFor({ state: 'detached' });
+      }
+      assert.deepEqual(await lists(), before);
+      assert.deepEqual(errors, []);
+    });
+  });
 });
