@@ -1,5 +1,5 @@
 // Fournisseur MusicBrainz (P1-16), avec des réponses enregistrées, sans réseau ; débit limité.
-import { test } from 'node:test';
+import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { musicBrainzProvider } from '../../src/main/scrape/providers/musicbrainz.ts';
 import { loadRoutes } from './fake-fetch.ts';
@@ -64,12 +64,25 @@ test('candidates : douze au plus, triés par titre', async (t) => {
 
 test('débit limité : les requêtes vers MusicBrainz sont espacées, même lancées ensemble', async (t) => {
   const { ctx, fetch } = providerContext(t, loadRoutes('musicbrainz'));
+  // Horloge et minuterie simulées : l'écart mesuré ne dépend ni de la charge de la machine ni de la précision de setTimeout.
+  // Le départ est l'heure réelle : le limiteur garde en mémoire des créneaux calculés avec elle par les tests précédents.
+  mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.now() });
+  t.after(() => mock.timers.reset());
   const times: number[] = [];
   const spy = ctx().io;
   const mb = musicBrainzProvider({ intervalMs: 60 });
-  const base = ctx();
-  const job = { ...base, io: { ...spy, getJson: (url: string) => (times.push(Date.now()), spy.getJson(url)) } };
-  await Promise.all([1, 2, 3].map(() => mb.candidates({ query: 'Discovery', artist: 'Daft Punk' }, job)));
+  const job = { ...ctx(), io: { ...spy, getJson: (url: string) => (times.push(Date.now()), spy.getJson(url)) } };
+  let done = false;
+  const all = Promise.all([1, 2, 3].map(() => mb.candidates({ query: 'Discovery', artist: 'Daft Punk' }, job))).then(() => (done = true));
+  // Laisse les promesses avancer, puis fait passer le temps d'un intervalle à la fois.
+  for (let i = 0; i < 10 && !done; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+    mock.timers.tick(60);
+  }
+  await all;
   assert.equal(fetch.calls.length, 3);
-  for (let i = 1; i < times.length; i++) assert.ok(times[i] - times[i - 1] >= 55, `écart ${times[i] - times[i - 1]} ms`);
+  assert.deepEqual(
+    times.map((x) => x - times[0]),
+    [0, 60, 120],
+  );
 });
