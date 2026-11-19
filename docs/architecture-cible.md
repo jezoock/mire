@@ -186,7 +186,8 @@ Ce sont les trois niveaux présentés au tri ; cette section précise où tourne
 
 ## Dépôts et Centre
 
-- **Index signé** : chaque dépôt publie un `index.json`, signé en ed25519.
+- **Index signé** : chaque dépôt publie un `index.json`, signé en ed25519 (format et chaîne de publication :
+  [`docs/index-format.md` de `mire-addons`](https://github.com/jezoock/mire-addons/blob/main/docs/index-format.md)).
   - Il décrit pour chaque plugin : versions, empreinte sha256 de chaque paquet, niveau, permissions, dépendances.
   - La clé du dépôt officiel est intégrée à Mire.
   - La clé d'un dépôt tiers est fournie à l'ajout du dépôt, et son empreinte est affichée pour vérification.
