@@ -26,6 +26,7 @@ describe('@mire/shared', () => {
       'PAGE_DEFINITION_SCHEMA',
       'PAGE_DISPLAYS',
       'PAGE_ID_RE',
+      'PAGE_LIMITS',
       'PALETTE_AUTO',
       'PALETTE_OPTIONAL_TOKENS',
       'PALETTE_TOKENS',
