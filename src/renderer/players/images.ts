@@ -101,8 +101,11 @@ export function closeImages(): void {
   clearTimeout(I.hideTimer);
   viewer.hidden = true;
   viewer.idle = false;
+  // Rien de l'image fermée ne reste affiché à la prochaine ouverture.
   viewer.src = '';
   viewer.preload = '';
+  viewer.heading = '';
+  viewer.subheading = '';
   ctrl.web.sync();
   if (S.section === 'home') ctrl.player.refreshView();
   restoreFocus(I.returnFocus);

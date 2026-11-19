@@ -3831,23 +3831,36 @@ describe('Test de fumée de Mire', () => {
       const from = await page.evaluateHandle(() => document.activeElement);
       await page.keyboard.press('Enter');
       await viewerReady();
-      await textIs(VIEWER, 'sub', '1 sur 2, Vacances');
+      // Place de l'image dans la liste (« 1 sur 2, Vacances ») : l'ordre suit la liste de la page.
+      const place = () =>
+        page
+          .waitForFunction((s) => /^([12]) sur 2, Vacances$/.exec(document.querySelector(`${s} .${s}__sub`)?.textContent)?.[1], VIEWER)
+          .then((h) => h.jsonValue());
+      const preload = () => page.evaluate((s) => document.querySelector(s).preload, VIEWER);
+      const opened = await place();
       const first = await text(VIEWER, 'title');
-      // L'image suivante est préchargée ; la dernière ne précharge rien.
-      assert.match(await page.evaluate((s) => document.querySelector(s).preload, VIEWER), /^media:/);
+      // Image suivante (flèche), en boucle : l'autre image, puis la première.
       await page.keyboard.press('ArrowRight');
-      await textIs(VIEWER, 'sub', '2 sur 2, Vacances');
-      assert.notEqual(await text(VIEWER, 'title'), first);
-      assert.equal(await page.evaluate((s) => document.querySelector(s).preload, VIEWER), '');
-      // En boucle : après la dernière, la première.
+      await page.waitForFunction(([s, t]) => document.querySelector(`${s} .${s}__title`)?.textContent !== t, [VIEWER, first]);
+      assert.notEqual(await place(), opened);
       await page.locator(`${VIEWER} ds-trigger[action="next"] button`).click();
       await textIs(VIEWER, 'title', first);
       assert.ok(await page.evaluate((s) => document.activeElement === document.querySelector(s), VIEWER));
+      // La première image précharge la suivante ; la dernière ne précharge rien.
+      if ((await place()) === '2') await page.keyboard.press('ArrowRight');
+      await page.waitForFunction((s) => document.querySelector(`${s} .${s}__sub`)?.textContent.startsWith('1 sur 2'), VIEWER);
+      assert.match(await preload(), /^media:/);
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction((s) => document.querySelector(`${s} .${s}__sub`)?.textContent.startsWith('2 sur 2'), VIEWER);
+      assert.equal(await preload(), '');
       // Diaporama : le bouton change de libellé.
       await page.keyboard.press(' ');
       await textIs(VIEWER, 'text-btn', 'Arrêter le diaporama');
       await page.keyboard.press(' ');
       await textIs(VIEWER, 'text-btn', 'Diaporama');
+      // Capture sur Plage (le bloc P4-09 renomme l'autre image).
+      if ((await text(VIEWER, 'title')) !== 'Plage') await page.keyboard.press('ArrowRight');
+      await textIs(VIEWER, 'title', 'Plage');
       await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
       // L'affichage se cache sans mouvement : la souris le réveille pour la capture.
       await page.mouse.move(800, 450);
@@ -3866,10 +3879,10 @@ describe('Test de fumée de Mire', () => {
       await openVacances();
       await padPress('a');
       await viewerReady();
-      await textIs(VIEWER, 'sub', '1 sur 2, Vacances');
+      await page.waitForFunction((s) => / sur 2, Vacances$/.test(document.querySelector(`${s} .${s}__sub`)?.textContent), VIEWER);
       const first = await text(VIEWER, 'title');
       await padPress('rb');
-      await textIs(VIEWER, 'sub', '2 sur 2, Vacances');
+      await page.waitForFunction(([s, t]) => document.querySelector(`${s} .${s}__title`)?.textContent !== t, [VIEWER, first]);
       await padPress('lb');
       await textIs(VIEWER, 'title', first);
       await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('Diaporama'));
