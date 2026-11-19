@@ -2261,7 +2261,8 @@ describe('Test de fumée de Mire', () => {
       assert.ok(preview.image);
       assert.ok(preview.tags.includes('Image'), preview.tags.join(', '));
       assert.ok(preview.location.length > 0);
-      assert.deepEqual(preview.actions, ['Lire', 'Modifier les infos', 'Tags', 'Ajouter à une liste']);
+      // Les quatre actions, puis celles du fichier (P4-09).
+      assert.deepEqual(preview.actions, ['Lire', 'Modifier les infos', 'Tags', 'Ajouter à une liste', 'Renommer', 'Déplacer', 'Supprimer']);
       // Le focus est sur « Lire » ; Entrée ouvre l'image, Échap la ferme et l'explorateur est toujours là.
       await page.waitForFunction(() => document.activeElement?.dataset?.previewAction === 'play');
       await shot('section-explorer');
@@ -3481,6 +3482,187 @@ describe('Test de fumée de Mire', () => {
       });
       await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
       await page.waitForFunction(() => document.body.dataset.section === 'home');
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  describe('Explorateur : gérer ses fichiers et sélection multiple (P4-09)', () => {
+    const PAD = { y: 3 };
+    const VIEW = '#view mire-explorer mire-explorer-view';
+    const COL = `${VIEW} .mire-explorer-view__column:not(.mire-explorer-view__preview)`;
+    const VACANCES = path.join(os.tmpdir(), 'mire-e2e', 'fixtures', 'bibliotheque', 'Images', 'Vacances');
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && errors.push(m.text());
+    const row = (col, text) =>
+      page.locator(`${VIEW} .mire-explorer-view__column:nth-child(${col + 1}) .mire-explorer-view__row.hydrated`, { hasText: text }).first();
+    const picked = () => page.$$eval(`${VIEW} .mire-explorer-view__row[data-picked] .mire-explorer-view__label`, (ls) => ls.map((l) => l.textContent).sort());
+    const selectionCount = () => page.locator(`${VIEW} .mire-explorer-view__selection-count`).textContent();
+    const action = (name) => page.locator(`${VIEW} .mire-explorer-view__preview ds-trigger[data-preview-action="${name}"].hydrated`);
+    // Boîte rendue et ouverte (ds-modal affiché, ds-trigger rendus), le focus dedans.
+    const boxOpen = () =>
+      page.waitForFunction(() => {
+        const b = [...document.querySelectorAll('mire-form')].at(-1);
+        return (
+          b?.classList.contains('hydrated') &&
+          b.querySelector('ds-modal')?.shown &&
+          [...b.querySelectorAll('ds-trigger')].every((d) => d.classList.contains('hydrated')) &&
+          document.activeElement?.closest('mire-form') === b
+        );
+      });
+    // Notifications masquées avant une capture (leur durée dépend de la machine).
+    const hideToasts = () =>
+      page.evaluate(() => {
+        document.getElementById('toast')?.classList.remove('show');
+        for (const t of document.querySelectorAll('.ds-toaster.--shown')) t.classList.remove('--shown');
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const boxClosed = () => page.waitForFunction(() => !document.querySelector('mire-form'));
+    const boxButton = (text) => page.locator('mire-form ds-trigger.hydrated', { hasText: text }).last();
+    // Colonne `n` affichée avec ce titre (l'explorateur garde ses colonnes d'une visite à l'autre).
+    const heading = (n, text) => page.waitForFunction(([sel, k, h]) => document.querySelectorAll(sel)[k]?.getAttribute('aria-label') === h, [COL, n, text]);
+    const openExplorer = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:explorer' }));
+      await page.waitForFunction(
+        (sel) => document.body.dataset.section === 'explorer' && document.querySelector(`${sel} .mire-explorer-view__row.hydrated`),
+        VIEW,
+      );
+      await row(0, 'Sources').click();
+      await heading(1, 'Sources');
+    };
+    const openVacances = async () => {
+      await openExplorer();
+      await row(1, 'Dossier · Images').click();
+      await heading(2, 'Dossier · Images');
+      await row(2, 'Vacances').click();
+      await heading(3, 'Vacances');
+    };
+
+    before(() => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('sélection multiple : Ctrl + clic, Maj + clic, Espace et Y ; la barre propose ses actions', async () => {
+      await openVacances();
+      await row(3, 'Montagne').click({ modifiers: ['Control'] });
+      await page.waitForFunction((sel) => document.querySelector(`${sel} .mire-explorer-view__selection`), VIEW);
+      assert.deepEqual(await picked(), ['Montagne']);
+      // Le choix n'ouvre pas l'aperçu.
+      assert.equal(await page.locator(`${VIEW} .mire-explorer-view__preview`).count(), 0);
+      await row(3, 'Plage').click({ modifiers: ['Shift'] });
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} .mire-explorer-view__row[data-picked]`).length === 2, VIEW);
+      assert.equal(await selectionCount(), '2 éléments choisis');
+      // Les deux fichiers sont dans un dossier autorisé : « Supprimer » est permis une fois le contrôle fait.
+      const remove = page.locator(`${VIEW} ds-trigger[data-selection-action="remove"].hydrated`);
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} ds-trigger[data-selection-action="remove"]`)?.hasAttribute('disabled'), VIEW);
+      assert.equal(await remove.count(), 1);
+      await hideToasts();
+      await settle();
+      await shot('explorer-selection');
+      // Espace sur une ligne qui a le focus la retire de la sélection, sans ouvrir l'aperçu.
+      await row(3, 'Plage').focus();
+      await page.waitForFunction(() => document.activeElement?.classList.contains('hydrated'));
+      await page.keyboard.press(' ');
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} .mire-explorer-view__row[data-picked]`).length === 1, VIEW);
+      assert.deepEqual(await picked(), ['Montagne']);
+      // Y de la manette la choisit de nouveau.
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.waitForFunction(() => document.activeElement?.classList.contains('hydrated'));
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD.y);
+      await page.evaluate((n) => (window.__pad.buttons[n] = { pressed: false, value: 0 }), PAD.y);
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} .mire-explorer-view__row[data-picked]`).length === 2, VIEW);
+      assert.equal(await page.evaluate(() => document.body.dataset.section), 'explorer', 'Y ne mène pas à la recherche');
+      await disconnectPad();
+      // Ranger dans une liste : une nouvelle liste reçoit les deux images.
+      await page.locator(`${VIEW} ds-trigger[data-selection-action="list"].hydrated`).click();
+      await boxOpen();
+      assert.match(await page.locator('mire-form .mire-form__help').textContent(), /Les 2 éléments choisis/);
+      await page.locator('mire-form input[name="name"]').fill('Vacances choisies');
+      await boxButton('Ajouter').click();
+      await boxClosed();
+      const list = await page.evaluate(async () => (await window.api.listsList()).find((l) => l.name === 'Vacances choisies'));
+      assert.equal(list?.count, 2);
+      // Tout désélectionner : la barre disparaît.
+      await page.locator(`${VIEW} ds-trigger[data-selection-action="clear"].hydrated`).click();
+      await page.waitForFunction((sel) => !document.querySelector(`${sel} .mire-explorer-view__selection`), VIEW);
+      assert.deepEqual(errors, []);
+    });
+
+    it('renommer : la confirmation dit ce qui sera fait ; annulé, rien ne change ; confirmé, le fichier est renommé', async () => {
+      await openVacances();
+      await row(3, 'Montagne').click();
+      await action('rename').waitFor();
+      const ask = async () => {
+        await action('rename').click();
+        await boxOpen();
+        await page.locator('mire-form input[name="name"]').fill('Sommet.png');
+        await boxButton('Continuer').click();
+        await page.locator('mire-form .mire-form__help', { hasText: 'Sommet.png' }).waitFor();
+        await boxOpen();
+      };
+      await ask();
+      assert.equal(
+        await page.locator('mire-form .mire-form__help').last().textContent(),
+        `« Montagne.png » s’appellera « Sommet.png ». Il reste dans le dossier ${VACANCES}.`,
+      );
+      await boxButton('Annuler').click();
+      await boxClosed();
+      assert.ok(fs.existsSync(path.join(VACANCES, 'Montagne.png')));
+      assert.ok(!fs.existsSync(path.join(VACANCES, 'Sommet.png')));
+      await ask();
+      await boxButton('Renommer').click();
+      await boxClosed();
+      // Le fichier est renommé, puis le catalogue suit : la colonne montre le nouveau nom.
+      assert.ok(fs.existsSync(path.join(VACANCES, 'Sommet.png')));
+      assert.ok(!fs.existsSync(path.join(VACANCES, 'Montagne.png')));
+      await page.waitForFunction(
+        (sel) =>
+          [...document.querySelectorAll(`${sel} .mire-explorer-view__column:nth-child(4) .mire-explorer-view__label`)].some((l) => l.textContent === 'Sommet'),
+        VIEW,
+      );
+      assert.deepEqual(errors, []);
+    });
+
+    it('ce qui n’est pas un fichier de vos dossiers (un site ajouté) : aucune action sur le fichier, la raison est affichée', async () => {
+      await openExplorer();
+      await row(1, 'Sites ajoutés').click();
+      await heading(2, 'Sites ajoutés');
+      await page.locator(`${VIEW} .mire-explorer-view__column:nth-child(3) .mire-explorer-view__row.hydrated`).first().click();
+      await action('rename').waitFor();
+      const state = await page.$$eval(`${VIEW} .mire-explorer-view__preview ds-trigger[data-preview-action]`, (ts) =>
+        Object.fromEntries(ts.map((t) => [t.dataset.previewAction, t.hasAttribute('disabled') || t.disabled === true])),
+      );
+      assert.deepEqual([state.rename, state.move, state.remove], [true, true, true]);
+      assert.match(await page.locator(`${VIEW} .mire-explorer-view__reason`).textContent(), /n’est pas un fichier de vos dossiers/);
+      await hideToasts();
+      await settle();
+      await shot('explorer-files-blocked');
       assert.deepEqual(errors, []);
     });
   });

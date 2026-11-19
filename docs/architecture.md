@@ -141,7 +141,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
 | `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>` et des vues historiques (`mire-legacy-view`), entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une page s'affiche dans la vue de page (section `page`, P4-11), un écran du cœur sans vue à lui dans la vue historique qui en tient lieu. |
 | `pages/` | Vue de page (P4-11) : l'hôte `<mire-page>` et sa `mire-page-view`, remplis d'après la route (page et chemin) ; niveaux chargés par tranches (`catalog.page`), regroupements (« Autres », « Saison 1 »), chemin parcouru, rangées (`model.ts`, sans DOM). |
-| `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes, Tags, Sources et Dossiers, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) ou les dossiers de `catalog.folder` (source et chemin relatif) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. |
+| `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes, Tags, Sources et Dossiers, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) ou les dossiers de `catalog.folder` (source et chemin relatif) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. Gérer ses fichiers (P4-09, `files.ts` sans DOM) : renommer, déplacer, mettre à la corbeille depuis l'aperçu, avec confirmation, désactivés hors des dossiers autorisés (`filesCheck`) ; sélection multiple (Ctrl + clic, Maj + clic pour une plage, Espace, Y à la manette) avec une barre : ajouter ou retirer un tag, ranger dans une liste, mettre à la corbeille. |
 | `home/` | Accueil (P4-12) : l'hôte `<mire-home>` et sa `mire-home-view`, remplis d'après `ui.home` (rangées : barres de la mire vers des cibles, sites épinglés, « Reprendre », pages et listes ; `model.ts`, sans DOM) ; réglages de l'accueil (rangées, barres, sites, ordre ; `settings.ts`, sans DOM). |
 | `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). |
 | `themes/` | Moteur de thèmes (P4-11) et thèmes intégrés (`<id>/theme.json` et leurs fichiers) : palette, polices et fond posés sur `<mire-page>` et `<mire-home>` (portée commune, P4-12), mise en page transmise à la vue de page et à l'accueil. Voir `docs/themes.md`. |
@@ -589,7 +589,9 @@ port est attribué. Aucune vérification n'est laissée à l'hôte.
 
 ### Gestion des fichiers
 
-Le service `files/` (P2-10, IPC `filesRename(path, name)`, `filesMove(path, folder)`, `filesRemove(path)`) ne croit
+Le service `files/` (P2-10, IPC `filesRename(path, name)`, `filesMove(path, folder)`, `filesRemove(path)` ; P4-09 :
+`filesCheck(paths)`, le même contrôle sans rien changer, au plus 500 chemins, qui rend pour chacun `null` ou la raison
+du refus) ne croit
 jamais l'interface sur parole. Il n'agit que sous les dossiers **locaux** de la configuration (`managedRoots` :
 bibliothèque, dossiers de jeux, dossiers des consoles), jamais sur un fichier autorisé un par un ou ouvert à part,
 ni dans les dossiers de données de Mire, ni sur un partage réseau ou un serveur web. Sont refusés : un chemin
@@ -598,7 +600,9 @@ relatif, avec `..` ou hors de ces dossiers ; un lien symbolique (le fichier ou u
 (une racine de disque configurée est ignorée) ; une destination hors des dossiers, absente ou qui n'est pas un
 dossier ; un nom déjà pris (rien n'est écrasé) ; un nouveau nom vide, `.`, `..` ou avec un séparateur. La
 suppression passe par la corbeille du système (`shell.trashItem`). La confirmation est demandée par l'interface
-(P4-09). Le catalogue suit (`files/follow.ts`, `catalogFollow`, clés recalculées par `movedKey`) :
+(explorateur, P4-09 : un nouveau nom ou un dossier d'arrivée, puis une boîte qui dit l'ancien et le nouveau nom, le
+dossier de départ et d'arrivée, ou les fichiers mis à la corbeille). L'explorateur ne propose ces actions que si
+`filesCheck` accepte le fichier ; sinon elles sont désactivées et la raison est affichée. Le catalogue suit (`files/follow.ts`, `catalogFollow`, clés recalculées par `movedKey`) :
 
 | Après… | Suit le nouveau chemin | Ne bouge pas |
 | --- | --- | --- |

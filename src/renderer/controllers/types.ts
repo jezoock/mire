@@ -132,7 +132,7 @@ export interface LegacyUi {
   search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult' | 'resetWatch'>;
   // Explorateur (P4-08)
   /** Écran de l'explorateur (`src/renderer/explorer/`). */
-  explorer: Pick<Explorer, 'open' | 'show' | 'more'>;
+  explorer: Pick<Explorer, 'open' | 'show' | 'more' | 'pick' | 'focusedRowKey' | 'picked' | 'clearPicks' | 'fileOf'>;
   /** Écran des Réglages (`src/renderer/settings/`, P4-20). */
   settings: Pick<Settings, 'refresh' | 'draft' | 'clearDraft' | 'focus'>;
   // Téléchargements, boutique, réglages
@@ -156,6 +156,8 @@ export interface ControllerContext {
   toast(message: string, opts?: ToastOptions): void;
   /** Traduction des nouveaux textes (les vues historiques restent en français jusqu'à leur remplacement). */
   t(key: string, vars?: Record<string, string | number>): string;
+  /** Texte au pluriel d'après un nombre (formes `one`, `other`… des catalogues) ; à défaut, la forme `other`. */
+  plural?(key: string, count: number): string;
   ui: LegacyUi;
   /** Nombre d'éléments ajoutés à chaque « Afficher plus ». */
   page: number;

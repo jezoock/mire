@@ -11,6 +11,12 @@
     display: flex;
     align-items: stretch;
     height: calc(100vh - 190px);
+
+    // Barre de la sélection affichée : les colonnes laissent sa place.
+    .mire-explorer-view__selection + & {
+      height: calc(100vh - 270px);
+    }
+
     min-height: 320px;
     overflow-x: auto;
     border: 1px solid var(--line);
@@ -74,6 +80,41 @@
       color: var(--muted);
       cursor: default;
     }
+
+    // Élément choisi (sélection multiple) : un trait de la couleur d'accent et une coche.
+    &.--picked {
+      box-shadow: inset 3px 0 0 var(--accent);
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+  }
+
+  &__check::after {
+    content: '✓';
+    color: var(--accent);
+    font-weight: 800;
+  }
+
+  // Barre des éléments choisis, au-dessus des colonnes.
+  &__selection {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(2) ds-spacing(3);
+    margin-bottom: ds-spacing(2);
+    padding: ds-spacing(2) ds-spacing(3);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, 12px);
+    background: var(--surface);
+  }
+
+  &__selection-count {
+    font-weight: 700;
+  }
+
+  &__reason {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
   }
 
   &__label {

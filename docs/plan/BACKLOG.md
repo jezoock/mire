@@ -131,7 +131,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-06 | Boîtes de dialogue et formulaires | M | P4-02, P4-03 |  | faite | [#68](https://github.com/jezoock/mire/pull/68) |
 | P4-07 | Coquille de l'application | L | P4-05, P4-06, P2-07 |  | faite | [#70](https://github.com/jezoock/mire/pull/70) |
 | P4-08 | Explorateur | L | P4-07, P2-08, P2-09 | 🧑 | faite ([#79](https://github.com/jezoock/mire/pull/79), [#82](https://github.com/jezoock/mire/pull/82)) | |
-| P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | à faire | |
+| P4-09 | Gérer ses fichiers et sélection multiple | M | P4-08, P2-10 |  | faite | [#87](https://github.com/jezoock/mire/pull/87) |
 | P4-10 | Mode secours | S | P4-08, P4-11 | 🧑 | faite | |
 | P4-11 | Moteur de thèmes et vue de page | L | P4-05, P4-07, P2-07 |  | faite | [#73](https://github.com/jezoock/mire/pull/73) |
 | P4-12 | Accueil | M | P4-11 |  | faite | [#74](https://github.com/jezoock/mire/pull/74) |

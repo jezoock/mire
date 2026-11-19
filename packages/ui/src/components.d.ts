@@ -7,7 +7,7 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
-import { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
+import { ExplorerColumn, ExplorerLabels, ExplorerPreview, ExplorerSelection } from "./utils/explorer";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
@@ -21,7 +21,7 @@ import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 import { Box, WebBarIcons, WebBarLabels, WebBarView } from "./utils/web";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
-export { ExplorerColumn, ExplorerLabels, ExplorerPreview } from "./utils/explorer";
+export { ExplorerColumn, ExplorerLabels, ExplorerPreview, ExplorerSelection } from "./utils/explorer";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
@@ -246,6 +246,9 @@ export namespace Components {
      * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
      * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
      * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     * Sélection multiple (P4-09) : Ctrl (ou ⌘) + clic choisit un élément, Maj + clic une plage, Espace au clavier ; la
+     * vue le signale (`mireExplorerPick`) sans ouvrir l'aperçu. Les éléments choisis ont une barre d'actions au-dessus des
+     * colonnes ; les actions sur les fichiers de l'aperçu sont désactivées, avec la raison, hors des dossiers autorisés.
      */
     interface MireExplorerView {
         /**
@@ -259,10 +262,20 @@ export namespace Components {
          */
         "labels": ExplorerLabels | string;
         /**
+          * Clés des éléments choisis (sélection multiple).
+          * @default []
+         */
+        "picked": string[] | string;
+        /**
           * Aperçu de l'élément choisi ; `null` s'il n'y en a pas.
           * @default null
          */
         "preview": ExplorerPreview | string | null;
+        /**
+          * Barre de la sélection ; `null` si rien n'est choisi.
+          * @default null
+         */
+        "selection": ExplorerSelection | string | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -1274,6 +1287,7 @@ declare global {
     };
     interface HTMLMireExplorerViewElementEventMap {
         "mireExplorerFocus": { node?: string; key?: string };
+        "mireExplorerPick": { key: string; range: boolean };
     }
     /**
      * Vue de l'explorateur (P4-08) : des colonnes côte à côte, comme le Finder du Mac, puis l'aperçu de l'élément choisi.
@@ -1282,6 +1296,9 @@ declare global {
      * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
      * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
      * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     * Sélection multiple (P4-09) : Ctrl (ou ⌘) + clic choisit un élément, Maj + clic une plage, Espace au clavier ; la
+     * vue le signale (`mireExplorerPick`) sans ouvrir l'aperçu. Les éléments choisis ont une barre d'actions au-dessus des
+     * colonnes ; les actions sur les fichiers de l'aperçu sont désactivées, avec la raison, hors des dossiers autorisés.
      */
     interface HTMLMireExplorerViewElement extends Components.MireExplorerView, HTMLStencilElement {
         addEventListener<K extends keyof HTMLMireExplorerViewElementEventMap>(type: K, listener: (this: HTMLMireExplorerViewElement, ev: MireExplorerViewCustomEvent<HTMLMireExplorerViewElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
@@ -1961,6 +1978,9 @@ declare namespace LocalJSX {
      * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
      * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
      * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+     * Sélection multiple (P4-09) : Ctrl (ou ⌘) + clic choisit un élément, Maj + clic une plage, Espace au clavier ; la
+     * vue le signale (`mireExplorerPick`) sans ouvrir l'aperçu. Les éléments choisis ont une barre d'actions au-dessus des
+     * colonnes ; les actions sur les fichiers de l'aperçu sont désactivées, avec la raison, hors des dossiers autorisés.
      */
     interface MireExplorerView {
         /**
@@ -1978,10 +1998,24 @@ declare namespace LocalJSX {
          */
         "onMireExplorerFocus"?: (event: MireExplorerViewCustomEvent<{ node?: string; key?: string }>) => void;
         /**
+          * Un élément est choisi ou retiré de la sélection ; `range` : tous ceux depuis le dernier choisi.
+         */
+        "onMireExplorerPick"?: (event: MireExplorerViewCustomEvent<{ key: string; range: boolean }>) => void;
+        /**
+          * Clés des éléments choisis (sélection multiple).
+          * @default []
+         */
+        "picked"?: string[] | string;
+        /**
           * Aperçu de l'élément choisi ; `null` s'il n'y en a pas.
           * @default null
          */
         "preview"?: ExplorerPreview | string | null;
+        /**
+          * Barre de la sélection ; `null` si rien n'est choisi.
+          * @default null
+         */
+        "selection"?: ExplorerSelection | string | null;
     }
     /**
      * Infos de l'élément sélectionné (P4-05) : logo ou titre, une ligne d'infos (année, genres, durée…), et le résumé.
@@ -2873,6 +2907,8 @@ declare namespace LocalJSX {
         "columns": ExplorerColumn[] | string;
         "preview": ExplorerPreview | string | null;
         "labels": ExplorerLabels | string;
+        "picked": string[] | string;
+        "selection": ExplorerSelection | string | null;
     }
     interface MireFocusInfoAttributes {
         "element": CardElement | string | null;
@@ -3154,6 +3190,9 @@ declare module "@stencil/core" {
              * textes déjà rédigés. Une ligne qui reçoit le focus est signalée (`mireExplorerFocus`) : la page montre ce qu'elle
              * ouvre, sans déplacer le focus. Les actions (Entrée, bouton A, clic) vont au contrôleur `mire-explorer`, avec le nœud
              * d'une branche ou la clé d'un élément. Affichage fixe : l'habillage du cœur et la palette, jamais le thème.
+             * Sélection multiple (P4-09) : Ctrl (ou ⌘) + clic choisit un élément, Maj + clic une plage, Espace au clavier ; la
+             * vue le signale (`mireExplorerPick`) sans ouvrir l'aperçu. Les éléments choisis ont une barre d'actions au-dessus des
+             * colonnes ; les actions sur les fichiers de l'aperçu sont désactivées, avec la raison, hors des dossiers autorisés.
              */
             "mire-explorer-view": LocalJSX.IntrinsicElements["mire-explorer-view"] & JSXBase.HTMLAttributes<HTMLMireExplorerViewElement>;
             /**

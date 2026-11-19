@@ -880,7 +880,8 @@
         "buttons": {
           "view": "Affichage",
           "create": "Créer"
-        }
+        },
+        "pick": "Choisir"
       }
     },
     "themes": {
@@ -1440,7 +1441,10 @@
         "play": "Lire",
         "edit": "Modifier les infos",
         "tags": "Tags",
-        "addToList": "Ajouter à une liste"
+        "addToList": "Ajouter à une liste",
+        "rename": "Renommer",
+        "move": "Déplacer",
+        "remove": "Supprimer"
       },
       "addToList": {
         "title": "Ajouter à une liste",
@@ -1454,7 +1458,101 @@
         "already": "Déjà dans « {list} ».",
         "failed": "Impossible d’ajouter à cette liste."
       },
-      "gone": "Cet élément n’est plus dans le catalogue."
+      "gone": "Cet élément n’est plus dans le catalogue.",
+      "files": {
+        "blocked": "Pourquoi ces actions sont désactivées",
+        "notFile": "Ce n’est pas un fichier de vos dossiers : Mire ne peut pas le renommer, le déplacer ni le supprimer.",
+        "notFileNamed": "« {name} » n’est pas un fichier de vos dossiers : la sélection ne peut pas être supprimée.",
+        "blockedNamed": "« {name} » : {reason}",
+        "quoted": "« {name} »",
+        "separator": ", ",
+        "andMore": {
+          "one": "{names} et {count} autre",
+          "other": "{names} et {count} autres"
+        },
+        "failed": "« {name} » : {error}"
+      },
+      "rename": {
+        "title": "Renommer",
+        "help": "Nouveau nom de « {name} ». Il restera dans le même dossier.",
+        "field": "Nouveau nom",
+        "next": "Continuer",
+        "cancel": "Annuler",
+        "same": "Le nom n’a pas changé.",
+        "confirmTitle": "Renommer ce fichier ?",
+        "confirm": "« {from} » s’appellera « {to} ». Il reste dans le dossier {folder}.",
+        "yes": "Renommer",
+        "done": "Renommé en « {name} »."
+      },
+      "move": {
+        "title": "Déplacer",
+        "help": "Dans quel dossier déplacer « {name} » ?",
+        "field": "Dossier",
+        "none": "Il n’y a pas d’autre dossier où déplacer « {name} ».",
+        "next": "Continuer",
+        "cancel": "Annuler",
+        "confirmTitle": "Déplacer ce fichier ?",
+        "confirm": "« {name} » quittera le dossier {from} pour le dossier {to}.",
+        "yes": "Déplacer",
+        "done": "Déplacé dans {folder}."
+      },
+      "remove": {
+        "title": {
+          "one": "Mettre ce fichier à la corbeille ?",
+          "other": "Mettre ces {count} fichiers à la corbeille ?"
+        },
+        "confirm": {
+          "one": "{names} ira dans la corbeille de l’ordinateur. Vous pourrez l’en sortir si besoin.",
+          "other": "{names} iront dans la corbeille de l’ordinateur. Vous pourrez les en sortir si besoin."
+        },
+        "yes": "Mettre à la corbeille",
+        "cancel": "Annuler",
+        "done": {
+          "one": "{count} fichier mis à la corbeille.",
+          "other": "{count} fichiers mis à la corbeille."
+        }
+      },
+      "selection": {
+        "label": "Éléments choisis",
+        "count": {
+          "one": "{count} élément choisi",
+          "other": "{count} éléments choisis"
+        },
+        "picked": "choisi",
+        "addTag": "Ajouter un tag",
+        "removeTag": "Retirer un tag",
+        "toList": "Ranger dans une liste",
+        "remove": "Supprimer",
+        "clear": "Tout désélectionner"
+      },
+      "tag": {
+        "addTitle": "Ajouter un tag",
+        "removeTitle": "Retirer un tag",
+        "addHelp": {
+          "one": "Le tag choisi sera ajouté à {count} élément.",
+          "other": "Le tag choisi sera ajouté aux {count} éléments choisis."
+        },
+        "removeHelp": {
+          "one": "Le tag choisi sera retiré de {count} élément.",
+          "other": "Le tag choisi sera retiré des {count} éléments choisis."
+        },
+        "field": "Tag",
+        "newTag": "Ou un nouveau tag",
+        "newTagHint": "Nom du nouveau tag",
+        "add": "Ajouter",
+        "remove": "Retirer",
+        "cancel": "Annuler",
+        "none": "Aucun des éléments choisis n’a de tag à retirer.",
+        "added": "Tag « {tag} » ajouté.",
+        "removed": "Tag « {tag} » retiré.",
+        "failed": "Le tag n’a pas pu être changé pour certains éléments."
+      },
+      "toList": {
+        "help": {
+          "one": "{count} élément sera ajouté à la fin de la liste choisie.",
+          "other": "Les {count} éléments choisis seront ajoutés à la fin de la liste choisie."
+        }
+      }
     },
     "webView": {
       "bar": {

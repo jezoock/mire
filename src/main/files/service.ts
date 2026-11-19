@@ -79,6 +79,14 @@ export function createFilesService({ roots, ops: given, follow, platform = proce
   }
 
   return {
+    /**
+     * Contrôle sans rien changer (`files.check`) : le fichier ou le dossier existe et le service pourrait agir dessus.
+     * L'explorateur s'en sert pour proposer ou non ses actions (P4-09) ; chaque opération refait ce contrôle.
+     */
+    check(target: unknown): Promise<FilesResult> {
+      return checkExisting(target, roots(), guard);
+    },
+
     /** Renomme un fichier ou un dossier (`files.rename`), sans le changer de dossier ; rend son nouveau chemin. */
     async rename(target: unknown, name: unknown): Promise<FilesResult> {
       if (!isValidName(name, platform)) return failure('name');

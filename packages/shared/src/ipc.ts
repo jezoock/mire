@@ -447,6 +447,9 @@ export interface IpcMethods {
   filesRename(path: string, name: string): Outcome<{ path: string }>;
   filesMove(path: string, folder: string): Outcome<{ path: string }>;
   filesRemove(path: string): Outcome<{ path: string }>;
+  // Contrôle sans rien changer (explorateur, P4-09) : pour chaque chemin, `null` si le service peut agir dessus, sinon
+  // la raison à afficher. `null` en entier : la valeur n'est pas une liste d'au plus 500 chemins.
+  filesCheck(paths: string[]): (string | null)[] | null;
   // Plugins (P3-03) : plugins trouvés et leur état ; activer ou désactiver (à chaud quand c'est possible). `null` :
   // plugin inconnu.
   pluginsList(): PluginSummary[];
@@ -624,6 +627,7 @@ export const IPC_METHODS = {
   filesRename: 'files:rename',
   filesMove: 'files:move',
   filesRemove: 'files:remove',
+  filesCheck: 'files:check',
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',
   tvWatch: 'tv:watch',

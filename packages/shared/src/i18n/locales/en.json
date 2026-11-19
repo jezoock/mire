@@ -880,7 +880,8 @@
         "buttons": {
           "view": "View",
           "create": "Create"
-        }
+        },
+        "pick": "Choose"
       }
     },
     "themes": {
@@ -1440,7 +1441,10 @@
         "play": "Play",
         "edit": "Edit details",
         "tags": "Tags",
-        "addToList": "Add to a list"
+        "addToList": "Add to a list",
+        "rename": "Rename",
+        "move": "Move",
+        "remove": "Delete"
       },
       "addToList": {
         "title": "Add to a list",
@@ -1454,7 +1458,101 @@
         "already": "Already in “{list}”.",
         "failed": "Couldn't add to this list."
       },
-      "gone": "This item is no longer in the catalog."
+      "gone": "This item is no longer in the catalog.",
+      "files": {
+        "blocked": "Why these actions are turned off",
+        "notFile": "This isn't a file in your folders: Mire can't rename, move or delete it.",
+        "notFileNamed": "“{name}” isn't a file in your folders: the selection can't be deleted.",
+        "blockedNamed": "“{name}”: {reason}",
+        "quoted": "“{name}”",
+        "separator": ", ",
+        "andMore": {
+          "one": "{names} and {count} other",
+          "other": "{names} and {count} others"
+        },
+        "failed": "“{name}”: {error}"
+      },
+      "rename": {
+        "title": "Rename",
+        "help": "New name for “{name}”. It will stay in the same folder.",
+        "field": "New name",
+        "next": "Continue",
+        "cancel": "Cancel",
+        "same": "The name hasn't changed.",
+        "confirmTitle": "Rename this file?",
+        "confirm": "“{from}” will be called “{to}”. It stays in the folder {folder}.",
+        "yes": "Rename",
+        "done": "Renamed to “{name}”."
+      },
+      "move": {
+        "title": "Move",
+        "help": "Which folder should “{name}” go to?",
+        "field": "Folder",
+        "none": "There's no other folder to move “{name}” to.",
+        "next": "Continue",
+        "cancel": "Cancel",
+        "confirmTitle": "Move this file?",
+        "confirm": "“{name}” will leave the folder {from} for the folder {to}.",
+        "yes": "Move",
+        "done": "Moved to {folder}."
+      },
+      "remove": {
+        "title": {
+          "one": "Move this file to the trash?",
+          "other": "Move these {count} files to the trash?"
+        },
+        "confirm": {
+          "one": "{names} will go to the computer's trash. You can take it out again if needed.",
+          "other": "{names} will go to the computer's trash. You can take them out again if needed."
+        },
+        "yes": "Move to trash",
+        "cancel": "Cancel",
+        "done": {
+          "one": "{count} file moved to the trash.",
+          "other": "{count} files moved to the trash."
+        }
+      },
+      "selection": {
+        "label": "Chosen items",
+        "count": {
+          "one": "{count} item chosen",
+          "other": "{count} items chosen"
+        },
+        "picked": "chosen",
+        "addTag": "Add a tag",
+        "removeTag": "Remove a tag",
+        "toList": "Put in a list",
+        "remove": "Delete",
+        "clear": "Clear selection"
+      },
+      "tag": {
+        "addTitle": "Add a tag",
+        "removeTitle": "Remove a tag",
+        "addHelp": {
+          "one": "The chosen tag will be added to {count} item.",
+          "other": "The chosen tag will be added to the {count} chosen items."
+        },
+        "removeHelp": {
+          "one": "The chosen tag will be removed from {count} item.",
+          "other": "The chosen tag will be removed from the {count} chosen items."
+        },
+        "field": "Tag",
+        "newTag": "Or a new tag",
+        "newTagHint": "Name of the new tag",
+        "add": "Add",
+        "remove": "Remove",
+        "cancel": "Cancel",
+        "none": "None of the chosen items has a tag to remove.",
+        "added": "Tag “{tag}” added.",
+        "removed": "Tag “{tag}” removed.",
+        "failed": "The tag couldn't be changed for some items."
+      },
+      "toList": {
+        "help": {
+          "one": "{count} item will be added at the end of the chosen list.",
+          "other": "The {count} chosen items will be added at the end of the chosen list."
+        }
+      }
     },
     "webView": {
       "bar": {

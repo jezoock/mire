@@ -9,6 +9,8 @@ import path from 'node:path';
 import { createFilesService, type FilesOps } from '../../src/main/files/service.ts';
 import { managedRoots } from '../../src/main/files/roots.ts';
 import { isValidName } from '../../src/main/files/guard.ts';
+import { filesHandlers, MAX_CHECKED } from '../../src/main/ipc/handlers/files.ts';
+import type { MainContext } from '../../src/main/ipc/context.ts';
 
 const POSIX = process.platform !== 'win32';
 
@@ -284,5 +286,46 @@ describe('gestion des fichiers : noms et dossiers gérés', () => {
       emulators: [],
     } as any;
     assert.deepEqual(managedRoots(win, 'win32'), ['C:\\Films']);
+  });
+});
+
+describe('gestion des fichiers : contrôle sans rien changer (explorateur, P4-09)', { skip: !POSIX }, () => {
+  let s: ReturnType<typeof setup>;
+  beforeEach(() => (s = setup()));
+
+  it('un fichier sous un dossier autorisé est accepté, rien ne change sur le disque', async () => {
+    const p = path.join(s.films, 'a.mkv');
+    assert.deepEqual(await s.svc.check(p), { ok: true, path: p });
+    assert.ok(fs.existsSync(p));
+    assert.deepEqual(s.events, []);
+  });
+
+  it('refuse comme les opérations : hors des dossiers, racine, lien qui sort, absent, valeur invalide', async () => {
+    const link = path.join(s.films, 'lien.txt');
+    fs.symlinkSync(path.join(s.outside, 'secret.txt'), link);
+    const code = async (p: unknown) => {
+      const r = await s.svc.check(p);
+      return r.ok ? 'ok' : r.code;
+    };
+    assert.equal(await code(path.join(s.outside, 'secret.txt')), 'outside');
+    assert.equal(await code(s.films), 'root');
+    assert.equal(await code(link), 'link');
+    assert.equal(await code(path.join(s.films, 'absent.mkv')), 'missing');
+    assert.equal(await code(`${s.films}/../films/a.mkv`), 'invalid');
+    assert.equal(await code(42), 'invalid');
+  });
+});
+
+describe('IPC files.check (P4-09)', { skip: !POSIX }, () => {
+  it('rend `null` pour un chemin accepté, la raison sinon ; refuse une valeur qui n’est pas une liste courte', async () => {
+    const s = setup();
+    const h = filesHandlers({ fileManager: s.svc } as unknown as MainContext);
+    const r = await h.filesCheck([path.join(s.films, 'a.mkv'), path.join(s.outside, 'secret.txt'), 7 as unknown as string]);
+    assert.equal(r?.length, 3);
+    assert.equal(r?.[0], null);
+    assert.equal(typeof r?.[1], 'string');
+    assert.equal(typeof r?.[2], 'string');
+    assert.equal(await h.filesCheck('/films/a.mkv' as unknown as string[]), null);
+    assert.equal(await h.filesCheck(Array.from({ length: MAX_CHECKED + 1 }, () => path.join(s.films, 'a.mkv'))), null);
   });
 });

@@ -128,9 +128,12 @@ describe('nav/targets : navigation par colonnes', () => {
     assert.equal(isSelectedRow(el('div', { 'aria-selected': 'false' })), false);
   });
 
-  it('le rappel de la manette en colonnes est celui des listes (aucun nouveau texte)', () => {
-    assert.deepEqual(PAD_HINTS.columns, PAD_HINTS.list);
-    assert.deepEqual(padHints('columns', 'xbox'), padHints('list', 'xbox'));
+  it('le rappel de la manette en colonnes est celui des listes, sauf Y qui choisit un élément (P4-09)', () => {
+    assert.deepEqual(
+      PAD_HINTS.columns,
+      PAD_HINTS.list?.map(([b, k]) => (b === 'y' ? ['y', 'pick'] : [b, k])),
+    );
+    assert.deepEqual(padHints('columns', 'xbox')?.find((h) => h.key === 'shell.pad.pick')?.glyphs, ['Y']);
   });
 
   it('un focus différé cède à une flèche pressée pendant l’attente ou à un focus placé ailleurs (P4-03b)', () => {

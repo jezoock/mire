@@ -39,8 +39,8 @@ export interface GamepadHooks {
   rescue?(): void;
 }
 
-/** Contrôleurs appelés par la manette : LB / RB (écran précédent ou suivant), X (modifier), site affiché. */
-export type GamepadControllers = Pick<Controllers, 'app' | 'web'>;
+/** Contrôleurs appelés par la manette : LB / RB (écran précédent ou suivant), X (modifier), site affiché, Y (choisir). */
+export type GamepadControllers = Pick<Controllers, 'app' | 'web' | 'explorer'>;
 
 let hooks: GamepadHooks;
 let ctrl: GamepadControllers;
@@ -85,6 +85,11 @@ function padPress(k: string): void {
   if (ctx === 'video' || ctx === 'image') {
     const key = padKey(ctx === 'video' ? VIDEO_PAD : IMAGE_PAD, k);
     if (key) handleKey(key, true);
+    return;
+  }
+  // Explorateur (P4-09) : Y choisit l'élément qui a le focus (sélection multiple), au lieu de la recherche.
+  if (ctx === 'columns' && k === 'y') {
+    ctrl.explorer.pickFocused();
     return;
   }
   if (k === 'x') {

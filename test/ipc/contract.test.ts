@@ -172,6 +172,7 @@ const ADDED_METHODS: Record<string, string> = {
   filesRename: 'files:rename',
   filesMove: 'files:move',
   filesRemove: 'files:remove',
+  filesCheck: 'files:check', // P4-09 : actions de l'explorateur
   // P3-03 : plugins
   pluginsList: 'plugins:list',
   pluginsSetEnabled: 'plugins:setEnabled',

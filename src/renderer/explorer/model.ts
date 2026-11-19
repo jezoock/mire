@@ -21,6 +21,8 @@ import type {
 import { mediaUrl } from '@mire/ui/utils';
 import type { ExplorerColumn, ExplorerPreview, ExplorerRow } from '@mire/ui/utils';
 import { groupFormatter, pageName } from '../pages/model.ts';
+import { NO_PICKS, prunePicks, rangePick, togglePick } from './files.ts';
+import type { Picks } from './files.ts';
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
@@ -120,11 +122,27 @@ export interface ExplorerSources {
   /** Sources du catalogue et dossiers autorisés. */
   sources(): Promise<CatalogSources | null>;
   folder(source: string, path: string, cursor: string | null): Promise<FolderLevel | null>;
+  /** Contrôle de la gestion des fichiers (`files.check`) : `null` si l'on peut agir sur le chemin, sinon la raison. */
+  check(paths: string[]): Promise<(string | null)[] | null>;
+}
+
+/** Élément choisi : sa clé, son nom, et le chemin de son fichier (`null` : ce n'est pas un fichier). */
+export interface Picked {
+  key: string;
+  name: string;
+  path: string | null;
 }
 
 export interface ExplorerState {
   columns: ExplorerColumn[];
   preview: ExplorerPreview | null;
+  /** Éléments choisis (sélection multiple, P4-09), par leur clé. */
+  picked: string[];
+  /**
+   * Raison pour laquelle la sélection ne peut pas être mise à la corbeille (un élément hors des dossiers autorisés, ou
+   * qui n'est pas un fichier) ; vide si elle le peut, `null` pendant le contrôle.
+   */
+  blocked: string | null;
 }
 
 /** Colonne avec de quoi charger sa tranche suivante. */
@@ -146,20 +164,66 @@ export interface ExplorerModel {
   more(node: string): Promise<boolean>;
   /** Relit toutes les colonnes et l'aperçu (catalogue changé, langue) ; garde les choix qui existent encore. */
   refresh(): Promise<void>;
+  /** Choisit ou retire un élément affiché ; `range` : tous ceux entre le dernier choisi et lui, dans sa colonne. */
+  pick(key: string, opts?: { range?: boolean }): boolean;
+  /** Retire tous les éléments choisis. */
+  clearPicks(): void;
+  /** Éléments choisis, dans l'ordre du choix. */
+  picked(): Picked[];
+  /** Nom et chemin du fichier d'un élément affiché ; `null` s'il ne l'est pas. */
+  fileOf(key: string): Picked | null;
 }
 
 export function createExplorerModel(src: ExplorerSources, onUpdate: (state: ExplorerState) => void): ExplorerModel {
   const { t } = src;
   let columns: Column[] = [];
   let preview: ExplorerPreview | null = null;
+  let picks: Picks = NO_PICKS;
+  let blocked: string | null = '';
+  // Contrôle de la sélection en cours : une sélection plus récente l'emporte.
+  let checkSeq = 0;
+  // Nom et fichier des éléments affichés, par clé (pour la sélection et les actions sur les fichiers).
+  const known = new Map<string, Picked>();
   // Une demande plus récente l'emporte : la réponse d'une demande dépassée est ignorée.
   let seq = 0;
   // Ouverture en cours : une seconde demande du même nœud la rejoint au lieu de la dépasser.
   let opening: { node: string; id: number; done: Promise<boolean> } | null = null;
   const formatGroup = groupFormatter(t);
 
-  const state = (): ExplorerState => ({ columns: columns.map(view), preview });
-  const emit = () => onUpdate(state());
+  const state = (): ExplorerState => ({ columns: columns.map(view), preview, picked: picks.keys, blocked });
+
+  /** Éléments affichés dans les colonnes. */
+  const shownKeys = () => new Set(columns.flatMap((c) => c.rows.filter((r) => r.key && !r.unavailable).map((r) => r.key as string)));
+
+  const emit = () => {
+    const before = picks;
+    picks = prunePicks(picks, shownKeys());
+    if (picks !== before) checkPicks();
+    onUpdate(state());
+  };
+
+  /** Contrôle des fichiers choisis : la sélection peut-elle aller à la corbeille ? */
+  function checkPicks() {
+    const id = ++checkSeq;
+    const items = picks.keys.map((k) => known.get(k));
+    if (!items.length) {
+      blocked = '';
+      return;
+    }
+    const notFile = items.find((x) => !x?.path);
+    if (notFile) {
+      blocked = t('explorer.files.notFileNamed', { name: notFile?.name ?? '' });
+      return;
+    }
+    blocked = null;
+    void src.check(items.map((x) => x?.path as string)).then((r) => {
+      if (id !== checkSeq) return;
+      const at = Array.isArray(r) && r.length === items.length ? r.findIndex((x) => x !== null) : 0;
+      blocked =
+        at < 0 ? '' : t('explorer.files.blockedNamed', { name: items[at]?.name ?? '', reason: (Array.isArray(r) && r[at]) || t('files.errors.invalid') });
+      onUpdate(state());
+    });
+  }
 
   const column = (node: string, heading: string, rows: ExplorerRow[], total = rows.length, next: string | null = null): Column => ({
     node,
@@ -189,7 +253,10 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
   }
 
   const elementRows = (els: readonly (CatalogElement & { unavailable?: true })[]): ExplorerRow[] =>
-    els.map((e) => ({ id: e.key, key: e.key, label: e.name, ...(e.unavailable ? { unavailable: true } : {}) }));
+    els.map((e) => {
+      if (!e.unavailable) known.set(e.key, { key: e.key, name: e.name, path: filePath(e) });
+      return { id: e.key, key: e.key, label: e.name, ...(e.unavailable ? { unavailable: true } : {}) };
+    });
 
   function folderRows(lvl: FolderLevel): ExplorerRow[] {
     const folders = lvl.folders.map((f) => {
@@ -259,7 +326,13 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
 
   async function previewOf(key: string): Promise<ExplorerPreview | null> {
     const [el, tags] = await Promise.all([src.element(key), src.tags()]);
-    return el ? elementPreview(el, tags ?? [], t) : null;
+    if (!el) return null;
+    const path = filePath(el);
+    known.set(el.key, { key: el.key, name: el.name, path });
+    // Sans réponse du contrôle (erreur), les actions restent désactivées.
+    const checked = path ? await src.check([path]) : null;
+    const reason = !path ? t('explorer.files.notFile') : Array.isArray(checked) ? (checked[0] ?? null) : t('files.errors.invalid');
+    return { ...elementPreview(el, tags ?? [], t), files: { allowed: !!path && reason === null, reason: reason ?? '' } };
   }
 
   /** Colonne qui montre la ligne `match`, choisie ; les colonnes après elle et l'aperçu sont retirés. */
@@ -275,6 +348,22 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
 
   return {
     state,
+    pick(key, { range = false } = {}) {
+      const col = columns.find((c) => c.rows.some((r) => r.key === key && !r.unavailable));
+      if (!col) return false;
+      const order = col.rows.filter((r) => r.key && !r.unavailable).map((r) => r.key as string);
+      picks = range ? rangePick(picks, order, key) : togglePick(picks, key);
+      checkPicks();
+      emit();
+      return true;
+    },
+    clearPicks() {
+      picks = NO_PICKS;
+      checkPicks();
+      emit();
+    },
+    picked: () => picks.keys.map((k) => known.get(k) ?? { key: k, name: k, path: null }),
+    fileOf: (key) => known.get(key) ?? null,
     reset() {
       seq++;
       columns = [rootColumn()];
@@ -349,6 +438,13 @@ export function createExplorerModel(src: ExplorerSources, onUpdate: (state: Expl
       emit();
     },
   };
+}
+
+/** Chemin du fichier d'un élément (fichier, jeu, programme), ou `null` (site, flux, adresse). */
+export function filePath(el: CatalogElement): string | null {
+  const o = el.open;
+  if (o.kind === 'site' || o.kind === 'stream') return null;
+  return typeof o.path === 'string' && !/^[a-z][a-z0-9+.-]*:\/\//i.test(o.path) ? o.path : null;
 }
 
 /** Valeur d'une info en texte. */
