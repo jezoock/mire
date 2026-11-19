@@ -1491,6 +1491,95 @@
             "desc": "Décroissant"
           }
         }
+      },
+      "tags": {
+        "title": "Tags",
+        "help": "Les tags décrivent vos éléments et servent à composer les pages. Les tags de Mire et des plugins sont posés automatiquement : vous pouvez changer leur couleur et leur icône. Vos propres tags se renomment, se fusionnent et se suppriment.",
+        "none": "Aucun tag.",
+        "setBy": "Posé par {who}",
+        "by": {
+          "core": "Mire",
+          "user": "vous",
+          "none": "Posé par un ancien réglage"
+        },
+        "colors": {
+          "red": "Rouge",
+          "orange": "Orange",
+          "yellow": "Jaune",
+          "green": "Vert",
+          "blue": "Bleu",
+          "purple": "Violet",
+          "pink": "Rose",
+          "grey": "Gris"
+        },
+        "icons": {
+          "star": "Étoile",
+          "folder": "Dossier",
+          "globe": "Globe",
+          "play": "Lecture",
+          "layers": "Calques",
+          "shield": "Bouclier",
+          "search": "Loupe",
+          "download": "Téléchargement"
+        },
+        "form": {
+          "name": "Nom du tag",
+          "color": "Couleur",
+          "noColor": "Aucune couleur",
+          "icon": "Icône",
+          "noIcon": "Aucune icône",
+          "merge": "Fusionner dans un autre tag",
+          "noMerge": "Ne pas fusionner",
+          "userHelp": "Fusionner : les éléments de ce tag reçoivent l’autre tag, puis celui-ci disparaît.",
+          "autoHelp": "Ce tag est posé automatiquement : son nom ne change pas, mais vous pouvez choisir sa couleur et son icône."
+        },
+        "errors": {
+          "name": "Donnez au tag un nom de 1 à 64 caractères.",
+          "failed": "Ce changement n’a pas pu être enregistré."
+        },
+        "gone": "Ce tag n’existe plus.",
+        "editTitle": "Modifier le tag « {name} »",
+        "saved": "Tag « {name} » enregistré",
+        "merged": {
+          "one": "« {name} » fusionné dans « {into} » ({count} élément)",
+          "other": "« {name} » fusionné dans « {into} » ({count} éléments)"
+        },
+        "removeTitle": "Supprimer le tag « {name} » ?",
+        "removeHelp": {
+          "one": "Il sera retiré de {count} élément. Vos fichiers ne sont pas touchés.",
+          "other": "Il sera retiré de {count} éléments. Vos fichiers ne sont pas touchés."
+        },
+        "removeYes": "Supprimer le tag",
+        "removed": "Tag « {name} » supprimé",
+        "rules": {
+          "label": "Tags selon le type de fichier",
+          "help": "Par défaut, chaque type de fichier connu reçoit Vidéo, Musique ou Image. Ajoutez une règle pour changer les tags d’une extension ; retirez-la pour revenir à la règle par défaut.",
+          "noTag": "Aucun tag",
+          "none": "Aucune règle changée : les règles par défaut s’appliquent.",
+          "ext": "Extension",
+          "tags": "Tags posés",
+          "tagsPlaceholder": "Vidéo, Films (séparés par des virgules)",
+          "badExt": "Écrivez une extension, par exemple .mkv."
+        }
+      },
+      "lists": {
+        "title": "Listes",
+        "help": "Vos listes, faites à la main. Leur ordre est celui de l’explorateur et de l’accueil.",
+        "none": "Aucune liste.",
+        "create": "Créer une liste",
+        "order": "Ordre des listes",
+        "createTitle": "Nouvelle liste",
+        "renameTitle": "Renommer la liste « {name} »",
+        "name": "Nom de la liste",
+        "errors": {
+          "name": "Donnez à la liste un nom de 1 à 200 caractères."
+        },
+        "created": "Liste « {name} » créée",
+        "renamed": "Liste renommée « {name} »",
+        "removeTitle": "Supprimer la liste « {name} » ?",
+        "removeHelp": "Ses éléments restent dans vos pages et vos fichiers ne sont pas touchés.",
+        "removeYes": "Supprimer la liste",
+        "removed": "Liste « {name} » supprimée"
       }
     },
     "explorer": {

@@ -12,6 +12,7 @@ export type * from './config.ts';
 export type * from './element.ts';
 export * from './pages.ts';
 export * from './lists.ts';
+export * from './tags.ts';
 export * from './targets.ts';
 export type * from './search.ts';
 export type * from './browse.ts';

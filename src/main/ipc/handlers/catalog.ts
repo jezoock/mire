@@ -17,6 +17,12 @@ export function catalogHandlers(ctx: MainContext) {
     catalogSetTags: (key, changes) => ctx.tags.setTags(key, changes),
     catalogSetInfos: (key, changes) => ctx.tags.setInfos(key, changes),
     tagsList: () => ctx.tags.tagsList(),
+    // Administration des tags (P4-21) : identifiants, noms et apparence vérifiés par le moteur de tags.
+    tagsOverview: () => ctx.tags.tagsOverview(),
+    tagsRename: (id, name) => ctx.tags.renameTag(id, name),
+    tagsMerge: (from, into) => ctx.tags.mergeTags(from, into),
+    tagsRemove: (id) => ctx.tags.removeTag(id),
+    tagsSetLook: (id, look) => ctx.tags.setTagLook(id, look),
     // Éditeurs (P4-22) : image choisie sur le disque (copiée dans les données de Mire), images effacées, réinitialisation.
     catalogPickImage: async (key, field) => {
       if (!ctx.tags.element(key) || !IMAGE_FIELDS.includes(field)) return null;
@@ -64,6 +70,7 @@ export function catalogHandlers(ctx: MainContext) {
     listsCreate: (name) => ctx.lists.create(name),
     listsRename: (id, name) => ctx.lists.rename(id, name),
     listsRemove: (id) => ctx.lists.remove(id),
+    listsReorder: (ids) => ctx.lists.reorder(ids),
     listsAdd: (id, keys, at?: number) => ctx.lists.add(id, keys, at),
     listsRemoveItems: (id, keys) => ctx.lists.removeItems(id, keys),
     listsMove: (id, key, to) => ctx.lists.move(id, key, to),
