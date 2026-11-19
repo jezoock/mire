@@ -19,9 +19,9 @@ import { initKeyboard } from './nav/keyboard.ts';
 import { initGamepad, startGamepad } from './nav/gamepad.ts';
 import { nextSection } from './nav/gamepad-data.ts';
 import { setVolume } from './players/volume.ts';
-import { audio, initAudio, markPlaying, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
+import { audio, initAudio, markPlaying, musicUi, playQueue, stepTrack, toggleAudio } from './players/audio.ts';
 import { initVideo, isVideoOpen, openVideo, stepVideo, video, videoKey, videoUi } from './players/video.ts';
-import { imageKey, initImages, isImagesOpen, openImages } from './players/images.ts';
+import { imageKey, imagesUi, initImages, isImagesOpen, openImages } from './players/images.ts';
 import { createPaletteLoader } from '@mire/ui/palettes';
 import { DEMO_SECTION, demoTitle, initDemoDialogs, isDemoHash, loadDemoTexts, viewDemo } from './demo/index.ts';
 import { createControllers } from './controllers/index.ts';
@@ -2430,7 +2430,7 @@ const legacyUi = {
   openFileDialog, scan, addSourceFolder, askSourceAddress, removeSource, startScrape, updateScrapeButton, reloadScrape,
   playInContext, playRecent, openVideo, playQueue, openImages,
   pauseAudio: () => audio.pause(),
-  toggleAudio, openExternal, addRecent, video: videoUi,
+  toggleAudio, openExternal, addRecent, video: videoUi, music: musicUi, images: imagesUi,
   playChannel, loadChannels,
   launchEntry, launchRom, downloadGameBookmark, cleanupGames, addGame, openEmu, closeRoms, openRomBrowser, loadLocalRoms,
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
@@ -2605,7 +2605,6 @@ document.addEventListener('error', (e) => {
   const el = e.target;
   if (el?.tagName !== 'IMG') return;
   if (el.closest('.art')) el.remove();
-  else if (el.id === 'mini-cover') el.hidden = true;
 }, true);
 
 function tick() {

@@ -4004,4 +4004,232 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  describe('Lecteurs de musique et d’images (P4-15)', () => {
+    const PAD = { a: 0, b: 1, lb: 4, rb: 5, start: 9, right: 15 };
+    const MINI = 'mire-mini-player';
+    const VIEWER = 'mire-image-viewer';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text());
+    let tracks;
+    const padPress = async (button) => {
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: true, value: 1 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }, PAD[button]);
+      await page.evaluate((n) => {
+        window.__pad.buttons[n] = { pressed: false, value: 0 };
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }, PAD[button]);
+    };
+    const connectPad = () =>
+      page.evaluate(() => {
+        window.__pad = {
+          id: 'Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+    const disconnectPad = () =>
+      page.evaluate(() => {
+        if (window.__pad) {
+          navigator.getGamepads = () => [];
+          window.dispatchEvent(new Event('gamepaddisconnected'));
+          delete window.__pad;
+        }
+      });
+    const text = (sel, part) => page.evaluate(([s, p]) => document.querySelector(`${s} .${s}__${p}`)?.textContent ?? null, [sel, part]);
+    const textIs = (sel, part, value) => page.waitForFunction(([s, p, v]) => document.querySelector(`${s} .${s}__${p}`)?.textContent === v, [sel, part, value]);
+    const hidden = (sel) => page.evaluate((s) => document.querySelector(s).hidden, sel);
+    // Les deux morceaux de démonstration (40 s chacun) ouverts comme depuis le système (seconde instance de Mire).
+    const openTracks = async () => {
+      await app.evaluate(({ app: a }, files) => a.emit('second-instance', {}, ['electron', '.', ...files]), tracks);
+      await page.waitForFunction((s) => {
+        const el = document.querySelector(s);
+        return el.classList.contains('hydrated') && !el.hidden && el.querySelectorAll('ds-trigger.hydrated, ds-range.hydrated').length === 6;
+      }, MINI);
+      await textIs(MINI, 'title', 'Morceau un');
+      await page.waitForFunction((s) => document.querySelector(s).playing, MINI);
+    };
+    const stopMusic = async () => {
+      if (await hidden(MINI)) return;
+      await page.locator(`${MINI} ds-trigger[action="stop"] button`).click();
+      await page.waitForFunction((s) => document.querySelector(s).hidden, MINI);
+    };
+    // Page Images, au niveau de l'album Vacances (rendu complet), le focus sur sa première image.
+    const openVacances = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'images', path: ['Vacances'] }));
+      await page.waitForFunction(() => {
+        const v = document.querySelector('#view mire-page-view');
+        return v?.kind === 'elements' && !v.loading && v.querySelectorAll('mire-card ds-trigger.hydrated').length === 2;
+      });
+      await page.locator('#view mire-card ds-trigger.hydrated').first().focus();
+    };
+    const viewerReady = () =>
+      page.waitForFunction((s) => {
+        const el = document.querySelector(s);
+        return el.classList.contains('hydrated') && !el.hidden && el.querySelector('img').complete && document.activeElement === el;
+      }, VIEWER);
+
+    before(() => {
+      const media = path.join(tmp, 'fixtures', 'media');
+      tracks = ['Morceau un.opus', 'Morceau deux.opus'].map((f) => path.join(media, f));
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+    });
+    after(async () => {
+      await disconnectPad();
+      await stopMusic();
+      if (!(await hidden(VIEWER))) await page.keyboard.press('Escape');
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+
+    it('musique : le mini-lecteur montre le morceau et la file, passe au suivant, partage le volume avec la vidéo', async () => {
+      await openTracks();
+      assert.equal(await text(MINI, 'sub'), 'media, 1 sur 2');
+      assert.ok(await page.evaluate(() => document.body.classList.contains('has-mini')));
+      // Le temps avance et la réglette de position suit.
+      await page.waitForFunction((s) => document.querySelector(`${s} .${s}__current`).textContent !== '0:00', MINI, { timeout: 5000 });
+      await textIs(MINI, 'duration', '0:40');
+      // Morceau suivant, puis précédent (moins de 3 s de lecture : le morceau d'avant).
+      await page.locator(`${MINI} ds-trigger[action="next"] button`).click();
+      await textIs(MINI, 'title', 'Morceau deux');
+      await textIs(MINI, 'sub', 'media, 2 sur 2');
+      await page.locator(`${MINI} ds-trigger[action="previous"] button`).click();
+      await textIs(MINI, 'title', 'Morceau un');
+      // Lecture ou pause.
+      await page.locator(`${MINI} ds-trigger[action="togglePlay"] button`).click();
+      await page.waitForFunction((s) => !document.querySelector(s).playing, MINI);
+      // Volume réglé à la souris : le lecteur vidéo prend le même.
+      await page.evaluate((s) => {
+        const input = document.querySelector(`${s} .${s}__volume input`);
+        input.value = '0.5';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, MINI);
+      await page.waitForFunction(() => {
+        const v = document.querySelector('mire-video-player');
+        return v.volume === 0.5 && v.querySelector('video').volume === 0.5;
+      });
+      // Position réglée à la souris (au milieu : 0:20), pour une capture fixe.
+      await page.evaluate((s) => {
+        const input = document.querySelector(`${s} .${s}__seek input`);
+        input.value = '500';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, MINI);
+      await textIs(MINI, 'current', '0:20');
+      await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
+      await settle();
+      await shot('lecteur-musique');
+      await page.evaluate((s) => {
+        const input = document.querySelector(`${s} .${s}__volume input`);
+        input.value = '0.9';
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }, MINI);
+      await stopMusic();
+      assert.ok(!(await page.evaluate(() => document.body.classList.contains('has-mini'))));
+      assert.deepEqual(errors, []);
+    });
+
+    it('musique à la manette : Start met en pause, la croix et A passent au morceau suivant, A arrête la musique', async () => {
+      await connectPad();
+      await openTracks();
+      await page.locator(`${MINI} ds-trigger[action="togglePlay"] button`).focus();
+      await padPress('start');
+      await page.waitForFunction((s) => !document.querySelector(s).playing, MINI);
+      await padPress('start');
+      await page.waitForFunction((s) => document.querySelector(s).playing, MINI);
+      // La croix passe au bouton suivant (les réglettes se règlent à la souris), A l'active.
+      await padPress('right');
+      await page.waitForFunction(
+        (s) => document.activeElement?.closest('ds-trigger')?.getAttribute('action') === 'next' && document.querySelector(s).contains(document.activeElement),
+        MINI,
+      );
+      await padPress('a');
+      await textIs(MINI, 'title', 'Morceau deux');
+      // Arrêt : le bouton est au bout de la bande ; la croix y mène selon l'écran du dessous, on y pose le focus.
+      await page.locator(`${MINI} ds-trigger[action="stop"] button`).focus();
+      await padPress('a');
+      await page.waitForFunction((s) => document.querySelector(s).hidden, MINI);
+      // Le focus quitte le mini-lecteur caché.
+      assert.ok(!(await page.evaluate((s) => document.querySelector(s).contains(document.activeElement), MINI)));
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+
+    it('images : plein écran, image suivante en boucle, préchargement, diaporama, Échap rend le focus', async () => {
+      await openVacances();
+      const from = await page.evaluateHandle(() => document.activeElement);
+      await page.keyboard.press('Enter');
+      await viewerReady();
+      // Place de l'image dans la liste (« 1 sur 2, Vacances ») : l'ordre suit la liste de la page.
+      const place = () =>
+        page
+          .waitForFunction((s) => /^([12]) sur 2, Vacances$/.exec(document.querySelector(`${s} .${s}__sub`)?.textContent)?.[1], VIEWER)
+          .then((h) => h.jsonValue());
+      const preload = () => page.evaluate((s) => document.querySelector(s).preload, VIEWER);
+      const opened = await place();
+      const first = await text(VIEWER, 'title');
+      // Image suivante (flèche), en boucle : l'autre image, puis la première.
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(([s, t]) => document.querySelector(`${s} .${s}__title`)?.textContent !== t, [VIEWER, first]);
+      assert.notEqual(await place(), opened);
+      await page.locator(`${VIEWER} ds-trigger[action="next"] button`).click();
+      await textIs(VIEWER, 'title', first);
+      assert.ok(await page.evaluate((s) => document.activeElement === document.querySelector(s), VIEWER));
+      // La première image précharge la suivante ; la dernière ne précharge rien.
+      if ((await place()) === '2') await page.keyboard.press('ArrowRight');
+      await page.waitForFunction((s) => document.querySelector(`${s} .${s}__sub`)?.textContent.startsWith('1 sur 2'), VIEWER);
+      assert.match(await preload(), /^media:/);
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction((s) => document.querySelector(`${s} .${s}__sub`)?.textContent.startsWith('2 sur 2'), VIEWER);
+      assert.equal(await preload(), '');
+      // Diaporama : le bouton change de libellé.
+      await page.keyboard.press(' ');
+      await textIs(VIEWER, 'text-btn', 'Arrêter le diaporama');
+      await page.keyboard.press(' ');
+      await textIs(VIEWER, 'text-btn', 'Diaporama');
+      // Capture sur Plage (le bloc P4-09 renomme l'autre image).
+      if ((await text(VIEWER, 'title')) !== 'Plage') await page.keyboard.press('ArrowRight');
+      await textIs(VIEWER, 'title', 'Plage');
+      await page.waitForFunction(() => !document.querySelector('.toast.show'), null, { timeout: 8000 });
+      // L'affichage se cache sans mouvement : la souris le réveille pour la capture.
+      await page.mouse.move(800, 450);
+      await page.mouse.move(810, 460);
+      await page.waitForFunction((s) => !document.querySelector(s).idle, VIEWER);
+      await settle();
+      await shot('visionneuse-images');
+      await page.keyboard.press('Escape');
+      await page.waitForFunction((s) => document.querySelector(s).hidden, VIEWER);
+      assert.ok(await page.evaluate((f) => document.activeElement === f, from));
+      assert.deepEqual(errors, []);
+    });
+
+    it('images à la manette : A ouvre, RB et LB changent d’image, A lance le diaporama, B ferme', async () => {
+      await connectPad();
+      await openVacances();
+      await padPress('a');
+      await viewerReady();
+      await page.waitForFunction((s) => / sur 2, Vacances$/.test(document.querySelector(`${s} .${s}__sub`)?.textContent), VIEWER);
+      const first = await text(VIEWER, 'title');
+      await padPress('rb');
+      await page.waitForFunction(([s, t]) => document.querySelector(`${s} .${s}__title`)?.textContent !== t, [VIEWER, first]);
+      await padPress('lb');
+      await textIs(VIEWER, 'title', first);
+      await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('Diaporama'));
+      await padPress('a');
+      await page.waitForFunction((s) => document.querySelector(s).slideshow, VIEWER);
+      await padPress('b');
+      await page.waitForFunction((s) => document.querySelector(s).hidden && !document.querySelector(s).slideshow, VIEWER);
+      await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
 });

@@ -10,6 +10,8 @@ import { EditorController } from './editor.ts';
 import { ExplorerController } from './explorer.ts';
 import { GamesController } from './games.ts';
 import { HomeController } from './home.ts';
+import { ImagesController } from './images.ts';
+import { MusicController } from './music.ts';
 import { PageController } from './page.ts';
 import { PlayerController } from './player.ts';
 import { RescueController } from './rescue.ts';
@@ -31,6 +33,8 @@ export const CONTROLLER_CLASSES = {
   'mire-settings': SettingsController,
   'mire-player': PlayerController,
   'mire-video-player': VideoController,
+  'mire-mini-player': MusicController,
+  'mire-image-viewer': ImagesController,
   'mire-web': WebController,
   'mire-dialogs': DialogsController,
   'mire-editor': EditorController,
@@ -51,6 +55,8 @@ export interface Controllers {
   settings: SettingsController;
   player: PlayerController;
   video: VideoController;
+  music: MusicController;
+  images: ImagesController;
   web: WebController;
   dialogs: DialogsController;
   editor: EditorController;
@@ -70,6 +76,8 @@ export function createControllers(ctx: ControllerContext): Controllers {
     settings: new SettingsController(ctx),
     player: new PlayerController(ctx),
     video: new VideoController(ctx),
+    music: new MusicController(ctx),
+    images: new ImagesController(ctx),
     web: new WebController(ctx),
     dialogs: new DialogsController(ctx),
     editor: new EditorController(ctx),
@@ -91,6 +99,8 @@ export {
   ExplorerController,
   GamesController,
   HomeController,
+  ImagesController,
+  MusicController,
   PageController,
   PlayerController,
   SearchController,

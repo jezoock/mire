@@ -32,6 +32,8 @@
 @use '../components/mire-webbar/mire-webbar';
 @use '../components/mire-web-slot/mire-web-slot';
 @use '../components/mire-video-player/mire-video-player';
+@use '../components/mire-mini-player/mire-mini-player';
+@use '../components/mire-image-viewer/mire-image-viewer';
 @use './demo-page';
 
 // Jetons en propriétés CSS (--ds-…) sur :root, lus par les habillages ci-dessus avec var(), et les icônes qu'ils

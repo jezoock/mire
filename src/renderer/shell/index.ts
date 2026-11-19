@@ -46,6 +46,8 @@ export async function mountShell(doc: Document = document): Promise<void> {
   await whenRendered(app);
   // Le lecteur vidéo (P4-14) contient l'élément <video> que les lecteurs prennent au démarrage.
   await whenRendered(doc.querySelector('mire-video-player') as Rendered);
+  // Les lecteurs de musique et d'images (P4-15) reçoivent leurs textes et le volume au démarrage.
+  await Promise.all(['mire-mini-player', 'mire-image-viewer'].map((tag) => whenRendered(doc.querySelector(tag) as Rendered)));
   (doc.getElementById('legacy-layers') as HTMLElement).innerHTML = LEGACY_LAYERS;
 }
 

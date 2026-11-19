@@ -1807,6 +1807,25 @@
           "action": "Open in the external player"
         },
         "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
+      },
+      "music": {
+        "prev": "Previous track",
+        "play": "Play or pause",
+        "next": "Next track",
+        "seek": "Position in the track",
+        "volume": "Volume",
+        "stop": "Stop the music",
+        "position": "{folder}, {index} of {count}",
+        "unsupported": "{name}: this format can’t be played by the built-in player, opening it in the external player"
+      },
+      "images": {
+        "close": "Close the viewer",
+        "prev": "Previous image",
+        "next": "Next image",
+        "slideshow": "Slideshow",
+        "slideshowStop": "Stop the slideshow",
+        "position": "{index} of {count}, {folder}",
+        "error": "This image can’t be displayed."
       }
     },
     "rescue": {

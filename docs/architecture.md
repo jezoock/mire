@@ -152,7 +152,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `api/` | Seul accès à `window.api` (`api`), typé par le contrat IPC. |
 | `domain/` | Logique sans DOM ni état : éléments, vidéos et séries, jeux, recherche, sites, états des téléchargements. Les fonctions reçoivent leurs données en paramètre ; elles sont testées sous Node. |
 | `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), service de focus sur les vues historiques et les composants `ds-*` / `mire-*` (`focus.ts`, règles sans DOM dans `targets.ts`, P4-03 ; voir l'ADR 0001, § 10), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
-| `players/` | Lecteurs intégrés : vidéo (`video.ts`, qui pilote `mire-video-player` ; règles sans DOM dans `video-model.ts`, P4-14), musique (`audio.ts`), visionneuse d'images (`images.ts`), volume commun (`volume.ts`). |
+| `players/` | Lecteurs intégrés : vidéo (`video.ts`, qui pilote `mire-video-player` ; règles sans DOM dans `video-model.ts`, P4-14), musique (`audio.ts`, qui pilote `mire-mini-player` ; règles dans `music-model.ts`, P4-15), visionneuse d'images (`images.ts`, qui pilote `mire-image-viewer` ; règles dans `images-model.ts`, P4-15), volume commun (`volume.ts`). |
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
 | `styles.css`, `fonts/` | Styles de l'interface historique et police Archivo. |

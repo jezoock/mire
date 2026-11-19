@@ -26,7 +26,7 @@
 /* Accent de la section ; --ring est la version lisible sur le fond de la palette (focus, textes accentués), ou la
    couleur qu'impose la palette (--ring-from). Recalculé dans un bloc qui porte sa propre palette (aperçus). */
 body { --accent: var(--bar-white); }
-body, .mini, .layer, body [data-palette] { --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000); }
+body, body [data-palette] { --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000); }
 
 /* data-accent : la section, ou, dans la vue de page (P4-11), l'ancienne section de la page (Films → videos). */
 body[data-accent="videos"] { --accent: var(--bar-yellow); }
@@ -1060,148 +1060,6 @@ textarea.code {
 .icon-btn.big { width: 52px; height: 52px; background: var(--text); color: var(--bg); }
 .icon-btn.big:hover { background: color-mix(in srgb, var(--text) 85%, var(--bg)); }
 
-.mini {
-  --accent: var(--bar-cyan);
-  position: fixed;
-  left: var(--cl);
-  right: var(--cr);
-  bottom: var(--cb);
-  z-index: 20;
-  display: grid;
-  grid-template-columns: minmax(180px, 1.1fr) auto minmax(200px, 2fr) 150px auto;
-  align-items: center;
-  gap: 24px;
-  height: 94px;
-  padding: 0 28px;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
-}
-.mini-meta { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.mini-cover { flex: none; width: 60px; height: 60px; border-radius: 3px; background: var(--surface-2); object-fit: cover; }
-.mini-txt { min-width: 0; }
-.mini-title { overflow: hidden; font-size: 17px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-.mini-sub { overflow: hidden; color: var(--muted); font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
-.mini-ctrl { display: flex; align-items: center; gap: 6px; }
-.mini-seek { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.mini-seek .range { flex: 1; }
-.mini-vol { display: flex; align-items: center; gap: 10px; color: var(--muted); }
-.mini-vol .range { flex: 1; }
-.vol-ico { display: inline-grid; width: 22px; height: 22px; flex: none; }
-.vol-ico svg { width: 22px; height: 22px; }
-
-.range {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 22px;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.range::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--ring) var(--p, 0%), color-mix(in srgb, var(--text) 22%, transparent) var(--p, 0%));
-}
-.range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
-  border-radius: 50%;
-  background: var(--text);
-}
-
-/* ------------------------------------------------------------------
-   Lecteur vidéo et visionneuse
-   ------------------------------------------------------------------ */
-.layer {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  background: #000;
-  outline: none;
-  color-scheme: dark;
-  --text: #F4F4F0;
-  --muted: #B8B8B2;
-  --bg: #000000;
-  --ring-mix: 100%;
-  color: var(--text);
-}
-.video-layer { --accent: var(--bar-yellow); }
-.image-layer { --accent: var(--bar-green); }
-.layer video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
-.vp-ui { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; transition: opacity .25s ease; }
-.vp-top, .vp-bottom { pointer-events: auto; padding: 24px 40px; }
-.vp-top { display: flex; align-items: center; gap: 18px; background: linear-gradient(rgba(0, 0, 0, .78), transparent); }
-.vp-heading { flex: 1; min-width: 0; }
-.vp-title { overflow: hidden; font-size: 26px; font-weight: 700; font-stretch: 112%; white-space: nowrap; text-overflow: ellipsis; }
-.vp-sub { color: rgba(255, 255, 255, .7); font-size: 15px; }
-.vp-bottom { padding-top: 70px; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); }
-.vp-seek { width: 100%; }
-.vp-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-.vp-time { margin-left: 14px; color: rgba(255, 255, 255, .85); font-size: 16px; font-variant-numeric: tabular-nums; }
-.vp-spacer { flex: 1; }
-.vp-vol { width: 120px; }
-.layer .icon-btn { color: #fff; }
-.layer .icon-btn.big { background: #fff; color: #000; }
-.text-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px 8px 12px;
-  border: 1px solid rgba(255, 255, 255, .3);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .35);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.text-btn:hover { background: rgba(255, 255, 255, .14); }
-.text-btn svg { width: 18px; height: 18px; display: block; }
-.layer.idle { cursor: none; }
-.layer.idle .vp-ui { opacity: 0; }
-video::cue { font-family: var(--font); background: rgba(0, 0, 0, .55); }
-
-.osd {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  padding: 14px 24px;
-  border-radius: var(--r-sm);
-  background: rgba(0, 0, 0, .7);
-  color: #fff;
-  font-size: 26px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  transition: opacity .2s ease;
-}
-.osd.show { opacity: 1; }
-
-.iv-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.iv-nav {
-  position: absolute;
-  top: 50%;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, .45);
-  color: #fff;
-  pointer-events: auto;
-  transform: translateY(-50%);
-}
-.iv-nav:hover { background: rgba(255, 255, 255, .16); }
-.iv-nav svg { width: 30px; height: 30px; }
-.iv-prev { left: 28px; }
-.iv-next { right: 28px; }
-
 /* ------------------------------------------------------------------
    Messages et dépôt de fichiers
    ------------------------------------------------------------------ */
@@ -1259,9 +1117,6 @@ body.has-mini .toast { bottom: 120px; }
   body.menu-auto .brand-name, body.menu-auto .rail-item .lbl, body.menu-auto .rail-sub .lbl { display: initial !important; }
   body.menu-auto .rail-item { justify-content: flex-start !important; padding: 10px 12px !important; }
   .search { width: 210px; }
-  .mini { grid-template-columns: minmax(150px, 1fr) auto minmax(160px, 1.4fr) auto; }
-  .mini-vol { display: none; }
-  .vp-top, .vp-bottom { padding-left: 24px; padding-right: 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

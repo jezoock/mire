@@ -7,8 +7,8 @@ import { Component, Element, Host, h } from '@stencil/core';
  * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
  *
  * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
- * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
- * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
+ * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
+ * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
  * ce que la page place dans ces hôtes n'est jamais touché.
  */
 @Component({ tag: 'mire-app', shadow: false })
@@ -37,6 +37,8 @@ export class MireApp {
         </div>
         <mire-legacy-view class="mire-legacy-view--layers" id="legacy-layers" lang="fr" />
         <mire-video-player id="video-layer" hidden />
+        <mire-mini-player id="mini" hidden />
+        <mire-image-viewer id="image-layer" hidden />
         <mire-padbar id="padbar" />
         <mire-dialogs />
       </Host>

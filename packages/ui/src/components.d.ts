@@ -12,6 +12,7 @@ import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./uti
 import { DialogEventDetail } from "./components/mire-form/mire-form";
 import { PageGroup } from "@mire/shared";
 import { HomeLabels, HomeSection } from "./utils/home";
+import { ImageViewerIcons, ImageViewerLabels, MiniPlayerIcons, MiniPlayerLabels } from "./utils/music";
 import { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 import { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 import { RescueLabels, RescueTheme } from "./components/mire-rescue-view/mire-rescue-view";
@@ -26,6 +27,7 @@ export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./uti
 export { DialogEventDetail } from "./components/mire-form/mire-form";
 export { PageGroup } from "@mire/shared";
 export { HomeLabels, HomeSection } from "./utils/home";
+export { ImageViewerIcons, ImageViewerLabels, MiniPlayerIcons, MiniPlayerLabels } from "./utils/music";
 export { PadHint, RailEntry, RailLabels, RailSession } from "./utils/shell";
 export { PageCrumb, PageViewGroup, PageViewLabels } from "./utils/page-view";
 export { RescueLabels, RescueTheme } from "./components/mire-rescue-view/mire-rescue-view";
@@ -40,8 +42,8 @@ export namespace Components {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
-     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
+     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -611,12 +613,118 @@ export namespace Components {
         "time": string;
     }
     /**
+     * Visionneuse d'images plein écran (P4-15) : l'image, son titre et sa place dans la liste, les flèches, le diaporama.
+     * Hôte du contrôleur `mire-image-viewer` : ses boutons sont des `ds-trigger` vers ses actions (fermer, image précédente
+     * ou suivante, diaporama).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/images.ts`) tient la liste, la minuterie
+     * du diaporama et les touches, et lui donne ce qu'il affiche. Il précharge l'image que la page lui désigne (`preload`),
+     * pour que l'image suivante s'affiche sans attente, et signale une image illisible (`mireImageError`).
+     */
+    interface MireImageViewer {
+        /**
+          * Titre (nom du fichier) et sous-titre (place dans la liste, dossier).
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "icons": ImageViewerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle": boolean;
+        /**
+          * Textes (voir `ImageViewerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels": ImageViewerLabels | string;
+        /**
+          * Adresse de l'image à précharger (la suivante) ; vide : aucune.
+          * @default ''
+         */
+        "preload": string;
+        /**
+          * Le diaporama tourne (le bouton montre « pause » et le libellé pour l'arrêter).
+          * @default false
+         */
+        "slideshow": boolean;
+        /**
+          * Adresse de l'image affichée ; vide : aucune.
+          * @default ''
+         */
+        "src": string;
+        /**
+          * @default ''
+         */
+        "subheading": string;
+    }
+    /**
      * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
      * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
      * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
      * (P4-24).
      */
     interface MireLegacyView {
+    }
+    /**
+     * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
+     * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
+     * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
+     * arrêt).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/audio.ts`) tient la file et l'élément
+     * audio, lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes (`mireMusicSeek`, `mireMusicVolume`). Comme
+     * dans l'interface historique, les réglettes se règlent à la souris : les flèches et la manette passent d'un bouton à
+     * l'autre sans s'y arrêter.
+     */
+    interface MireMiniPlayer {
+        /**
+          * Adresse de la pochette ; vide : pas de pochette. Une pochette illisible est cachée.
+          * @default ''
+         */
+        "cover": string;
+        /**
+          * Temps écoulé et durée, écrits (« 1:23 »), et proportion lue, de 0 à 1.
+          * @default '0:00'
+         */
+        "current": string;
+        /**
+          * @default '0:00'
+         */
+        "duration": string;
+        /**
+          * Titre du morceau et sous-titre (dossier, place dans la file).
+          * @default ''
+         */
+        "heading": string;
+        /**
+          * @default ''
+         */
+        "icons": MiniPlayerIcons | string;
+        /**
+          * Textes (voir `MiniPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels": MiniPlayerLabels | string;
+        /**
+          * Le morceau joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing": boolean;
+        /**
+          * @default 0
+         */
+        "position": number;
+        /**
+          * @default ''
+         */
+        "subheading": string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume": number;
     }
     /**
      * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
@@ -1128,6 +1236,14 @@ export interface MireFormCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMireFormElement;
 }
+export interface MireImageViewerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireImageViewerElement;
+}
+export interface MireMiniPlayerCustomEvent<T> extends CustomEvent<T> {
+    detail: T;
+    target: HTMLMireMiniPlayerElement;
+}
 export interface MirePickCustomEvent<T> extends CustomEvent<T> {
     detail: T;
     target: HTMLMirePickElement;
@@ -1163,8 +1279,8 @@ declare global {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
-     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
+     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
@@ -1428,6 +1544,31 @@ declare global {
         prototype: HTMLMireHomeViewElement;
         new (): HTMLMireHomeViewElement;
     };
+    interface HTMLMireImageViewerElementEventMap {
+        "mireImageError": { src: string };
+    }
+    /**
+     * Visionneuse d'images plein écran (P4-15) : l'image, son titre et sa place dans la liste, les flèches, le diaporama.
+     * Hôte du contrôleur `mire-image-viewer` : ses boutons sont des `ds-trigger` vers ses actions (fermer, image précédente
+     * ou suivante, diaporama).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/images.ts`) tient la liste, la minuterie
+     * du diaporama et les touches, et lui donne ce qu'il affiche. Il précharge l'image que la page lui désigne (`preload`),
+     * pour que l'image suivante s'affiche sans attente, et signale une image illisible (`mireImageError`).
+     */
+    interface HTMLMireImageViewerElement extends Components.MireImageViewer, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireImageViewerElementEventMap>(type: K, listener: (this: HTMLMireImageViewerElement, ev: MireImageViewerCustomEvent<HTMLMireImageViewerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireImageViewerElementEventMap>(type: K, listener: (this: HTMLMireImageViewerElement, ev: MireImageViewerCustomEvent<HTMLMireImageViewerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireImageViewerElement: {
+        prototype: HTMLMireImageViewerElement;
+        new (): HTMLMireImageViewerElement;
+    };
     /**
      * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
      * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
@@ -1439,6 +1580,34 @@ declare global {
     var HTMLMireLegacyViewElement: {
         prototype: HTMLMireLegacyViewElement;
         new (): HTMLMireLegacyViewElement;
+    };
+    interface HTMLMireMiniPlayerElementEventMap {
+        "mireMusicSeek": { ratio: number; commit: boolean };
+        "mireMusicVolume": { value: number; commit: boolean };
+    }
+    /**
+     * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
+     * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
+     * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
+     * arrêt).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/audio.ts`) tient la file et l'élément
+     * audio, lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes (`mireMusicSeek`, `mireMusicVolume`). Comme
+     * dans l'interface historique, les réglettes se règlent à la souris : les flèches et la manette passent d'un bouton à
+     * l'autre sans s'y arrêter.
+     */
+    interface HTMLMireMiniPlayerElement extends Components.MireMiniPlayer, HTMLStencilElement {
+        addEventListener<K extends keyof HTMLMireMiniPlayerElementEventMap>(type: K, listener: (this: HTMLMireMiniPlayerElement, ev: MireMiniPlayerCustomEvent<HTMLMireMiniPlayerElementEventMap[K]>) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLMireMiniPlayerElementEventMap>(type: K, listener: (this: HTMLMireMiniPlayerElement, ev: MireMiniPlayerCustomEvent<HTMLMireMiniPlayerElementEventMap[K]>) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof DocumentEventMap>(type: K, listener: (this: Document, ev: DocumentEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+        removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    }
+    var HTMLMireMiniPlayerElement: {
+        prototype: HTMLMireMiniPlayerElement;
+        new (): HTMLMireMiniPlayerElement;
     };
     /**
      * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
@@ -1746,7 +1915,9 @@ declare global {
         "mire-header": HTMLMireHeaderElement;
         "mire-home": HTMLMireHomeElement;
         "mire-home-view": HTMLMireHomeViewElement;
+        "mire-image-viewer": HTMLMireImageViewerElement;
         "mire-legacy-view": HTMLMireLegacyViewElement;
+        "mire-mini-player": HTMLMireMiniPlayerElement;
         "mire-padbar": HTMLMirePadbarElement;
         "mire-page": HTMLMirePageElement;
         "mire-page-view": HTMLMirePageViewElement;
@@ -1772,8 +1943,8 @@ declare namespace LocalJSX {
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
      * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
-     * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
+     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
+     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
@@ -2342,12 +2513,130 @@ declare namespace LocalJSX {
         "time"?: string;
     }
     /**
+     * Visionneuse d'images plein écran (P4-15) : l'image, son titre et sa place dans la liste, les flèches, le diaporama.
+     * Hôte du contrôleur `mire-image-viewer` : ses boutons sont des `ds-trigger` vers ses actions (fermer, image précédente
+     * ou suivante, diaporama).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/images.ts`) tient la liste, la minuterie
+     * du diaporama et les touches, et lui donne ce qu'il affiche. Il précharge l'image que la page lui désigne (`preload`),
+     * pour que l'image suivante s'affiche sans attente, et signale une image illisible (`mireImageError`).
+     */
+    interface MireImageViewer {
+        /**
+          * Titre (nom du fichier) et sous-titre (place dans la liste, dossier).
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "icons"?: ImageViewerIcons | string;
+        /**
+          * Rien n'a bougé depuis un moment : l'affichage et le pointeur se cachent.
+          * @default false
+         */
+        "idle"?: boolean;
+        /**
+          * Textes (voir `ImageViewerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels"?: ImageViewerLabels | string;
+        /**
+          * L'image affichée ne peut pas être lue.
+         */
+        "onMireImageError"?: (event: MireImageViewerCustomEvent<{ src: string }>) => void;
+        /**
+          * Adresse de l'image à précharger (la suivante) ; vide : aucune.
+          * @default ''
+         */
+        "preload"?: string;
+        /**
+          * Le diaporama tourne (le bouton montre « pause » et le libellé pour l'arrêter).
+          * @default false
+         */
+        "slideshow"?: boolean;
+        /**
+          * Adresse de l'image affichée ; vide : aucune.
+          * @default ''
+         */
+        "src"?: string;
+        /**
+          * @default ''
+         */
+        "subheading"?: string;
+    }
+    /**
      * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
      * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
      * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
      * (P4-24).
      */
     interface MireLegacyView {
+    }
+    /**
+     * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
+     * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
+     * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
+     * arrêt).
+     * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/audio.ts`) tient la file et l'élément
+     * audio, lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes (`mireMusicSeek`, `mireMusicVolume`). Comme
+     * dans l'interface historique, les réglettes se règlent à la souris : les flèches et la manette passent d'un bouton à
+     * l'autre sans s'y arrêter.
+     */
+    interface MireMiniPlayer {
+        /**
+          * Adresse de la pochette ; vide : pas de pochette. Une pochette illisible est cachée.
+          * @default ''
+         */
+        "cover"?: string;
+        /**
+          * Temps écoulé et durée, écrits (« 1:23 »), et proportion lue, de 0 à 1.
+          * @default '0:00'
+         */
+        "current"?: string;
+        /**
+          * @default '0:00'
+         */
+        "duration"?: string;
+        /**
+          * Titre du morceau et sous-titre (dossier, place dans la file).
+          * @default ''
+         */
+        "heading"?: string;
+        /**
+          * @default ''
+         */
+        "icons"?: MiniPlayerIcons | string;
+        /**
+          * Textes (voir `MiniPlayerLabels`) et icônes, en JSON ou en objets.
+          * @default ''
+         */
+        "labels"?: MiniPlayerLabels | string;
+        /**
+          * La réglette de position bouge (`commit` faux) ou est lâchée (`commit` vrai) : proportion de 0 à 1.
+         */
+        "onMireMusicSeek"?: (event: MireMiniPlayerCustomEvent<{ ratio: number; commit: boolean }>) => void;
+        /**
+          * La réglette du volume bouge ou est lâchée : volume de 0 à 1.
+         */
+        "onMireMusicVolume"?: (event: MireMiniPlayerCustomEvent<{ value: number; commit: boolean }>) => void;
+        /**
+          * Le morceau joue (le bouton montre « pause »).
+          * @default false
+         */
+        "playing"?: boolean;
+        /**
+          * @default 0
+         */
+        "position"?: number;
+        /**
+          * @default ''
+         */
+        "subheading"?: string;
+        /**
+          * Volume, de 0 à 1.
+          * @default 1
+         */
+        "volume"?: number;
     }
     /**
      * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
@@ -2976,6 +3265,28 @@ declare namespace LocalJSX {
         "countLabels": string;
         "scrollerLabels": string;
     }
+    interface MireImageViewerAttributes {
+        "heading": string;
+        "subheading": string;
+        "src": string;
+        "preload": string;
+        "slideshow": boolean;
+        "idle": boolean;
+        "labels": ImageViewerLabels | string;
+        "icons": ImageViewerIcons | string;
+    }
+    interface MireMiniPlayerAttributes {
+        "heading": string;
+        "subheading": string;
+        "cover": string;
+        "current": string;
+        "duration": string;
+        "position": number;
+        "volume": number;
+        "playing": boolean;
+        "labels": MiniPlayerLabels | string;
+        "icons": MiniPlayerIcons | string;
+    }
     interface MirePadbarAttributes {
         "hints": PadHint[] | string;
     }
@@ -3095,7 +3406,9 @@ declare namespace LocalJSX {
         "mire-header": Omit<MireHeader, keyof MireHeaderAttributes> & { [K in keyof MireHeader & keyof MireHeaderAttributes]?: MireHeader[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `attr:${K}`]?: MireHeaderAttributes[K] } & { [K in keyof MireHeader & keyof MireHeaderAttributes as `prop:${K}`]?: MireHeader[K] };
         "mire-home": MireHome;
         "mire-home-view": Omit<MireHomeView, keyof MireHomeViewAttributes> & { [K in keyof MireHomeView & keyof MireHomeViewAttributes]?: MireHomeView[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `attr:${K}`]?: MireHomeViewAttributes[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `prop:${K}`]?: MireHomeView[K] };
+        "mire-image-viewer": Omit<MireImageViewer, keyof MireImageViewerAttributes> & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes]?: MireImageViewer[K] } & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes as `attr:${K}`]?: MireImageViewerAttributes[K] } & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes as `prop:${K}`]?: MireImageViewer[K] };
         "mire-legacy-view": MireLegacyView;
+        "mire-mini-player": Omit<MireMiniPlayer, keyof MireMiniPlayerAttributes> & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes]?: MireMiniPlayer[K] } & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes as `attr:${K}`]?: MireMiniPlayerAttributes[K] } & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes as `prop:${K}`]?: MireMiniPlayer[K] };
         "mire-padbar": Omit<MirePadbar, keyof MirePadbarAttributes> & { [K in keyof MirePadbar & keyof MirePadbarAttributes]?: MirePadbar[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `attr:${K}`]?: MirePadbarAttributes[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `prop:${K}`]?: MirePadbar[K] };
         "mire-page": MirePage;
         "mire-page-view": Omit<MirePageView, keyof MirePageViewAttributes> & { [K in keyof MirePageView & keyof MirePageViewAttributes]?: MirePageView[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `attr:${K}`]?: MirePageViewAttributes[K] } & { [K in keyof MirePageView & keyof MirePageViewAttributes as `prop:${K}`]?: MirePageView[K] };
@@ -3124,8 +3437,8 @@ declare module "@stencil/core" {
              * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
              * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
              * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-             * pour les lecteurs, boîtes et messages de l'interface historique. Le lecteur vidéo (`mire-video-player`, P4-14) est
-             * caché tant qu'aucune vidéo n'est ouverte. La coquille ne se rend qu'une fois (aucun état) :
+             * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
+             * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
              * ce que la page place dans ces hôtes n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
@@ -3257,12 +3570,32 @@ declare module "@stencil/core" {
              */
             "mire-home-view": LocalJSX.IntrinsicElements["mire-home-view"] & JSXBase.HTMLAttributes<HTMLMireHomeViewElement>;
             /**
+             * Visionneuse d'images plein écran (P4-15) : l'image, son titre et sa place dans la liste, les flèches, le diaporama.
+             * Hôte du contrôleur `mire-image-viewer` : ses boutons sont des `ds-trigger` vers ses actions (fermer, image précédente
+             * ou suivante, diaporama).
+             * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/images.ts`) tient la liste, la minuterie
+             * du diaporama et les touches, et lui donne ce qu'il affiche. Il précharge l'image que la page lui désigne (`preload`),
+             * pour que l'image suivante s'affiche sans attente, et signale une image illisible (`mireImageError`).
+             */
+            "mire-image-viewer": LocalJSX.IntrinsicElements["mire-image-viewer"] & JSXBase.HTMLAttributes<HTMLMireImageViewerElement>;
+            /**
              * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
              * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
              * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
              * (P4-24).
              */
             "mire-legacy-view": LocalJSX.IntrinsicElements["mire-legacy-view"] & JSXBase.HTMLAttributes<HTMLMireLegacyViewElement>;
+            /**
+             * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
+             * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
+             * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
+             * arrêt).
+             * Il n'a ni état ni accès au processus principal : la page (`src/renderer/players/audio.ts`) tient la file et l'élément
+             * audio, lui donne ce qu'il affiche, déjà rédigé, et reçoit les réglettes (`mireMusicSeek`, `mireMusicVolume`). Comme
+             * dans l'interface historique, les réglettes se règlent à la souris : les flèches et la manette passent d'un bouton à
+             * l'autre sans s'y arrêter.
+             */
+            "mire-mini-player": LocalJSX.IntrinsicElements["mire-mini-player"] & JSXBase.HTMLAttributes<HTMLMireMiniPlayerElement>;
             /**
              * Aide de la manette (P4-07) : en bas de l'écran, les boutons utiles dans le contexte affiché et ce qu'ils font.
              * Cachée sans aide (pas de manette, ou contexte sans rappel). Libellés des boutons et textes viennent de la page.

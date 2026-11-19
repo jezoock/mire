@@ -12,14 +12,11 @@ audio.preload = 'auto';
 // La vidéo est celle du lecteur (`mire-video-player`, P4-14), rendu par la coquille avant le démarrage de l'interface.
 const player = $('mire-video-player') as HTMLElement & { volume: number };
 export const video = player.querySelector('video') as HTMLVideoElement;
+// Le mini-lecteur de musique (`mire-mini-player`, P4-15) montre le même volume.
+const miniPlayer = $('mire-mini-player') as HTMLElement & { volume: number };
 let volume = 0.9;
 
 export const getVolume = (): number => volume;
-
-/** Remplissage d'une réglette (`--p`) selon la proportion donnée. */
-export function setRangeFill(el: HTMLElement, ratio: number): void {
-  el.style.setProperty('--p', `${clamp(ratio, 0, 1) * 100}%`);
-}
 
 /** Règle le volume (arrondi au centième, entre 0 et 1) sur les deux lecteurs et leurs réglettes ; renvoie la valeur retenue. */
 export function setVolume(v: number): number {
@@ -27,9 +24,7 @@ export function setVolume(v: number): number {
   audio.volume = volume;
   video.volume = volume;
   player.volume = volume;
-  const mini = $<HTMLInputElement>('#mini-vol') as HTMLInputElement;
-  mini.value = String(volume);
-  setRangeFill(mini, volume);
+  miniPlayer.volume = volume;
   if (volume !== S.usage.volume) {
     S.usage.volume = volume;
     api.usageSetVolume(volume);

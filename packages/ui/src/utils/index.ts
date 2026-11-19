@@ -13,3 +13,4 @@ export * from './explorer.ts';
 export * from './web.ts';
 export * from './video.ts';
 export * from './settings.ts';
+export * from './music.ts';

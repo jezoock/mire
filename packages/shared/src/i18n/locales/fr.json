@@ -1807,6 +1807,25 @@
           "action": "Ouvrir dans le lecteur externe"
         },
         "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe"
+      },
+      "music": {
+        "prev": "Morceau précédent",
+        "play": "Lecture ou pause",
+        "next": "Morceau suivant",
+        "seek": "Position dans le morceau",
+        "volume": "Volume",
+        "stop": "Arrêter la musique",
+        "position": "{folder}, {index} sur {count}",
+        "unsupported": "{name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe"
+      },
+      "images": {
+        "close": "Fermer la visionneuse",
+        "prev": "Image précédente",
+        "next": "Image suivante",
+        "slideshow": "Diaporama",
+        "slideshowStop": "Arrêter le diaporama",
+        "position": "{index} sur {count}, {folder}",
+        "error": "Cette image ne peut pas être affichée."
       }
     },
     "rescue": {
