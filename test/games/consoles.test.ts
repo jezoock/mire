@@ -114,8 +114,11 @@ describe('Consoles (P4-17)', () => {
     const key = romKey('duckstation:ps1', '/jeux/ps1/Jeu.cue', 'linux');
     let list = ok(setConsoleEmulator(consoles(), 'duckstation:ps1', 'retroarch:ps1')).emulators;
     assert.equal(launcherOf(list, 'duckstation:ps1', { key })?.id, 'retroarch:ps1');
+    // Le jeu garde l'émulateur de sa propre console, alors que la console en utilise un autre.
     list = ok(setGameEmulator(list, 'duckstation:ps1', key, 'duckstation:ps1')).emulators;
-    // Choisir la console elle-même pour le jeu revient à suivre la console.
+    assert.deepEqual(list[0].gameEmulators, { [key]: 'duckstation:ps1' });
+    assert.equal(launcherOf(list, 'duckstation:ps1', { key })?.id, 'duckstation:ps1');
+    list = ok(setGameEmulator(list, 'duckstation:ps1', key, null)).emulators;
     assert.equal(list[0].gameEmulators, undefined);
     assert.equal(launcherOf(list, 'duckstation:ps1', { key })?.id, 'retroarch:ps1');
     list = ok(setConsoleEmulator(list, 'duckstation:ps1', null)).emulators;

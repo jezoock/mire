@@ -20,6 +20,20 @@ export class GamesController extends Controller {
     return this.ctx.t(`games.ui.${key}`, vars);
   }
 
+  /** Question oui / non sur les boîtes de P4-06 ; vrai si l'on a choisi `yes`. */
+  private async confirm(title: string, help: string, yes: string): Promise<boolean> {
+    const res = await this.ctx.dialogs.form({
+      title,
+      help,
+      fields: [],
+      actions: [
+        { id: 'yes', label: yes, kind: 'primary' },
+        { id: 'no', label: this.ctx.t('forms.no'), kind: 'ghost' },
+      ],
+    });
+    return res.action === 'yes';
+  }
+
   private consoleOf(id: unknown): Emulator | null {
     return ((this.ctx.S.config?.emulators ?? []) as Emulator[]).find((e) => e.id === id) ?? null;
   }
@@ -86,10 +100,10 @@ export class GamesController extends Controller {
 
   /** Retire une console de Mire (l'émulateur et les jeux restent sur le disque), après confirmation. */
   async removeConsole({ id }: { id: string }): Promise<boolean> {
-    const { api, ui, toast } = this.ctx;
+    const { api, toast } = this.ctx;
     const emu = this.consoleOf(id);
     if (!emu) return false;
-    const ok = await ui.confirm(this.k('remove.title', { name: String(emu.name || id) }), this.k('remove.help'), this.k('remove.yes'));
+    const ok = await this.confirm(this.k('remove.title', { name: String(emu.name || id) }), this.k('remove.help'), this.k('remove.yes'));
     if (!ok) return false;
     if (!this.changed((await api.consoleRemove(id)) as Outcome<{ config: unknown }> | null)) return false;
     toast(this.k('consoleRemoved'));
@@ -195,9 +209,9 @@ export class GamesController extends Controller {
 
   /** Supprime un jeu désigné par sa clé, après confirmation : le processus principal contrôle le fichier. */
   async deleteGame({ key, name }: { key: string; name?: string }): Promise<boolean> {
-    const { api, ui, toast } = this.ctx;
+    const { api, toast } = this.ctx;
     const label = name ?? ((await api.catalogElement(key)) as CatalogElement | null)?.name ?? '';
-    const ok = await ui.confirm(this.k('delete.title', { name: label }), isRomKey(key) ? this.k('delete.rom') : this.k('delete.pc'), this.k('delete.yes'));
+    const ok = await this.confirm(this.k('delete.title', { name: label }), isRomKey(key) ? this.k('delete.rom') : this.k('delete.pc'), this.k('delete.yes'));
     if (!ok) return false;
     if (!this.changed((await api.gameDeleteElement(key)) as Outcome<{ config?: unknown }> | null)) return false;
     toast(this.k('delete.done'));
@@ -224,7 +238,7 @@ export class GamesController extends Controller {
     });
     if (res.action === 'download') ui.downloadGameBookmark(id);
     else if (res.action === 'remove') {
-      const ok = await ui.confirm(this.k('bookmark.removeTitle', { name: el.name }), this.k('bookmark.removeHelp'), this.k('bookmark.remove'));
+      const ok = await this.confirm(this.k('bookmark.removeTitle', { name: el.name }), this.k('bookmark.removeHelp'), this.k('bookmark.remove'));
       if (ok && this.changed((await api.gameBookmarkRemove(id)) as Outcome<{ config: unknown }> | null)) toast(this.k('bookmark.removed'));
     }
     return res.action;

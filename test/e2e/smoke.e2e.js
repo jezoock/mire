@@ -2544,13 +2544,14 @@ describe('Test de fumée de Mire', () => {
       await shot('centre-consoles');
       // La console de démonstration lance ses jeux avec l'émulateur de la nouvelle.
       const demo = (await consoles())[0];
-      await card('Super Nintendo').filter({ hasNotText: '(bis)' }).locator('.mire-centre-view__emulator').click();
+      const demoCard = page.locator(`${CENTRE} .mire-centre-view__console[data-key="${demo.id}"]`);
+      await demoCard.locator('.mire-centre-view__emulator').click();
       assert.equal(await formOpen(), 'Émulateur de Super Nintendo');
       await field('Émulateur').locator('select').selectOption(made.id);
       await button('Enregistrer').click();
       await formClosed();
       await page.waitForFunction(async (id) => (await window.api.getConfig()).config.emulators[0].emulator === id, made.id);
-      await card('Super Nintendo').filter({ hasNotText: '(bis)' }).getByText('celui de la console Super Nintendo (bis)').waitFor();
+      await demoCard.getByText('celui de la console Super Nintendo (bis)').waitFor();
       // Pour un jeu : la boîte du jeu (clic droit sur sa carte) garde un autre choix, enregistré par sa clé.
       const key = await findRom();
       await romCard().click({ button: 'right' });

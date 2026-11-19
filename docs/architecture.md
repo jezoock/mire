@@ -733,6 +733,19 @@ déduisent de la configuration :
   (`adopt`), dans `overrides.json` comme dans `metadata.json`.
 - Coût mesuré (750 jeux de console, 100 jeux PC, 300 chaînes, ~70 sites et marque-pages, à côté de 20 000 fichiers) :
   quelques millisecondes par liste, ~3 ms par changement de la configuration, rien de mesurable au chargement.
+- **Consoles et émulateurs** (P4-17, `games/consoles.ts`, D-21) : `consoleSave(fiche, id?)` crée (sans `id`) ou
+  modifie une console (nom et programme exigés, arguments, dossiers, extensions, sites de jeux propres ou `null` pour
+  ceux que Mire propose), `consoleRemove(id)` la retire. L'émulateur d'une console, ce sont son programme et ses
+  arguments : `consoleEmulators(id)` propose le sien puis ceux des consoles du même système,
+  `consoleSetEmulator(id, autre | null)` choisit celui qui lance ses jeux (`emulator`), `gameSetEmulator(clé, autre |
+  null)` celui d'un jeu (`gameEmulators`, par clé d'élément) ; `gameEmulators(clé)` rend les propositions et les deux
+  choix. Au lancement (`launchRom`, `gameLaunch(clé, autre?)`), l'ordre est : celui demandé pour cette fois, celui du
+  jeu, celui de la console, le sien. Un choix qui ne fait plus partie des propositions est ignoré, et retiré au
+  prochain enregistrement.
+- **Suppression d'un jeu** (P4-17) : `gameDeleteElement(clé)`. Le processus principal retrouve l'élément ; un jeu de
+  console n'est effacé que s'il est sous un dossier local de sa console (contrôle de P0-06, puis `checkExisting` de
+  `files/guard.ts` : un lien symbolique qui mène ailleurs est refusé), un jeu PC ajouté à la main est retiré de la
+  liste. La liste de la console est relue ensuite, et la carte quitte le catalogue.
 
 ### Tags et infos
 

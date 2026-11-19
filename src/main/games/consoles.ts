@@ -113,23 +113,38 @@ export function setConsoleEmulator(emulators: readonly Emulator[], id: string, e
   });
 }
 
-/** Émulateur d'un jeu (désigné par sa clé) : celui d'une console proposée, ou `null` pour celui de la console. */
+/**
+ * Émulateur d'un jeu (désigné par sa clé) : celui d'une console proposée, ou `null` pour suivre la console. Le jeu peut
+ * garder l'émulateur de sa propre console quand celle-ci en utilise un autre.
+ */
 export function setGameEmulator(emulators: readonly Emulator[], id: string, key: string, emulator: string | null): ConsoleResult {
   if (!text(key)) return { ok: false, code: 'gone' };
-  return withChoice(emulators, id, emulator, (e, value) => {
-    const map = { ...(e.gameEmulators || {}) };
-    if (value) map[key] = value;
-    else delete map[key];
-    if (Object.keys(map).length) e.gameEmulators = map;
-    else delete e.gameEmulators;
-  });
+  return withChoice(
+    emulators,
+    id,
+    emulator || null,
+    (e, value) => {
+      const map = { ...(e.gameEmulators || {}) };
+      if (value) map[key] = value;
+      else delete map[key];
+      if (Object.keys(map).length) e.gameEmulators = map;
+      else delete e.gameEmulators;
+    },
+    true,
+  );
 }
 
-function withChoice(emulators: readonly Emulator[], id: string, emulator: string | null, apply: (e: Emulator, value: string | null) => void): ConsoleResult {
+function withChoice(
+  emulators: readonly Emulator[],
+  id: string,
+  emulator: string | null,
+  apply: (e: Emulator, value: string | null) => void,
+  ownAllowed = false,
+): ConsoleResult {
   const at = emulators.findIndex((e) => e.id === id);
   if (at < 0) return { ok: false, code: 'gone' };
-  // Choisir la console elle-même revient à ne rien choisir.
-  const value = emulator && emulator !== id ? emulator : null;
+  // Pour une console, choisir la sienne revient à ne rien choisir.
+  const value = emulator && (ownAllowed || emulator !== id) ? emulator : null;
   if (value && !emulatorChoices(emulators, id).some((c) => c.id === value)) return { ok: false, code: 'emulator' };
   const out = [...emulators];
   out[at] = { ...out[at] };
@@ -142,7 +157,7 @@ function pruneChoices(emulators: readonly Emulator[]): Emulator[] {
   return emulators.map((e) => {
     const allowed = new Set(emulatorChoices(emulators, e.id).map((c) => c.id));
     const keep = (v: unknown) => typeof v === 'string' && v !== e.id && allowed.has(v);
-    const games = Object.fromEntries(Object.entries(e.gameEmulators || {}).filter(([, v]) => keep(v)));
+    const games = Object.fromEntries(Object.entries(e.gameEmulators || {}).filter(([, v]) => typeof v === 'string' && allowed.has(v)));
     const changed = (e.emulator != null && !keep(e.emulator)) || Object.keys(games).length !== Object.keys(e.gameEmulators || {}).length;
     if (!changed) return e;
     const out = { ...e };

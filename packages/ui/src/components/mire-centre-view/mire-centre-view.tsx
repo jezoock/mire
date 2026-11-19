@@ -337,7 +337,11 @@ export class MireCentreView {
     return (
       <Host class={{ 'mire-centre-view': true, [`--${tab}`]: true }}>
         {this.renderTabs(tab, l)}
-        <div class="mire-centre-view__panel">{this.renderPanel(tab, l)}</div>
+        {/* Un panneau par onglet (clé) : un ds-trigger résout sa cible une seule fois, il ne doit pas passer d'un
+            onglet à l'autre (les boutons des consoles visent mire-games, les autres mire-centre). */}
+        <div key={tab} class="mire-centre-view__panel">
+          {this.renderPanel(tab, l)}
+        </div>
       </Host>
     );
   }

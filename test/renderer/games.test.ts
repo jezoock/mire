@@ -157,7 +157,6 @@ describe('Jeux : contrôleur mire-games (P4-17)', () => {
       t: tFr,
       toast: (m: string) => toasts.push(m),
       ui: {
-        confirm: async (title: string) => (calls.push(['confirm', title]), confirm),
         afterConsolesChange: () => calls.push(['afterConsolesChange']),
         openRomBrowser: (id: unknown) => calls.push(['openRomBrowser', id]),
         pauseAudio: () => calls.push(['pauseAudio']),
@@ -165,8 +164,13 @@ describe('Jeux : contrôleur mire-games (P4-17)', () => {
         downloadGameBookmark: (id: unknown) => calls.push(['downloadGameBookmark', id]),
       },
       dialogs: {
-        async form(opts: FormOptions) {
+        async form(opts: FormOptions): Promise<{ action: string; values: Record<string, unknown> }> {
           forms.push(opts);
+          // Question oui / non : notée, puis la réponse du test.
+          if (opts.actions?.[0]?.id === 'yes') {
+            calls.push(['confirm', opts.title]);
+            return { action: confirm ? 'yes' : 'no', values: {} };
+          }
           let values: Record<string, unknown> = Object.fromEntries((opts.fields ?? []).map((f) => [f.id, normalizeField(f).value]));
           const form = { values: () => values, set: () => {}, setImage: () => {}, help: () => {} };
           const click = clicks.shift();
