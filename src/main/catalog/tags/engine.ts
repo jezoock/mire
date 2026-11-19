@@ -3,7 +3,8 @@
  * fichier, source, tags automatiques, infos en ligne, modifications à la main), les garde dans un index en mémoire
  * et le tient à jour à chaque changement du catalogue, des modifications à la main ou des règles par extension.
  */
-import type { Element, ElementImages, ElementKey, InfoChanges, InfoValue, TagChanges, TagSummary } from '@mire/shared';
+import type { Element, ElementImages, ElementKey, InfoChanges, InfoValue, TagChanges, TagOverview, TagSummary } from '@mire/shared';
+import { isTagName, validateTagLook } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { Overrides } from '../overrides.ts';
 import { keyGenre } from '../keys.ts';
@@ -127,6 +128,20 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
     return userTagId(name);
   }
 
+  /** Tags connus (`tags.list`) : ceux du cœur, puis de l'utilisateur, puis ceux posés sans être déclarés. */
+  function tagsList(): TagSummary[] {
+    const core = registry.coreTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'core', count: index.tagCount(id) }));
+    const user = registry.userTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'user', count: index.tagCount(id) }));
+    user.sort((a, b) => a.name.localeCompare(b.name));
+    const known = new Set([...core, ...user].map((t) => t.id));
+    const other = index
+      .tags()
+      .filter((id) => !known.has(id))
+      .sort()
+      .map((id): TagSummary => ({ id, name: id, origin: 'other', count: index.tagCount(id) }));
+    return [...core, ...user, ...other];
+  }
+
   const validKey = (key: unknown): key is ElementKey => typeof key === 'string' && keyGenre(key) !== null;
 
   return {
@@ -209,18 +224,50 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
     /** Plusieurs modifications à la main (un regroupement, P4-22), recalculées et annoncées ensemble à la fin. */
     batch: <T>(fn: () => T): T => overrides.batch(fn),
 
-    /** Tags connus (`tags.list`) : ceux du cœur, puis de l'utilisateur, puis ceux posés sans être déclarés. */
-    tagsList(): TagSummary[] {
-      const core = registry.coreTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'core', count: index.tagCount(id) }));
-      const user = registry.userTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'user', count: index.tagCount(id) }));
-      user.sort((a, b) => a.name.localeCompare(b.name));
-      const known = new Set([...core, ...user].map((t) => t.id));
-      const other = index
-        .tags()
-        .filter((id) => !known.has(id))
-        .sort()
-        .map((id): TagSummary => ({ id, name: id, origin: 'other', count: index.tagCount(id) }));
-      return [...core, ...user, ...other];
+    tagsList,
+
+    // ---------- Administration des tags (P4-21) ----------
+
+    /** Tags connus avec leur apparence et qui les pose (`tags.overview`). */
+    tagsOverview(): TagOverview[] {
+      const looks = overrides.looks();
+      return tagsList().map((t) => ({
+        ...t,
+        look: { ...looks[t.id] },
+        setBy: [...(t.origin === 'core' ? ['core'] : t.origin === 'user' ? ['user'] : []), ...registry.pluginsOf(t.id)],
+      }));
+    },
+
+    /** Renomme un tag de l'utilisateur (`tags.rename`) ; faux pour un autre tag ou un nom qui ne convient pas. */
+    renameTag(id: unknown, name: unknown): boolean {
+      if (typeof id !== 'string' || !registry.isUserTag(id) || !isTagName(name)) return false;
+      return overrides.renameUserTag(id, name.trim());
+    },
+
+    /**
+     * Fusionne un tag de l'utilisateur dans un autre tag connu (`tags.merge`) : les éléments qui le portent reçoivent
+     * `into`, puis il disparaît. Rend le nombre d'éléments touchés, ou `null` (tags inconnus, identiques, ou `from`
+     * n'est pas un tag de l'utilisateur : un tag posé automatiquement reviendrait).
+     */
+    mergeTags(from: unknown, into: unknown): number | null {
+      if (typeof from !== 'string' || typeof into !== 'string' || from === into || !registry.isUserTag(from)) return null;
+      if (!registry.isCoreTag(into) && !registry.isUserTag(into) && !index.tagCount(into)) return null;
+      return overrides.dropTag(from, index.withTags([from]), into).length;
+    },
+
+    /** Supprime un tag de l'utilisateur (`tags.remove`) : il quitte chaque élément ; faux pour un autre tag. */
+    removeTag(id: unknown): boolean {
+      if (typeof id !== 'string' || !registry.isUserTag(id)) return false;
+      overrides.dropTag(id, []);
+      return true;
+    },
+
+    /** Couleur et icône d'un tag connu (`tags.setLook`) ; faux pour un tag inconnu ou une valeur hors des listes. */
+    setTagLook(id: unknown, changes: unknown): boolean {
+      const look = validateTagLook(changes);
+      if (typeof id !== 'string' || !look || !tagsList().some((t) => t.id === id)) return false;
+      overrides.setLook(id, look);
+      return true;
     },
 
     /** Règles par extension changées (configuration) : tout est recalculé. */

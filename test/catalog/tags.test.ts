@@ -339,3 +339,125 @@ describe('éditeurs (P4-22) : nom saisi, images, réinitialisation', () => {
     assert.equal(await h.catalogPickImage(amelie, 'name' as never), null);
   });
 });
+
+describe('administration des tags (P4-21)', () => {
+  const brazil = localFileKey('/films/Brazil.mkv', 'linux');
+  const films = () => [file('/films/Amélie.mkv'), file('/films/Brazil.mkv')];
+
+  it('vue d’ensemble : apparence, et qui pose chaque tag (Mire, vous, un plugin)', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { 'Vus en 2024': true });
+    const byId = new Map(engine.tagsOverview().map((t) => [t.id, t]));
+    assert.deepEqual(byId.get('video')?.setBy, ['core']);
+    assert.deepEqual(byId.get('vus-en-2024'), { id: 'vus-en-2024', name: 'Vus en 2024', origin: 'user', count: 1, look: {}, setBy: ['user'] });
+  });
+
+  it('un plugin actif qui déclare un tag apparaît comme celui qui le pose', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-tags-'));
+    const catalog = createCatalog({ dir: path.join(dir, 'sources'), debounceMs: 0, onIgnored: () => {} });
+    const overrides = createOverrides({ file: path.join(dir, 'overrides.json') });
+    overrides.load();
+    const registry = createRegistry(builtinTranslator('fr').t);
+    const engine = createTagEngine({ catalog, overrides, registry, rules: () => fileTagRules(undefined) });
+    registry.declarePlugin('mire.anime', { tags: ['anime', 'video'], infos: {}, textPrefix: 'pluginTexts.mire_anime.' });
+    catalog.setSource(FILMS, [file('/films/Akira.mkv', { tags: ['local', 'anime'] })]);
+    const byId = new Map(engine.tagsOverview().map((t) => [t.id, t]));
+    assert.deepEqual(byId.get('anime')?.setBy, ['mire.anime']);
+    assert.deepEqual(byId.get('video')?.setBy, ['core', 'mire.anime']);
+  });
+
+  it('renommer un tag de l’utilisateur ; pas un tag du cœur ni un nom vide', () => {
+    const { dir, catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { 'Vus en 2024': true });
+    assert.equal(engine.renameTag('vus-en-2024', '  Déjà vus  '), true);
+    assert.equal(engine.renameTag('video', 'Vidéos'), false);
+    assert.equal(engine.renameTag('vus-en-2024', ''), false);
+    assert.equal(engine.renameTag('vus-en-2024', 'x'.repeat(65)), false);
+    assert.equal(engine.renameTag(['vus-en-2024'], 'X'), false);
+    const again = setup({ dir });
+    assert.equal(again.engine.tagsList().find((t) => t.id === 'vus-en-2024')?.name, 'Déjà vus');
+    // L'identifiant ne change pas : les pages qui l'utilisent le gardent.
+    assert.deepEqual(again.engine.query(['vus-en-2024']), [amelie]);
+  });
+
+  it('fusionner un tag de l’utilisateur dans un autre : ses éléments reçoivent l’autre, puis il disparaît', () => {
+    const { dir, catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { 'Vus en 2024': true });
+    engine.setTags(brazil, { 'Déjà vus': true, 'Vus en 2024': true });
+    const changed: string[][] = [];
+    engine.onChange((keys) => changed.push(keys));
+    assert.equal(engine.mergeTags('vus-en-2024', 'deja-vus'), 2);
+    assert.deepEqual(engine.query(['deja-vus']).sort(), [amelie, brazil].sort());
+    assert.deepEqual(engine.query(['vus-en-2024']), []);
+    assert.equal(
+      engine.tagsList().some((t) => t.id === 'vus-en-2024'),
+      false,
+    );
+    assert.deepEqual(changed.at(-1)?.sort(), [amelie, brazil].sort());
+    // Gardé dans overrides.json.
+    const again = setup({ dir });
+    assert.deepEqual(again.engine.element(amelie)!.tags.sort(), ['deja-vus', 'local', 'video']);
+  });
+
+  it('fusion refusée : tag du cœur en source, tags identiques ou inconnus', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { 'Vus en 2024': true });
+    assert.equal(engine.mergeTags('video', 'vus-en-2024'), null);
+    assert.equal(engine.mergeTags('vus-en-2024', 'vus-en-2024'), null);
+    assert.equal(engine.mergeTags('vus-en-2024', 'inconnu'), null);
+    assert.equal(engine.mergeTags(null, 'video'), null);
+    // Vers un tag du cœur : permis.
+    assert.equal(engine.mergeTags('vus-en-2024', 'movie'), 1);
+    assert.deepEqual(engine.query(['movie']), [amelie]);
+  });
+
+  it('supprimer un tag de l’utilisateur : il quitte chaque élément ; un tag du cœur ne se supprime pas', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { 'Vus en 2024': true });
+    engine.setTags(brazil, { 'Vus en 2024': false });
+    assert.equal(engine.removeTag('video'), false);
+    assert.equal(engine.removeTag('vus-en-2024'), true);
+    assert.equal(engine.removeTag('vus-en-2024'), false);
+    assert.deepEqual(engine.element(amelie)!.tags.sort(), ['local', 'video']);
+    assert.equal(
+      engine.tagsList().some((t) => t.id === 'vus-en-2024'),
+      false,
+    );
+  });
+
+  it('couleur et icône d’un tag connu, dans les listes permises ; enlevées avec null', () => {
+    const { dir, catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    assert.equal(engine.setTagLook('video', { color: 'blue', icon: 'play' }), true);
+    assert.equal(engine.setTagLook('video', { color: '#123456' }), false);
+    assert.equal(engine.setTagLook('video', { icon: 'bombe' }), false);
+    assert.equal(engine.setTagLook('video', { color: 'red', taille: 3 }), false);
+    assert.equal(engine.setTagLook('inconnu', { color: 'red' }), false);
+    assert.equal(engine.setTagLook('video', 'blue'), false);
+    let again = setup({ dir });
+    assert.deepEqual(again.engine.tagsOverview().find((t) => t.id === 'video')?.look, { color: 'blue', icon: 'play' });
+    assert.equal(again.engine.setTagLook('video', { icon: null }), true);
+    assert.equal(again.engine.setTagLook('video', { color: null }), true);
+    again = setup({ dir });
+    assert.deepEqual(again.engine.tagsOverview().find((t) => t.id === 'video')?.look, {});
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'overrides.json'), 'utf8')).looks, undefined);
+  });
+
+  it('IPC : tags.* passent au moteur de tags', () => {
+    const { catalog, engine } = setup();
+    catalog.setSource(FILMS, films());
+    engine.setTags(amelie, { A: true, B: true });
+    const h = catalogHandlers({ tags: engine } as unknown as MainContext);
+    assert.equal(h.tagsOverview().length >= 13, true);
+    assert.equal(h.tagsRename('a', 'Aa'), true);
+    assert.equal(h.tagsSetLook('a', { color: 'green' }), true);
+    assert.equal(h.tagsMerge('a', 'b'), 1);
+    assert.equal(h.tagsRemove('b'), true);
+    assert.equal(h.tagsRemove('video'), false);
+  });
+});

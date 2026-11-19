@@ -11,6 +11,7 @@
 
 import type { Bookmark, Config, ConsoleRef, GameBookmark, LinkSite } from './config.ts';
 import type { Element, ElementImages, InfoChanges, TagChanges, TagSummary } from './element.ts';
+import type { TagLookChanges, TagOverview } from './tags.ts';
 import type {
   CatalogGroup,
   GroupEdit,
@@ -413,6 +414,14 @@ export interface IpcMethods {
   catalogSetTags(key: string, changes: TagChanges): Element | null;
   catalogSetInfos(key: string, changes: InfoChanges): Element | null;
   tagsList(): TagSummary[];
+  // Administration des tags (P4-21) : tags avec leur apparence et qui les pose ; renommer, fusionner dans un autre tag
+  // ou supprimer un tag de l'utilisateur (faux / `null` pour un autre tag ou une valeur qui ne convient pas) ; couleur
+  // et icône d'un tag connu, choisies dans `TAG_COLORS` et `TAG_ICONS` (`null` : aucune).
+  tagsOverview(): TagOverview[];
+  tagsRename(id: string, name: string): boolean;
+  tagsMerge(from: string, into: string): number | null;
+  tagsRemove(id: string): boolean;
+  tagsSetLook(id: string, look: TagLookChanges): boolean;
   // Éditeurs (P4-22) : image d'un élément choisie sur le disque (`null` : abandon, élément ou image inconnus), images
   // effacées (retour à l'automatique), réinitialisation (tags, infos et images reviennent à l'automatique).
   catalogPickImage(key: string, field: keyof ElementImages): Element | null;
@@ -451,6 +460,8 @@ export interface IpcMethods {
   listsCreate(name: string | { key: string }): ListSummary | null;
   listsRename(id: string, name: string | { key: string }): boolean;
   listsRemove(id: string): boolean;
+  // Nouvel ordre des listes (P4-21) : `ids` d'abord, puis les autres ; faux si un identifiant est inconnu ou en double.
+  listsReorder(ids: string[]): boolean;
   // Rendent le nombre d'éléments ajoutés ou retirés.
   listsAdd(id: string, keys: string[], at?: number): number | null;
   listsRemoveItems(id: string, keys: string[]): number | null;
@@ -624,6 +635,11 @@ export const IPC_METHODS = {
   catalogGroupPickImage: 'catalog:groupPickImage',
   catalogGroupFetch: 'catalog:groupFetch',
   tagsList: 'tags:list',
+  tagsOverview: 'tags:overview',
+  tagsRename: 'tags:rename',
+  tagsMerge: 'tags:merge',
+  tagsRemove: 'tags:remove',
+  tagsSetLook: 'tags:setLook',
   pagesList: 'pages:list',
   pagesGet: 'pages:get',
   pagesSave: 'pages:save',
@@ -639,6 +655,7 @@ export const IPC_METHODS = {
   listsCreate: 'lists:create',
   listsRename: 'lists:rename',
   listsRemove: 'lists:remove',
+  listsReorder: 'lists:reorder',
   listsAdd: 'lists:add',
   listsRemoveItems: 'lists:removeItems',
   listsMove: 'lists:move',

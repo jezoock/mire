@@ -9,7 +9,8 @@
  * - la façade lit et écrit les fiches sous leurs anciennes clés (`legacyAll`, `legacySet`).
  */
 import fs from 'node:fs';
-import type { Element, ElementImages, ElementKey, InfoValue, OpenKind } from '@mire/shared';
+import type { Element, ElementImages, ElementKey, InfoValue, OpenKind, TagLook, TagLookChanges } from '@mire/shared';
+import { validateTagLook } from '@mire/shared';
 import type { UserMeta } from '@mire/shared/ipc';
 import { corruptReason, createJsonStore, readJsonFile } from '../storage/json-store.ts';
 import { movedKey } from './keys.ts';
@@ -28,6 +29,8 @@ export interface OverridesFile {
   elements: Record<ElementKey, Override>;
   /** Fiches de l'ancien `meta.json` qui ne correspondent (encore) à aucun élément, par ancienne clé. */
   unmatched: Record<string, Override>;
+  /** Apparence des tags (couleur, icône ; P4-21), par identifiant ; absent tant qu'aucun tag n'en a. */
+  looks?: Record<string, TagLook>;
 }
 
 export interface OverridesOptions {
@@ -81,6 +84,10 @@ function readFile(raw: OverridesFile): OverridesFile {
   const out = empty();
   for (const [id, tag] of Object.entries(isObject(raw.tags) ? raw.tags : {}))
     if (isObject(tag) && typeof tag.name === 'string') out.tags[id] = { name: tag.name };
+  for (const [id, look] of Object.entries(isObject(raw.looks) ? raw.looks : {})) {
+    const ok = validateTagLook(look);
+    if (ok && (ok.color || ok.icon)) (out.looks ??= {})[id] = { ...(ok.color ? { color: ok.color } : {}), ...(ok.icon ? { icon: ok.icon } : {}) };
+  }
   for (const section of ['elements', 'unmatched'] as const) {
     for (const [key, o] of Object.entries(isObject(raw[section]) ? raw[section] : {})) {
       if (!isObject(o)) continue;
@@ -221,6 +228,61 @@ export function createOverrides({ file, legacyFile, platform = process.platform,
     addUserTag(id: string, name: string): void {
       if (Object.hasOwn(data.tags, id)) return;
       data.tags[id] = { name };
+      save([]);
+    },
+
+    /** Renomme un tag de l'utilisateur ; faux s'il n'en est pas un. */
+    renameUserTag(id: string, name: string): boolean {
+      if (!Object.hasOwn(data.tags, id)) return false;
+      data.tags[id] = { name };
+      save([]);
+      return true;
+    },
+
+    /**
+     * Retire un tag de chaque élément modifié à la main qui le mentionne (ajouté ou retiré), et, avec `into`, l'ajoute à
+     * sa place ; `carriers` : éléments qui portent le tag (y compris automatiquement), qui reçoivent aussi `into`. Le tag
+     * de l'utilisateur et son apparence disparaissent. Rend les clés touchées.
+     */
+    dropTag(id: string, carriers: readonly ElementKey[], into?: string): ElementKey[] {
+      const touched = new Set<ElementKey>();
+      for (const [key, o] of Object.entries(data.elements)) if (o.tags && Object.hasOwn(o.tags, id)) touched.add(key);
+      if (into) for (const key of carriers) touched.add(key);
+      for (const key of touched) {
+        const o = data.elements[key] ?? {};
+        const tags = { ...o.tags };
+        delete tags[id];
+        if (into && (carriers.includes(key) || o.tags?.[id] === true)) tags[into] = true;
+        o.tags = tags;
+        tidy(o);
+        if (isEmpty(o) && !o.legacy) delete data.elements[key];
+        else data.elements[key] = o;
+      }
+      for (const o of Object.values(data.unmatched)) if (o.tags) delete o.tags[id];
+      delete data.tags[id];
+      if (data.looks) {
+        delete data.looks[id];
+        if (!Object.keys(data.looks).length) delete data.looks;
+      }
+      save([...touched]);
+      return [...touched];
+    },
+
+    /** Apparence des tags (lecture seule). */
+    looks: (): Readonly<Record<string, TagLook>> => data.looks ?? {},
+
+    /** Change l'apparence d'un tag (valeurs déjà vérifiées) ; `null` enlève. */
+    setLook(id: string, changes: TagLookChanges): void {
+      const look: TagLook = { ...data.looks?.[id] };
+      for (const k of ['color', 'icon'] as const) {
+        if (changes[k] === null) delete look[k];
+        else if (changes[k] !== undefined) (look as Record<string, string>)[k] = changes[k] as string;
+      }
+      const looks = { ...data.looks };
+      if (look.color || look.icon) looks[id] = look;
+      else delete looks[id];
+      if (Object.keys(looks).length) data.looks = looks;
+      else delete data.looks;
       save([]);
     },
 
