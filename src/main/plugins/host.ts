@@ -21,7 +21,7 @@ import { HOST_ORIGIN, PLUGIN_SCHEME, pluginProtocolHandler } from './protocol.ts
 const START_TIMEOUT = 10000;
 
 export interface IsolatedHostOptions {
-  /** Groupe de l'hôte (`installed` ; plus tard un par dépôt tiers) : nom de sa session. */
+  /** Groupe de l'hôte (`installed`, ou `repo-<…>` pour un dépôt tiers, `host-pool.ts`) : nom de sa session. */
   group: string;
   /** `dist/plugin-host/` : page, Worker et preload. */
   hostDir: string;

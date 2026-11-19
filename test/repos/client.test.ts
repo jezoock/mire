@@ -305,8 +305,8 @@ describe('IPC', () => {
     h.pluginsUpdate(A);
     h.pluginsUninstall(A, true);
     assert.deepEqual(calls, [
-      ['install', A, '1.0.0'],
-      ['install', A, undefined],
+      ['install', A, '1.0.0', undefined],
+      ['install', A, undefined, undefined],
       ['update', A],
       ['uninstall', A, { keepData: true }],
     ]);

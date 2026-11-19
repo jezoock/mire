@@ -1,5 +1,5 @@
 /**
- * Index des dépôts configurés (pour l'instant le seul dépôt officiel ; les dépôts tiers viendront avec P3-08) :
+ * Index des dépôts configurés (le dépôt officiel et les dépôts tiers ajoutés par l'utilisateur, P3-08) :
  * téléchargement, vérification (signature avec la clé du dépôt, structure), cache hors ligne.
  *
  * Cache : `userData/repos/<dépôt>/index.json`, les octets tels que reçus. Il est vérifié de nouveau à chaque lecture
@@ -13,7 +13,7 @@ import type { KeyObject } from 'node:crypto';
 import type { FetchLike } from '../net/http.ts';
 import { downloadBytes } from './download.ts';
 import { RepoError, repoErrorCode, type RepoErrorCode } from './errors.ts';
-import { loadPublicKey, parseIndex, type Localized, type RepoIndex } from './index-file.ts';
+import { keyId, loadPublicKey, parseIndex, type Localized, type RepoIndex } from './index-file.ts';
 
 export interface RepositoryConfig {
   /** Identifiant (nom du dossier de cache) : minuscules, chiffres et tirets. */
@@ -30,6 +30,10 @@ export interface RepositoryConfig {
 export interface RepositoryStatus {
   id: string;
   official: boolean;
+  /** Adresse de l'index. */
+  index: string;
+  /** Empreinte de la clé (sha256 de ses 32 octets, `signature.keyId`), à comparer avec celle que publie le dépôt. */
+  fingerprint: string;
   name: Localized | null;
   /** Date de publication de l'index utilisé (`generated`), ou `null` s'il n'y en a pas encore. */
   generated: string | null;
@@ -107,14 +111,12 @@ export function createRepositories(opts: RepositoriesOptions) {
     await fsp.rename(tmp, file);
   }
 
+  const download = (url: string, signal?: AbortSignal) =>
+    downloadBytes(url, { maxBytes: opts.maxIndexBytes ?? MAX_INDEX_BYTES, timeout: opts.timeout ?? INDEX_TIMEOUT, fetch: opts.fetch, signal });
+
   async function refreshOne(e: Entry, signal?: AbortSignal): Promise<void> {
     try {
-      const bytes = await downloadBytes(e.config.index, {
-        maxBytes: opts.maxIndexBytes ?? MAX_INDEX_BYTES,
-        timeout: opts.timeout ?? INDEX_TIMEOUT,
-        fetch: opts.fetch,
-        signal,
-      });
+      const bytes = await download(e.config.index, signal);
       const index = parseIndex(bytes, e.key, { official: e.config.official });
       if (e.index && Date.parse(index.generated) < Date.parse(e.index.generated))
         throw new RepoError('rollback', `Index of ${index.generated}, older than the cached one (${e.index.generated}).`);
@@ -142,10 +144,43 @@ export function createRepositories(opts: RepositoriesOptions) {
       return configured().flatMap((e) => (e.index ? [{ config: e.config, index: e.index }] : []));
     },
 
+    /**
+     * Télécharge et vérifie l'index d'un dépôt pas encore configuré (ajout d'un dépôt tiers), sans rien garder.
+     * Lève une `RepoError` (adresse, réseau, signature, format, préfixe réservé…).
+     */
+    async probe(config: RepositoryConfig, signal?: AbortSignal): Promise<{ index: RepoIndex; bytes: Buffer }> {
+      if (!REPO_ID_RE.test(config.id)) throw new RepoError('format', `Repository id refused: ${config.id}`);
+      let key: KeyObject;
+      try {
+        key = loadPublicKey(config.publicKey);
+      } catch (err) {
+        throw new RepoError('key', (err as Error).message);
+      }
+      const bytes = await download(config.index, signal);
+      return { index: parseIndex(bytes, key, { official: config.official }), bytes };
+    },
+
+    /** Garde en cache l'index vérifié par `probe` d'un dépôt qui vient d'être ajouté. */
+    async seed(config: RepositoryConfig, bytes: Buffer): Promise<void> {
+      await writeCache(config.id, bytes);
+      entries.delete(config.id);
+      const e = entry(config);
+      if (e) e.checkedAt = Date.now();
+    },
+
+    /** Oublie un dépôt retiré : son entrée et son cache. */
+    async drop(id: string): Promise<void> {
+      if (!REPO_ID_RE.test(id)) return;
+      entries.delete(id);
+      await fsp.rm(path.join(opts.cacheDir, id), { recursive: true, force: true });
+    },
+
     status(): RepositoryStatus[] {
       return configured().map((e) => ({
         id: e.config.id,
         official: e.config.official,
+        index: e.config.index,
+        fingerprint: keyId(e.key),
         name: e.index?.repository.name ?? null,
         generated: e.index?.generated ?? null,
         checkedAt: e.checkedAt,

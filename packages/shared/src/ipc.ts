@@ -211,6 +211,8 @@ export interface PluginSummary {
   origin: 'bundled' | 'installed';
   /** Plugin installé : dépôt qui l'a installé (`official` : dépôt officiel), `null` sinon (P3-07). */
   repository: string | null;
+  /** Confiance (P3-08) : livré avec Mire, dépôt officiel, dépôt tiers, ou installé à la main (`local`). */
+  trust: PluginTrust;
   /** Niveau de sécurité (D-18), `null` si le manifeste est illisible. */
   level: 'data' | 'code' | 'privileged' | null;
   /** Permissions demandées par le manifeste (`permissions`), vide s'il est illisible. */
@@ -228,10 +230,18 @@ export interface PluginSummary {
   restartRequired: boolean;
 }
 
+/** Niveau de confiance de l'origine d'un plugin (P3-08). */
+export type PluginTrust = 'bundled' | 'official' | 'third-party' | 'local';
+
 /** Dépôt de plugins configuré et état de son index (P3-07 ; le Centre, P4-18). */
 export interface RepositoryInfo {
   id: string;
   official: boolean;
+  trust: 'official' | 'third-party';
+  /** Adresse de l'index. */
+  index: string;
+  /** Empreinte de la clé du dépôt (64 caractères hexadécimaux), à montrer pour vérification. */
+  fingerprint: string;
   /** Nom du dépôt dans la langue de l'interface (index), ou son identifiant. */
   name: string;
   /** Date de publication de l'index utilisé, `null` s'il n'y en a pas encore (jamais lu, même en cache). */
@@ -263,12 +273,50 @@ export interface AvailablePlugin {
   size: number;
   /** Version installée (ou incluse), `null` sinon. */
   installed: string | null;
-  /** Version plus récente compatible proposée, `null` sinon. */
+  /** Version plus récente compatible proposée (par ce dépôt, s'il l'a installé), `null` sinon. */
   update: string | null;
+  trust: 'official' | 'third-party';
+  /** Plugin tiers de code sensible (P3-08) : avertissement renforcé et accord nécessaire avant de l'installer. */
+  sensitive: boolean;
+  /** Accord déjà donné pour la version montrée (toujours vrai si l'accord n'est pas nécessaire). */
+  consented: boolean;
+  /** Déjà installé depuis un autre dépôt (ou livré avec Mire) : ce dépôt ne peut ni l'installer ni le mettre à jour. */
+  conflict: boolean;
 }
 
-/** Résultat d'une installation ou d'une mise à jour : les plugins après coup, ou l'erreur (code stable et message). */
-export type PluginsOutcome = { ok: true; plugins: PluginSummary[] } | { ok: false; code: string; error: string };
+/** Ce que l'utilisateur doit accepter pour une version d'un plugin tiers de code sensible (P3-08). */
+export interface PluginConsentRequest {
+  plugin: string;
+  repository: string;
+  version: string;
+  level: 'data' | 'code' | 'privileged';
+  permissions: Record<string, unknown>;
+}
+
+/**
+ * Résultat d'une installation ou d'une mise à jour : les plugins après coup, ou l'erreur (code stable et message).
+ * Code `consent` : les versions à faire accepter (`pluginsConsent`), plugin par plugin.
+ */
+export type PluginsOutcome = { ok: true; plugins: PluginSummary[] } | { ok: false; code: string; error: string; consent?: PluginConsentRequest[] };
+
+/** Dépôt tiers vérifié (P3-08) : ce que l'interface montre avant de l'ajouter. */
+export interface RepositoryPreview {
+  id: string;
+  index: string;
+  /** Empreinte de la clé fournie : l'utilisateur la compare à celle que publie le dépôt. */
+  fingerprint: string;
+  name: string;
+  /** Nombre de plugins proposés, et de plugins de code sensible parmi eux. */
+  plugins: number;
+  sensitive: number;
+}
+
+/** Résultat de la vérification ou de l'ajout d'un dépôt tiers. */
+export type RepositoryOutcome = { ok: true; repository: RepositoryPreview; repositories: RepositoryInfo[] } | { ok: false; code: string; error: string };
+
+/** Résultat du retrait d'un dépôt tiers : plugins désinstallés, et ceux gardés parce qu'un autre plugin en a besoin. */
+export type RepositoryRemoveOutcome =
+  { ok: true; uninstalled: string[]; kept: { id: string; by: string[] }[]; repositories: RepositoryInfo[] } | { ok: false; code: string; error: string };
 
 /** Résultat d'une désinstallation : refusée si un autre plugin en a besoin, ou s'il est livré avec Mire. */
 export type UninstallOutcome =
@@ -557,9 +605,19 @@ export interface IpcMethods {
   reposList(): RepositoryInfo[];
   reposRefresh(): RepositoryInfo[];
   reposPlugins(): AvailablePlugin[];
-  // Installe un plugin des dépôts (une version, ou la plus récente compatible) avec ses dépendances ; met à jour un
-  // plugin installé ; désinstalle (en gardant ou non ses données). `null` : arguments refusés (plugin inconnu…).
-  pluginsInstall(id: string, version?: string): PluginsOutcome | null;
+  // Dépôts tiers (P3-08) : vérifier un dépôt (adresse `https:` de l'index, clé publique PEM ed25519) et montrer
+  // l'empreinte de sa clé ; l'ajouter avec l'empreinte que l'utilisateur a vue ; le retirer en gardant ses plugins
+  // (sans mise à jour) ou en les désinstallant. `null` : arguments refusés.
+  reposInspect(index: string, publicKey: string): RepositoryOutcome | null;
+  reposAdd(index: string, publicKey: string, fingerprint: string): RepositoryOutcome | null;
+  reposRemove(id: string, uninstall: boolean, keepData: boolean): RepositoryRemoveOutcome | null;
+  // Installe un plugin des dépôts (une version, ou la plus récente compatible ; depuis un dépôt, ou celui par défaut)
+  // avec ses dépendances ; met à jour un plugin installé depuis son dépôt ; désinstalle (en gardant ou non ses
+  // données). `null` : arguments refusés (plugin inconnu…).
+  pluginsInstall(id: string, version?: string, repository?: string): PluginsOutcome | null;
+  // Accord pour une version d'un plugin tiers de code sensible, après l'avertissement renforcé (P3-08) ; rend ce qui a
+  // été accepté, `null` si rien n'était à accepter ou si les arguments sont refusés.
+  pluginsConsent(id: string, repository: string, version: string): PluginConsentRequest | null;
   pluginsUpdate(id: string): PluginsOutcome | null;
   pluginsUninstall(id: string, keepData: boolean): UninstallOutcome | null;
 
@@ -748,7 +806,11 @@ export const IPC_METHODS = {
   reposList: 'repos:list',
   reposRefresh: 'repos:refresh',
   reposPlugins: 'repos:plugins',
+  reposInspect: 'repos:inspect',
+  reposAdd: 'repos:add',
+  reposRemove: 'repos:remove',
   pluginsInstall: 'plugins:install',
+  pluginsConsent: 'plugins:consent',
   pluginsUpdate: 'plugins:update',
   pluginsUninstall: 'plugins:uninstall',
 } as const satisfies Record<IpcMethodName, string>;

@@ -74,6 +74,7 @@ import { createInstaller } from './repos/installer.ts';
 import { createRepoClient } from './repos/client.ts';
 import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
+import { createTrustStore, toConfig } from './repos/trust.ts';
 import * as http from './net/http.ts';
 import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers } from './platform/index.ts';
@@ -271,6 +272,8 @@ function start(pending: PendingFiles): Running {
     title: t('plugins.folder.title', { name: plugins.list().find((p) => p.id === id)?.name ?? id }),
     button: t('plugins.folder.button'),
   }));
+  // Dépôts tiers et accords pour leurs plugins de code sensible (P3-08), hors de la configuration.
+  const trust = createTrustStore({ file: files.repoTrust });
   const plugins = createPluginService({
     roots: {
       bundled: app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(__dirname, '..', '..', 'resources', 'plugins'),
@@ -293,13 +296,19 @@ function start(pending: PendingFiles): Running {
     translate: t,
     locale: () => i18n.language(),
     runners: electronRunners(dist('plugin-host')),
+    consented: (c) => trust.consented(c),
     onTaggersChange: () => tags.setContributors(contributors()),
     refresh: (keys) => tags.refresh(keys),
   });
-  // Client des dépôts (P3-07) : index du dépôt officiel (clé intégrée, `repos/official.ts`) gardé en cache pour le
-  // hors ligne ; aucun accès réseau tant que l'interface ne demande pas de mise à jour (`reposRefresh`, Centre P4-18).
+  // Client des dépôts (P3-07) : index du dépôt officiel (clé intégrée, `repos/official.ts`) et des dépôts tiers
+  // (P3-08) gardés en cache pour le hors ligne ; aucun accès réseau tant que l'interface ne demande pas de mise à jour
+  // (`reposRefresh`, Centre P4-18) ou n'ajoute pas de dépôt.
   const repos = createRepoClient({
-    repositories: createRepositories({ cacheDir: files.repoCache, repositories: () => [OFFICIAL_REPOSITORY] }),
+    repositories: createRepositories({
+      cacheDir: files.repoCache,
+      repositories: () => [OFFICIAL_REPOSITORY, ...trust.repositories().map(toConfig)],
+    }),
+    trust,
     installer: createInstaller({ pluginsDir: files.plugins }),
     plugins,
     appVersion: app.getVersion(),
