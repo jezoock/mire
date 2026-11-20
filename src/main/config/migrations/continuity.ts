@@ -47,8 +47,16 @@ export interface ContinuityRule {
   settings?: readonly SettingMove[];
 }
 
-/** Table des règles : vide tant qu'aucune fonction n'est extraite (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
-export const CONTINUITY_RULES: readonly ContinuityRule[] = [];
+/** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
+const always = (): boolean => true;
+
+/** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
+export const CONTINUITY_RULES: readonly ContinuityRule[] = [
+  // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
+  { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
+  { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
+  { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
+];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 

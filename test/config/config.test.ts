@@ -236,6 +236,8 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'recent' },
     ]);
     delete out.ui.home.rows;
+    // File de la continuité (v10, P5-01) : des identifiants de règles ajoutés, aucun réglage touché.
+    delete out.continuity;
     assert.deepEqual(out, { ...v8(), version: CONFIG_VERSION });
   });
 
