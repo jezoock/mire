@@ -4,6 +4,7 @@
  * `mire-demo` de `@mire/ui` dans le gabarit historique, et les composants ds-* utilisés par Mire dans les cinq
  * palettes (P4-02). Ses textes viennent des catalogues, dans la langue de l'interface.
  */
+import { CORE_PALETTES } from '@mire/shared';
 import type { CardElement, GridGroup } from '@mire/ui/utils';
 import { esc } from '../core/dom.ts';
 import { i18n, t } from '../i18n/index.ts';
@@ -13,8 +14,8 @@ import type { FormOptions } from '../ui/dialogs.ts';
 
 export const DEMO_SECTION = 'demo';
 
-/** Les cinq palettes du cœur et des futurs plugins (P5-02) ; nom : clé `palettes.<id>` des catalogues. */
-const PALETTES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'] as const;
+/** Les palettes du cœur (celles des plugins, P5-02, n'y figurent pas) ; nom : clé `palettes.<id>` des catalogues. */
+const PALETTES = CORE_PALETTES;
 
 let countForms = '';
 /** Textes des composants d'éléments (P4-05), tirés des catalogues : JSON des attributs. */

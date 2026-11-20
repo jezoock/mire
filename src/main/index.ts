@@ -331,8 +331,14 @@ function start(pending: PendingFiles): Running {
   });
   pluginTaggers = plugins.taggerContributors;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
+  // Palettes des plugins (P5-02) : fond de la fenêtre, et l'interface les redemande.
+  const palettesChanged = () => {
+    window.setPalettes((id) => plugins.palettes().palettes.find((p) => p.id === id) ?? null);
+    toUi('palettes:changed');
+  };
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
+    if (kinds.includes('palettes')) palettesChanged();
   });
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });
@@ -436,7 +442,9 @@ function start(pending: PendingFiles): Running {
       // Sans attendre : les installations en attente dépendent du réseau.
       void continuity.start();
     })
-    .catch((err: Error) => console.error('Plugins :', err.message));
+    .catch((err: Error) => console.error('Plugins :', err.message))
+    // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
+    .finally(palettesChanged);
 
   return {
     async onSecondInstance(paths) {

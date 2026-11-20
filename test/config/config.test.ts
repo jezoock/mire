@@ -78,11 +78,16 @@ test.describe('normalizeConfig', () => {
     assert.equal(c.tv.detected, true);
   });
 
-  test('thème et position de menu inconnus : valeurs par défaut', () => {
-    const c = normalizeConfig({ ui: { theme: 'fluo', start: 3, menu: { position: 'milieu', autohide: 'oui' } } });
+  test('palette invalide et position de menu inconnue : valeurs par défaut', () => {
+    const c = normalizeConfig({ ui: { theme: '../fluo', start: 3, menu: { position: 'milieu', autohide: 'oui' } } });
     assert.equal(c.ui.theme, 'ecran');
     assert.equal(c.ui.start, 'home');
     assert.deepEqual(c.ui.menu, { position: 'left', autohide: false });
+  });
+
+  test('palette (P5-02) : « auto » ou un identifiant, même inconnu (palette d’un plugin absent, gardée)', () => {
+    for (const v of ['auto', 'ecran', 'contraste', 'jour', 'fluo-2']) assert.equal(normalizeConfig({ ui: { theme: v } }).ui.theme, v);
+    for (const v of ['Jour', 'a b', '', 3, null, '../x']) assert.equal(normalizeConfig({ ui: { theme: v } }).ui.theme, 'ecran', String(v));
   });
 
   test('thème des pages (P4-11) : un identifiant, sinon le thème Mire', () => {

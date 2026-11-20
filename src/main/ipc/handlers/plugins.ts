@@ -49,6 +49,8 @@ export function pluginsHandlers(ctx: MainContext) {
     pluginsSetEnabled: (id, enabled) => ctx.plugins.setEnabled(id, enabled),
     pluginsSettings: () => ctx.plugins.settingsList(),
     pluginsMetadataProviders: () => ctx.plugins.metadataProviders(),
+    // Sans argument ; les données des plugins sont vérifiées par le lecteur des palettes (`plugins/palettes.ts`).
+    palettesList: () => ctx.plugins.palettes(),
     pluginsSetSetting: (id, key, value) => {
       const name = () => ctx.plugins.settingsList().find((p) => p.id === id)?.name ?? id;
       try {

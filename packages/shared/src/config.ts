@@ -12,7 +12,11 @@ export type MediaKind = 'video' | 'audio' | 'image';
 /** Barres de la mire proposées sur l'accueil. */
 export type HomeBar = 'search' | 'videos' | 'music' | 'images' | 'streaming' | 'tv' | 'games';
 
-export type Theme = 'auto' | 'ecran' | 'jour' | 'minuit' | 'velours' | 'contraste';
+/**
+ * Réglage de la palette : « Automatique », une palette du cœur ou celle d'un plugin (identifiant de palette, voir
+ * `isPaletteId`).
+ */
+export type Theme = 'auto' | 'ecran' | 'contraste' | (string & {});
 
 export type MenuPosition = 'left' | 'right' | 'top' | 'bottom';
 
