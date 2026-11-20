@@ -3168,10 +3168,10 @@ describe('Test de fumée de Mire', () => {
       await page.locator(`${VIEW} ds-toggle#set-ui-home-clock`).click();
       await waitSaved('ui.home.clock', clock);
       // Liste de choix.
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('BE');
-      await waitSaved('search.region', 'BE');
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('FR');
-      await waitSaved('search.region', 'FR');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('system');
+      await waitSaved('downloads.torrentClient', 'system');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('mire');
+      await waitSaved('downloads.torrentClient', 'mire');
       // Palette : l'aperçu porte ses propres jetons ; choisie, elle s'applique au document.
       assert.equal(await page.locator(`${VIEW} .mire-settings-view__palette[data-key="minuit"] [data-palette="minuit"]`).count(), 1);
       await palette('minuit').click();
@@ -3207,12 +3207,13 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
 
-    it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
+    it('« Où regarder » sans plugin : la Recherche propose d’en installer un (TMDB n’est plus dans le cœur, P5-15)', async () => {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
       await page.locator('#view mire-search-view .mire-search-view__input').fill('démonstration');
-      const add = page.locator('#view mire-search-view ds-trigger[action="addKey"].hydrated');
-      await add.click();
-      await page.waitForFunction(() => document.body.dataset.section === 'settings' && document.activeElement?.id === 'set-search-tmdbToken');
+      await page.waitForFunction(() =>
+        document.querySelector('#view mire-search-view [data-group="watch"] .mire-search-view__note')?.textContent?.includes('plugin « Où regarder »'),
+      );
+      assert.equal(await page.locator('#view mire-search-view ds-trigger[action="addKey"]').count(), 0);
       assert.deepEqual(errors, []);
     });
 
