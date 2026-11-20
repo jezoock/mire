@@ -113,7 +113,7 @@ Fiches dans `phase-3.md`.
 | P3-06 | Dépôt `mire-addons` : structure et publication | M | P3-01 | 🧑 | faite | [mire-addons#1](https://github.com/jezoock/mire-addons/pull/1) |
 | P3-07 | Client des dépôts | L | P3-05, P3-06 |  | faite | [#95](https://github.com/jezoock/mire/pull/95) |
 | P3-08 | Dépôts tiers et confiance | M | P3-07 |  | faite | [#97](https://github.com/jezoock/mire/pull/97) |
-| **G4** | **Point d'étape : fin de la phase 3 (hôte isolé, SDK, publication)** | | P3-01…P3-08 | | | |
+| **G4** | **Point d'étape : fin de la phase 3 (hôte isolé, SDK, publication)** — ✅ validé le 19/11/2026 (🧑 vérification de la sandbox de l'hôte isolé sur une vraie machine encore à faire) | | P3-01…P3-08 | | | |
 
 ## Phase 4 — Interface : dot-stash, explorateur et thèmes
 
@@ -177,7 +177,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
-| P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | à faire | |
+| P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | faite | [#98](https://github.com/jezoock/mire/pull/98) |
 | P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | à faire | |
 | P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | à faire | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | à faire | |

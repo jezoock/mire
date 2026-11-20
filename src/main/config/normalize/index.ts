@@ -15,6 +15,7 @@ import { normalizeUi } from './ui.ts';
 import { normalizeWeb } from './web.ts';
 import { normalizeCatalogSettings } from '../../catalog/tags/file-rules.ts';
 import { normalizePluginSettings } from '../../plugins/settings.ts';
+import { normalizeContinuityQueue } from '../migrations/continuity.ts';
 
 export function normalizeConfig(raw: unknown): Config {
   const src: Loose = isObjectLike(raw) ? raw : {};
@@ -40,6 +41,10 @@ export function normalizeConfig(raw: unknown): Config {
   // Réglages des plugins (P3-04) : de même, absents tant qu'aucun n'a été changé.
   if (src.plugins !== undefined) c.plugins = normalizePluginSettings(src.plugins);
   else delete c.plugins;
+  // Règles de continuité appliquées par la migration v10, en attente du service de continuité (P5-01).
+  const queue = normalizeContinuityQueue(src.continuity);
+  if (queue.length) c.continuity = queue;
+  else delete c.continuity;
   // Ancien réglage de la télévision (avant la v5), repris par la migration.
   delete c.freebox;
   return c as Config;

@@ -189,7 +189,7 @@ test.describe('migrateConfig', () => {
     return res;
   };
 
-  for (const v of [1, 2, 3, 4, 5, 8]) {
+  for (const v of [1, 2, 3, 4, 5, 8, 9]) {
     test(`version ${v} : résultat figé`, () => {
       const { config, from, changed } = migrate(readFixture(`config-v${v}.json`));
       assert.equal(from, v);
@@ -210,7 +210,7 @@ test.describe('migrateConfig', () => {
   test('registre : une étape par version, dans l’ordre, jusqu’à la version courante', () => {
     assert.deepEqual(
       MIGRATIONS.map((m) => m.version),
-      [2, 3, 4, 5, 6, 7, 8, 9],
+      [2, 3, 4, 5, 6, 7, 8, 9, 10],
     );
     assert.equal(MIGRATIONS.at(-1)?.version, CONFIG_VERSION);
   });
@@ -236,7 +236,7 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'recent' },
     ]);
     delete out.ui.home.rows;
-    assert.deepEqual(out, { ...v8(), version: 9 });
+    assert.deepEqual(out, { ...v8(), version: CONFIG_VERSION });
   });
 
   test('l’interface historique retrouve ses réglages (accueil, menu, page de démarrage)', () => {

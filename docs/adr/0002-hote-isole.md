@@ -1,6 +1,6 @@
 # ADR 0002 — Hôte isolé des plugins de code limité
 
-- **État** : proposée (à relire au point G4).
+- **État** : acceptée au point G4 (19/11/2026) ; 🧑 vérification de la sandbox sur une vraie machine encore à faire.
 - **Contexte** : décisions D-07 et D-18 (`docs/analyse/ANALYSE.md` § 10), architecture cible (« Niveaux de sécurité
   et exécution », « Sécurité »), tâche P3-02. Electron 44.9.3 (castLabs), Chromium 152, Node 24.22.
 

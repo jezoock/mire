@@ -266,7 +266,7 @@ export function createRepoClient(opts: RepoClientOptions) {
   const repositoryName = (id: string): string => repositoriesInfo().find((r) => r.id === id)?.name ?? id;
 
   /** Installe `id` (dans la plage `range`, depuis `repository`) et ses dépendances, en transaction. */
-  async function run(id: string, range: string, repository: string | null): Promise<PluginsOutcome> {
+  async function run(id: string, range: string, repository: string | null, officialOnly = false): Promise<PluginsOutcome> {
     if (busy) return failure(new RepoError('busy', 'An installation is already running.'), id);
     busy = true;
     const prepared: { item: InstallItem; staging: string }[] = [];
@@ -274,6 +274,10 @@ export function createRepoClient(opts: RepoClientOptions) {
     try {
       progress({ id, phase: 'resolve' });
       const items = plan(id, range, repository);
+      // Continuité (P5-01) : rien d'un dépôt tiers, pas même une dépendance.
+      const outside = officialOnly ? items.find((i) => !i.official) : undefined;
+      if (outside?.id === id) throw new RepoError('unknown', `${id}: not in the official repository.`);
+      if (outside) throw new RepoError('dependency', `${outside.id}: not from the official repository.`, { dependency: outside.id });
       const { missing, carried } = consents(items);
       if (missing.length) throw new ConsentError(missing);
       for (const item of items) {
@@ -449,6 +453,12 @@ export function createRepoClient(opts: RepoClientOptions) {
 
     /** Installe un plugin (une version précise, ou la plus récente compatible) avec ses dépendances. */
     install: (id: string, version?: string, repository?: string): Promise<PluginsOutcome> => run(id, version ?? '*', repository ?? null),
+
+    /**
+     * Installe un plugin et ses dépendances depuis le dépôt officiel seulement (continuité, P5-01) : même transaction,
+     * mêmes vérifications que `install`.
+     */
+    installOfficial: (id: string): Promise<PluginsOutcome> => run(id, '*', OFFICIAL, true),
 
     /** Met à jour un plugin installé vers la plus récente version compatible de son dépôt. */
     async update(id: string): Promise<PluginsOutcome> {

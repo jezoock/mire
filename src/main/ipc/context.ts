@@ -20,6 +20,7 @@ import type { UsageService } from '../usage/index.ts';
 import type { WebManager } from '../web/index.ts';
 import type { PluginService } from '../plugins/service.ts';
 import type { RepoClient } from '../repos/client.ts';
+import type { Continuity } from '../plugins/continuity.ts';
 
 // Fonction d'un service, passée telle quelle (types encore larges).
 type Fn = (...args: any[]) => any;
@@ -75,6 +76,8 @@ export interface MainContext {
     | 'addRepository'
     | 'removeRepository'
   >;
+  /** Continuité pour les installations existantes (P5-01) : récapitulatif, reprise après la mise à jour des index. */
+  readonly continuity: Pick<Continuity, 'summary' | 'seen' | 'afterRefresh'>;
 
   // Lus (et écrits) au moment de l'appel.
   readonly mainWindow: any;

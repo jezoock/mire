@@ -321,7 +321,8 @@ dont `index-file.ts` et `tar.ts` reproduisent la vérification de référence (m
 - **Dépôts configurés** : pour l'instant le seul dépôt officiel (`official.ts`), dont la clé publique ed25519 est
   intégrée à Mire à cet endroit seulement (empreinte vérifiée par `test/repos/index-file.test.ts`). Les dépôts tiers
   viendront avec P3-08, par le même code.
-- **Index** (`repositories.ts`) : téléchargé à la demande (`reposRefresh` ; rien au démarrage), `https:` seulement,
+- **Index** (`repositories.ts`) : téléchargé à la demande (`reposRefresh` ; rien au démarrage, sauf installation de
+  la continuité en attente, voir plus bas), `https:` seulement,
   redirections comprises, 8 Mo et 30 s au plus ; signature vérifiée avec la clé du dépôt, puis la structure (préfixe
   `mire.` refusé hors du dépôt officiel). Gardé tel quel dans `userData/repos/<dépôt>/index.json` et vérifié de nouveau
   à chaque lecture ; un index plus ancien que celui du cache est refusé. Sans réseau, le cache sert.
@@ -338,6 +339,15 @@ dont `index-file.ts` et `tar.ts` reproduisent la vérification de référence (m
 - **API** : `reposList`, `reposRefresh`, `reposPlugins` (disponibles, version installée, mise à jour, niveau,
   permissions, dépendances), `pluginsInstall`, `pluginsUpdate`, `pluginsUninstall`, événement `plugins:progress`.
   Une opération à la fois. Erreurs : code stable et message `repos.errors.<code>`.
+- **Continuité** (P5-01, `src/main/plugins/continuity.ts`) : reprend les règles notées par la migration v10 (ou
+  par l'import d'un fichier ancien), une fois l'hôte de plugins démarré. Plugin inclus : activé. Plugin à installer :
+  en attente dans `userData/plugins/continuity.json`, installé par `installOfficial` (dépôt officiel seulement, même
+  transaction et mêmes vérifications que `pluginsInstall`) dès que l'index officiel se lit en ligne : au démarrage,
+  sans le retarder (seul accès réseau aux dépôts sans demande de l'interface, et seulement s'il reste une installation
+  en attente), ou après `reposRefresh`. Hors ligne : en attente sans compter d'essai. Raison définitive (introuvable,
+  aucune version compatible, dépendance, refusé, manifeste) ou `MAX_ATTEMPTS` échecs passagers : impossible, avec la
+  raison. API `pluginsContinuity` (récapitulatif et message de ce qui a changé), `pluginsContinuitySeen`, événement
+  `plugins:continuity-changed` ; l'interface historique montre le message dans un toast.
 
 ## Contrat IPC
 
@@ -677,6 +687,7 @@ reçoivent le dossier de données (`dataDir`) et en tirent leurs chemins par cet
 | `plugins/<id>/origin.json` | Dépôt qui a installé le plugin : `{ repository, version, sha256, installedAt }` | `src/main/repos/installer.ts` |
 | `repos/<dépôt>/index.json` | Dernier index vérifié de chaque dépôt (octets reçus), pour le hors ligne | `src/main/repos/repositories.ts` |
 | `plugins/state.json` | État des plugins : activé ou non, erreur qui a fait désactiver, dossiers accordés, version d'un plugin inclus installée (`{ version, plugins: { <id>: { enabled, fault?, folders?, bundled? } } }`) ; absent tant que rien n'a changé et qu'aucun plugin n'est inclus | hôte de plugins (`src/main/plugins/state.ts`), stockage JSON |
+| `plugins/continuity.json` | Continuité (P5-01) : plugins qui reprennent des fonctions d'une installation existante, état (`pending`, `installed`, `failed`), raison, essais, dernier état montré (`{ version, plugins: { <id>: { mode, rules, status, reason?, attempts, seen? } } }`) ; absent tant qu'aucune règle ne s'est appliquée | `src/main/plugins/continuity.ts`, stockage JSON |
 | `plugin-data/<id>/storage.json` | Stockage d'un plugin (`ctx.storage`) : `{ version, values }` | `src/main/plugins/plugin-storage.ts`, stockage JSON (écriture différée) |
 | `plugins/logs/<id>.log` | Journal de chaque plugin (son `ctx.log`, refus, pannes), 256 Ko au plus puis `<id>.log.1` | `src/main/plugins/journal.ts` |
 | `bin/7za` | Copie exécutable de 7-Zip, quand l'original ne peut pas l'être (application empaquetée) | service d'archives (`src/main/archive/`) |
@@ -1018,7 +1029,7 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
 
 - `defaults.ts` (`DEFAULT_CONFIG`, valeurs admises) et `catalogs/` (`DEFAULT_TV`, `DEFAULT_WEB` : données, futur
   contenu d'addons) ;
-- `migrations/` : une étape par version (`v2.ts` … `v9.ts`) et leur registre ; `migrate(brut)` rend
+- `migrations/` : une étape par version (`v2.ts` … `v10.ts`) et leur registre ; `migrate(brut)` rend
   `{ config, from, changed }`. Nouvelle version : ajouter `vN.ts`, l'inscrire dans `MIGRATIONS`, monter
   `CONFIG_VERSION` ;
 - v9 (P2-11, sections → pages) : les pages prêtes à l'emploi reprennent les sections de la v8 telles quelles (toutes
@@ -1029,6 +1040,12 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
   `web:<id>` ; `recent` ; `page` ; `list`). `ui.home.clock`, `recent`, `bars`, `services` et `ui.start` restent en
   place pour l'interface historique ; une configuration sans rangées (installation neuve) reçoit celles qu'on tire de
   ces réglages. Les réglages qui iront aux plugins ne bougent pas (P5-01) ;
+- v10 (P5-01, continuité) : la table `CONTINUITY_RULES` de `migrations/continuity.ts` dit, pour chaque fonction
+  devenue un plugin, quand une configuration s'en sert, quel plugin du dépôt officiel la reprend (inclus : activé ;
+  à installer : mis en attente) et quels réglages déplacer sous `plugins.<id>`. Les règles appliquées sont notées dans
+  `continuity` (identifiants de règles seulement), que le service de continuité reprend puis efface (voir « Dépôts de
+  plugins »). **Chaque tâche P5-xx ajoute sa règle** (mode d'emploi en tête de `continuity.ts`) et son test dans
+  `test/config/continuity.test.ts` ; la table est vide tant qu'aucune fonction n'est extraite ;
 - `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète. La
   section `catalog` (règles par extension du moteur de tags, P2-04) est facultative : absente, elle n'est pas ajoutée ;
 - `merge.ts` : import « compléter » ;
