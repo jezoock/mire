@@ -150,6 +150,8 @@ export interface CentreLabels {
   reposRemove?: string;
   reposNone?: string;
   reposLoading?: string;
+  continuity?: string;
+  continuityHelp?: string;
   consolesHelp?: string;
   newConsole?: string;
   noConsoles?: string;

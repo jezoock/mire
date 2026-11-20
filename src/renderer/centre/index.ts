@@ -87,6 +87,8 @@ const LABEL_KEYS: Record<keyof CentreLabels, string> = {
   reposRemove: 'repos.remove',
   reposNone: 'repos.none',
   reposLoading: 'repos.loading',
+  continuity: 'plugins.continuity.title',
+  continuityHelp: 'plugins.continuity.help',
   consolesHelp: 'consoles.help',
   newConsole: 'consoles.new',
   noConsoles: 'consoles.none',

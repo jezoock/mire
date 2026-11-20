@@ -1357,6 +1357,14 @@
           "refused": "Mire a refusé cette demande.",
           "failed": "L’opération n’a pas abouti.",
           "gone": "Ce plugin n’est plus dans les listes."
+        },
+        "continuity": {
+          "title": "Fonctions reprises par des plugins",
+          "help": "Des fonctions que vous utilisiez avant cette version de Mire sont maintenant des plugins.",
+          "installed": "« {name} » : installé.",
+          "bundled": "« {name} » : activé (livré avec Mire).",
+          "pending": "« {name} » : sera installé dès que la connexion le permettra.",
+          "failed": "« {name} » : impossible."
         }
       },
       "repos": {

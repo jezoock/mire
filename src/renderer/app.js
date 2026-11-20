@@ -2396,9 +2396,14 @@ api.onStoreProgress((p) => {
 /* Plugins et dépôts (vue : Centre, P4-19) */
 
 async function loadPlugins() {
-  const [installed, available, repos] = await Promise.all([api.pluginsList(), api.reposPlugins(), api.reposList()]);
+  const [installed, available, repos, continuity] = await Promise.all([
+    api.pluginsList(),
+    api.reposPlugins(),
+    api.reposList(),
+    api.pluginsContinuity().catch(() => null),
+  ]);
   const list = (x) => (Array.isArray(x) ? x : []);
-  S.plugins = { installed: list(installed), available: list(available), repos: list(repos) };
+  S.plugins = { installed: list(installed), available: list(available), repos: list(repos), continuity: list(continuity?.items) };
   if (S.section === CENTRE_VIEW) centre.refresh();
 }
 
@@ -2679,6 +2684,12 @@ function tick() {
     api.pluginsContinuitySeen().catch(() => {});
   };
   api.onPluginsContinuity(continuityNotice);
+  // Le récapitulatif est aussi montré dans le Centre (onglet Plugins, P4-19).
+  api.onPluginsContinuity((s) => {
+    if (!S.plugins || !Array.isArray(s?.items)) return;
+    S.plugins.continuity = s.items;
+    if (S.section === CENTRE_VIEW) centre.refresh();
+  });
   api.pluginsContinuity().then(continuityNotice).catch(() => {});
   tick();
   setInterval(tick, 5000);

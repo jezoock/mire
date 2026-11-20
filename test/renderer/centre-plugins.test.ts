@@ -7,6 +7,7 @@ import type { AvailablePlugin, PluginSummary, RepositoryInfo } from '@mire/share
 import { groupFingerprint, offerKey } from '@mire/ui/utils';
 import {
   consentHelp,
+  continuityLines,
   contributesLines,
   levelText,
   permissionLines,
@@ -285,6 +286,27 @@ describe('Centre (P4-19) : fiche d’un plugin', () => {
     assert.equal(s.desc, '<b>Pas du HTML</b>');
     assert.equal(pluginSheet('inconnu', state(), fr), null);
     assert.equal(pluginSheet(null, state(), fr), null);
+  });
+});
+
+describe('Centre (P4-19) : récapitulatif de la continuité (P5-01)', () => {
+  it('une ligne par fonction reprise ; la raison d’une reprise impossible ; rien sans récapitulatif', () => {
+    const lines = continuityLines(
+      [
+        { plugin: 'mire.a', name: 'A', bundled: true, status: 'installed', reason: null },
+        { plugin: 'mire.b', name: 'B', bundled: false, status: 'installed', reason: null },
+        { plugin: 'mire.c', name: 'C', bundled: false, status: 'pending', reason: null },
+        { plugin: 'mire.d', name: 'D', bundled: true, status: 'failed', reason: 'Absent.' },
+      ],
+      fr.t,
+    );
+    assert.deepEqual(lines, [
+      { text: '« A » : activé (livré avec Mire).', sensitive: false },
+      { text: '« B » : installé.', sensitive: false },
+      { text: '« C » : sera installé dès que la connexion le permettra.', sensitive: false },
+      { text: '« D » : impossible. Absent.', sensitive: true },
+    ]);
+    assert.deepEqual(pluginsView(state(), fr)!.continuity, []);
   });
 });
 

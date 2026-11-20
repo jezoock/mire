@@ -366,5 +366,9 @@
       color: var(--bar-yellow);
       font-weight: 700;
     }
+
+    .--failed {
+      color: var(--bar-red);
+    }
   }
 }

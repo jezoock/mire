@@ -7,7 +7,7 @@
  * Les noms, descriptions, hôtes et adresses viennent d'un index ou d'un manifeste : ils restent des textes (la vue ne
  * les interprète jamais comme du HTML) et aucun n'est rendu en lien ni en image.
  */
-import type { AvailablePlugin, PluginConsentRequest, PluginSummary, PluginsProgress, RepositoryInfo } from '@mire/shared/ipc';
+import type { AvailablePlugin, ContinuityItem, PluginConsentRequest, PluginSummary, PluginsProgress, RepositoryInfo } from '@mire/shared/ipc';
 import type { AppProgress, PluginAction, PluginButton, PluginCard, PluginLine, PluginSheet, PluginsView, RepoCard, ReposView } from '@mire/ui/utils';
 import { actionArgs, groupFingerprint, offerKey } from '@mire/ui/utils';
 import { formatBytes } from './model.ts';
@@ -21,6 +21,8 @@ export interface PluginsState {
   progress: Readonly<Record<string, PluginsProgress>>;
   /** Clé de la fiche ouverte (`offerKey` d'un plugin proposé, identifiant d'un plugin présent), ou `null`. */
   sheet: string | null;
+  /** Récapitulatif de la continuité (P5-01), s'il est lu. */
+  continuity?: readonly ContinuityItem[];
 }
 
 type Level = PluginSummary['level'];
@@ -316,8 +318,18 @@ export function pluginsView(s: PluginsState | null, w: Writer): PluginsView | nu
       offers.map((o) => offerCard(o, s, w)),
       w.lang,
     ),
+    continuity: continuityLines(s.continuity ?? [], w.t),
     sheet: pluginSheet(s.sheet, s, w),
   };
+}
+
+/** Récapitulatif de la continuité (P5-01) : « Nom : activé », « en attente de connexion », « impossible (raison) ». */
+export function continuityLines(items: readonly ContinuityItem[], t: Translate): PluginLine[] {
+  return items.map((i) => {
+    const state = i.status === 'installed' ? (i.bundled ? 'bundled' : 'installed') : i.status;
+    const text = k(t, `continuity.${state}`, { name: i.name });
+    return { text: i.status === 'failed' && i.reason ? `${text} ${i.reason}` : text, sensitive: i.status === 'failed' };
+  });
 }
 
 /** Date de la liste des plugins d'un dépôt. */

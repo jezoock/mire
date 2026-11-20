@@ -7,6 +7,7 @@
  */
 import type {
   AvailablePlugin,
+  ContinuityItem,
   DownloadItem,
   MediaItem,
   MireConfig,
@@ -88,7 +89,7 @@ export interface State {
   storeProgress: Dict<StoreProgress>;
   raPick: Set<string>;
   /** Plugins et dépôts du Centre (P4-19) : copies des listes du processus principal, `null` tant qu'elles ne sont pas lues. */
-  plugins: { installed: PluginSummary[]; available: AvailablePlugin[]; repos: RepositoryInfo[] } | null;
+  plugins: { installed: PluginSummary[]; available: AvailablePlugin[]; repos: RepositoryInfo[]; continuity?: ContinuityItem[] } | null;
   /** Avancement des installations de plugins, par plugin demandé. */
   pluginProgress: Dict<PluginsProgress>;
   /** Fiche de plugin ouverte dans le Centre : sa clé, ou `null` (les listes). */

@@ -73,6 +73,9 @@ export interface PluginsView {
   updates: PluginCard[];
   installed: PluginCard[];
   available: PluginCard[];
+  /** Fonctions d'une installation existante reprises par des plugins (P5-01) : une ligne chacune, `sensitive` si
+   *  la reprise est impossible. Vide : la partie n'est pas montrée. */
+  continuity: PluginLine[];
   sheet: PluginSheet | null;
 }
 

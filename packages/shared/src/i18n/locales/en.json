@@ -1357,6 +1357,14 @@
           "refused": "Mire refused this request.",
           "failed": "This did not work.",
           "gone": "This plugin is no longer in the lists."
+        },
+        "continuity": {
+          "title": "Features taken over by plugins",
+          "help": "Features you used before this version of Mire are now plugins.",
+          "installed": "“{name}”: installed.",
+          "bundled": "“{name}”: turned on (comes with Mire).",
+          "pending": "“{name}”: will be installed as soon as the connection allows.",
+          "failed": "“{name}”: not possible."
         }
       },
       "repos": {

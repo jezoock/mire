@@ -166,6 +166,17 @@ export function renderPlugins(v: PluginsView | null, l: CentreLabels) {
     v.updates.length > 0 && group('updates', l.updates, v.updates, ''),
     group('installed', l.installed, v.installed, l.noInstalled),
     group('available', l.available, v.available, l.noAvailable),
+    v.continuity.length > 0 && (
+      <section class="mire-centre-view__group" data-group="continuity">
+        <h2 class="mire-centre-view__heading">{l.continuity}</h2>
+        <p class="mire-centre-view__help">{l.continuityHelp}</p>
+        <ul class="mire-centre-view__sheet-list">
+          {v.continuity.map((i) => (
+            <li class={{ '--failed': i.sensitive }}>{i.text}</li>
+          ))}
+        </ul>
+      </section>
+    ),
   ];
 }
 
