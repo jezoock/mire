@@ -17,8 +17,8 @@ import type { Data } from './types.ts';
 const destOf = (consoleId: string) => (consoleId === '' ? {} : { console: consoleId });
 
 /** Focus après le rendu (P4-19) : le bouton « Retour » d'une fiche, le bouton « Voir la fiche » d'une carte. */
-const SHEET_BACK = '.mire-centre-view__sheet-back button';
-const openButtonOf = (key: string) => `.mire-centre-view__plugin[data-key="${key.replace(/["\\]/g, '')}"] .--openPlugin button`;
+const SHEET_BACK = 'ds-trigger.mire-centre-view__sheet-back';
+const openButtonOf = (key: string) => `.mire-centre-view__plugin[data-key="${key.replace(/["\\]/g, '')}"] ds-trigger.--openPlugin`;
 
 /**
  * `mire-centre` (P4-18) : onglets du Centre, téléchargements (ajouter un lien ou un .torrent, suivre, annuler), apps

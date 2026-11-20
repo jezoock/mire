@@ -1877,7 +1877,7 @@ describe('Test de fumée de Mire', () => {
       await settle();
       await shot('centre-plugins');
       // Fiche : ouverte par Entrée sur « Voir la fiche », le focus sur « Retour aux plugins ».
-      await card.locator('ds-trigger.--openPlugin.hydrated button').focus();
+      await card.locator('ds-trigger.--openPlugin.hydrated').focus();
       await page.keyboard.press('Enter');
       const sheet = page.locator(`${VIEW} .mire-centre-view__sheet[data-key="mire.exemple.inclus"]`);
       await sheet.waitFor();

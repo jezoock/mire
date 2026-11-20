@@ -408,8 +408,8 @@ describe('Centre (P4-19) : contrôleur, plugins', () => {
     centre.closePlugin();
     assert.equal(S.pluginSheet, null);
     assert.deepEqual(calls, [
-      ['ui.refreshCentre', '.mire-centre-view__sheet-back button'],
-      ['ui.refreshCentre', '.mire-centre-view__plugin[data-key="repo-1/org.tiers.outil"] .--openPlugin button'],
+      ['ui.refreshCentre', 'ds-trigger.mire-centre-view__sheet-back'],
+      ['ui.refreshCentre', '.mire-centre-view__plugin[data-key="repo-1/org.tiers.outil"] ds-trigger.--openPlugin'],
     ]);
   });
 
