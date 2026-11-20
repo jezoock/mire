@@ -43,10 +43,30 @@ test.describe('migration v10 (P5-01)', () => {
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
-    assert.deepEqual(config, { ...v9, version: CONFIG_VERSION });
+    // Seule la file `continuity` s'ajoute (règles de la table livrée qui s'appliquent) : aucun réglage perdu.
+    const { continuity, ...rest } = config as Any;
+    assert.deepEqual(rest, { ...v9, version: CONFIG_VERSION });
+    const { continuity: _queue, ...normalized } = normalizeConfig(config) as Any;
     // Normalisée, elle reste celle de la v9 (réglages des plugins compris, secret gardé).
-    assert.deepEqual(normalizeConfig(config), { ...normalizeConfig(v9), version: CONFIG_VERSION });
-    assert.equal((config as Any).continuity, undefined);
+    assert.deepEqual(normalized, { ...normalizeConfig(v9), version: CONFIG_VERSION });
+    assert.ok(Array.isArray(continuity));
+  });
+
+  test('P5-04 : les trois profils de manettes, plugins inclus, pour toute installation existante', () => {
+    const ids = ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo'];
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const id of ids) assert.ok((config as Any).continuity.includes(id), id);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => ids.includes(r.id));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      [
+        ['mire.gamepad.xbox', 'bundled', []],
+        ['mire.gamepad.playstation', 'bundled', []],
+        ['mire.gamepad.nintendo', 'bundled', []],
+      ],
+    );
   });
 
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {

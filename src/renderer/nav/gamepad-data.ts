@@ -1,39 +1,62 @@
 /**
- * Manette (API Gamepad), en données : familles reconnues, libellés des boutons, rappel des commandes,
- * et correspondance bouton → touche selon le contexte. Sans DOM : testé tel quel.
+ * Manette (API Gamepad), en données : reconnaissance par les profils des plugins (`gamepads`, P5-04) et profil
+ * générique, rappel des commandes, et correspondance bouton → touche selon le contexte. Sans DOM : testé tel quel.
  * Croix ou stick gauche, A valider, B retour, Start lecture/pause, LB/RB précédent/suivant.
  */
 import { isRescueCombo } from '@mire/shared';
+import type { GamepadGlyphButton, GamepadProfile } from '@mire/shared/ipc';
 
-export type PadFamily = 'xbox' | 'ps' | 'nintendo';
 export type PadButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select' | 'start' | 'home';
 export type PadContext = 'dialog' | 'video' | 'image' | 'web' | 'list' | 'columns';
 export type PadState = Record<PadButton, boolean>;
+type GlyphButton = GamepadGlyphButton;
 
-/** Familles reconnues d'après l'identifiant annoncé par la manette, dans l'ordre de priorité ; Xbox par défaut. */
-export const PAD_FAMILIES: ReadonlyArray<{ family: PadFamily; match: RegExp }> = [
-  { family: 'xbox', match: /xbox|xinput|045e/ },
-  // Les manettes Sony s'annoncent souvent comme « Wireless Controller … Vendor: 054c ».
-  { family: 'ps', match: /054c|playstation|dualsense|dualshock|^wireless controller/ },
-  { family: 'nintendo', match: /057e|nintendo|switch|pro controller|joy-con/ },
-];
+/**
+ * Profil générique du cœur : une manette qu'aucun profil de plugin ne reconnaît (ou dont la famille est désactivée)
+ * reste utilisable, avec les libellés de la disposition standard. Un bouton qui porte un mot plutôt qu'un symbole est
+ * donné par sa clé des catalogues, traduite à l'affichage.
+ */
+export const GENERIC_PROFILE: Readonly<GamepadProfile> = {
+  id: 'generic',
+  name: '',
+  match: [],
+  priority: 100,
+  glyphs: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', select: 'shell.pad.buttons.select' },
+};
 
-export function padFamily(id: unknown): PadFamily {
-  const s = String(id || '').toLowerCase();
-  return PAD_FAMILIES.find((f) => f.match.test(s))?.family ?? 'xbox';
+/** Profil prêt à reconnaître une manette : motifs compilés (une expression invalide est ignorée). */
+export interface PadMatcher {
+  profile: GamepadProfile;
+  patterns: RegExp[];
 }
 
-export const PAD_NAMES: Readonly<Record<PadFamily, string>> = { xbox: 'Xbox', ps: 'PlayStation', nintendo: 'Nintendo' };
+// Identifiant annoncé par la manette : borné avant d'y chercher les motifs.
+const MAX_PAD_ID = 256;
 
-type GlyphButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select';
+/** Compile les motifs des profils des plugins, dans leur ordre d'essai ; un profil sans motif valide est écarté. */
+export function padMatchers(profiles: readonly GamepadProfile[]): PadMatcher[] {
+  return profiles.flatMap((profile) => {
+    const patterns = (Array.isArray(profile?.match) ? profile.match : []).flatMap((p) => {
+      try {
+        return [new RegExp(p, 'i')];
+      } catch {
+        return [];
+      }
+    });
+    return patterns.length ? [{ profile, patterns }] : [];
+  });
+}
 
-// Libellés des boutons par famille (selon leur position : en bas = valider, à droite = retour…). Un bouton qui porte un
-// mot plutôt qu'un symbole est donné par sa clé des catalogues (`shell.pad.buttons.…`), traduite à l'affichage.
-export const PAD_GLYPHS: Readonly<Record<PadFamily, Readonly<Record<GlyphButton, string>>>> = {
-  xbox: { a: 'A', b: 'B', x: 'X', y: 'Y', lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT', select: 'shell.pad.buttons.view' },
-  ps: { a: '✕', b: '○', x: '□', y: '△', lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2', select: 'shell.pad.buttons.create' },
-  nintendo: { a: 'B', b: 'A', x: 'Y', y: 'X', lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR', select: '−' },
-};
+/** Profil de la manette d'après l'identifiant qu'elle annonce : le premier qui la reconnaît, sinon le générique. */
+export function padProfile(id: unknown, matchers: readonly PadMatcher[]): GamepadProfile {
+  const s = String(id || '').slice(0, MAX_PAD_ID);
+  return matchers.find((m) => m.patterns.some((re) => re.test(s)))?.profile ?? GENERIC_PROFILE;
+}
+
+/** Libellés des boutons d'un profil : les siens, complétés par ceux du profil générique. */
+export function padGlyphs(profile: GamepadProfile): Readonly<Record<GlyphButton, string>> {
+  return { ...(GENERIC_PROFILE.glyphs as Record<GlyphButton, string>), ...profile.glyphs };
+}
 
 const LIST_HINTS: ReadonlyArray<readonly [string, string]> = [
   ['a', 'open'],
@@ -70,17 +93,17 @@ export const PAD_HINTS: Readonly<Partial<Record<PadContext, ReadonlyArray<readon
   ],
 };
 
-/** Vrai si le libellé d'un bouton est une clé des catalogues, à traduire. */
-export const isGlyphKey = (glyph: string): boolean => glyph.startsWith('shell.pad.buttons.');
+/** Vrai si le libellé d'un bouton est une clé des catalogues (du cœur ou d'un plugin), à traduire. */
+export const isGlyphKey = (glyph: string): boolean => glyph.startsWith('shell.pad.buttons.') || glyph.startsWith('pluginTexts.');
 
 /**
- * Aide de la manette pour ce contexte et cette famille : libellés des boutons et clé du texte (`shell.pad.<clé>`),
+ * Aide de la manette pour ce contexte et ce profil : libellés des boutons et clé du texte (`shell.pad.<clé>`),
  * à traduire ; `null` si le contexte n'a pas de rappel.
  */
-export function padHints(ctx: string, family: PadFamily): { glyphs: string[]; key: string }[] | null {
+export function padHints(ctx: string, profile: GamepadProfile = GENERIC_PROFILE): { glyphs: string[]; key: string }[] | null {
   const hints = PAD_HINTS[ctx as PadContext];
   if (!hints) return null;
-  const g = PAD_GLYPHS[family] as Record<string, string>;
+  const g = padGlyphs(profile) as Record<string, string>;
   return hints.map(([btns, key]) => ({ glyphs: btns.split(' ').map((b) => g[b] as string), key: `shell.pad.${key}` }));
 }
 

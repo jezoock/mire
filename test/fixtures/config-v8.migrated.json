@@ -1,6 +1,5 @@
 {
   "raw": {
-    "continuity": ["P5-02-minuit"],
     "version": 10,
     "library": {
       "sources": [
@@ -215,7 +214,8 @@
         ".mkv": ["video", "anime"]
       },
       "metadataProviders": ["tmdb"]
-    }
+    },
+    "continuity": ["P5-04-xbox", "P5-04-playstation", "P5-04-nintendo", "P5-02-minuit"]
   },
   "changed": true
 }
