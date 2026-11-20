@@ -114,8 +114,6 @@
       "language": "en"
     },
     "search": {
-      "tmdbToken": "jeton-tmdb",
-      "region": "BE",
       "language": "en-US"
     },
     "scrape": {
@@ -224,8 +222,17 @@
           "$secret": "Y2hpZmZyw6k=",
           "encrypted": true
         }
+      },
+      "mire.tmdb": {
+        "token": {
+          "$secret": "jeton-tmdb",
+          "encrypted": false
+        },
+        "region": "be",
+        "language": "en-US"
       }
-    }
+    },
+    "continuity": ["P5-15"]
   },
   "changed": true
 }
