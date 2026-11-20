@@ -1945,8 +1945,8 @@ describe('Test de fumée de Mire', () => {
         ['watch', []],
         ['sites', ['Arte', 'Radio France']],
       ]);
-      // Sans clé TMDB, « Où regarder » propose de l'ajouter.
-      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'Ajoutez une clé TMDB' }).waitFor();
+      // Sans plugin « Où regarder » (TMDB est un plugin à installer, P5-15), la Recherche propose d'en installer un.
+      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'plugin « Où regarder »' }).waitFor();
       // Les chaînes entrent au catalogue quand leur liste est lue : la Recherche les trouve.
       await searchFor('chaîne', 'tv');
       assert.deepEqual((await shown())[0], ['tv', ['Chaîne Deux', 'Chaîne Trois', 'Chaîne Une']]);
@@ -3204,16 +3204,6 @@ describe('Test de fumée de Mire', () => {
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
       await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="tmdb"] button`).first().click();
       await waitSaved('catalog.metadataProviders', ['tmdb', 'musicbrainz', 'libretro', 'steam']);
-      assert.deepEqual(errors, []);
-    });
-
-    it('« Où regarder » sans plugin : la Recherche propose d’en installer un (TMDB n’est plus dans le cœur, P5-15)', async () => {
-      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
-      await page.locator('#view mire-search-view .mire-search-view__input').fill('démonstration');
-      await page.waitForFunction(() =>
-        document.querySelector('#view mire-search-view [data-group="watch"] .mire-search-view__note')?.textContent?.includes('plugin « Où regarder »'),
-      );
-      assert.equal(await page.locator('#view mire-search-view ds-trigger[action="addKey"]').count(), 0);
       assert.deepEqual(errors, []);
     });
 
