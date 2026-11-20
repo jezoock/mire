@@ -21,6 +21,8 @@
 .mire-pick__help {
   margin: 0 0 ds-spacing(4);
   color: ds-color(gray, dark);
+  // Une aide de plusieurs lignes (accord pour un plugin, empreinte d'un dépôt, P4-19) garde ses retours à la ligne.
+  white-space: pre-line;
 }
 
 .mire-form__fields {

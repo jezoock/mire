@@ -13,7 +13,7 @@ import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
 import { focusSelectorOf } from './nav/spatial.ts';
-import { focusFirst } from './nav/focus.ts';
+import { focusFirst, restoreFocus } from './nav/focus.ts';
 import { pendingFocusDue } from './nav/targets.ts';
 import { initKeyboard } from './nav/keyboard.ts';
 import { initGamepad, startGamepad } from './nav/gamepad.ts';
@@ -122,10 +122,16 @@ const centre = createCentre({
   loadCatalog: () => loadCatalog(),
   apps: () => ({ picks: S.raPick, progress: S.storeProgress, consoles: S.config?.emulators ?? [] }),
   consoles: () => consoleCards(S.config?.emulators, t),
+  // Plugins et dépôts (P4-19) : listes lues sans réseau ; seul « Rechercher des mises à jour » lit les dépôts en ligne.
+  plugins: () => (S.plugins ? { ...S.plugins, progress: S.pluginProgress, sheet: S.pluginSheet } : null),
+  loadPlugins: () => loadPlugins(),
   onLanguageChange: (listener) => i18n.onChange(listener),
-  // Centre redessiné : le focus, s'il était sur un bouton retiré, va au premier élément du contenu.
+  // Centre redessiné : le focus va où l'action l'a demandé (fiche ouverte, refermée) ; s'il était sur un bouton
+  // retiré, au premier élément du contenu.
   onRendered: () => {
     if (S.section !== CENTRE_VIEW) return;
+    const sel = centre.takeFocus();
+    if (sel) return restoreFocus({ el: null, sel: `#view mire-centre ${sel}` });
     const a = document.activeElement;
     if (!a || a === document.body || !a.isConnected) focusFirst();
   },
@@ -2387,6 +2393,28 @@ api.onStoreProgress((p) => {
   if (p.phase !== 'done' && p.phase !== 'error' && S.section === CENTRE_VIEW) centre.refresh();
 });
 
+/* Plugins et dépôts (vue : Centre, P4-19) */
+
+async function loadPlugins() {
+  const [installed, available, repos, continuity] = await Promise.all([
+    api.pluginsList(),
+    api.reposPlugins(),
+    api.reposList(),
+    api.pluginsContinuity().catch(() => null),
+  ]);
+  const list = (x) => (Array.isArray(x) ? x : []);
+  S.plugins = { installed: list(installed), available: list(available), repos: list(repos), continuity: list(continuity?.items) };
+  if (S.section === CENTRE_VIEW) centre.refresh();
+}
+
+// Avancement d'une installation de plugin : des données, rédigées par le Centre ; la fin (réussite ou erreur) est
+// annoncée par l'action qui l'a lancée.
+api.onPluginsProgress((p) => {
+  if (p.phase === 'done' || p.phase === 'error') delete S.pluginProgress[p.id];
+  else S.pluginProgress[p.id] = p;
+  if (S.section === CENTRE_VIEW) centre.refresh();
+});
+
 async function afterStoreChange(r, okMessage) {
   if (r?.config) S.config = r.config;
   else S.config = (await api.getConfig()).config;
@@ -2438,6 +2466,11 @@ const legacyUi = {
   rescue: { themes: pageThemes, refresh: () => rescue.refresh() },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
+  loadPlugins,
+  refreshCentre(focus) {
+    if (focus) centre.focusAfterRender(focus);
+    centre.refresh();
+  },
   open: (target, opts) => shell.open(target, opts),
   cycle: (step) => shell.cycle(step),
   openPageGroup: (value) => pages.openGroup(value),
@@ -2651,6 +2684,12 @@ function tick() {
     api.pluginsContinuitySeen().catch(() => {});
   };
   api.onPluginsContinuity(continuityNotice);
+  // Le récapitulatif est aussi montré dans le Centre (onglet Plugins, P4-19).
+  api.onPluginsContinuity((s) => {
+    if (!S.plugins || !Array.isArray(s?.items)) return;
+    S.plugins.continuity = s.items;
+    if (S.section === CENTRE_VIEW) centre.refresh();
+  });
   api.pluginsContinuity().then(continuityNotice).catch(() => {});
   tick();
   setInterval(tick, 5000);

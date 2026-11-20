@@ -217,6 +217,8 @@ export interface PluginSummary {
   level: 'data' | 'code' | 'privileged' | null;
   /** Permissions demandées par le manifeste (`permissions`), vide s'il est illisible. */
   permissions: Record<string, unknown>;
+  /** Dépendances déclarées par le manifeste (identifiant → versions acceptées), vide s'il est illisible (P4-19). */
+  dependencies: Record<string, string>;
   /** Nom affiché (textes du plugin), ou l'identifiant. */
   name: string;
   /** Voulu actif (état mémorisé). */
