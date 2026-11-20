@@ -219,7 +219,10 @@ describe('palettes des plugins (P5-02)', () => {
     );
     assert.deepEqual(decl[0], ['color-scheme', 'light']);
     const names = decl.map(([n]) => n);
-    assert.deepEqual(names.slice(1, PALETTE_TOKENS.length + 1), PALETTE_TOKENS.map((t) => `--${t}`));
+    assert.deepEqual(
+      names.slice(1, PALETTE_TOKENS.length + 1),
+      PALETTE_TOKENS.map((t) => `--${t}`),
+    );
     assert.ok(names.includes('--ring-w') && names.includes('--mono-mix'));
     for (const n of ['--ring-from', '--mire-edge', '--autre']) assert.ok(!names.includes(n), n);
     // Un jeton revérifié ici aussi : une valeur glissée dans les données ne passe pas.
