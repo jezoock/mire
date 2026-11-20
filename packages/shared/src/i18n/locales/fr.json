@@ -229,25 +229,6 @@
           "label": "Service de télévision"
         }
       },
-      "search": {
-        "title": "Recherche dans les catalogues de streaming",
-        "help": "Avec une clé gratuite de TMDB, Rechercher affiche les films et séries correspondants et indique sur quel service les regarder.",
-        "tmdbToken": {
-          "label": "Clé ou jeton TMDB",
-          "help": "Créez un compte sur themoviedb.org, puis copiez le « jeton d’accès en lecture à l’API » depuis Paramètres, rubrique API.",
-          "placeholder": "Facultatif"
-        },
-        "region": {
-          "label": "Pays des disponibilités",
-          "options": {
-            "FR": "France",
-            "BE": "Belgique",
-            "CH": "Suisse",
-            "LU": "Luxembourg",
-            "CA": "Canada"
-          }
-        }
-      },
       "scrape": {
         "title": "Infos et affiches",
         "help": "Mire cherche en ligne une image et quelques infos pour vos fichiers. Les images restent dans les données de Mire ; rien n’est écrit dans vos dossiers.",
@@ -510,11 +491,6 @@
       }
     },
     "search": {
-      "errors": {
-        "tmdbUnreachable": "Le catalogue TMDB est injoignable. Vérifiez la connexion Internet.",
-        "tmdbKeyRefused": "Clé TMDB refusée. Vérifiez-la dans Réglages.",
-        "tmdbStatus": "TMDB a répondu avec le code {status}."
-      },
       "field": "Rechercher partout",
       "placeholder": "Film, série, chanson, chaîne, jeu…",
       "intro": "Une seule recherche couvre vos fichiers, vos chaînes de télévision, vos jeux et vos services de streaming.",
@@ -527,19 +503,18 @@
       "none": "Rien de trouvé dans votre bibliothèque.",
       "watch": {
         "heading": "Films et séries en streaming",
-        "noKey": "Ajoutez une clé TMDB gratuite pour voir ici les films et séries correspondants, avec le service où les regarder.",
-        "addKey": "Ajouter la clé",
+        "addKey": "Ouvrir ses réglages",
         "loading": "Recherche dans les catalogues…",
         "failed": "Recherche impossible.",
         "empty": "Aucun film ni série trouvé.",
-        "attribution": "Catalogue : TMDB. Disponibilités : JustWatch.",
         "movie": "Film",
         "series": "Série",
         "noOffer": "Pas en abonnement",
         "notConfigured": "Disponible sur {services}, qui n’est pas configuré dans Mire.",
         "nowhere": "Ce titre n’est proposé en abonnement sur aucun service pour le moment (d’après JustWatch).",
         "alsoOn": "Aussi disponible sur {name}",
-        "openOn": "Ouvrir {name}"
+        "openOn": "Ouvrir {name}",
+        "noPlugin": "Installez un plugin « Où regarder » (TMDB, par exemple) depuis le Centre pour voir ici les films et séries correspondants, avec le service où les regarder."
       },
       "sites": {
         "heading": "Chercher sur vos sites",
@@ -622,12 +597,6 @@
         "noTitle": "Indiquez un titre à chercher.",
         "unknownType": "Type inconnu.",
         "status": "{host} : code {status}"
-      },
-      "tmdb": {
-        "skipped": "vidéos (clé TMDB absente)",
-        "noKey": "Ajoutez une clé TMDB dans Réglages pour chercher les films et séries.",
-        "series": "Série",
-        "movie": "Film"
       }
     },
     "store": {

@@ -38,15 +38,18 @@ const INSTALL: ContinuityRule = {
 const RULES = [BUNDLED, INSTALL];
 
 test.describe('migration v10 (P5-01)', () => {
-  test('configuration v9 réelle : passe en v10 sans perte (table livrée)', () => {
+  test('configuration v9 réelle : passe en v10, seule la clé TMDB change de place (règle P5-15)', () => {
     const v9 = readFixture('config-v9.json');
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
-    assert.deepEqual(config, { ...v9, version: CONFIG_VERSION });
-    // Normalisée, elle reste celle de la v9 (réglages des plugins compris, secret gardé).
-    assert.deepEqual(normalizeConfig(config), { ...normalizeConfig(v9), version: CONFIG_VERSION });
-    assert.equal((config as Any).continuity, undefined);
+    const { tmdbToken: _t, region: _r, ...search } = v9.search;
+    const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
+    assert.deepEqual(config, { ...v9, search, plugins, continuity: ['P5-15'], version: CONFIG_VERSION });
+    // Normalisée : réglages des autres plugins gardés, secret compris.
+    const c = normalizeConfig(config);
+    assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
+    assert.deepEqual(c.continuity, ['P5-15']);
   });
 
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
@@ -77,7 +80,7 @@ test.describe('migration v10 (P5-01)', () => {
     const c = normalizeConfig(raw);
     assert.deepEqual(c.continuity, applied);
     assert.deepEqual(c.plugins?.['mire.essai.infos'], { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'BE' });
-    assert.equal(c.search.tmdbToken, '');
+    assert.equal('tmdbToken' in c.search, false);
   });
 
   test('règle qui ne s’applique pas : rien ne bouge', () => {
@@ -112,6 +115,45 @@ test.describe('migration v10 (P5-01)', () => {
     // Une configuration déjà en v10 n'est pas migrée de nouveau.
     const again = migrate(structuredClone({ ...once, version: CONFIG_VERSION }));
     assert.equal(again.changed, false);
+  });
+
+  test('P5-15 : clé TMDB → secret du plugin mire.tmdb (à installer), pays et langue des fiches repris', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-15')!;
+    assert.equal(rule.plugin, 'mire.tmdb');
+    assert.equal(rule.mode, 'install');
+    const raw: Any = { version: 9, search: { tmdbToken: '  cle-courte  ', region: 'CH', language: '' } };
+    assert.deepEqual(applyContinuity(raw, [rule]), ['P5-15']);
+    assert.deepEqual(raw.plugins['mire.tmdb'], { token: { $secret: 'cle-courte', encrypted: false }, region: 'ch', language: 'auto' });
+    // La langue des fiches sert encore au cœur (Steam) : copiée, pas déplacée.
+    assert.deepEqual(raw.search, { language: '' });
+    assert.deepEqual(raw.continuity, ['P5-15']);
+    // Normalisée, la clé reste un secret (jamais rendu à l'interface).
+    assert.deepEqual(normalizeConfig(raw).plugins?.['mire.tmdb']?.token, { $secret: 'cle-courte', encrypted: false });
+  });
+
+  test('P5-15 : sans clé TMDB (vide, absente, mal formée), rien n’est installé ni déplacé', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-15')!;
+    for (const search of [{ tmdbToken: '', region: 'BE' }, { tmdbToken: '   ' }, { region: 'FR' }, { tmdbToken: 42 }, 'x', undefined]) {
+      const raw: Any = { version: 9, search };
+      const before = structuredClone(raw);
+      assert.deepEqual(applyContinuity(raw, [rule]), []);
+      assert.deepEqual(raw, before);
+    }
+  });
+
+  test('convert et keep : valeur traduite, copiée ou laissée en place si elle ne se traduit pas', () => {
+    const rule: ContinuityRule = {
+      ...INSTALL,
+      settings: [
+        { from: 'search.tmdbToken', to: 'token', secret: true },
+        { from: 'search.region', to: 'region', convert: () => undefined },
+        { from: 'search.language', to: 'language', keep: true, convert: (v) => `${v}!` },
+      ],
+    };
+    const raw: Any = { version: 9, search: { tmdbToken: 'k', region: 'FR', language: 'fr-FR' } };
+    applyContinuity(raw, [rule]);
+    assert.deepEqual(raw.search, { region: 'FR', language: 'fr-FR' });
+    assert.deepEqual(raw.plugins['mire.essai.infos'], { token: { $secret: 'k', encrypted: false }, language: 'fr-FR!' });
   });
 
   test('file normalisée : identifiants de règles seulement, absente quand elle est vide', () => {

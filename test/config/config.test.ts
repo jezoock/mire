@@ -228,7 +228,7 @@ test.describe('migration v9 (P2-11)', () => {
   const v8 = () => readFixture('config-v8.json');
   const migrated = () => migrate(v8()).config as Any;
 
-  test('aucune donnée perdue : seuls la version et les rangées de l’accueil changent', () => {
+  test('aucune donnée perdue : seuls la version, les rangées de l’accueil et la clé TMDB (P5-15) changent', () => {
     const out = migrated();
     assert.deepEqual(out.ui.home.rows, [
       { kind: 'bars', targets: ['games', 'movies', 'series', 'screen:search', 'tv'] },
@@ -236,7 +236,13 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'recent' },
     ]);
     delete out.ui.home.rows;
-    assert.deepEqual(out, { ...v8(), version: CONFIG_VERSION });
+    // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15).
+    assert.deepEqual(out.plugins, { 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } });
+    assert.deepEqual(out.continuity, ['P5-15']);
+    delete out.plugins;
+    delete out.continuity;
+    const { tmdbToken: _token, region: _region, ...search } = v8().search;
+    assert.deepEqual(out, { ...v8(), search, version: CONFIG_VERSION });
   });
 
   test('l’interface historique retrouve ses réglages (accueil, menu, page de démarrage)', () => {

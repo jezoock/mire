@@ -9,6 +9,7 @@ import type {
   MetadataOverride,
   MetadataPick,
   MetadataProvider as SdkMetadataProvider,
+  MissingRequirement as SdkMissingRequirement,
   MetadataQuery,
 } from '@mire/plugin-sdk';
 import type { FetchLike } from '../net/http.ts';
@@ -139,5 +140,10 @@ export interface JobContext extends ProviderContext {
  */
 export type ScrapeOutcome = MetadataOutcome;
 
-/** Une source d'infos (TMDB, MusicBrainz, libretro, Steam) : l'interface du SDK, avec le contexte du moteur. */
-export type MetadataProvider = SdkMetadataProvider<ScrapeItem, ProviderContext, JobContext, RunOptions>;
+/**
+ * Une source d'infos : l'interface du SDK, avec le contexte du moteur. `requires` peut répondre plus tard : celui d'un
+ * plugin passe par son hôte (ponts des plugins).
+ */
+export type MetadataProvider = Omit<SdkMetadataProvider<ScrapeItem, ProviderContext, JobContext, RunOptions>, 'requires'> & {
+  requires?(ctx: ProviderContext): SdkMissingRequirement | null | Promise<SdkMissingRequirement | null>;
+};

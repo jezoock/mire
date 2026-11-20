@@ -1945,8 +1945,8 @@ describe('Test de fumée de Mire', () => {
         ['watch', []],
         ['sites', ['Arte', 'Radio France']],
       ]);
-      // Sans clé TMDB, « Où regarder » propose de l'ajouter.
-      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'Ajoutez une clé TMDB' }).waitFor();
+      // Sans plugin « Où regarder » (TMDB est un plugin à installer, P5-15), la Recherche propose d'en installer un.
+      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'plugin « Où regarder »' }).waitFor();
       // Les chaînes entrent au catalogue quand leur liste est lue : la Recherche les trouve.
       await searchFor('chaîne', 'tv');
       assert.deepEqual((await shown())[0], ['tv', ['Chaîne Deux', 'Chaîne Trois', 'Chaîne Une']]);
@@ -3168,10 +3168,10 @@ describe('Test de fumée de Mire', () => {
       await page.locator(`${VIEW} ds-toggle#set-ui-home-clock`).click();
       await waitSaved('ui.home.clock', clock);
       // Liste de choix.
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('BE');
-      await waitSaved('search.region', 'BE');
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('FR');
-      await waitSaved('search.region', 'FR');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('system');
+      await waitSaved('downloads.torrentClient', 'system');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('mire');
+      await waitSaved('downloads.torrentClient', 'mire');
       // Palette : l'aperçu porte ses propres jetons ; choisie, elle s'applique au document.
       assert.equal(await page.locator(`${VIEW} .mire-settings-view__palette[data-key="minuit"] [data-palette="minuit"]`).count(), 1);
       await palette('minuit').click();
@@ -3204,15 +3204,6 @@ describe('Test de fumée de Mire', () => {
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
       await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="tmdb"] button`).first().click();
       await waitSaved('catalog.metadataProviders', ['tmdb', 'musicbrainz', 'libretro', 'steam']);
-      assert.deepEqual(errors, []);
-    });
-
-    it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
-      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
-      await page.locator('#view mire-search-view .mire-search-view__input').fill('démonstration');
-      const add = page.locator('#view mire-search-view ds-trigger[action="addKey"].hydrated');
-      await add.click();
-      await page.waitForFunction(() => document.body.dataset.section === 'settings' && document.activeElement?.id === 'set-search-tmdbToken');
       assert.deepEqual(errors, []);
     });
 

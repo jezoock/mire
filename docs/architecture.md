@@ -58,9 +58,9 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
 | `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`) ; pages et regroupements (`pages/`, P2-07) ; listes (`lists/`, P2-08). Voir « Catalogue d'éléments ». |
 | `meta/` | Façade de l'interface historique sur les infos modifiées à la main (rangées dans `catalog/overrides.json` depuis P2-04) ; images choisies (`meta/img/`). |
-| `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs (TMDB, MusicBrainz, libretro, Steam). |
-| `search/` | Recherche « où regarder » (`streaming.ts`) : titres TMDB et services qui les proposent. |
-| `net/` | Client HTTP unique (`http.ts` : délais, identité, erreurs) et client TMDB (`tmdb.ts`). |
+| `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs du cœur (MusicBrainz, libretro, Steam) ; TMDB est le plugin `mire.tmdb` (P5-15). |
+| `search/` | Recherche « où regarder » (`watch.ts`) : réponse d'un plugin `search` (comme `mire.tmdb`) vérifiée et rapprochée des sites configurés. |
+| `net/` | Client HTTP unique (`http.ts` : délais, identité, erreurs). |
 | `web/` | Vues web intégrées : gestionnaire des vues, entrées (`netflix`, `rom:`, `bm:`, `tv:`), session `persist:web`, extensions (bloqueur, connexion Google), identité, raccourcis, Widevine. |
 | `downloads/` | Téléchargements : gestionnaire (`manager.ts`), moteurs HTTP et torrent, fin d'un téléchargement (`finish.ts` : décompression, programme d'installation, fichiers d'un jeu sur disque). |
 | `games/` | Jeux : jeux PC (dossiers, ajout manuel, lancement), jeux de console (liste, lancement, copie locale), jeux sur disque, marque-pages de jeux, nettoyage, suppression, sites « Ajouter des jeux », fin d'un téléchargement vue des jeux. |
@@ -285,8 +285,13 @@ ni dossier, ni fichier, ni hôte.
   contribution sont gardés, au type déclaré. `sources`, `metadata` et `search` sont branchées par `bridges.ts`
   (P3-04) : chaque source active est analysée à son activation (emplacement `null` en attendant les réglages de
   P4-20) et ses éléments vont au catalogue sous `{ plugin: <id>, instance: <contribution> }`, puis le quittent à sa
-  désactivation ; les fournisseurs d'infos en ligne s'ajoutent après les quatre du cœur (`extraProviders` du moteur) ;
-  `pluginBridges.search(query)` interroge les fournisseurs de recherche (l'écran Recherche, P4-12, les affichera).
+  désactivation ; les fournisseurs d'infos en ligne s'ajoutent après ceux du cœur (`extraProviders` du moteur) :
+  `requires` est relayé, les images d'une fiche (adresses) sont copiées dans `scrape/img/` seulement depuis un hôte
+  `https:` déclaré par le plugin, et un échec attendu se rend comme résultat, `{ failure: "<message du plugin>" }`
+  (une erreur levée désactive le plugin), que l'utilisateur voit comme l'erreur d'une recherche de fiches ;
+  `pluginBridges.search(query)` interroge les fournisseurs de recherche ; « Où regarder » (`search/watch.ts`, IPC
+  `searchStreaming`) garde la première réponse de la forme `{ ok: true, results, attribution }` ou
+  `{ ok: false, message, setup? }`, la vérifie et rapproche chaque service d'un site configuré (P5-15).
   Ce qu'un plugin rend y est vérifié d'après son niveau : un plugin de code limité ne fournit ni programme ni jeu à
   lancer, ni fichier local hors de ses dossiers accordés, et ses clés sont préfixées par `plugin:<id>|` ; une fiche
   porte la source du plugin, une image seulement en `http(s)`. `webExtensions` et `downloaders` (P3-05) : code sensible,
@@ -426,7 +431,7 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
 (`scrapeCandidates`). Le moteur (`scrape/engine.ts`) :
 
 1. choisit le fournisseur selon la nature de l'élément (`video`, `album`, `rom`, `pc`) ;
-2. vérifie ce qui manque (`requires` : par exemple la clé TMDB) ;
+2. vérifie ce qui manque (`requires` : par exemple la clé d'un plugin ; celui d'un plugin répond plus tard, il est attendu) ;
 3. pour `run`, rassemble les éléments de chaque fournisseur (`collect`), saute ceux qui sont déjà décrits ou en échec
    depuis moins de 14 jours, et lance les récupérations avec la concurrence du fournisseur ;
 4. enregistre chaque fiche sous la clé du fournisseur (`v:<chemin>`, `a:<dossier>`…) dans la base des infos en ligne
@@ -434,8 +439,8 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
    `scrape/img/`. L'interface les affiche par `media://` ;
 5. annonce la progression (événement `scrape-progress`) ; « Arrêter » appelle `scrapeCancel`.
 
-Les fournisseurs, dans l'ordre : TMDB (films et séries, clé à saisir), MusicBrainz et Cover Art Archive (albums),
-libretro-thumbnails (jeux de console), Steam (jeux PC). Ils passent par `ctx.io` (client HTTP avec les délais et
+Les fournisseurs du cœur, dans l'ordre : MusicBrainz et Cover Art Archive (albums), libretro-thumbnails (jeux de
+console), Steam (jeux PC) ; puis ceux des plugins (films et séries : `mire.tmdb`, à installer, P5-15). Ils passent par `ctx.io` (client HTTP avec les délais et
 messages habituels, copie d'images). La langue des fiches suit celle de l'interface, sauf si `search.language` est
 fixé (`i18n/metadata.ts`).
 
@@ -490,7 +495,8 @@ fixé (`i18n/metadata.ts`).
 4. Quand la configuration change de langue, le service prévient ses abonnés ; la racine de composition envoie
    alors `i18n:changed` (`onLanguageChange`) à l'interface, avec les catalogues à consulter. L'interface peut aussi
    les demander par `i18nGet`. Elle n'utilise encore ni l'un ni l'autre (phase 2).
-5. Les fiches TMDB et Steam sont demandées dans la langue de l'interface, sauf si `search.language` est fixé.
+5. Les fiches Steam sont demandées dans la langue de l'interface, sauf si `search.language` est fixé (TMDB : réglage
+   `language` du plugin `mire.tmdb`).
 
 ## Interfaces d'extension
 
@@ -500,8 +506,8 @@ implémentent.
 
 | Interface | Fichier | Ce qu'elle décrit | Implémentations |
 | --- | --- | --- | --- |
-| `MetadataProvider` | `src/main/scrape/types.ts` | Une source d'infos : natures décrites (`kinds`), famille (`group`), concurrence, `requires`, `key`, `collect`, `scrape`, `candidates`, `byId`. | `tmdbProvider`, `musicBrainzProvider`, `libretroProvider`, `steamProvider` (`defaultProviders`) |
-| `SearchProvider` | `src/main/search/streaming.ts` | Un catalogue interrogé par la recherche : `id`, `search(query, ctx)`. | `streamingSearchProvider` (TMDB, « où regarder ») |
+| `MetadataProvider` | `src/main/scrape/types.ts` | Une source d'infos : natures décrites (`kinds`), famille (`group`), concurrence, `requires`, `key`, `collect`, `scrape`, `candidates`, `byId`. | `musicBrainzProvider`, `libretroProvider`, `steamProvider` (`defaultProviders`) ; plugins par `bridges.ts` |
+| `SearchProvider` | `@mire/plugin-sdk` (contribution `search`) | Un catalogue interrogé par la recherche : `id`, `search(query, ctx)`. | `mire.tmdb` (« où regarder », lu par `src/main/search/watch.ts`) |
 | `WebExtension` | `src/main/web/extensions.ts` | Ce qui s'ajoute aux vues web : `attach`/`detach`, filtres réseau (`onBeforeRequest`, `onBeforeSendHeaders`, `onHeadersReceived`), `beforePageScript`, `guardNavigation`, compteurs du bouclier. | Bloqueur de publicités, connexion Google |
 | `ElementSource` | `src/main/catalog/types.ts` | Une source d'éléments du catalogue : `id` (celui du plugin prévu), `tags` de source, `handles(emplacement)`, `instance(emplacement)`, `scan(emplacement)` → éléments. | `src-local`, `src-smb`, `src-http`, `src-m3u` (`src/main/library/element-sources.ts`) ; `jeux-roms`, `jeux-pc`, `jeux-pc-manuel`, `jeux-marque` (`src/main/games/element-sources.ts`) ; `tv-m3u`, `tv-web` (`src/main/tv/element-sources.ts`) ; `svc-<id>`, `web-perso`, `web-bm` (`src/main/web/element-sources.ts`) |
 | `TvProvider` | `src/main/tv/types.ts` | Une façon de regarder un service de télévision, choisie par son `kind` : `channels(service, ctx)`. | `playlistProvider` (liste M3U), `webProvider` (portail dans une vue web) |
@@ -1045,7 +1051,9 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
   à installer : mis en attente) et quels réglages déplacer sous `plugins.<id>`. Les règles appliquées sont notées dans
   `continuity` (identifiants de règles seulement), que le service de continuité reprend puis efface (voir « Dépôts de
   plugins »). **Chaque tâche P5-xx ajoute sa règle** (mode d'emploi en tête de `continuity.ts`) et son test dans
-  `test/config/continuity.test.ts` ; la table est vide tant qu'aucune fonction n'est extraite ;
+  `test/config/continuity.test.ts`. Un réglage peut être traduit (`convert`) ou copié (`keep`, le cœur s'en sert
+  encore) ; un secret déplacé est rangé en clair puis chiffré par le service de continuité dès que son plugin est
+  là (`seal`). Règles : `P5-15` (clé TMDB → `mire.tmdb`) ;
 - `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète. La
   section `catalog` (règles par extension du moteur de tags, P2-04) est facultative : absente, elle n'est pas ajoutée ;
 - `merge.ts` : import « compléter » ;

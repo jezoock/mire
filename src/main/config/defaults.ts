@@ -40,7 +40,7 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
     language: 'auto',
   },
   // Langue des fiches (TMDB, Steam) : vide = celle de l'interface (src/main/i18n/metadata.ts, migrations/v8.ts).
-  search: { tmdbToken: '', region: 'FR', language: '' },
+  search: { language: '' },
   scrape: { auto: true },
   // Jeux : autoOnline affiche d'emblée les jeux en ligne en ouvrant une console.
   games: [],
