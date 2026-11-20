@@ -74,21 +74,20 @@ describe('panneaux générés depuis le schéma', () => {
   it('chaque champ simple a sa valeur dans la configuration, et le contrôle de son type', () => {
     const config = structuredClone(DEFAULT_CONFIG) as Data;
     config.ui.home.clock = false;
-    config.search.region = 'BE';
     config.adblock.allowlist = ['exemple.com'];
     config.externalPlayer.path = '/usr/bin/mpv';
     const panels = schemaPanels(sources({ config }));
     assert.deepEqual(fieldOf(panels, 'ui.home.clock'), { key: 'ui.home.clock', kind: 'toggle', label: 'Afficher l’heure et la date', value: false });
-    const region = fieldOf(panels, 'search.region');
-    assert.equal(region.kind, 'choice');
-    assert.equal(region.value, 'BE');
-    assert.deepEqual(region.options?.[1], { value: 'BE', label: 'Belgique' });
     assert.deepEqual(fieldOf(panels, 'adblock.allowlist').value, ['exemple.com']);
     const player = fieldOf(panels, 'externalPlayer.path');
     assert.equal(player.kind, 'path');
     assert.equal(player.pick, 'program');
     assert.equal(player.placeholder, 'Détection automatique');
-    assert.equal(fieldOf(panels, 'search.tmdbToken').kind, 'secret');
+    // Clé TMDB et pays de « Où regarder » : réglages du plugin mire.tmdb (P5-15), plus du cœur.
+    assert.equal(
+      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.') && f.key !== 'search.language'),
+      false,
+    );
   });
 
   it('choix tirés de l’état : langues sous leur propre nom, sites de streaming groupés', () => {
@@ -146,7 +145,6 @@ describe('panneaux générés depuis le schéma', () => {
     assert.equal(fieldOf(panels, 'search.language').kind, 'segmented');
     assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
     assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
-    assert.equal(fieldOf(panels, 'search.region').kind, 'choice');
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
@@ -433,8 +431,8 @@ function context(answers: Record<string, unknown> = {}) {
 describe('contrôleur mire-settings (P4-20)', () => {
   it('un champ s’enregistre dès qu’il change, puis l’écran se relit', async () => {
     const { ctx, named } = context();
-    await new SettingsController(ctx).setValue({ key: 'search.region', value: 'BE' });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.region', 'BE']]);
+    await new SettingsController(ctx).setValue({ key: 'search.language', value: 'en-US' });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.language', 'en-US']]);
     assert.equal(named('ui.settings.refresh').length, 1);
   });
 
@@ -597,11 +595,15 @@ describe('contrôleur mire-settings (P4-20)', () => {
     assert.deepEqual(named('ui.showCentreTab'), [['ui.showCentreTab', 'consoles']]);
   });
 
-  it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
-    const { ctx, named } = context();
+  it('« Ouvrir ses réglages » de la Recherche mène au réglage qui manque au plugin « Où regarder »', async () => {
+    const { ctx, named } = context({ 'ui.search.watchSetup': { plugin: 'mire.tmdb', setup: 'token' } });
     await new SearchController(ctx).addKey();
     assert.deepEqual(named('ui.go'), [['ui.go', 'settings', { focus: 'content' }]]);
-    assert.deepEqual(named('ui.settings.focus'), [['ui.settings.focus', 'search.tmdbToken']]);
+    assert.deepEqual(named('ui.settings.focus'), [['ui.settings.focus', 'plugin:mire.tmdb:token']]);
+    // Rien ne manque : rien ne s'ouvre.
+    const none = context();
+    await new SearchController(none.ctx).addKey();
+    assert.deepEqual(none.named('ui.go'), []);
   });
 });
 

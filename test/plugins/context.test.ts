@@ -414,7 +414,8 @@ describe('ponts', () => {
     let fail = false;
     const calls: string[] = [];
     const service: BridgeService = {
-      contributions: (kind) => (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
+      contributions: (kind) =>
+        (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
       onContributionsChange: () => () => {},
       call: async (_p, _k, _id, method, args) => {
         calls.push(method);
@@ -461,13 +462,17 @@ describe('ponts', () => {
     ]);
 
     fail = true;
-    await assert.rejects(provider.scrape({ name: 'A' } as never, undefined, job), (err: Error) => err.name === 'ScrapeRefusal' && err.message === 'Clé refusée.');
+    await assert.rejects(
+      provider.scrape({ name: 'A' } as never, undefined, job),
+      (err: Error) => err.name === 'ScrapeRefusal' && err.message === 'Clé refusée.',
+    );
     await assert.rejects(provider.candidates({ query: 'Dune' } as never, {} as never), { message: 'Clé refusée.' });
   });
 
   it('requires absent ou en panne : la source est interrogée', async () => {
     const service: BridgeService = {
-      contributions: (kind) => (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
+      contributions: (kind) =>
+        (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
       onContributionsChange: () => () => {},
       call: async () => {
         throw new Error('requires.notFound');

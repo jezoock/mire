@@ -71,16 +71,7 @@ describe('SETTINGS_SCHEMA', () => {
 
   it('couvre les réglages repérés en double dans le rendu actuel', () => {
     const paths = settingsPaths();
-    for (const p of [
-      'search.tmdbToken',
-      'search.region',
-      'adblock.enabled',
-      'ui.start',
-      'ui.home.clock',
-      'externalPlayer.path',
-      'ui.language',
-      'search.language',
-    ]) {
+    for (const p of ['adblock.enabled', 'ui.start', 'ui.home.clock', 'externalPlayer.path', 'ui.language', 'search.language']) {
       assert.equal(paths.filter((x) => x === p).length, 1, p);
     }
   });
