@@ -49,6 +49,23 @@ test.describe('migration v10 (P5-01)', () => {
     assert.equal((config as Any).continuity, undefined);
   });
 
+  test('P5-07 : sites de jeux (selon la configuration) et jeux libres (toute installation), plugins à installer', () => {
+    const rule = (id: string) => CONTINUITY_RULES.find((r) => r.id === id)!;
+    assert.deepEqual([rule('P5-07-sites').plugin, rule('P5-07-sites').mode, rule('P5-07-sites').settings ?? []], ['mire.game-sites', 'install', []]);
+    assert.deepEqual([rule('P5-07-libres').plugin, rule('P5-07-libres').mode, rule('P5-07-libres').settings ?? []], ['mire.free-games', 'install', []]);
+    const queue = (raw: Any) => (migrate(structuredClone({ ...raw, version: 9 })).config as Any).continuity as string[];
+    // Une console sans liste à elle prenait les sites proposés : le plugin des sites est mis en attente.
+    assert.ok(queue({ emulators: [{ id: 'gb-1', name: 'GB' }] }).includes('P5-07-sites'));
+    assert.ok(queue({ emulators: [{ id: 'a', romSites: [] }, { id: 'b' }] }).includes('P5-07-sites'));
+    // Aucune console, ou que des consoles avec leur propre liste (même vide) : les sites proposés ne servaient pas.
+    for (const emulators of [[], [{ id: 'a', romSites: [] }], [{ id: 'a', romSites: [{ name: 'X', url: 'https://x.example/' }] }], 'mal formé', [null, 4]]) {
+      assert.ok(!queue({ emulators }).includes('P5-07-sites'), JSON.stringify(emulators));
+    }
+    assert.ok(!queue({}).includes('P5-07-sites'));
+    // La configuration ne dit pas si la liste de jeux libres servait : toute installation existante, même mal formée.
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) assert.ok(queue(raw).includes('P5-07-libres'));
+  });
+
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
     assert.deepEqual(checkRules(CONTINUITY_RULES), []);
     assert.deepEqual(checkRules(RULES), []);

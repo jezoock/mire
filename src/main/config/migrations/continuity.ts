@@ -47,8 +47,20 @@ export interface ContinuityRule {
   settings?: readonly SettingMove[];
 }
 
-/** Table des règles : vide tant qu'aucune fonction n'est extraite (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
-export const CONTINUITY_RULES: readonly ContinuityRule[] = [];
+/** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
+/** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
+const always = (): boolean => true;
+
+/** Une console sans liste de sites à elle : elle prenait ceux que Mire proposait pour son système. */
+const usesDefaultRomSites = (config: Loose): boolean =>
+  Array.isArray(config.emulators) && config.emulators.some((e) => isRecord(e) && !Array.isArray(e.romSites));
+
+export const CONTINUITY_RULES: readonly ContinuityRule[] = [
+  // P5-07 : sites de jeux légaux, plugin à installer ; la configuration dit si une console utilisait les sites proposés.
+  { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
+  // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.
+  { id: 'P5-07-libres', plugin: 'mire.free-games', mode: 'install', applies: always },
+];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 

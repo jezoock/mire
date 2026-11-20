@@ -259,7 +259,7 @@ export class MireCentreView {
       </section>,
       <section class="mire-centre-view__group" data-group="games">
         <h2 class="mire-centre-view__heading">{l.games}</h2>
-        <p class="mire-centre-view__help">{l.gamesHelp}</p>
+        <p class="mire-centre-view__help">{apps.games.length ? l.gamesHelp : l.gamesNone}</p>
         <div class="mire-centre-view__games">{apps.games.map((g) => this.renderGame(g, l))}</div>
       </section>,
       <section class="mire-centre-view__group" data-group="own">

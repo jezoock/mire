@@ -79,6 +79,7 @@ const LABEL_KEYS: Record<keyof CentreLabels, string> = {
   biosOpen: 'apps.bios.open',
   games: 'apps.games',
   gamesHelp: 'apps.gamesHelp',
+  gamesNone: 'apps.gamesNone',
   download: 'apps.download',
   own: 'apps.own',
   ownHelp: 'apps.ownHelp',

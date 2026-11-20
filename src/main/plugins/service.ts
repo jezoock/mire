@@ -13,6 +13,7 @@ import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
 import type { PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import { freeGamesOf, romSitesFor } from './packs.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -625,6 +626,11 @@ export function createPluginService(opts: PluginServiceOptions) {
         kinds: Array.isArray(e.declaration.kinds) ? e.declaration.kinds.filter((k): k is string => typeof k === 'string') : [],
       }));
     },
+
+    /** Sites de jeux proposés pour un système par les packs `romSites` des plugins actifs (P5-07), vérifiés. */
+    romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
+    /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */
+    freeGames: () => freeGamesOf(registry.list('packs')),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

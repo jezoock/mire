@@ -15,7 +15,7 @@ import { MUSIC_GENRES, musicBrainzProvider } from '../../src/main/scrape/provide
 import { steamProvider } from '../../src/main/scrape/providers/steam.ts';
 import { tmdbProvider } from '../../src/main/scrape/providers/tmdb.ts';
 import { streamingSearchProvider } from '../../src/main/search/streaming.ts';
-import { BIOS_HINTS, EMULATORS, FREE_GAMES } from '../../src/main/store/catalog/index.ts';
+import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 import { loadRoutes } from '../scrape/fake-fetch.ts';
 import { providerContext } from '../scrape/helpers.ts';
@@ -53,7 +53,6 @@ describe('clés employées par le processus principal', () => {
       ...Object.values(MUSIC_GENRES).map((id) => `scrape.genres.music.${id}`),
       ...EMULATORS.map((e) => `store.emulators.${e.id}`),
       ...[...BIOS_HINTS].map((id) => `store.bios.${id}`),
-      ...FREE_GAMES.map((g) => `store.games.${g.id}`),
     ];
     for (const key of keys) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });

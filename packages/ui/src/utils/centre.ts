@@ -151,6 +151,7 @@ export interface CentreLabels {
   biosOpen?: string;
   games?: string;
   gamesHelp?: string;
+  gamesNone?: string;
   download?: string;
   own?: string;
   ownHelp?: string;

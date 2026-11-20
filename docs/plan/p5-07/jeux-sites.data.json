@@ -1,0 +1,225 @@
+{
+  "kind": "romSites",
+  "systems": {
+    "Nintendo - Nintendo Entertainment System": [
+      {
+        "name": "Homebrew Hub",
+        "url": "https://hh.gbdev.io/search?platform=NES&typetag=game",
+        "search": "https://hh.gbdev.io/search?q={q}&platform=NES&typetag=game"
+      },
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-entertainment-system-nes-famicom/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=nes+rom",
+        "search": "https://itch.io/search?q={q}+nes"
+      }
+    ],
+    "Nintendo - Super Nintendo Entertainment System": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/super-nintendo-snes-super-famicom/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=snes+rom",
+        "search": "https://itch.io/search?q={q}+snes"
+      }
+    ],
+    "Nintendo - Game Boy": [
+      {
+        "name": "Homebrew Hub",
+        "url": "https://hh.gbdev.io/search?platform=GB&typetag=game",
+        "search": "https://hh.gbdev.io/search?q={q}&platform=GB&typetag=game"
+      },
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-game-boy-gb-gbc/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=game+boy+rom",
+        "search": "https://itch.io/search?q={q}+game+boy"
+      }
+    ],
+    "Nintendo - Game Boy Color": [
+      {
+        "name": "Homebrew Hub",
+        "url": "https://hh.gbdev.io/search?platform=GBC&typetag=game",
+        "search": "https://hh.gbdev.io/search?q={q}&platform=GBC&typetag=game"
+      },
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-game-boy-gb-gbc/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=game+boy+color+rom",
+        "search": "https://itch.io/search?q={q}+game+boy+color"
+      }
+    ],
+    "Nintendo - Game Boy Advance": [
+      {
+        "name": "Homebrew Hub",
+        "url": "https://hh.gbdev.io/search?platform=GBA&typetag=game",
+        "search": "https://hh.gbdev.io/search?q={q}&platform=GBA&typetag=game"
+      },
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-game-boy-advance-gba/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=gba+rom",
+        "search": "https://itch.io/search?q={q}+gba"
+      }
+    ],
+    "Nintendo - Nintendo 64": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-64-n64/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=n64+rom",
+        "search": "https://itch.io/search?q={q}+n64"
+      }
+    ],
+    "Nintendo - Nintendo DS": [
+      {
+        "name": "Universal-DB",
+        "url": "https://db.universal-team.net/ds",
+        "search": ""
+      },
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-ds/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Nintendo - Wii": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nintendo-wii/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Sega - Mega Drive - Genesis": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sega-genesis-megadrive/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=mega+drive+rom",
+        "search": "https://itch.io/search?q={q}+mega+drive"
+      }
+    ],
+    "Sega - Master System - Mark III": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sega-master-system-sms/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=master+system+rom",
+        "search": "https://itch.io/search?q={q}+master+system"
+      }
+    ],
+    "Sega - Game Gear": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sega-game-gear/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=game+gear+rom",
+        "search": "https://itch.io/search?q={q}+game+gear"
+      }
+    ],
+    "Sega - Saturn": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sega-saturn/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Sega - Dreamcast": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sega-dreamcast/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "NEC - PC Engine - TurboGrafx 16": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/nec-turbografx-16-pc-engine/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=pc+engine+rom",
+        "search": "https://itch.io/search?q={q}+pc+engine"
+      }
+    ],
+    "Sony - PlayStation": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sony-playstation-ps1/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Sony - PlayStation 2": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sony-playstation-2-ps2/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Sony - PlayStation Portable": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/sony-playstation-portable-psp/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Atari - 2600": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/atari-2600/",
+        "search": "https://pdroms.de/?s={q}"
+      },
+      {
+        "name": "itch.io",
+        "url": "https://itch.io/search?q=atari+2600+rom",
+        "search": "https://itch.io/search?q={q}+atari+2600"
+      }
+    ],
+    "SNK - Neo Geo Pocket Color": [
+      {
+        "name": "PDRoms",
+        "url": "https://pdroms.de/files/snk-neo-geo-pocket-ngp-ngpc/",
+        "search": "https://pdroms.de/?s={q}"
+      }
+    ],
+    "Nintendo - Nintendo 3DS": [
+      {
+        "name": "Universal-DB",
+        "url": "https://db.universal-team.net/3ds",
+        "search": ""
+      }
+    ]
+  }
+}
