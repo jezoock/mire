@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Xbox controllers",
+      "description": "Recognizes Xbox controllers and shows their buttons (A, B, LB, RB, View…) in the help at the bottom of the screen."
+    },
+    "gamepads": {
+      "xbox": {
+        "name": "Xbox"
+      }
+    },
+    "buttons": {
+      "view": "View"
+    }
+  }
+}

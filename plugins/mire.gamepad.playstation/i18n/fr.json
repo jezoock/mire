@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Manettes PlayStation",
+      "description": "Reconnaît les manettes PlayStation (DualShock, DualSense) et affiche leurs boutons (✕, ○, L1, R1, Créer…) dans l’aide en bas de l’écran."
+    },
+    "gamepads": {
+      "playstation": {
+        "name": "PlayStation"
+      }
+    },
+    "buttons": {
+      "create": "Créer"
+    }
+  }
+}
