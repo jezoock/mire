@@ -168,6 +168,25 @@ export function createPluginSettings({ read, write, box, log = (m) => console.er
       return { values, secrets };
     },
 
+    /**
+     * Chiffre les secrets d'un plugin gardés en clair (déplacés par la continuité, P5-01) quand le système le permet ;
+     * rend leur nombre. Rien n'est écrit si tout est déjà chiffré ou si le système ne chiffre pas.
+     */
+    seal(id: string): number {
+      if (!box.available()) return 0;
+      const stored = read()?.[id];
+      if (!stored) return 0;
+      const next: Record<string, StoredPluginSetting> = { ...stored };
+      let sealed = 0;
+      for (const [key, v] of Object.entries(stored)) {
+        if (!isStoredSecret(v) || v.encrypted) continue;
+        next[key] = { $secret: box.encrypt(v.$secret), encrypted: true };
+        sealed++;
+      }
+      if (sealed) write(id, next);
+      return sealed;
+    },
+
     /** Change un réglage déclaré ; `null` le remet à sa valeur par défaut. Rend la valeur vue par le plugin. */
     set(id: string, declared: readonly PluginSetting[], key: string, value: unknown): SettingValue | undefined {
       const decl = declared.find((d) => d.key === key);

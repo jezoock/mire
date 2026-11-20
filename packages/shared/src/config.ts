@@ -118,10 +118,10 @@ export interface UiSettings {
 }
 
 export interface SearchSettings {
-  tmdbToken: string;
-  /** Pays des disponibilités (« où regarder »). */
-  region: string;
-  /** Langue des fiches TMDB et Steam (`fr-FR`, `en-US`) ; vide = celle de l'interface. */
+  /**
+   * Langue des fiches (`fr-FR`, `en-US`) des sources d'infos du cœur ; vide = celle de l'interface. La clé TMDB et le
+   * pays des disponibilités sont devenus des réglages du plugin `mire.tmdb` (P5-15).
+   */
   language: string;
 }
 

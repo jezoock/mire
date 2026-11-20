@@ -229,25 +229,6 @@
           "label": "TV service"
         }
       },
-      "search": {
-        "title": "Search in the streaming catalogues",
-        "help": "With a free TMDB key, Search shows the matching movies and series and tells you on which service to watch them.",
-        "tmdbToken": {
-          "label": "TMDB key or token",
-          "help": "Create an account on themoviedb.org, then copy the “API read access token” from Settings, API section.",
-          "placeholder": "Optional"
-        },
-        "region": {
-          "label": "Country of availability",
-          "options": {
-            "FR": "France",
-            "BE": "Belgium",
-            "CH": "Switzerland",
-            "LU": "Luxembourg",
-            "CA": "Canada"
-          }
-        }
-      },
       "scrape": {
         "title": "Details and posters",
         "help": "Mire looks online for a picture and some details for your files. The pictures stay in Mire’s data; nothing is written in your folders.",
@@ -510,11 +491,6 @@
       }
     },
     "search": {
-      "errors": {
-        "tmdbUnreachable": "Can't reach the TMDB catalog. Check your internet connection.",
-        "tmdbKeyRefused": "TMDB key refused. Check it in Settings.",
-        "tmdbStatus": "TMDB responded with code {status}."
-      },
       "field": "Search everything",
       "placeholder": "Film, series, song, channel, game…",
       "intro": "One search covers your files, your TV channels, your games and your streaming services.",
@@ -527,19 +503,18 @@
       "none": "Nothing found in your library.",
       "watch": {
         "heading": "Streaming films and series",
-        "noKey": "Add a free TMDB key to see matching films and series here, with the service where you can watch them.",
-        "addKey": "Add the key",
+        "addKey": "Open its settings",
         "loading": "Searching the catalogues…",
         "failed": "Search failed.",
         "empty": "No film or series found.",
-        "attribution": "Catalogue: TMDB. Availability: JustWatch.",
         "movie": "Film",
         "series": "Series",
         "noOffer": "Not on subscription",
         "notConfigured": "Available on {services}, which is not set up in Mire.",
         "nowhere": "This title is not offered on any subscription service at the moment (according to JustWatch).",
         "alsoOn": "Also available on {name}",
-        "openOn": "Open {name}"
+        "openOn": "Open {name}",
+        "noPlugin": "Install a \"Where to watch\" plugin (TMDB, for example) from the Center to see matching movies and TV shows here, with the service where you can watch them."
       },
       "sites": {
         "heading": "Search your sites",
@@ -622,12 +597,6 @@
         "noTitle": "Enter a title to search for.",
         "unknownType": "Unknown type.",
         "status": "{host}: code {status}"
-      },
-      "tmdb": {
-        "skipped": "videos (no TMDB key)",
-        "noKey": "Add a TMDB key in Settings to look up movies and series.",
-        "series": "Series",
-        "movie": "Movie"
       }
     },
     "store": {

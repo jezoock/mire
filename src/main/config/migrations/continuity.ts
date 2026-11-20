@@ -16,7 +16,8 @@
  * 4. `applies(config)` : vrai si la configuration (d'avant la v10, non normalisée : tout peut y manquer ou y être mal
  *    formé) se sert de la fonction ; faux sinon (rien n'est alors activé, installé ni déplacé) ;
  * 5. `settings` (facultatif) : réglages à déplacer, chemin dans la configuration (`search.tmdbToken`) → clé du réglage
- *    déclaré par le manifeste du plugin (`token`), `secret: true` pour un réglage `secret` ;
+ *    déclaré par le manifeste du plugin (`token`), `secret: true` pour un réglage `secret`, `convert` pour une valeur
+ *    à traduire (option d'un `choice`), `keep: true` pour un réglage que le cœur lit encore (copié, pas déplacé) ;
  * 6. un test dans `test/config/continuity.test.ts` (une configuration qui s'en sert, une qui ne s'en sert pas).
  * Exemple :
  *   { id: 'P5-15', plugin: 'mire.tmdb', mode: 'install',
@@ -31,8 +32,12 @@ export interface SettingMove {
   from: string;
   /** Clé du réglage dans `plugins.<id>` (déclarée par le manifeste du plugin). */
   to: string;
-  /** Réglage `secret` du manifeste : rangé comme un secret (chiffré au prochain changement, voir plus bas). */
+  /** Réglage `secret` du manifeste : rangé comme un secret (chiffré dès que le plugin est installé, voir plus bas). */
   secret?: boolean;
+  /** Valeur du plugin d'après l'ancienne (`'FR'` → `'fr'`) ; `undefined` : rien n'est déplacé. */
+  convert?(value: unknown): unknown;
+  /** Le cœur se sert encore du réglage : il est copié, et reste à sa place. */
+  keep?: boolean;
 }
 
 export interface ContinuityRule {
@@ -47,8 +52,24 @@ export interface ContinuityRule {
   settings?: readonly SettingMove[];
 }
 
-/** Table des règles : vide tant qu'aucune fonction n'est extraite (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
-export const CONTINUITY_RULES: readonly ContinuityRule[] = [];
+const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
+
+/** Table des règles : P5-02 à P5-20 ajoutent la leur (voir plus haut). */
+export const CONTINUITY_RULES: readonly ContinuityRule[] = [
+  // Infos en ligne TMDB et « Où regarder » : ne servaient qu'avec une clé TMDB.
+  {
+    id: 'P5-15',
+    plugin: 'mire.tmdb',
+    mode: 'install',
+    applies: (c) => nonEmpty(c.search?.tmdbToken),
+    settings: [
+      { from: 'search.tmdbToken', to: 'token', secret: true, convert: (v) => String(v).trim() },
+      { from: 'search.region', to: 'region', convert: (v) => (nonEmpty(v) ? String(v).trim().toLowerCase() : undefined) },
+      // La langue des fiches sert aussi à Steam (cœur jusqu'à P5-16).
+      { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
+    ],
+  },
+];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 
@@ -84,16 +105,23 @@ function moveSetting(raw: Loose, plugin: string, move: SettingMove): void {
   let parent: unknown = raw;
   for (const k of keys) parent = isRecord(parent) ? parent[k] : undefined;
   if (!isRecord(parent) || !Object.hasOwn(parent, last) || !isSettingValue(parent[last])) return;
-  const value = parent[last];
+  let value: unknown = parent[last];
+  try {
+    value = move.convert ? move.convert(value) : value;
+  } catch {
+    value = undefined;
+  }
+  if (value === undefined || !isSettingValue(value)) return;
   if (!isRecord(raw.plugins)) raw.plugins = {};
   if (!isRecord(raw.plugins[plugin])) raw.plugins[plugin] = {};
   const target: Loose = raw.plugins[plugin];
   // Un réglage déjà là (fichier modifié à la main, import) l'emporte sur l'ancien emplacement.
   if (!Object.hasOwn(target, move.to)) {
-    // Pas de `safeStorage` pendant la migration : le secret est rangé en clair, comme quand le système ne chiffre pas.
+    // Pas de `safeStorage` pendant la migration : le secret est rangé en clair, comme quand le système ne chiffre pas,
+    // puis chiffré par le service de continuité dès que le plugin est installé (`seal`).
     target[move.to] = move.secret ? { $secret: String(value), encrypted: false } : structuredClone(value);
   }
-  delete parent[last];
+  if (!move.keep) delete parent[last];
 }
 
 /** Applique les règles à une configuration lue (modifiée sur place) ; rend les identifiants des règles appliquées. */

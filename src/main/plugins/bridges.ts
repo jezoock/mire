@@ -5,7 +5,12 @@
  *   éléments vont au catalogue sous `{ plugin: <id du plugin>, instance: <id de la contribution> }`, et le quittent à
  *   sa désactivation. Les emplacements configurés par l'utilisateur viendront avec les réglages des plugins (P4-20) :
  *   la source reçoit `null` en attendant.
- * - `metadata` → moteur d'infos en ligne (`scrape/engine.ts`, `extraProviders`), après les quatre fournisseurs du cœur.
+ * - `metadata` → moteur d'infos en ligne (`scrape/engine.ts`, `extraProviders`), après les fournisseurs du cœur. Les
+ *   images d'une fiche (`image`, `backdrop`) arrivent par leur adresse : elles sont copiées dans le dossier d'images,
+ *   seulement depuis un hôte `https:` déclaré par le plugin ; ce qu'il manque pour interroger la source (`requires`)
+ *   est fait de textes du plugin, montrés tels quels. Une erreur levée par un plugin le désactive (service) : un
+ *   échec attendu (clé refusée, service injoignable) se rend comme résultat, `{ failure: "<message du plugin>" }`,
+ *   que l'utilisateur voit comme l'erreur d'une recherche de fiches.
  * - `search` → `search(query)` : interroge les fournisseurs actifs en parallèle (l'écran Recherche, P4-12, les
  *   affichera).
  *
@@ -18,7 +23,9 @@ import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel } from '@mire/plugin-sdk';
 import type { ElementSourceRef } from '@mire/shared';
 import { isInside } from '../lib/paths.ts';
-import type { MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
+import { ScrapeRefusal } from '../scrape/refusal.ts';
+import type { JobContext, MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
+import { hostDeclared } from './permissions.ts';
 import type { ContributionEntry } from './registry.ts';
 
 /** Bornes des résultats rendus par un plugin. */
@@ -41,6 +48,8 @@ export interface BridgeService {
   call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args?: unknown[], options?: { timeout?: number }): Promise<unknown>;
   levelOf(id: string): PluginLevel | null;
   folders(id: string): string[];
+  /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`). */
+  hosts(id: string): string[];
 }
 
 export interface BridgeCatalog {
@@ -122,6 +131,30 @@ export function checkElements(pluginId: string, level: PluginLevel, granted: str
   return { elements, dropped: raw.length - elements.length };
 }
 
+/** Message d'un plugin (texte de son catalogue, montré tel quel), borné ; à défaut, celui de l'erreur. */
+const pluginMessage = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 500) : null);
+
+/** Ce qu'il manque pour interroger la source d'un plugin : deux textes, ou `null`. */
+export function checkMissing(raw: unknown): { skipped: string; error: string } | null {
+  if (!isObject(raw)) return null;
+  const skipped = pluginMessage(raw.skipped);
+  const error = pluginMessage(raw.error);
+  return skipped && error ? { skipped, error } : null;
+}
+
+/** Adresse d'image qu'un plugin peut faire copier : `https:`, vers un hôte qu'il a déclaré. */
+export function imageAllowed(url: string, hosts: readonly string[]): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && !u.username && !u.password && hostDeclared(hosts, u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** Nombre d'images copiées gardées en mémoire (une même affiche pour tous les épisodes d'une série). */
+const IMAGE_MEMORY = 500;
+
 const GROUPS: Record<MetadataKind, ScrapeGroup> = { video: 'videos', album: 'music', rom: 'games', pc: 'games' };
 
 /** Fiche rendue par un plugin : les champs connus, d'un type attendu ; `source` est celle du plugin. */
@@ -177,26 +210,58 @@ export function createPluginBridges({
     for (const e of current) if (!scanned.has(refKey(e))) void scan(e);
   }
 
+  // Images copiées, par adresse : la même image n'est téléchargée qu'une fois, et garde le même fichier.
+  const images = new Map<string, Promise<string | null>>();
+  function saveImage(url: string, job: JobContext): Promise<string | null> {
+    let saved = images.get(url);
+    if (!saved) {
+      if (images.size >= IMAGE_MEMORY) images.clear();
+      saved = job.io.saveImage(url, `plugin-image|${url}`).catch(() => null);
+      images.set(url, saved);
+      // Échec : un nouvel essai à la prochaine fiche.
+      void saved.then((file) => (file ? undefined : images.delete(url)));
+    }
+    return saved;
+  }
+
+  /** Fiche d'un plugin, avec ses images copiées (celles d'un hôte non déclaré sont écartées). */
+  async function withImages(pluginId: string, facts: MetadataFacts | null | undefined, job: JobContext): Promise<MetadataFacts | null | undefined> {
+    if (!facts) return facts;
+    const hosts = service.hosts(pluginId);
+    const copy = (url: string | null | undefined) => (url && imageAllowed(url, hosts) ? saveImage(url, job) : Promise.resolve(null));
+    const [image, backdrop] = await Promise.all([copy(facts.image), copy(facts.backdrop)]);
+    return { ...facts, image, ...(facts.backdrop !== undefined ? { backdrop } : {}) };
+  }
+
   /** Adaptateur d'une contribution `metadata` pour le moteur d'infos en ligne. */
   function metadataProvider(e: ContributionEntry): MetadataProvider {
     const kinds = ((e.declaration.kinds as MetadataKind[] | undefined) ?? []).filter((k) => Object.hasOwn(GROUPS, k));
     const source = `${e.pluginId}/${e.id}`;
     const call = (method: string, args: unknown[]) => service.call(e.pluginId, 'metadata', e.id, method, args, { timeout: BRIDGE_LIMITS.metadataTimeout });
+    // Échec rendu par le plugin (clé refusée, service injoignable) : un message pour l'utilisateur.
+    const ask = async (method: string, args: unknown[]): Promise<unknown> => {
+      const raw = await call(method, args);
+      const failure = isObject(raw) ? pluginMessage(raw.failure) : null;
+      if (failure) throw new ScrapeRefusal(failure);
+      return raw;
+    };
     return {
       id: source,
       kinds,
       group: GROUPS[kinds[0] ?? 'video'],
       concurrency: 2,
+      // Sans `requires` (ou en panne), le plugin est interrogé : ses erreurs diront ce qui ne va pas.
+      requires: async () => checkMissing(await call('requires', []).catch(() => null)),
       // Clé de la fiche : propre au plugin, d'après la clé de l'élément.
       key: (item) => `plugin:${source}|${String((item as { key?: unknown })?.key ?? (item as { path?: unknown })?.path ?? '')}`,
       collect: async (opts) => {
         const items = await call('collect', [opts ?? {}]);
         return Array.isArray(items) ? items.slice(0, BRIDGE_LIMITS.elements) : [];
       },
-      scrape: async (item, override) => checkFacts(source, await call('scrape', [item, override ?? null])),
-      byId: async (pick, item) => checkFacts(source, await call('byId', [pick, item])),
+      scrape: async (item, override, job) => withImages(e.pluginId, checkFacts(source, await ask('scrape', [item, override ?? null])), job),
+      byId: async (pick, item, job) => withImages(e.pluginId, checkFacts(source, await ask('byId', [pick, item])), job),
       candidates: async (q) => {
-        const list = await call('candidates', [q]);
+        const list = await ask('candidates', [q]);
         return Array.isArray(list)
           ? list
               .filter((c) => isObject(c) && text(c.id) && text(c.title))

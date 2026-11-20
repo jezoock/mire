@@ -77,10 +77,9 @@ import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
 import * as http from './net/http.ts';
-import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers } from './platform/index.ts';
 import { createScraper, guessSystem } from './scrape/index.ts';
-import { streamingSearchProvider } from './search/streaming.ts';
+import { createWatchSearch } from './search/watch.ts';
 import { createAccessPolicy } from './security/access-policy.ts';
 import { allowedFiles, allowedRoots } from './security/allowed.ts';
 import { flushWithin } from './storage/json-store.ts';
@@ -180,7 +179,6 @@ function start(pending: PendingFiles): Running {
   });
   const { web, drm } = webLayer;
 
-  const streaming = streamingSearchProvider(createTmdbClient({ key: () => config.get().search.tmdbToken }));
   const games = createGames({
     config,
     access,
@@ -275,6 +273,11 @@ function start(pending: PendingFiles): Running {
   }));
   // Dépôts tiers et accords pour leurs plugins de code sensible (P3-08), hors de la configuration.
   const trust = createTrustStore({ file: files.repoTrust });
+  const pluginSettings = createPluginSettings({
+    read: () => config.get().plugins,
+    write: (id, values) => config.update((d) => void (d.plugins = { ...(d.plugins ?? {}), [id]: values })),
+    box: safeStorageBox(safeStorage),
+  });
   const plugins = createPluginService({
     roots: {
       bundled: app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(__dirname, '..', '..', 'resources', 'plugins'),
@@ -285,11 +288,7 @@ function start(pending: PendingFiles): Running {
     state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
     context: createContextHandler({ pickFolder, folders: { list: pluginState.folders, add: pluginState.addFolder }, storage: storages.of }),
-    settings: createPluginSettings({
-      read: () => config.get().plugins,
-      write: (id, values) => config.update((d) => void (d.plugins = { ...(d.plugins ?? {}), [id]: values })),
-      box: safeStorageBox(safeStorage),
-    }),
+    settings: pluginSettings,
     flush: storages.flush,
     dropData: storages.drop,
     tagRegistry: registry,
@@ -327,6 +326,7 @@ function start(pending: PendingFiles): Running {
     plugins,
     repos,
     translate: t,
+    secrets: pluginSettings,
     onChange: (summary) => toUi('plugins:continuity-changed', summary),
   });
   pluginTaggers = plugins.taggerContributors;
@@ -422,7 +422,8 @@ function start(pending: PendingFiles): Running {
     downloads,
     adblock,
   };
-  const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
+  // « Où regarder » : recherche d'un plugin (P5-15), rapprochée des sites configurés.
+  const searchStreaming = createWatchSearch({ search: pluginBridges.search, sites: () => config.get().web });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
