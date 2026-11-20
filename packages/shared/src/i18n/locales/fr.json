@@ -919,10 +919,10 @@
         "confirm": "Valider",
         "cancel": "Annuler",
         "detected": "Manette {name} détectée. Les commandes s’affichent en bas de l’écran.",
+        "detectedGeneric": "Manette détectée. Les commandes s’affichent en bas de l’écran.",
         "disconnected": "Manette déconnectée",
         "buttons": {
-          "view": "Affichage",
-          "create": "Créer"
+          "select": "Select"
         },
         "pick": "Choisir"
       }

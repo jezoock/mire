@@ -1,0 +1,15 @@
+{
+  "match": ["057e", "nintendo", "switch", "pro controller", "joy-con"],
+  "priority": 30,
+  "buttons": {
+    "a": "B",
+    "b": "A",
+    "x": "Y",
+    "y": "X",
+    "lb": "L",
+    "rb": "R",
+    "lt": "ZL",
+    "rt": "ZR",
+    "select": "−"
+  }
+}

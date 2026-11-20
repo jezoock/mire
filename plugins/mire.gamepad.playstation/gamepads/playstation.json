@@ -1,0 +1,17 @@
+{
+  "match": ["054c", "playstation", "dualsense", "dualshock", "^wireless controller"],
+  "priority": 20,
+  "buttons": {
+    "a": "✕",
+    "b": "○",
+    "x": "□",
+    "y": "△",
+    "lb": "L1",
+    "rb": "R1",
+    "lt": "L2",
+    "rt": "R2",
+    "select": {
+      "text": "buttons.create"
+    }
+  }
+}

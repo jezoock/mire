@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "PlayStation controllers",
+      "description": "Recognizes PlayStation controllers (DualShock, DualSense) and shows their buttons (✕, ○, L1, R1, Create…) in the help at the bottom of the screen."
+    },
+    "gamepads": {
+      "playstation": {
+        "name": "PlayStation"
+      }
+    },
+    "buttons": {
+      "create": "Create"
+    }
+  }
+}
