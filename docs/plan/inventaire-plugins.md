@@ -303,9 +303,9 @@ Des données seules, sans code. Les anciens thèmes deviennent des palettes de c
 | `lang-fr` | Français | À installer | Langue | Données seules | packages/shared/src/i18n/locales/fr.json |  |
 | `lang-en` | Anglais | Cœur | Langue | Données seules | packages/shared/src/i18n/locales/en.json |  |
 | `lang-packs` | Autres langues | À installer | Langue | Données seules | à créer (P3-29) |  |
-| `pad-xbox` | Manettes Xbox | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
-| `pad-ps` | Manettes PlayStation | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
-| `pad-nintendo` | Manettes Nintendo | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
+| `pad-xbox` | Manettes Xbox | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.xbox` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `pad-ps` | Manettes PlayStation | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.playstation` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `pad-nintendo` | Manettes Nintendo | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.nintendo` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `police` | Police Archivo | Cœur | Socle | Données seules | src/renderer/fonts/ |  |
 
 ## Socle de l'application

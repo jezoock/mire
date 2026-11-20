@@ -227,8 +227,16 @@ ni dossier, ni fichier, ni hôte.
   est notée dans l'état (`bundled`), son journal le dit ; il est actif, sauf si l'utilisateur l'avait désactivé. Il
   se désactive comme les autres mais ne se désinstalle pas ; une version plus haute installée dans
   `userData/plugins/` (mise à jour par le dépôt, P3-07) passe devant, et sa désinstallation lui rend la place.
-  Aujourd'hui, un seul : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni
-  jeu), qui ne change rien de visible ; la phase 5 le remplacera par les vrais plugins inclus.
+  Aujourd'hui : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni jeu), et les
+  profils de manettes `mire.gamepad.xbox`, `mire.gamepad.playstation`, `mire.gamepad.nintendo` (P5-04).
+- **Ajouter un plugin inclus** (phase 5, mécanisme posé par P5-04) : la source de vérité est `jezoock/mire-addons`
+  (`plugins/<id>/`, publié comme les autres) ; Mire en versionne une copie dans `plugins/<id>/`, faite par
+  `node scripts/bundle-plugin.mjs <clone de mire-addons> <id…>` : identifiant du dépôt officiel (`mire.`) seulement,
+  manifeste et fichiers listés dans `files` du `package.json` du plugin et rien d'autre, liens symboliques et chemins
+  qui sortent du plugin refusés, dossier cible vidé avant la copie (une copie refusée laisse l'ancienne en place). On
+  ne modifie jamais la copie à la main : on change le plugin dans mire-addons (nouvelle version), puis on relance le
+  script. `test/plugins/bundled-sources.test.ts` vérifie que chaque dossier est accepté par la découverte sans refus.
+  La tâche ajoute aussi sa règle de continuité (mode `bundled`).
 - **Dépendances** (D-19, `dependencies.ts`, plages de `semver.ts`) : au démarrage, un plugin dont une dépendance
   manque, n'est pas dans une version qui convient, est refusée ou forme un cycle est refusé
   (`plugins.refused.dependency`, `dependency-refused`, `cycle`), de proche en proche ; les autres sont activés dans
@@ -301,6 +309,14 @@ ni dossier, ni fichier, ni hôte.
   Mire (`restartRequired`). Les contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles,
   packs, sites) sont exposées au registre par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec
   leur tâche.
+- **Manettes** (P5-04, `gamepads.ts`) : lecteur des contributions `gamepads` (format en tête du fichier). Motifs de
+  l'identifiant de la manette : expressions courtes et en nombre borné, sans groupe répété ni référence arrière,
+  compilées sans distinction de casse ; une expression invalide ou refusée est ignorée. Libellés : symbole court (affiché
+  comme du texte) ou texte du plugin (`pluginTexts.<plugin>.<clé>`). `gamepadsProfiles()` (`gamepads:profiles`, sans
+  argument) rend les profils des plugins actifs dans leur ordre d'essai ; l'événement `onGamepadsChange`
+  (`gamepads:changed`) prévient l'interface quand un plugin de manettes est activé ou désactivé. L'interface
+  (`nav/gamepad-data.ts`) garde la mécanique et un profil générique, utilisé pour une manette qu'aucun profil ne
+  reconnaît.
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 - **Réglages des plugins** (P4-20) : `pluginsSettings()` (`plugins:settings`) rend, pour chaque plugin qui en déclare,
