@@ -28,7 +28,8 @@
       "theme": "ecran",
       "webFullscreen": true,
       "language": "fr"
-    }
+    },
+    "continuity": ["P5-07-libres"]
   },
   "changed": true
 }

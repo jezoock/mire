@@ -64,7 +64,8 @@
       ],
       "active": "freebox",
       "detected": true
-    }
+    },
+    "continuity": ["P5-07-libres"]
   },
   "changed": true
 }

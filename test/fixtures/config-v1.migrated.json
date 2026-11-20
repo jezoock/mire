@@ -93,7 +93,8 @@
       "active": "freebox",
       "detected": true
     },
-    "version": 10
+    "version": 10,
+    "continuity": ["P5-07-libres"]
   },
   "changed": true
 }

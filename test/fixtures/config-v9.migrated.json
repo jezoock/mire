@@ -225,7 +225,8 @@
           "encrypted": true
         }
       }
-    }
+    },
+    "continuity": ["P5-07-sites", "P5-07-libres"]
   },
   "changed": true
 }
