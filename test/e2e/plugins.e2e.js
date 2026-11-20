@@ -232,6 +232,8 @@ describe('Hôte de plugins', () => {
 
   it('Centre (P4-19) : la fiche d’un plugin montre les permissions qu’il demande, et son refus s’il est refusé', async () => {
     const VIEW = '#view mire-centre mire-centre-view';
+    // Les actions de mire-app lui sont ajoutées par le registre des contrôleurs, après sa connexion.
+    await page.waitForFunction(() => typeof document.querySelector('mire-app')?.open === 'function');
     await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
     await page.waitForFunction(() => document.querySelector('#view mire-centre')?.showTab);
     await page.evaluate(() => document.querySelector('#view mire-centre').showTab({ tab: 'plugins' }));
