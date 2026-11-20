@@ -11,9 +11,10 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
-import type { Element } from '@mire/shared';
+import type { Element, PageDefinition } from '@mire/shared';
 import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
+import { readPluginPages } from './pages.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -629,6 +630,8 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
+    /** Pages prêtes à l'emploi des plugins actifs (contributions `pages`, P5-03), vérifiées. */
+    pageDefinitions: (): PageDefinition[] => readPluginPages(registry.list('pages')),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

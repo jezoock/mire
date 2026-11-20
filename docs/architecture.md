@@ -938,7 +938,7 @@ sur plusieurs niveaux (`groupBy`, une info par niveau). Le service (`catalog/pag
 - **Tri** (`sort`) : une info, ou `name` et `added`, croissant ou décroissant ; un élément sans la valeur va après
   les autres ; on finit toujours par le nom.
 - **Tranches** : 100 regroupements ou éléments par réponse ; `next` est le curseur de la suivante (`null` à la fin).
-- **Pages prêtes à l'emploi** (`pages/builtin.ts`, plugin inclus en P5-03) :
+- **Pages prêtes à l'emploi** (P5-03) : sept plugins inclus `mire.page.movies`, `.series`, `.music`, `.images`, `.streaming`, `.tv`, `.games` (`plugins/<id>/pages/<page>.json`, nature `pages`) ; le cœur n'en garde aucune. `plugins/pages.ts` lit les contributions des plugins actifs (`PageDefinition` vérifiée par `validatePage`, nom en clé de texte du plugin, identifiant égal à celui de la contribution, le premier plugin l'emporte en cas de doublon) et `pages.setBuiltin` les fournit au moteur : une page de plugin désactivé disparaît (menu, Accueil, événement `pages:changed`), les pages de l'utilisateur (`pages.json`, y compris une copie modifiée ou une suppression) ne changent pas :
 
   | Page | `require` | `groupBy` | `sort` |
   | --- | --- | --- | --- |

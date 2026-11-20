@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Streaming page",
+      "description": "A “Streaming” page: your streaming services and sites, sorted by category."
+    },
+    "pages": {
+      "streaming": "Streaming"
+    }
+  }
+}

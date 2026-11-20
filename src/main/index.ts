@@ -335,7 +335,10 @@ function start(pending: PendingFiles): Running {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
     // Profils de manettes (P5-04) : l'interface les redemande.
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
+    // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
+    if (kinds.includes('pages')) catalogPages.setBuiltin(plugins.pageDefinitions());
   });
+  catalogPages.setBuiltin(plugins.pageDefinitions());
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));

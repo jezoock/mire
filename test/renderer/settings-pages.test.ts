@@ -6,7 +6,7 @@ import { BUILTIN_CATALOGS, createI18n } from '@mire/shared/i18n';
 import { validatePage, type PageDefinition, type PageOverview, type TagSummary } from '@mire/shared';
 import { normalizeField } from '@mire/ui/utils';
 import type { FormValues } from '@mire/ui/utils';
-import { BUILTIN_PAGES } from '../../src/main/catalog/pages/builtin.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 import { newPageId, pageFormTabs, pageFromForm, pagesGroup, previewText, tagIdOf } from '../../src/renderer/settings/pages.ts';
 import { settingsPanels } from '../../src/renderer/settings/index.ts';
 import { SettingsController } from '../../src/renderer/controllers/settings.ts';

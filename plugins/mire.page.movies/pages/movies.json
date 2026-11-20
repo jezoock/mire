@@ -1,0 +1,22 @@
+{
+  "id": "movies",
+  "name": {
+    "key": "pages.movies"
+  },
+  "icon": "movie",
+  "require": ["video", "movie"],
+  "groupBy": ["genres"],
+  "sort": [
+    {
+      "by": "title"
+    },
+    {
+      "by": "year"
+    }
+  ],
+  "display": "posters",
+  "menu": {
+    "pinned": true,
+    "order": 1
+  }
+}
