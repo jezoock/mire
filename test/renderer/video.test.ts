@@ -20,7 +20,7 @@ import {
 import { VideoController } from '../../src/renderer/controllers/video.ts';
 import { CONTROLLER_CLASSES } from '../../src/renderer/controllers/index.ts';
 import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
-import { PAD_GLYPHS, isGlyphKey } from '../../src/renderer/nav/gamepad-data.ts';
+import { GENERIC_PROFILE, isGlyphKey } from '../../src/renderer/nav/gamepad-data.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
 
@@ -183,16 +183,14 @@ describe('contrôleur mire-video-player', () => {
 
 describe('manette : textes', () => {
   it('les boutons qui portent un mot sont traduits par les catalogues', () => {
-    for (const glyphs of Object.values(PAD_GLYPHS)) {
-      for (const g of Object.values(glyphs)) if (isGlyphKey(g)) assert.ok(tFr(g) && tEn(g), g);
-    }
-    assert.equal(tFr(PAD_GLYPHS.xbox.select), 'Affichage');
-    assert.equal(tEn(PAD_GLYPHS.ps.select), 'Create');
+    for (const g of Object.values(GENERIC_PROFILE.glyphs)) if (isGlyphKey(g)) assert.ok(tFr(g) !== g && tEn(g) !== g, g);
+    assert.equal(tEn(GENERIC_PROFILE.glyphs.select as string), 'Select');
     assert.equal(isGlyphKey('LB'), false);
   });
 
   it('manette détectée ou déconnectée, en français et en anglais', () => {
     assert.equal(tFr('shell.pad.detected', { name: 'Xbox' }), 'Manette Xbox détectée. Les commandes s’affichent en bas de l’écran.');
     assert.equal(tEn('shell.pad.disconnected'), 'Controller disconnected');
+    assert.equal(tFr('shell.pad.detectedGeneric'), 'Manette détectée. Les commandes s’affichent en bas de l’écran.');
   });
 });

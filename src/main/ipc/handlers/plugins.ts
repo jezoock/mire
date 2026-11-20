@@ -49,6 +49,8 @@ export function pluginsHandlers(ctx: MainContext) {
     pluginsSetEnabled: (id, enabled) => ctx.plugins.setEnabled(id, enabled),
     pluginsSettings: () => ctx.plugins.settingsList(),
     pluginsMetadataProviders: () => ctx.plugins.metadataProviders(),
+    // Sans argument ; les données des plugins sont vérifiées par le lecteur des profils (`plugins/gamepads.ts`).
+    gamepadsProfiles: () => ctx.plugins.gamepadProfiles(),
     pluginsSetSetting: (id, key, value) => {
       const name = () => ctx.plugins.settingsList().find((p) => p.id === id)?.name ?? id;
       try {

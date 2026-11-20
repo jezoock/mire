@@ -11,21 +11,23 @@ import type { Controllers } from '../controllers/index.ts';
 import { handleKey } from './keyboard.ts';
 import { activeDialog, closeDialog, inColumns, moveFocus, relayPadKey, stickScroll } from './focus.ts';
 import type { Direction } from './spatial.ts';
+import type { GamepadProfile } from '@mire/shared/ipc';
 import {
+  GENERIC_PROFILE,
   IMAGE_PAD,
   LIST_PAD,
-  PAD_NAMES,
   isGlyphKey,
   VIDEO_PAD,
   WEB_PAD,
-  padFamily,
   padHints,
   padKey,
+  padMatchers,
   padPresses,
+  padProfile,
   readPad,
   rescueCombo,
   type PadContext,
-  type PadFamily,
+  type PadMatcher,
   type PadMemory,
 } from './gamepad-data.ts';
 
@@ -37,6 +39,10 @@ export interface GamepadHooks {
   dialog(): HTMLElement | null;
   /** Combinaison du mode secours (Affichage + Menu) : ouvrir l'explorateur (P4-10). */
   rescue?(): void;
+  /** Profils de manettes des plugins actifs (P5-04) ; sans eux, le profil générique. */
+  profiles?(): Promise<GamepadProfile[]>;
+  /** Abonnement : profils changés (plugin activé ou désactivé). */
+  onProfilesChange?(listener: () => void): unknown;
 }
 
 /** Contrôleurs appelés par la manette : LB / RB (écran précédent ou suivant), X (modifier), site affiché, Y (choisir). */
@@ -45,6 +51,8 @@ export type GamepadControllers = Pick<Controllers, 'app' | 'web' | 'explorer'>;
 let hooks: GamepadHooks;
 let ctrl: GamepadControllers;
 const mem: PadMemory = { prev: {}, repeatAt: {} };
+let matchers: PadMatcher[] = [];
+let profile: GamepadProfile = GENERIC_PROFILE;
 const DIRS: Readonly<Record<string, Direction>> = { up: 'up', down: 'down', left: 'left', right: 'right' };
 
 /** Contexte de la manette : celui de l'interface, sauf un `ds-modal` au premier plan (dialogue) ou des colonnes. */
@@ -117,18 +125,39 @@ export function updatePadbar(force = false): void {
   const key = `${ctx}|${S.pad?.family || ''}`;
   if (!force && key === padCtxShown) return;
   padCtxShown = key;
-  const hints = S.pad ? padHints(ctx, S.pad.family as PadFamily) : null;
+  const hints = S.pad ? padHints(ctx, profile) : null;
   document.body.classList.toggle('has-pad', hints !== null);
   // Aide de la manette de la coquille (mire-padbar, P4-07), textes traduits.
   const padbar = $('mire-padbar') as (HTMLElement & { hints: { glyphs: string[]; label: string }[] }) | null;
   if (padbar) padbar.hints = (hints ?? []).map((h) => ({ glyphs: h.glyphs.map((g) => (isGlyphKey(g) ? t(g) : g)), label: t(h.key) }));
 }
 
+/** Message de la manette détectée : avec le nom de sa famille si un profil la reconnaît (et que son nom est traduit). */
+function detectedMessage(p: GamepadProfile): string {
+  const name = p.name ? t(p.name) : '';
+  return name && name !== p.name ? t('shell.pad.detected', { name }) : t('shell.pad.detectedGeneric');
+}
+
 function setPad(gp: Gamepad): void {
-  const family = padFamily(gp.id);
+  profile = padProfile(gp.id, matchers);
   const isNew = !S.pad || S.pad.id !== gp.id;
-  S.pad = { id: gp.id, family };
-  if (isNew) toast(t('shell.pad.detected', { name: PAD_NAMES[family] }), { duration: 4500 });
+  S.pad = { id: gp.id, family: profile.id };
+  if (isNew) toast(detectedMessage(profile), { duration: 4500 });
+  updatePadbar(true);
+}
+
+/** Recharge les profils des plugins ; la manette branchée est reconnue de nouveau (famille activée ou désactivée). */
+async function loadProfiles(): Promise<void> {
+  let list: GamepadProfile[] = [];
+  try {
+    list = (await hooks.profiles?.()) ?? [];
+  } catch {
+    // Profils illisibles : le profil générique suffit pour piloter Mire.
+  }
+  matchers = padMatchers(Array.isArray(list) ? list : []);
+  if (!S.pad) return;
+  profile = padProfile(S.pad.id, matchers);
+  S.pad = { id: S.pad.id, family: profile.id };
   updatePadbar(true);
 }
 
@@ -166,6 +195,8 @@ export function initGamepad(h: GamepadHooks, controllers: GamepadControllers): v
   ctrl = controllers;
   // L'aide de la manette suit la langue de l'interface.
   i18n.onChange(() => updatePadbar(true));
+  void loadProfiles();
+  h.onProfilesChange?.(() => void loadProfiles());
   window.addEventListener('gamepadconnected', (e) => setPad(e.gamepad));
   window.addEventListener('gamepaddisconnected', () => {
     const left = connectedPads();

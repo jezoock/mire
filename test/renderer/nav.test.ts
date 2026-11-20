@@ -7,8 +7,6 @@ import { ARROW_KEYS, IMAGE_KEYS, LIST_KEYS, VIDEO_KEYS, activatesOnEnter, isTypi
 import {
   IMAGE_PAD,
   LIST_PAD,
-  PAD_FAMILIES,
-  PAD_GLYPHS,
   PAD_HINTS,
   REPEAT_DELAY,
   REPEAT_RATE,
@@ -16,14 +14,19 @@ import {
   VIDEO_PAD,
   WEB_PAD,
   nextSection,
-  padFamily,
+  GENERIC_PROFILE,
+  isGlyphKey,
+  padGlyphs,
   padHints,
+  padMatchers,
+  padProfile,
   padKey,
   padPresses,
   readPad,
   type PadMemory,
   type PadState,
 } from '../../src/renderer/nav/gamepad-data.ts';
+import type { GamepadProfile } from '@mire/shared/ipc';
 
 interface Box extends Navigable {
   name: string;
@@ -277,40 +280,70 @@ describe('nav/keyboard', () => {
 });
 
 describe('nav/gamepad-data', () => {
-  it("famille déduite de l'identifiant de la manette", () => {
-    const cases: Array<[unknown, string]> = [
-      ['Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)', 'xbox'],
-      ['xinput', 'xbox'],
-      ['045e-02ea-Microsoft Controller', 'xbox'],
-      ['Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)', 'ps'],
-      ['DualSense Wireless Controller', 'ps'],
-      ['Sony PLAYSTATION(R)3 Controller', 'ps'],
-      ['Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)', 'nintendo'],
-      ['Joy-Con (L/R)', 'nintendo'],
-      ['Nintendo Switch Pro Controller', 'nintendo'],
-      ['8BitDo SN30 Pro (Vendor: 2dc8)', 'xbox'],
-      ['', 'xbox'],
-      [undefined, 'xbox'],
-      [null, 'xbox'],
-    ];
-    for (const [id, family] of cases) assert.equal(padFamily(id), family, String(id));
+  // Profils de plugins factices (P5-04) : les vrais profils et leurs motifs sont testés dans leurs plugins (mire-addons).
+  const FAKE_A: GamepadProfile = {
+    id: 'org.essai.a/a',
+    name: 'pluginTexts.org_essai_a.gamepads.a.name',
+    match: ['^alpha', '0aaa'],
+    priority: 10,
+    glyphs: { a: '✕', select: 'pluginTexts.org_essai_a.buttons.share' },
+  };
+  const FAKE_B: GamepadProfile = {
+    id: 'org.essai.b/b',
+    name: 'pluginTexts.org_essai_b.gamepads.b.name',
+    match: ['beta', 'controller'],
+    priority: 20,
+    glyphs: { a: 'B', b: 'A' },
+  };
+
+  it("profil déduit de l'identifiant de la manette, dans l'ordre des profils", () => {
+    const m = padMatchers([FAKE_A, FAKE_B]);
+    assert.equal(padProfile('Alpha Controller (Vendor: 0aaa)', m).id, 'org.essai.a/a');
+    assert.equal(padProfile('Beta pad', m).id, 'org.essai.b/b');
+    // Les deux reconnaîtraient « controller » : le premier de la liste l'emporte.
+    assert.equal(padProfile('Pad 0aaa controller', m).id, 'org.essai.a/a');
+    // Motif ancré : « alpha » ne compte qu'en début d'identifiant.
+    assert.equal(padProfile('Pad alpha', m).id, 'generic');
   });
 
-  it('ordre de priorité : Xbox, puis PlayStation, puis Nintendo', () => {
+  it('manette inconnue, ou famille désactivée : profil générique', () => {
+    for (const id of ['8BitDo SN30 Pro (Vendor: 2dc8)', '', undefined, null]) assert.equal(padProfile(id, padMatchers([FAKE_A])), GENERIC_PROFILE, String(id));
+    // Le plugin de la famille désactivé : ses profils ne sont plus fournis, la manette reste utilisable.
+    assert.equal(padProfile('Alpha Controller', padMatchers([])), GENERIC_PROFILE);
+    assert.deepEqual(padHints('dialog', GENERIC_PROFILE), [
+      { glyphs: ['A'], key: 'shell.pad.confirm' },
+      { glyphs: ['B'], key: 'shell.pad.cancel' },
+    ]);
+  });
+
+  it('motif invalide ignoré, les autres motifs du profil restent', () => {
+    const m = padMatchers([
+      { ...FAKE_A, match: ['(', '[z-a]', '0aaa'] },
+      { ...FAKE_B, match: ['('] },
+    ]);
+    assert.equal(m.length, 1);
+    assert.equal(m[0]?.patterns.length, 1);
+    assert.equal(padProfile('pad 0AAA', m).id, 'org.essai.a/a');
+    assert.equal(padProfile('beta', m), GENERIC_PROFILE);
+  });
+
+  it("libellés d'un profil complétés par ceux du profil générique", () => {
+    const g = padGlyphs(FAKE_A);
+    assert.equal(g.a, '✕');
+    assert.equal(g.b, 'B');
+    assert.equal(g.select, 'pluginTexts.org_essai_a.buttons.share');
+    assert.equal(isGlyphKey(g.select), true);
+    assert.equal(isGlyphKey(g.a), false);
     assert.deepEqual(
-      PAD_FAMILIES.map((f) => f.family),
-      ['xbox', 'ps', 'nintendo'],
+      padHints('dialog', FAKE_B)?.map((h) => h.glyphs),
+      [['B'], ['A']],
     );
-    // « Wireless Controller » ne désigne Sony qu'en début d'identifiant.
-    assert.equal(padFamily('Xbox Wireless Controller'), 'xbox');
-    assert.equal(padFamily('Generic Wireless Controller'), 'xbox');
   });
 
-  it('chaque famille a un libellé pour chaque bouton du rappel', () => {
-    for (const [family, glyphs] of Object.entries(PAD_GLYPHS)) {
-      for (const hints of Object.values(PAD_HINTS)) {
-        for (const [btns] of hints ?? []) for (const b of btns.split(' ')) assert.ok((glyphs as Record<string, string>)[b], `${family}.${b}`);
-      }
+  it('le profil générique a un libellé pour chaque bouton du rappel', () => {
+    const glyphs = padGlyphs(GENERIC_PROFILE) as Record<string, string>;
+    for (const hints of Object.values(PAD_HINTS)) {
+      for (const [btns] of hints ?? []) for (const b of btns.split(' ')) assert.ok(glyphs[b], b);
     }
   });
 
@@ -386,19 +419,19 @@ describe('nav/gamepad-data', () => {
     assert.deepEqual(padPresses({ ...none, a: true }, mem, 2001), [{ button: 'a', first: true }]);
   });
 
-  it('aide de la manette : libellés de la famille et clés des textes ; rien hors des contextes prévus', () => {
-    assert.equal(padHints('web', 'xbox'), null);
-    assert.equal(padHints('', 'xbox'), null);
-    assert.deepEqual(padHints('dialog', 'ps'), [
+  it('aide de la manette : libellés du profil et clés des textes ; rien hors des contextes prévus', () => {
+    assert.equal(padHints('web', FAKE_A), null);
+    assert.equal(padHints('', GENERIC_PROFILE), null);
+    assert.deepEqual(padHints('dialog', FAKE_A), [
       { glyphs: ['✕'], key: 'shell.pad.confirm' },
-      { glyphs: ['○'], key: 'shell.pad.cancel' },
+      { glyphs: ['B'], key: 'shell.pad.cancel' },
     ]);
-    assert.deepEqual(padHints('image', 'nintendo'), [
+    assert.deepEqual(padHints('image', FAKE_B), [
       { glyphs: ['B'], key: 'shell.pad.slideshow' },
-      { glyphs: ['L', 'R'], key: 'shell.pad.image' },
+      { glyphs: ['LB', 'RB'], key: 'shell.pad.image' },
       { glyphs: ['A'], key: 'shell.pad.close' },
     ]);
-    assert.deepEqual(padHints('video', 'xbox')?.[1], { glyphs: ['LT', 'RT'], key: 'shell.pad.minute' });
+    assert.deepEqual(padHints('video')?.[1], { glyphs: ['LT', 'RT'], key: 'shell.pad.minute' });
   });
 
   it('chaque texte de l’aide de la manette est dans les catalogues', () => {
