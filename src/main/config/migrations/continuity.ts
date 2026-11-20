@@ -50,12 +50,23 @@ export interface ContinuityRule {
 /** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
 const always = (): boolean => true;
 
+/** Palette choisie (`ui.theme`), parmi celles données ; P5-02. */
+const paletteIn =
+  (...ids: string[]) =>
+  (c: Loose): boolean =>
+    isObjectLike(c.ui) && ids.includes((c.ui as Loose).theme);
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
   { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
   { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
   { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
+  // P5-02 : palettes devenues des plugins à installer (une par plugin). Le réglage `ui.theme` reste en place : la
+  // palette revient dès que son plugin est installé. « Automatique » prenait Plein jour en mode clair.
+  { id: 'P5-02-jour', plugin: 'mire.palette.jour', mode: 'install', applies: paletteIn('jour', 'auto') },
+  { id: 'P5-02-minuit', plugin: 'mire.palette.minuit', mode: 'install', applies: paletteIn('minuit') },
+  { id: 'P5-02-velours', plugin: 'mire.palette.velours', mode: 'install', applies: paletteIn('velours') },
 ];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;

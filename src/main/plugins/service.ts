@@ -12,8 +12,9 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
-import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import type { GamepadProfile, PluginMetadataProvider, PluginPalettes, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
+import { readPluginPalettes } from './palettes.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -157,6 +158,8 @@ export function createPluginService(opts: PluginServiceOptions) {
   const restartPending = new Set<string>();
   let watchdogTimer: NodeJS.Timeout | null = null;
   let stopped = false;
+  /** Plugins démarrés (fin de `start`) : les palettes des plugins sont alors connues (P5-02). */
+  let started = false;
 
   const taggers = createPluginTaggers({
     refresh: (keys) => opts.refresh(keys),
@@ -464,6 +467,7 @@ export function createPluginService(opts: PluginServiceOptions) {
         log(id, 'warn', `Refusé : ${refusalMessage(id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
       }
       for (const id of order) if (state.get(id).enabled) await activate(id);
+      started = true;
     },
 
     /** Tous les plugins trouvés, avec leur état (pour le futur Centre). */
@@ -629,6 +633,12 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
+
+    /**
+     * Palettes des plugins actifs (contributions `palettes`, P5-02), vérifiées. `ready` : les plugins ont démarré ;
+     * avant, une palette absente n'est pas encore « manquante ».
+     */
+    palettes: (): PluginPalettes => ({ ready: started, palettes: readPluginPalettes(registry.list('palettes')) }),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

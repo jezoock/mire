@@ -217,6 +217,8 @@ const ADDED_METHODS: Record<string, string> = {
   pluginsContinuitySeen: 'plugins:continuitySeen',
   // P5-04 : profils de manettes des plugins
   gamepadsProfiles: 'gamepads:profiles',
+  // P5-02 : palettes des plugins
+  palettesList: 'palettes:list',
 };
 
 // Événements ajoutés après P1-08.
@@ -229,6 +231,7 @@ const ADDED_EVENTS: Record<string, string> = {
   onPluginsProgress: 'plugins:progress', // P3-07 : avancement d'une installation depuis un dépôt
   onPluginsContinuity: 'plugins:continuity-changed', // P5-01 : récapitulatif de la continuité changé
   onGamepadsChange: 'gamepads:changed', // P5-04 : profils de manettes changés
+  onPalettesChange: 'palettes:changed', // P5-02 : palettes des plugins changées
 };
 
 // Méthode de l'ancien preload qui ne passe pas par l'IPC.
