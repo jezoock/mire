@@ -1,9 +1,9 @@
 /** Interface : thème, menu, vue de départ, accueil et langue. */
 import { normalizeLanguageSetting } from '@mire/shared/i18n';
-import { DEFAULT_THEME, isTarget, isThemeId, listPageId, parseTarget } from '@mire/shared';
+import { DEFAULT_PALETTE, DEFAULT_THEME, PALETTE_AUTO, isPaletteId, isTarget, isThemeId, listPageId, parseTarget } from '@mire/shared';
 import type { HomeRow, HomeSettings, MenuPosition, UiSettings, WebSite } from '@mire/shared';
 import { homeRowsFromV8 } from '../migrations/v9.ts';
-import { DEFAULT_CONFIG, HOME_BARS, THEMES } from '../defaults.ts';
+import { DEFAULT_CONFIG, HOME_BARS } from '../defaults.ts';
 import { isObjectLike, type Loose } from './common.ts';
 
 const MENU_POSITIONS: readonly MenuPosition[] = ['left', 'right', 'top', 'bottom'];
@@ -70,7 +70,9 @@ export function normalizeUi(ui: Loose, srcUi: unknown, web: WebSite[]): UiSettin
   const src = srcUi as Loose | null | undefined;
   const out: Loose = { ...ui };
   out.home = normalizeHome(src?.home, web);
-  if (!THEMES.includes(out.theme)) out.theme = 'ecran';
+  // Palette : « Automatique » ou un identifiant (palette du cœur ou d'un plugin, P5-02). Celle d'un plugin absent est
+  // gardée : l'interface affiche la palette par défaut en attendant, et la retrouve quand le plugin revient.
+  if (out.theme !== PALETTE_AUTO && !isPaletteId(out.theme)) out.theme = DEFAULT_PALETTE;
   // Un thème inconnu de l'interface y retombe sur le thème par défaut : seul l'identifiant est vérifié ici.
   if (!isThemeId(out.pageTheme)) out.pageTheme = DEFAULT_THEME;
   if (typeof out.start !== 'string') out.start = 'home';

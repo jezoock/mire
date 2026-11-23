@@ -26,12 +26,16 @@ export function readPaletteMeta(dir: string, id: string): PaletteMeta | null {
   }
 }
 
+/** Palette d'un plugin actif (P5-02), par identifiant : sa couleur de fond, vérifiée. */
+export type PaletteLookup = (id: string) => { background: string } | null;
+
 /**
  * Couleur de fond de la fenêtre (avant l'affichage de l'interface) : celle de la palette du réglage, lue dans ses
- * métadonnées ; « auto » suit le système ; palette inconnue : celle par défaut.
+ * métadonnées, ou celle d'une palette de plugin ; « auto » suit le système ; palette inconnue : celle par défaut.
  */
-export function themeBackground(dir: string, theme: Theme | string, dark: boolean): string {
-  const meta = readPaletteMeta(dir, resolvePalette(theme, dark)) || readPaletteMeta(dir, DEFAULT_PALETTE);
+export function themeBackground(dir: string, theme: Theme | string, dark: boolean, plugins: PaletteLookup = () => null): string {
+  const id = resolvePalette(theme, dark);
+  const meta = readPaletteMeta(dir, id) || plugins(id) || readPaletteMeta(dir, DEFAULT_PALETTE);
   return meta?.background || FALLBACK_BACKGROUND;
 }
 
@@ -55,7 +59,9 @@ export function createMainWindow(deps: MainWindowDeps) {
   const alive = () => (win && !win.isDestroyed() ? win : null);
   // Les palettes sont à côté de la page de l'interface (dist/renderer/palettes/).
   const palettes = path.join(path.dirname(deps.files.html), 'palettes');
-  const background = () => themeBackground(palettes, deps.config.get().ui.theme, deps.nativeTheme.shouldUseDarkColors);
+  // Palettes des plugins (P5-02) : connues après le démarrage des plugins, donc après l'ouverture de la fenêtre.
+  let plugins: PaletteLookup = () => null;
+  const background = () => themeBackground(palettes, deps.config.get().ui.theme, deps.nativeTheme.shouldUseDarkColors, plugins);
 
   function open() {
     const w = new deps.BrowserWindow({
@@ -119,6 +125,11 @@ export function createMainWindow(deps: MainWindowDeps) {
     get: () => win,
     open,
     themeBackground: background,
+    /** Palettes des plugins (P5-02) : la couleur de fond suit celle de la palette choisie, une fois les plugins démarrés. */
+    setPalettes(lookup: PaletteLookup) {
+      plugins = lookup;
+      alive()?.setBackgroundColor(background());
+    },
     /** Message vers l'interface (ignoré sans fenêtre). */
     toUi(channel: string, payload?: unknown) {
       alive()?.webContents.send(channel, payload);

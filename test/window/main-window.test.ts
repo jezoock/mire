@@ -15,11 +15,24 @@ const PALETTES = path.join(RENDERER, 'palettes');
 
 describe('themeBackground', () => {
   it('couleur de la palette, lue dans palette.json ; « auto » suit le système ; palette inconnue : écran', () => {
-    assert.equal(themeBackground(PALETTES, 'minuit', false), '#0F1524');
+    assert.equal(themeBackground(PALETTES, 'contraste', false), '#000000');
     assert.equal(themeBackground(PALETTES, 'auto', true), '#1F2321');
-    assert.equal(themeBackground(PALETTES, 'auto', false), '#F1EFE8');
+    // Plein jour est un plugin (P5-02) : absent, « auto » en mode clair garde le fond de la palette par défaut.
+    assert.equal(themeBackground(PALETTES, 'auto', false), '#1F2321');
     assert.equal(themeBackground(PALETTES, 'inconnu', false), '#1F2321');
     assert.equal(themeBackground(PALETTES, '../ecran', false), '#1F2321');
+  });
+
+  it('palette d’un plugin actif (P5-02) : son fond ; « auto » en mode clair prend Plein jour si son plugin est là', () => {
+    const plugins = (id: string) => (id === 'velours' ? { background: '#1c1513' } : id === 'jour' ? { background: '#f1efe8' } : null);
+    assert.equal(themeBackground(PALETTES, 'velours', false, plugins), '#1c1513');
+    assert.equal(themeBackground(PALETTES, 'auto', false, plugins), '#f1efe8');
+    // Une palette du cœur ne se remplace pas.
+    assert.equal(
+      themeBackground(PALETTES, 'ecran', false, () => ({ background: '#ffffff' })),
+      '#1F2321',
+    );
+    assert.equal(themeBackground(PALETTES, 'minuit', false, plugins), '#1F2321');
   });
 
   it('palette illisible : celle par défaut, sinon noir', () => {
@@ -124,7 +137,7 @@ function setup(ui: Record<string, unknown> = { theme: 'jour', fullscreen: false 
 
 describe('createMainWindow', () => {
   it('réglages de la fenêtre et de la page : isolation du contexte, bac à sable, pas de Node', () => {
-    const { window } = setup({ theme: 'velours', fullscreen: true });
+    const { window } = setup({ theme: 'contraste', fullscreen: true });
     assert.equal(window.get(), null);
     window.open();
     const w = FakeWindow.last;
@@ -134,7 +147,7 @@ describe('createMainWindow', () => {
       minWidth: 960,
       minHeight: 620,
       title: 'Mire',
-      backgroundColor: '#1C1513',
+      backgroundColor: '#000000',
       autoHideMenuBar: true,
       fullscreen: true,
       show: false,

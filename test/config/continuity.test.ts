@@ -109,6 +109,30 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
+  test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
+    const queue = (ui: unknown) => {
+      const { config } = migrate({ version: 9, ui });
+      return ((config as Any).continuity ?? []).filter((id: string) => id.startsWith('P5-02'));
+    };
+    assert.deepEqual(queue({ theme: 'jour' }), ['P5-02-jour']);
+    // « Automatique » prenait Plein jour en mode clair.
+    assert.deepEqual(queue({ theme: 'auto' }), ['P5-02-jour']);
+    assert.deepEqual(queue({ theme: 'minuit' }), ['P5-02-minuit']);
+    assert.deepEqual(queue({ theme: 'velours' }), ['P5-02-velours']);
+    for (const ui of [{ theme: 'ecran' }, { theme: 'contraste' }, {}, 'mal formé', null, { theme: 3 }]) assert.deepEqual(queue(ui), [], JSON.stringify(ui));
+    // Le réglage reste en place : la palette revient quand le plugin est installé.
+    assert.equal((migrate({ version: 9, ui: { theme: 'minuit' } }).config as Any).ui.theme, 'minuit');
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-02'));
+    assert.deepEqual(
+      rules.map((r) => [r.id, r.plugin, r.mode, r.settings ?? []]),
+      [
+        ['P5-02-jour', 'mire.palette.jour', 'install', []],
+        ['P5-02-minuit', 'mire.palette.minuit', 'install', []],
+        ['P5-02-velours', 'mire.palette.velours', 'install', []],
+      ],
+    );
+  });
+
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
     assert.deepEqual(checkRules(CONTINUITY_RULES), []);
     assert.deepEqual(checkRules(RULES), []);
