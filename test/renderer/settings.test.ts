@@ -125,7 +125,7 @@ describe('panneaux générés depuis le schéma', () => {
     const providers = fieldOf(panels, 'scrape.providers');
     assert.deepEqual(
       providers.lists?.[0]?.items.map((x) => x.id),
-      ['tmdb', 'musicbrainz', 'libretro', 'steam'],
+      ['musicbrainz', 'libretro', 'steam'],
     );
     assert.equal(providers.lists?.[0]?.toggle, false);
     // Plus aucun bouton « Régler dans … » : chaque bloc propre aux pages est un champ de l'écran.
@@ -148,22 +148,22 @@ describe('panneaux générés depuis le schéma', () => {
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'tmdb'] } }), ['steam', 'tmdb', 'musicbrainz', 'libretro']);
-    assert.deepEqual(providerOrder({}), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'libretro'] } }), ['steam', 'libretro', 'musicbrainz']);
+    // TMDB est un plugin (P5-15) : sans lui, son fournisseur n'est pas dans la liste.
+    assert.deepEqual(providerOrder({}), ['musicbrainz', 'libretro', 'steam']);
   });
 
   it('les fournisseurs des plugins actifs rejoignent l’ordre, sous le nom de leur plugin', () => {
     const extra = ['org.films/infos'];
-    assert.deepEqual(providerOrder({}, extra), ['tmdb', 'musicbrainz', 'libretro', 'steam', 'org.films/infos']);
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }, extra), [
+    assert.deepEqual(providerOrder({}, extra), ['musicbrainz', 'libretro', 'steam', 'org.films/infos']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }, extra), [
       'org.films/infos',
-      'tmdb',
+      'steam',
       'musicbrainz',
       'libretro',
-      'steam',
     ]);
     // Un plugin désactivé : son fournisseur quitte la liste.
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }), ['steam', 'musicbrainz', 'libretro']);
     const providers = [{ id: 'org.films/infos', plugin: 'org.films', name: 'Films libres', kinds: ['video'] }];
     for (const [t, label] of [
       [fr.t, 'Films libres (plugin)'],
@@ -464,8 +464,8 @@ describe('contrôleur mire-settings (P4-20)', () => {
     const home = { clock: true, recent: false, bars: [], services: [], rows: [{ kind: 'recent' }, { kind: 'bars', targets: [] }] } as Data;
     const { ctx, named } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate({ home }) });
     const c = new SettingsController(ctx);
-    await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'tmdb'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['steam', 'tmdb']]]);
+    await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'libretro'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['steam', 'libretro']]]);
     let saved: Data | null = null;
     const { ctx: ctx2 } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate((saved = { home })) });
     await new SettingsController(ctx2).setOrder({ kind: 'rows', keys: ['bars', 'recent'] });
@@ -507,8 +507,8 @@ describe('contrôleur mire-settings (P4-20)', () => {
 
   it('nouvel ordre : les fournisseurs des plugins actifs sont gardés', async () => {
     const { ctx, named } = context({ 'api.pluginsMetadataProviders': [{ id: 'org.films/infos' }] });
-    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'tmdb'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'tmdb']]]);
+    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'steam'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'steam']]]);
   });
 
   it('sources : un dossier choisi par le processus principal, une adresse, un retrait ; nature vérifiée', async () => {

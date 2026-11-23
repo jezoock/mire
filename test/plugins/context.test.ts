@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { PluginSetting } from '@mire/plugin-sdk';
 import type { PluginSettingsSection } from '@mire/shared';
-import { checkElements, checkFacts, checkMissing, createPluginBridges, imageAllowed, type BridgeService } from '../../src/main/plugins/bridges.ts';
+import { checkElements, checkFacts, checkMissing, createPluginBridges, factsKey, imageAllowed, type BridgeService } from '../../src/main/plugins/bridges.ts';
 import { createContextHandler, LIMITS, type ContextDeps } from '../../src/main/plugins/context.ts';
 import { grantedPermissions, hostDeclared, isLocalHost } from '../../src/main/plugins/permissions.ts';
 import { createPluginStorage, pluginDataDir } from '../../src/main/plugins/plugin-storage.ts';
@@ -368,6 +368,9 @@ describe('ponts', () => {
     assert.equal(checkElements('org.exemple.r', 'privileged', [], raw).elements.length, 4);
     assert.equal(checkFacts('p/m', { title: 'Film', image: 'file:///etc/passwd', source: 'tmdb' })?.image, null);
     assert.equal(checkFacts('p/m', { title: 'Film' })?.source, 'p/m');
+    // Fiche choisie par l'utilisateur : la marque est gardée.
+    assert.equal(checkFacts('p/m', { title: 'Film', picked: true })?.picked, true);
+    assert.equal(checkFacts('p/m', { title: 'Film', picked: 'oui' })?.picked, undefined);
   });
 
   it('sources au catalogue à l’activation, retirées à la désactivation ; recherche réunie', async () => {
@@ -456,7 +459,13 @@ describe('ponts', () => {
     assert.equal(c?.image, '/img/affiche.jpg');
     // Même adresse : copiée une seule fois ; hôte non déclaré : jamais téléchargé.
     assert.deepEqual(saved, ['https://img.exemple.org/affiche.jpg']);
-    assert.equal(provider.key({ path: '/v/a' } as never), 'plugin:org.exemple.f/films|/v/a');
+    // Clé du cœur pour une vidéo : la fiche rejoint son élément, celle de l'ancien fournisseur est reprise.
+    assert.equal(provider.key({ path: '/v/a' } as never), 'v:/v/a');
+    assert.equal(provider.key({ name: 'sans chemin' } as never), 'plugin:org.exemple.f/films|');
+    assert.equal(factsKey('album', { dir: '/m/A' }), 'a:/m/A');
+    assert.equal(factsKey('rom', { path: '/r/x.sfc' }), 'r:/r/x.sfc');
+    assert.equal(factsKey('pc', { name: 'Hadès' }), 'g:hades');
+    assert.equal(factsKey('video', {}), null);
     assert.deepEqual(await provider.candidates({ query: 'Dune' } as never, {} as never), [
       { id: 'movie:1', title: 'Dune', year: '', sub: '', image: 'https://img.exemple.org/d.jpg' },
     ]);

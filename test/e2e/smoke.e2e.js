@@ -3189,21 +3189,22 @@ describe('Test de fumée de Mire', () => {
 
     it('l’ordre d’une liste change au clavier (ds-sortable) : celui des fournisseurs d’infos', async () => {
       await openSettings();
-      assert.deepEqual(await providers(), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+      // TMDB est un plugin à installer (P5-15) : seuls les fournisseurs du cœur sans lui.
+      assert.deepEqual(await providers(), ['musicbrainz', 'libretro', 'steam']);
       const item = (key) => page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="${key}"]`);
-      await item('musicbrainz').scrollIntoViewIfNeeded();
-      await item('musicbrainz').focus();
+      await item('libretro').scrollIntoViewIfNeeded();
+      await item('libretro').focus();
       await page.keyboard.press('Space');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('Space');
-      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'tmdb', 'libretro', 'steam']);
-      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'musicbrainz', VIEW);
+      await waitSaved('catalog.metadataProviders', ['libretro', 'musicbrainz', 'steam']);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'libretro', VIEW);
       await page.locator(`${VIEW} ds-sortable[data-list="providers"]`).scrollIntoViewIfNeeded();
       await settle();
       await page.locator(`${VIEW} [data-panel="scrape"]`).screenshot({ path: path.join(SHOTS, 'settings-order.png') });
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
-      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="tmdb"] button`).first().click();
-      await waitSaved('catalog.metadataProviders', ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="musicbrainz"] button`).first().click();
+      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'libretro', 'steam']);
       assert.deepEqual(errors, []);
     });
 

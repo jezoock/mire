@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG_VERSION, mergeConfig, migrate, normalizeConfig } from '../../src/main/config/index.ts';
-import { applyContinuity, checkRules, CONTINUITY_RULES, type ContinuityRule } from '../../src/main/config/migrations/continuity.ts';
+import { applyContinuity, checkRules, CONTINUITY_RULES, providerRenames, type ContinuityRule } from '../../src/main/config/migrations/continuity.ts';
 
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
 type Any = any;
@@ -45,7 +45,8 @@ test.describe('migration v10 (P5-01)', () => {
     assert.equal(changed, true);
     const { tmdbToken: _t, region: _r, ...search } = v9.search;
     const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
-    assert.deepEqual(config, { ...v9, search, plugins, continuity: ['P5-15'], version: CONFIG_VERSION });
+    const catalog = { ...v9.catalog, metadataProviders: ['mire.tmdb/tmdb'] };
+    assert.deepEqual(config, { ...v9, search, plugins, catalog, continuity: ['P5-15'], version: CONFIG_VERSION });
     // Normalisée : réglages des autres plugins gardés, secret compris.
     const c = normalizeConfig(config);
     assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
@@ -139,6 +140,18 @@ test.describe('migration v10 (P5-01)', () => {
       assert.deepEqual(applyContinuity(raw, [rule]), []);
       assert.deepEqual(raw, before);
     }
+  });
+
+  test('fournisseurs renommés (P5-15) : l’ordre choisi suit TMDB dans son plugin, même sans clé', () => {
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'tmdb', 'mire.tmdb/tmdb', 3] } };
+    assert.deepEqual(applyContinuity(raw), []);
+    assert.deepEqual(raw.catalog.metadataProviders, ['steam', 'mire.tmdb/tmdb', 3]);
+    assert.deepEqual(providerRenames(), { tmdb: 'mire.tmdb/tmdb' });
+    // Une règle ne peut renommer un fournisseur que vers un des siens.
+    assert.match(checkRules([{ ...INSTALL, providers: { tmdb: 'org.tiers/infos' } }])[0], /must be renamed/);
+    const untouched: Any = { version: 9, catalog: { metadataProviders: 'tmdb' } };
+    applyContinuity(untouched);
+    assert.equal(untouched.catalog.metadataProviders, 'tmdb');
   });
 
   test('convert et keep : valeur traduite, copiée ou laissée en place si elle ne se traduit pas', () => {

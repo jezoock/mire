@@ -21,7 +21,7 @@
  */
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel } from '@mire/plugin-sdk';
-import type { ElementSourceRef } from '@mire/shared';
+import { fold, type ElementSourceRef } from '@mire/shared';
 import { isInside } from '../lib/paths.ts';
 import { ScrapeRefusal } from '../scrape/refusal.ts';
 import type { JobContext, MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
@@ -155,6 +155,22 @@ export function imageAllowed(url: string, hosts: readonly string[]): boolean {
 /** Nombre d'images copiées gardées en mémoire (une même affiche pour tous les épisodes d'une série). */
 const IMAGE_MEMORY = 500;
 
+const field = (item: unknown, k: string): string => {
+  const v = isObject(item) ? item[k] : undefined;
+  return typeof v === 'string' ? v : '';
+};
+
+/**
+ * Clé d'une fiche, la même que celle des fournisseurs du cœur pour cette nature (`v:<chemin>` pour une vidéo…) : la
+ * fiche rejoint ainsi son élément (`catalog/legacy-meta.ts`), et celle d'un fournisseur du cœur devenu un plugin
+ * (TMDB, P5-15) est reprise sans nouvelle récupération. `null` si l'élément n'a pas ce qu'il faut.
+ */
+export function factsKey(kind: MetadataKind, item: unknown): string | null {
+  const v = kind === 'album' ? field(item, 'dir') : kind === 'pc' ? fold(field(item, 'name')) : field(item, 'path');
+  if (!v) return null;
+  return `${{ video: 'v', album: 'a', rom: 'r', pc: 'g' }[kind]}:${v}`;
+}
+
 const GROUPS: Record<MetadataKind, ScrapeGroup> = { video: 'videos', album: 'music', rom: 'games', pc: 'games' };
 
 /** Fiche rendue par un plugin : les champs connus, d'un type attendu ; `source` est celle du plugin. */
@@ -166,6 +182,7 @@ export function checkFacts(source: string, raw: unknown): MetadataFacts | null |
     if (typeof raw[k] === 'string') out[k] = (raw[k] as string).slice(0, BRIDGE_LIMITS.text * 4);
   if (isWebUrl(raw.backdrop)) out.backdrop = raw.backdrop;
   if (typeof raw.series === 'boolean') out.series = raw.series;
+  if (raw.picked === true) out.picked = true;
   return out;
 }
 
@@ -252,8 +269,10 @@ export function createPluginBridges({
       concurrency: 2,
       // Sans `requires` (ou en panne), le plugin est interrogé : ses erreurs diront ce qui ne va pas.
       requires: async () => checkMissing(await call('requires', []).catch(() => null)),
-      // Clé de la fiche : propre au plugin, d'après la clé de l'élément.
-      key: (item) => `plugin:${source}|${String((item as { key?: unknown })?.key ?? (item as { path?: unknown })?.path ?? '')}`,
+      // Clé de la fiche : celle du cœur pour la nature décrite ; à défaut, propre au plugin (elle ne rejoint alors
+      // aucun élément, mais reste gardée).
+      key: (item) =>
+        factsKey(kinds[0] ?? 'video', item) ?? `plugin:${source}|${String((item as { key?: unknown })?.key ?? (item as { path?: unknown })?.path ?? '')}`,
       collect: async (opts) => {
         const items = await call('collect', [opts ?? {}]);
         return Array.isArray(items) ? items.slice(0, BRIDGE_LIMITS.elements) : [];

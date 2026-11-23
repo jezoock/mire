@@ -211,7 +211,7 @@
       "fileTags": {
         ".mkv": ["video", "anime"]
       },
-      "metadataProviders": ["tmdb"]
+      "metadataProviders": ["mire.tmdb/tmdb"]
     },
     "plugins": {
       "mire.tmdb": {

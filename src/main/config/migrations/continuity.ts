@@ -50,6 +50,12 @@ export interface ContinuityRule {
   /** La configuration se sert-elle de la fonction ? */
   applies(config: Loose): boolean;
   settings?: readonly SettingMove[];
+  /**
+   * Fournisseurs d'infos en ligne repris par le plugin : ancien identifiant (`tmdb`) → celui du plugin
+   * (`<plugin>/<contribution>`). Appliqué à toute configuration (ordre `catalog.metadataProviders`) et aux fiches déjà
+   * enregistrées (`providerRenames`), même quand la règle ne s'applique pas : ce ne sont que des noms.
+   */
+  providers?: Readonly<Record<string, string>>;
 }
 
 const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
@@ -68,8 +74,21 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
       // La langue des fiches sert aussi à Steam (cœur jusqu'à P5-16).
       { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
     ],
+    providers: { tmdb: 'mire.tmdb/tmdb' },
   },
 ];
+
+/** Fournisseurs d'infos renommés par les règles : ancien identifiant → celui du plugin qui le reprend. */
+export function providerRenames(rules: readonly ContinuityRule[] = CONTINUITY_RULES): Record<string, string> {
+  return Object.assign({}, ...rules.map((r) => r.providers ?? {}));
+}
+
+/** Ordre des fournisseurs (`catalog.metadataProviders`) avec les nouveaux identifiants, sans doublon. */
+function renameProviders(raw: Loose, renames: Record<string, string>): void {
+  const list = isRecord(raw.catalog) ? raw.catalog.metadataProviders : undefined;
+  if (!Array.isArray(list) || !list.some((x) => typeof x === 'string' && Object.hasOwn(renames, x))) return;
+  raw.catalog.metadataProviders = [...new Set(list.map((x) => (typeof x === 'string' && Object.hasOwn(renames, x) ? renames[x] : x)))];
+}
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 
@@ -85,6 +104,8 @@ export function checkRules(rules: readonly ContinuityRule[]): string[] {
       problems.push(`${r.id}: ${r.plugin} is not a plugin of the official repository.`);
     if (r.mode !== 'bundled' && r.mode !== 'install') problems.push(`${r.id}: unknown mode.`);
     for (const s of r.settings ?? []) if (!s.from || !s.to) problems.push(`${r.id}: incomplete setting move.`);
+    for (const [from, to] of Object.entries(r.providers ?? {}))
+      if (!from || !to.startsWith(`${r.plugin}/`)) problems.push(`${r.id}: provider ${from} must be renamed to one of ${r.plugin}.`);
   }
   return problems;
 }
@@ -126,6 +147,7 @@ function moveSetting(raw: Loose, plugin: string, move: SettingMove): void {
 
 /** Applique les règles à une configuration lue (modifiée sur place) ; rend les identifiants des règles appliquées. */
 export function applyContinuity(raw: Loose, rules: readonly ContinuityRule[] = CONTINUITY_RULES): string[] {
+  renameProviders(raw, providerRenames(rules));
   const applied: string[] = [];
   for (const rule of rules) {
     let applies = false;

@@ -28,7 +28,7 @@ import { runApp, setApplicationMenu, type PendingFiles, type Running } from './a
 import { createRescue } from './app/rescue.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
-import { METADATA_PROVIDERS, createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
+import { createMetadataStore, defaultKnown, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import type { Contributor } from './catalog/tags/engine.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
@@ -123,6 +123,7 @@ function start(pending: PendingFiles): Running {
   const find = createTargetFinder(catalog);
   const overrides = createOverrides({ file: files.catalogOverrides, legacyFile: files.meta, find });
   // Infos en ligne (fiches des fournisseurs), qui reprennent l'ancien scrape/db.json.
+  // Fiches d'un fournisseur devenu un plugin (TMDB, P5-15) : montrées sous le fournisseur du plugin (`providerRenames`).
   const metadata = createMetadataStore({ file: files.catalogMetadata, legacyFile: files.scrapeDb, find });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
@@ -216,7 +217,7 @@ function start(pending: PendingFiles): Running {
   const contributors = () => [
     ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
     ...pluginTaggers(),
-    ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...METADATA_PROVIDERS, ...pluginProviders()])),
+    ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...new Set([...defaultKnown(), ...pluginProviders()])])),
   ];
   const registry = createRegistry(t);
   const tags = createTagEngine({

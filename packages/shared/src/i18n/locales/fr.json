@@ -1271,7 +1271,6 @@
         "auto": "Automatique"
       },
       "providers": {
-        "tmdb": "TMDB (films et séries)",
         "musicbrainz": "MusicBrainz (musique)",
         "libretro": "libretro (jeux de console)",
         "steam": "Steam (jeux PC)",

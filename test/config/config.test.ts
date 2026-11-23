@@ -242,7 +242,10 @@ test.describe('migration v9 (P2-11)', () => {
     delete out.plugins;
     delete out.continuity;
     const { tmdbToken: _token, region: _region, ...search } = v8().search;
-    assert.deepEqual(out, { ...v8(), search, version: CONFIG_VERSION });
+    // L'ordre choisi des fournisseurs suit TMDB dans son plugin.
+    assert.deepEqual(out.catalog.metadataProviders, ['mire.tmdb/tmdb']);
+    const catalog = { ...v8().catalog, metadataProviders: ['mire.tmdb/tmdb'] };
+    assert.deepEqual(out, { ...v8(), search, catalog, version: CONFIG_VERSION });
   });
 
   test('l’interface historique retrouve ses réglages (accueil, menu, page de démarrage)', () => {

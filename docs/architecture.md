@@ -286,7 +286,9 @@ ni dossier, ni fichier, ni hôte.
   (P3-04) : chaque source active est analysée à son activation (emplacement `null` en attendant les réglages de
   P4-20) et ses éléments vont au catalogue sous `{ plugin: <id>, instance: <contribution> }`, puis le quittent à sa
   désactivation ; les fournisseurs d'infos en ligne s'ajoutent après ceux du cœur (`extraProviders` du moteur) :
-  `requires` est relayé, les images d'une fiche (adresses) sont copiées dans `scrape/img/` seulement depuis un hôte
+  `requires` est relayé, une fiche est rangée sous la clé du cœur pour sa nature (`v:<chemin>`, `a:<dossier>`,
+  `r:<chemin>`, `g:<nom>` : elle rejoint son élément), les images d'une fiche (adresses) sont copiées dans
+  `scrape/img/` seulement depuis un hôte
   `https:` déclaré par le plugin, et un échec attendu se rend comme résultat, `{ failure: "<message du plugin>" }`
   (une erreur levée désactive le plugin), que l'utilisateur voit comme l'erreur d'une recherche de fiches ;
   `pluginBridges.search(query)` interroge les fournisseurs de recherche ; « Où regarder » (`search/watch.ts`, IPC
@@ -1053,7 +1055,9 @@ part, comme avant ; l'interface historique garde sa propre recherche (`src/rende
   plugins »). **Chaque tâche P5-xx ajoute sa règle** (mode d'emploi en tête de `continuity.ts`) et son test dans
   `test/config/continuity.test.ts`. Un réglage peut être traduit (`convert`) ou copié (`keep`, le cœur s'en sert
   encore) ; un secret déplacé est rangé en clair puis chiffré par le service de continuité dès que son plugin est
-  là (`seal`). Règles : `P5-15` (clé TMDB → `mire.tmdb`) ;
+  là (`seal`). Une règle peut renommer un fournisseur d'infos repris par son plugin (`providers` : `tmdb` →
+  `mire.tmdb/tmdb`) : l'ordre `catalog.metadataProviders` suit, et les fiches déjà enregistrées sont montrées sous le
+  fournisseur du plugin (`providerRenames`, magasin des infos en ligne). Règles : `P5-15` (clé TMDB → `mire.tmdb`) ;
 - `normalize/` : une fonction par section ; `normalizeConfig(valeur)` rend toujours une configuration complète. La
   section `catalog` (règles par extension du moteur de tags, P2-04) est facultative : absente, elle n'est pas ajoutée ;
 - `merge.ts` : import « compléter » ;
