@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Manettes Nintendo",
+      "description": "Reconnaît les manettes Nintendo (Pro Controller, Joy-Con) et affiche leurs boutons (B, A, L, R, ZL…) dans l’aide en bas de l’écran."
+    },
+    "gamepads": {
+      "nintendo": {
+        "name": "Nintendo"
+      }
+    }
+  }
+}

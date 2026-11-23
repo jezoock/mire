@@ -50,9 +50,9 @@ Ce qui remplit la section Jeux.
 | `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts |  |
 | `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | src/main/games/roms/ |  |
 | `jeux-disque` | Jeux sur disque | Plugin inclus | Fonction | Fichiers, Internet | src/main/games/disc/ |  |
-| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | src/main/games/rom-sites.ts |  |
+| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | plugin `mire.game-sites` (le cœur lit les packs `romSites`, P5-07) |  |
 | `jeux-marque` | Marque-pages de jeux à télécharger | Plugin inclus | Fonction | Internet, Fichiers | src/main/games/bookmarks.ts |  |
-| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | src/main/store/catalog/games.ts |  |
+| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | plugin `mire.free-games` (le cœur lit les packs `freeGames`, P5-07) |  |
 | `jeux-suppr` | Nettoyage et suppression de jeux | Cœur | Socle | Supprime des fichiers ⚠ | src/main/games/cleanup.ts, games/delete.ts |  |
 | `jeux-systemes` | Référentiel des systèmes de jeu | Cœur | Socle | Données seules | packages/shared (guessSystem) |  |
 | `jeux-consoles` | Consoles créées à la main | Cœur | Fonction | Fichiers, Lance des programmes ⚠ | src/main/config (consoles) |  |
@@ -303,9 +303,9 @@ Des données seules, sans code. Les anciens thèmes deviennent des palettes de c
 | `lang-fr` | Français | À installer | Langue | Données seules | packages/shared/src/i18n/locales/fr.json |  |
 | `lang-en` | Anglais | Cœur | Langue | Données seules | packages/shared/src/i18n/locales/en.json |  |
 | `lang-packs` | Autres langues | À installer | Langue | Données seules | à créer (P3-29) |  |
-| `pad-xbox` | Manettes Xbox | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
-| `pad-ps` | Manettes PlayStation | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
-| `pad-nintendo` | Manettes Nintendo | Plugin inclus | Manette | Données seules | src/renderer/nav/gamepad-data.ts |  |
+| `pad-xbox` | Manettes Xbox | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.xbox` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `pad-ps` | Manettes PlayStation | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.playstation` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `pad-nintendo` | Manettes Nintendo | Plugin inclus | Manette | Données seules | plugin `mire.gamepad.nintendo` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `police` | Police Archivo | Cœur | Socle | Données seules | src/renderer/fonts/ |  |
 
 ## Socle de l'application

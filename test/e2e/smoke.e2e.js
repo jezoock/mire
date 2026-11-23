@@ -4232,4 +4232,43 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  // Profils de manettes (P5-04) : trois plugins inclus, actifs dès le premier lancement ; une manette PlayStation est
+  // reconnue par son plugin et l'aide montre ses boutons.
+  describe('profils de manettes, plugins inclus (P5-04)', () => {
+    it('les trois plugins inclus sont actifs, et une manette PlayStation montre ses boutons', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const f of ['xbox', 'playstation', 'nintendo']) {
+        const p = list.find((x) => x.id === `mire.gamepad.${f}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], f);
+      }
+      const profiles = await page.evaluate(() => window.api.gamepadsProfiles());
+      assert.deepEqual(
+        profiles.map((p) => p.id),
+        ['mire.gamepad.xbox/xbox', 'mire.gamepad.playstation/playstation', 'mire.gamepad.nintendo/nintendo'],
+      );
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('✕'));
+      await page.evaluate(() => {
+        navigator.getGamepads = () => [];
+        window.dispatchEvent(new Event('gamepaddisconnected'));
+        delete window.__pad;
+      });
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
 });

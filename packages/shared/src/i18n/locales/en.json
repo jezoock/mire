@@ -911,10 +911,10 @@
         "confirm": "OK",
         "cancel": "Cancel",
         "detected": "{name} controller detected. The controls are shown at the bottom of the screen.",
+        "detectedGeneric": "Controller detected. The controls are shown at the bottom of the screen.",
         "disconnected": "Controller disconnected",
         "buttons": {
-          "view": "View",
-          "create": "Create"
+          "select": "Select"
         },
         "pick": "Choose"
       }

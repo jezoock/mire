@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Manettes Xbox",
+      "description": "Reconnaît les manettes Xbox et affiche leurs boutons (A, B, LB, RB, Affichage…) dans l’aide en bas de l’écran."
+    },
+    "gamepads": {
+      "xbox": {
+        "name": "Xbox"
+      }
+    },
+    "buttons": {
+      "view": "Affichage"
+    }
+  }
+}

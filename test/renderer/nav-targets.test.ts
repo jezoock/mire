@@ -133,7 +133,7 @@ describe('nav/targets : navigation par colonnes', () => {
       PAD_HINTS.columns,
       PAD_HINTS.list?.map(([b, k]) => (b === 'y' ? ['y', 'pick'] : [b, k])),
     );
-    assert.deepEqual(padHints('columns', 'xbox')?.find((h) => h.key === 'shell.pad.pick')?.glyphs, ['Y']);
+    assert.deepEqual(padHints('columns')?.find((h) => h.key === 'shell.pad.pick')?.glyphs, ['Y']);
   });
 
   it('un focus différé cède à une flèche pressée pendant l’attente ou à un focus placé ailleurs (P4-03b)', () => {

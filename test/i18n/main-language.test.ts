@@ -89,10 +89,28 @@ describe('langue des textes', () => {
     assert.equal(t('store.basedOn', { author: 'andwn', original: 'Daisuke Amaya' }), 'andwn, d’après Daisuke Amaya');
   });
 
+  // Jeu libre d'un plugin factice (P5-07) : adapté d'un autre jeu ; texte de présentation désigné par sa clé.
+  const GAME = {
+    id: 'cavestory',
+    name: 'Cave Story',
+    system: 'md',
+    author: 'andwn',
+    basedOn: 'Daisuke Amaya',
+    url: 'https://x.example/c.gen',
+    file: 'c.gen',
+    descKey: 'store.errors.unknownGame',
+  };
   it('boutique : descriptions, auteur et rappel des BIOS dans la langue de l’interface', (tc: TestContext) => {
     const dir = fs.mkdtempSync(path.join(ROOT, 'node_modules', '.mire-boutique-'));
     tc.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-    const store = createStore({ dataDir: dir, defaultRomsRoot: dir, getConfig: () => DEFAULT_CONFIG, saveConfig: () => {}, extract: async () => {} } as never);
+    const store = createStore({
+      dataDir: dir,
+      defaultRomsRoot: dir,
+      getConfig: () => DEFAULT_CONFIG,
+      saveConfig: () => {},
+      extract: async () => {},
+      freeGames: () => [GAME],
+    } as never);
     const fr = store.catalog();
     assert.match(fr.emulators[0].desc, /^Un seul programme pour les consoles/);
     assert.equal(fr.games.find((g: { id: string }) => g.id === 'cavestory')?.author, 'andwn, d’après Daisuke Amaya');

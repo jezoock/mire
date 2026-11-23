@@ -1,0 +1,17 @@
+{
+  "match": ["xbox", "xinput", "045e"],
+  "priority": 10,
+  "buttons": {
+    "a": "A",
+    "b": "B",
+    "x": "X",
+    "y": "Y",
+    "lb": "LB",
+    "rb": "RB",
+    "lt": "LT",
+    "rt": "RT",
+    "select": {
+      "text": "buttons.view"
+    }
+  }
+}

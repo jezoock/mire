@@ -2566,6 +2566,9 @@ initGamepad({
   dialog: topDialog,
   // Mode secours (P4-10) : Affichage + Menu ouvrent l'explorateur, quel que soit le thème.
   rescue: () => rescue.request({ reason: 'pad' }),
+  // Profils de manettes des plugins (P5-04).
+  profiles: () => api.gamepadsProfiles(),
+  onProfilesChange: (listener) => api.onGamepadsChange(listener),
 }, C);
 
 if ('mediaSession' in navigator) {

@@ -12,7 +12,8 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
-import type { PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import { readGamepadProfiles } from './gamepads.ts';
 import { freeGamesOf, romSitesFor } from './packs.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
@@ -627,6 +628,8 @@ export function createPluginService(opts: PluginServiceOptions) {
       }));
     },
 
+    /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
+    gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
     /** Sites de jeux proposés pour un système par les packs `romSites` des plugins actifs (P5-07), vérifiés. */
     romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
     /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */

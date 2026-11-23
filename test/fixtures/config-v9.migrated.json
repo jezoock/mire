@@ -226,7 +226,7 @@
         }
       }
     },
-    "continuity": ["P5-07-sites", "P5-07-libres"]
+    "continuity": ["P5-04-xbox", "P5-04-playstation", "P5-04-nintendo", "P5-07-sites", "P5-07-libres"]
   },
   "changed": true
 }
