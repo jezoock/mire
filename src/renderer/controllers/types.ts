@@ -161,8 +161,12 @@ export interface LegacyUi {
   loadDownloads(): Promise<void>;
   updateDlBadge(): void;
   loadCatalog(): Promise<void>;
-  /** Centre (P4-18) : affiche l'onglet `downloads`, `apps` ou `consoles`. */
+  /** Centre (P4-18) : affiche l'onglet `downloads`, `apps`, `consoles`, `plugins` ou `repos`. */
   showCentreTab(tab: string): void;
+  /** Centre (P4-19) : relit les plugins et les dépôts (sans réseau), puis redessine le Centre. */
+  loadPlugins(): Promise<void>;
+  /** Redessine le Centre ; `focus` : sélecteur de l'élément à focaliser après le rendu. */
+  refreshCentre(focus?: string): void;
   afterStoreChange(result: unknown, message: string): Promise<void>;
   afterAdblockChange(state: unknown): Promise<void>;
   setCfg(path: string, value: unknown): Promise<void>;

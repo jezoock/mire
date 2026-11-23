@@ -2,9 +2,11 @@ import { Component, Element, Host, Prop, h } from '@stencil/core';
 import { readJson, readList } from '../../utils/elements.ts';
 import { centreTab, idArgs } from '../../utils/centre.ts';
 import type { AppEmulator, AppGame, AppProgress, AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from '../../utils/centre.ts';
+import type { PluginsView, ReposView } from '../../utils/plugins.ts';
+import { renderPlugins, renderRepos } from './plugins.tsx';
 
 /**
- * Vue du Centre (P4-18) : trois onglets, Téléchargements, Apps et Consoles (P4-17).
+ * Vue du Centre (P4-18) : cinq onglets, Téléchargements, Apps, Consoles (P4-17), Plugins et Dépôts (P4-19).
  *
  * - Téléchargements : ajouter un lien ou un fichier .torrent (formulaires de P4-06, ouverts par le contrôleur), puis
  *   les téléchargements en cours et les autres, une ligne `mire-download-row` chacun ;
@@ -12,7 +14,10 @@ import type { AppEmulator, AppGame, AppProgress, AppsView, CentreLabels, Console
  *   rappel des BIOS), jeux libres et import de ses propres jeux ;
  * - Consoles : créer une console à la main ; pour chacune, la modifier (dossiers, émulateur, arguments, sites de
  *   jeux), choisir l'émulateur qui lance ses jeux, ouvrir ses sites de jeux, la retirer. Ces actions vont au
- *   contrôleur `mire-games`, avec l'identifiant de la console.
+ *   contrôleur `mire-games`, avec l'identifiant de la console ;
+ * - Plugins : mises à jour, plugins présents et proposés par les dépôts, ou la fiche d'un plugin (ce qu'il apporte,
+ *   origine, niveau, permissions, dépendances) ; Dépôts : liste, ajout, retrait, mise à jour des listes
+ *   (`plugins.tsx`).
  *
  * Elle n'a ni état ni accès au processus principal : la page (`src/renderer/centre/`) lui donne les lignes et les
  * cartes déjà rédigées. Les actions vont au contrôleur `mire-centre`, avec l'identifiant du téléchargement, de
@@ -22,13 +27,15 @@ const TABS: [string, keyof CentreLabels][] = [
   ['downloads', 'tabDownloads'],
   ['apps', 'tabApps'],
   ['consoles', 'tabConsoles'],
+  ['plugins', 'tabPlugins'],
+  ['repos', 'tabRepos'],
 ];
 
 @Component({ tag: 'mire-centre-view', shadow: false })
 export class MireCentreView {
   @Element() host!: HTMLElement;
 
-  /** Onglet affiché : `downloads`, `apps` ou `consoles`. */
+  /** Onglet affiché : `downloads`, `apps`, `consoles`, `plugins` ou `repos`. */
   @Prop({ reflect: true }) tab = 'downloads';
 
   /** Téléchargements en cours (actifs, en pause, en attente) puis les autres (voir `DownloadRow`). */
@@ -40,6 +47,10 @@ export class MireCentreView {
 
   /** Cartes de l'onglet des consoles (voir `ConsoleCard`). */
   @Prop() consoles: ConsoleCard[] | string = [];
+
+  /** Onglets des plugins et des dépôts (P4-19) ; `null` tant que les listes ne sont pas lues. */
+  @Prop() plugins: PluginsView | string | null = null;
+  @Prop() repos: ReposView | string | null = null;
 
   /** Textes (JSON ou objet, voir `CentreLabels`), et ceux des boutons d'une ligne (`DownloadRowLabels`). */
   @Prop() labels: CentreLabels | string = '';
@@ -328,6 +339,8 @@ export class MireCentreView {
   private renderPanel(tab: string, l: CentreLabels) {
     if (tab === 'apps') return this.renderApps(l);
     if (tab === 'consoles') return this.renderConsoles(l);
+    if (tab === 'plugins') return renderPlugins(readJson<PluginsView>(this.plugins), l);
+    if (tab === 'repos') return renderRepos(readJson<ReposView>(this.repos), l);
     return this.renderDownloads(l);
   }
 
