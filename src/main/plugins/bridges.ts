@@ -1,36 +1,50 @@
 /**
  * Branchements des contributions de code qui ont besoin du contexte (P3-04, reportés de P3-03) :
  *
- * - `sources` → catalogue : chaque source active est analysée à son activation (et sur demande, `rescan`), ses
- *   éléments vont au catalogue sous `{ plugin: <id du plugin>, instance: <id de la contribution> }`, et le quittent à
- *   sa désactivation. Les emplacements configurés par l'utilisateur viendront avec les réglages des plugins (P4-20) :
- *   la source reçoit `null` en attendant.
+ * - `sources` → catalogue. Emplacements de la bibliothèque (P5-11a) : ils restent dans la configuration de Mire
+ *   (`library.sources`) ; le cœur demande à chaque source active (`handles`) si elle sait lire un emplacement, la
+ *   première qui l'accepte l'analyse (`scan(location)`) et ses éléments vont au catalogue sous
+ *   `{ plugin: <id du plugin>, instance: <chemin ou adresse normalisés> }`. Un dossier accepté est accordé à ce plugin
+ *   tant qu'il reste dans la bibliothèque (`assignedFolders`) : l'accord suit la configuration, sans rien mémoriser.
+ *   Seuls les plugins inclus ou du dépôt officiel reçoivent ces emplacements, et un dossier seulement s'ils déclarent
+ *   `folders`. Une source qui n'en accepte aucun est analysée une fois sans emplacement (`scan(null)`), sous
+ *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation.
  * - `metadata` → moteur d'infos en ligne (`scrape/engine.ts`, `extraProviders`), après les quatre fournisseurs du cœur.
  * - `search` → `search(query)` : interroge les fournisseurs actifs en parallèle (l'écran Recherche, P4-12, les
  *   affichera).
  *
  * Ce qu'un plugin rend est vérifié ici, d'après son niveau (jamais d'après ce que dit le résultat) : un plugin de code
  * limité ne peut pas fournir un élément qui lance un programme ou un jeu (permission « programmes », code sensible),
- * ni un fichier local hors des dossiers que l'utilisateur lui a accordés ; ses clés sont préfixées par `plugin:<id>|`
- * pour ne jamais prendre la place d'un élément du cœur ou d'un autre plugin.
+ * ni un fichier ou une image locale hors des dossiers qui lui sont accordés, vérifiés une seconde fois sur le chemin
+ * réel (liens symboliques) ; ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un élément
+ * du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) qui désigne exactement son
+ * `open.path` vérifié : un fichier garde ainsi la clé qu'il avait quand le cœur le trouvait (listes, reprise, fiches).
  */
+import fsp from 'node:fs/promises';
 import path from 'node:path';
-import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel } from '@mire/plugin-sdk';
+import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
 import type { ElementSourceRef } from '@mire/shared';
+import { localFileKey } from '../catalog/keys.ts';
+import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import type { MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
 import type { ContributionEntry } from './registry.ts';
 
 /** Bornes des résultats rendus par un plugin. */
 export const BRIDGE_LIMITS = Object.freeze({
-  /** Éléments d'une analyse. */
-  elements: 50000,
+  /** Éléments d'une analyse : le nombre maximal de la bibliothèque (`MAX_ITEMS`). */
+  elements: 150000,
   /** Texte (clé, nom, adresse, info). */
   text: 4096,
   /** Résultat d'une recherche, en JSON. */
   searchBytes: 1024 * 1024,
-  /** Délais (ms) : analyse d'une source, recherche, infos en ligne. */
+  /**
+   * Délais (ms) : analyse d'une source sans emplacement, d'un emplacement de la bibliothèque (un partage réseau lent
+   * peut demander plusieurs minutes), question `handles`, recherche, infos en ligne.
+   */
   scanTimeout: 60000,
+  locationScanTimeout: 10 * 60000,
+  handlesTimeout: 5000,
   searchTimeout: 10000,
   metadataTimeout: 30000,
 });
@@ -41,6 +55,8 @@ export interface BridgeService {
   call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args?: unknown[], options?: { timeout?: number }): Promise<unknown>;
   levelOf(id: string): PluginLevel | null;
   folders(id: string): string[];
+  /** Ce qu'un plugin actif peut recevoir : inclus ou du dépôt officiel (`trusted`), permission `folders` déclarée. */
+  sourceRights(id: string): { trusted: boolean; folders: boolean };
 }
 
 export interface BridgeCatalog {
@@ -59,8 +75,14 @@ function infoValue(v: unknown): InfoValue | undefined {
   return undefined;
 }
 
+/** Fichier local qu'un plugin a le droit de désigner : n'importe lequel en code sensible, sinon sous ses dossiers accordés. */
+function localAllowed(p: unknown, level: PluginLevel, granted: readonly string[]): p is string {
+  if (!text(p) || !path.isAbsolute(p)) return false;
+  return level === 'privileged' || granted.some((g) => path.resolve(p) === path.resolve(g) || isInside(p, [g]));
+}
+
 /** Comment ouvrir un élément d'un plugin, s'il en a le droit ; `null` sinon. */
-function openSpec(raw: unknown, level: PluginLevel, granted: string[]): OpenSpec | null {
+function openSpec(raw: unknown, level: PluginLevel, granted: readonly string[]): OpenSpec | null {
   if (!isObject(raw)) return null;
   const sensitive = level === 'privileged';
   switch (raw.kind) {
@@ -77,10 +99,7 @@ function openSpec(raw: unknown, level: PluginLevel, granted: string[]): OpenSpec
     }
     case 'file':
       if (isWebUrl(raw.path)) return { kind: 'file', path: raw.path };
-      if (!text(raw.path) || !path.isAbsolute(raw.path)) return null;
-      return sensitive || granted.some((g) => path.resolve(raw.path as string) === path.resolve(g) || isInside(raw.path, [g]))
-        ? { kind: 'file', path: raw.path }
-        : null;
+      return localAllowed(raw.path, level, granted) ? { kind: 'file', path: raw.path } : null;
     case 'game':
     case 'program':
       // Lancer un programme ou un émulateur : permission sensible, code sensible seulement.
@@ -92,8 +111,23 @@ function openSpec(raw: unknown, level: PluginLevel, granted: string[]): OpenSpec
   }
 }
 
-/** Éléments rendus par la source d'un plugin, vérifiés ; ceux qui ne passent pas sont écartés. */
-export function checkElements(pluginId: string, level: PluginLevel, granted: string[], raw: unknown): { elements: ElementInput[]; dropped: number } {
+/** Image d'un élément : adresse web, ou fichier local que le plugin a le droit de désigner. */
+const imageAllowed = (v: unknown, level: PluginLevel, granted: readonly string[]): v is string => isWebUrl(v) || localAllowed(v, level, granted);
+
+/** Fichier local de l'élément (`open.path` d'un fichier qui n'est pas une adresse), s'il y en a un. */
+const localPathOf = (open: OpenSpec): string | null => (open.kind === 'file' && !isWebUrl(open.path) ? open.path : null);
+
+/**
+ * Éléments rendus par la source d'un plugin, vérifiés ; ceux qui ne passent pas sont écartés. Vérification écrite
+ * seulement : le chemin réel des fichiers locaux est vérifié ensuite (`keepReal`).
+ */
+export function checkElements(
+  pluginId: string,
+  level: PluginLevel,
+  granted: readonly string[],
+  raw: unknown,
+  platform: NodeJS.Platform = process.platform,
+): { elements: ElementInput[]; dropped: number } {
   if (!Array.isArray(raw)) throw new Error('scan() must return an array of elements.');
   if (raw.length > BRIDGE_LIMITS.elements) throw new Error(`scan() returned more than ${BRIDGE_LIMITS.elements} elements.`);
   const prefix = level === 'privileged' ? '' : `plugin:${pluginId}|`;
@@ -109,9 +143,12 @@ export function checkElements(pluginId: string, level: PluginLevel, granted: str
       }
     }
     const images: ElementInput['images'] = {};
-    if (isObject(e.images)) for (const k of ['poster', 'background', 'logo'] as const) if (isWebUrl(e.images[k])) images[k] = e.images[k] as string;
+    if (isObject(e.images)) for (const k of ['poster', 'background', 'logo'] as const) if (imageAllowed(e.images[k], level, granted)) images[k] = e.images[k];
+    // Clé d'un fichier local, gardée telle quelle si elle désigne exactement le fichier vérifié.
+    const local = localPathOf(open);
+    const ownKey = local !== null && e.key === localFileKey(local, platform);
     elements.push({
-      key: `${prefix}${e.key}`,
+      key: ownKey ? e.key : `${prefix}${e.key}`,
       name: e.name,
       open,
       tags: Array.isArray(e.tags) ? e.tags.filter(text) : [],
@@ -120,6 +157,50 @@ export function checkElements(pluginId: string, level: PluginLevel, granted: str
     });
   }
   return { elements, dropped: raw.length - elements.length };
+}
+
+/** Lecture du chemin réel (tests). */
+export type Realpath = (p: string) => Promise<string>;
+
+/** Appels de `realpath` en même temps. */
+const REAL_CONCURRENCY = 32;
+
+/**
+ * Seconde vérification des fichiers locaux d'un plugin de code limité, sur le chemin réel (liens symboliques résolus,
+ * dossiers accordés compris) : un élément dont le fichier mène ailleurs est écarté, une image qui mène ailleurs est
+ * retirée. Le code sensible n'est pas revérifié (il a déjà Node).
+ */
+export async function keepReal(
+  elements: ElementInput[],
+  level: PluginLevel,
+  granted: readonly string[],
+  realpath: Realpath = (p) => fsp.realpath(p),
+): Promise<{ elements: ElementInput[]; dropped: number }> {
+  if (level === 'privileged') return { elements, dropped: 0 };
+  const roots = (await Promise.all(granted.map((g) => realpath(g).catch(() => null)))).filter((r): r is string => !!r);
+  const ok = async (p: string): Promise<boolean> => {
+    const real = await realpath(p).catch(() => null);
+    return !!real && roots.some((r) => real === r || isInside(real, [r]));
+  };
+  const kept: (ElementInput | null)[] = new Array(elements.length).fill(null);
+  let next = 0;
+  async function worker(): Promise<void> {
+    while (next < elements.length) {
+      const i = next++;
+      const e = elements[i];
+      const local = localPathOf(e.open);
+      if (local !== null && !(await ok(local))) continue;
+      const images = { ...e.images };
+      for (const k of ['poster', 'background', 'logo'] as const) {
+        const v = images[k];
+        if (v && !isWebUrl(v) && !(await ok(v))) delete images[k];
+      }
+      kept[i] = { ...e, images };
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(REAL_CONCURRENCY, elements.length) }, worker));
+  const out = kept.filter((e): e is ElementInput => e !== null);
+  return { elements: out, dropped: elements.length - out.length };
 }
 
 const GROUPS: Record<MetadataKind, ScrapeGroup> = { video: 'videos', album: 'music', rom: 'games', pc: 'games' };
@@ -136,45 +217,158 @@ export function checkFacts(source: string, raw: unknown): MetadataFacts | null |
   return out;
 }
 
+/** Une analyse voulue : source, emplacement (`null` : sans emplacement) et référence au catalogue. */
+interface Target {
+  entry: ContributionEntry;
+  location: SourceLocation | null;
+  ref: ElementSourceRef;
+}
+
+const refId = (ref: ElementSourceRef) => JSON.stringify([ref.plugin, ref.instance]);
+const entryId = (e: ContributionEntry) => JSON.stringify([e.pluginId, e.id]);
+const print = (t: Target) => JSON.stringify([entryId(t.entry), t.location]);
+
 export function createPluginBridges({
   service,
   catalog,
   log = (m) => console.error(m),
+  platform = process.platform,
+  realpath,
+  onClaimsChange,
 }: {
   service: BridgeService;
   catalog: BridgeCatalog;
   log?: (m: string) => void;
+  platform?: NodeJS.Platform;
+  realpath?: Realpath;
+  /** Les emplacements de la bibliothèque pris par un plugin ont changé (la bibliothèque du cœur les laisse). */
+  onClaimsChange?: () => void;
 }) {
-  const scanned = new Map<string, ElementSourceRef>();
-  const refKey = (e: ContributionEntry) => `${e.pluginId}\u0000${e.id}`;
+  let locations: KeyedLocation[] = [];
+  /** Emplacement de la bibliothèque (clé) → source de plugin qui l'a accepté. */
+  let assigned = new Map<string, { entry: ContributionEntry; location: SourceLocation }>();
+  /** Analyses voulues à cet instant, par référence au catalogue. */
+  let wanted = new Map<string, Target>();
+  /** Analyses arrivées au catalogue : référence → empreinte (source et emplacement) de la dernière analyse. */
+  const scanned = new Map<string, { ref: ElementSourceRef; print: string }>();
+  /** Analyses en cours : référence → empreinte. */
+  const running = new Map<string, string>();
+  let queue: Promise<void> = Promise.resolve();
 
-  async function scan(e: ContributionEntry): Promise<void> {
-    const ref: ElementSourceRef = { plugin: e.pluginId, instance: e.id };
-    const level = service.levelOf(e.pluginId);
-    if (!level) return;
+  /** Dossiers d'un plugin : accordés par l'utilisateur (`ctx.files.requestFolder`), et ceux de la bibliothèque qu'il lit. */
+  const assignedFolders = (pluginId: string): string[] =>
+    [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId && a.location.path ? [a.location.path] : []));
+  const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
+
+  /** Un dossier ne va qu'à un plugin de confiance qui déclare `folders` ; une adresse, à un plugin de confiance. */
+  function mayReceive(e: ContributionEntry, location: SourceLocation): boolean {
+    const rights = service.sourceRights(e.pluginId);
+    return rights.trusted && (!location.path || rights.folders);
+  }
+
+  async function accepts(e: ContributionEntry, location: SourceLocation): Promise<boolean> {
     try {
-      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [null], { timeout: BRIDGE_LIMITS.scanTimeout });
-      // Désactivé pendant l'analyse : rien n'est ajouté.
-      if (!service.contributions('sources').some((x) => refKey(x) === refKey(e))) return;
-      const { elements, dropped } = checkElements(e.pluginId, level, service.folders(e.pluginId), raw);
-      if (dropped) log(`Plugins : ${e.pluginId} (sources/${e.id}) : ${dropped} élément(s) écarté(s) (invalides ou non permis).`);
-      catalog.setSource(ref, elements);
-      scanned.set(refKey(e), ref);
-    } catch (err) {
-      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service).
-      log(`Plugins : analyse de ${e.pluginId} (sources/${e.id}) impossible : ${(err as Error)?.message ?? err}`);
+      return (await service.call(e.pluginId, 'sources', e.id, 'handles', [location], { timeout: BRIDGE_LIMITS.handlesTimeout })) === true;
+    } catch {
+      return false;
     }
   }
 
-  function syncSources(): void {
-    const current = service.contributions('sources');
-    const keys = new Set(current.map(refKey));
-    for (const [k, ref] of [...scanned]) {
-      if (keys.has(k)) continue;
+  /** Attribue chaque emplacement à la première source qui l'accepte ; une attribution encore valable est gardée. */
+  async function assign(current: ContributionEntry[]): Promise<boolean> {
+    const active = new Map(current.map((e) => [entryId(e), e]));
+    const next = new Map<string, { entry: ContributionEntry; location: SourceLocation }>();
+    for (const { key, location } of locations) {
+      const prev = assigned.get(key);
+      const still = prev && active.get(entryId(prev.entry));
+      if (still && mayReceive(still, location)) {
+        next.set(key, { entry: still, location });
+        continue;
+      }
+      for (const e of current) {
+        if (!mayReceive(e, location) || !(await accepts(e, location))) continue;
+        next.set(key, { entry: e, location });
+        break;
+      }
+    }
+    const owners = (m: typeof next) => JSON.stringify([...m].map(([k, a]) => [k, entryId(a.entry)]));
+    const changed = owners(next) !== owners(assigned);
+    assigned = next;
+    return changed;
+  }
+
+  /** L'analyse `t` est-elle encore voulue (source active, même emplacement) ? */
+  const current = (t: Target): boolean => {
+    const w = wanted.get(refId(t.ref));
+    return !!w && print(w) === print(t);
+  };
+
+  async function scan(t: Target): Promise<void> {
+    const { entry: e, ref } = t;
+    const level = service.levelOf(e.pluginId);
+    if (!level) return;
+    const k = refId(ref);
+    running.set(k, print(t));
+    const where = `${e.pluginId} (sources/${e.id}${t.location ? ` : ${t.location.location}` : ''})`;
+    try {
+      const timeout = t.location ? BRIDGE_LIMITS.locationScanTimeout : BRIDGE_LIMITS.scanTimeout;
+      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [t.location], { timeout });
+      // Désactivé ou emplacement retiré pendant l'analyse : rien n'est ajouté.
+      if (!current(t)) return;
+      const folders = granted(e.pluginId);
+      const written = checkElements(e.pluginId, level, folders, raw, platform);
+      const real = await keepReal(written.elements, level, folders, realpath);
+      if (!current(t)) return;
+      const dropped = written.dropped + real.dropped;
+      if (dropped) log(`Plugins : ${where} : ${dropped} élément(s) écarté(s) (invalides ou non permis).`);
+      catalog.setSource(ref, real.elements);
+      scanned.set(refId(ref), { ref, print: print(t) });
+    } catch (err) {
+      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service).
+      log(`Plugins : analyse de ${where} impossible : ${(err as Error)?.message ?? err}`);
+    } finally {
+      if (running.get(k) === print(t)) running.delete(k);
+    }
+  }
+
+  /** Attribution et catalogue à jour ; rend les analyses lancées (elles ne bloquent pas la synchronisation suivante). */
+  async function syncSources(force: boolean): Promise<Promise<void>[]> {
+    const active = service.contributions('sources');
+    const claimsChanged = await assign(active);
+    const next = new Map<string, Target>();
+    for (const [key, a] of assigned)
+      next.set(refId({ plugin: a.entry.pluginId, instance: key }), { entry: a.entry, location: a.location, ref: { plugin: a.entry.pluginId, instance: key } });
+    const withLocation = new Set([...assigned.values()].map((a) => entryId(a.entry)));
+    for (const e of active) {
+      if (withLocation.has(entryId(e))) continue;
+      const ref = { plugin: e.pluginId, instance: e.id };
+      next.set(refId(ref), { entry: e, location: null, ref });
+    }
+    wanted = next;
+    for (const [k, { ref }] of [...scanned]) {
+      if (next.has(k)) continue;
       scanned.delete(k);
       catalog.removeSource(ref);
     }
-    for (const e of current) if (!scanned.has(refKey(e))) void scan(e);
+    if (claimsChanged) onClaimsChange?.();
+    const due = ([k, t]: [string, Target]) => force || (scanned.get(k)?.print !== print(t) && running.get(k) !== print(t));
+    return [...next].filter(due).map(([, t]) => scan(t));
+  }
+
+  /**
+   * Les synchronisations se suivent : une attribution ne se calcule jamais pendant une autre. La promesse rendue se
+   * résout quand les analyses lancées sont finies.
+   */
+  function sync(force = false): Promise<void> {
+    const step = queue.then(() => syncSources(force));
+    queue = step.then(
+      () => {},
+      (err) => log(`Plugins : sources : ${(err as Error)?.message ?? err}`),
+    );
+    return step.then(
+      (scans) => Promise.all(scans).then(() => {}),
+      () => {},
+    );
   }
 
   /** Adaptateur d'une contribution `metadata` pour le moteur d'infos en ligne. */
@@ -214,9 +408,9 @@ export function createPluginBridges({
   }
 
   const unsubscribe = service.onContributionsChange((kinds) => {
-    if (kinds.includes('sources')) syncSources();
+    if (kinds.includes('sources')) void sync();
   });
-  syncSources();
+  void sync();
 
   return {
     /** Fournisseurs d'infos en ligne des plugins actifs (`extraProviders` du moteur). */
@@ -238,7 +432,19 @@ export function createPluginBridges({
     },
 
     /** Analyse de nouveau les sources des plugins actifs. */
-    rescan: (): Promise<void> => Promise.all(service.contributions('sources').map(scan)).then(() => {}),
+    rescan: (): Promise<void> => sync(true),
+
+    /** Emplacements de la bibliothèque (configuration) : redistribués aux sources ; seuls les nouveaux ou changés sont analysés. */
+    setLocations(list: readonly KeyedLocation[]): Promise<void> {
+      locations = list.map((l) => ({ key: l.key, location: structuredClone(l.location) }));
+      return sync();
+    },
+    /** Vrai si un plugin lit cet emplacement de la bibliothèque (instance du cœur) : la bibliothèque du cœur le laisse. */
+    claimed: (key: string): boolean => assigned.has(key),
+    /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */
+    assignedFolders,
+    /** Fin des synchronisations en cours (tests). */
+    idle: (): Promise<void> => queue,
 
     stop: unsubscribe,
   };

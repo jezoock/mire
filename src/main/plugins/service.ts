@@ -42,6 +42,7 @@ import type { RuntimePlugin } from './runtime.ts';
 import type { PluginSettingsStore } from './settings.ts';
 import type { FaultCode, PluginState } from './state.ts';
 import { createPluginTaggers } from './taggers.ts';
+import { grantedPermissions } from './permissions.ts';
 
 /** Racine des textes d'un plugin dans les catalogues : `pluginTexts.<id, points remplacés par _>.` */
 export const pluginTextKey = (id: string): string => id.replaceAll('.', '_');
@@ -581,6 +582,17 @@ export function createPluginService(opts: PluginServiceOptions) {
           return instance ? [{ pluginId: p.id, id: c.id, instance }] : [];
         });
       });
+    },
+
+    /**
+     * Ce qu'un plugin actif peut recevoir des emplacements de la bibliothèque (P5-11a) : seulement s'il est inclus ou
+     * du dépôt officiel, et un dossier seulement s'il déclare `folders` (et que son niveau le permet).
+     */
+    sourceRights(id: string): { trusted: boolean; folders: boolean } {
+      const a = active.get(id);
+      const k = known.get(id);
+      if (!a || !k) return { trusted: false, folders: false };
+      return { trusted: ['bundled', 'official'].includes(trustOf(k)), folders: grantedPermissions(a.plugin.manifest).folders };
     },
 
     /** Niveau d'un plugin actif (`null` sinon) : les ponts appliquent ses règles aux résultats qu'il rend. */

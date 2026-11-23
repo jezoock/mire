@@ -15,12 +15,38 @@ import type { PluginContext } from './context.ts';
 /** Élément tel qu'une source le donne : le catalogue y ajoute sa source et sa date d'ajout. */
 export type ElementInput = Omit<Element, 'source' | 'added'> & { added?: number };
 
+/** Type de fichiers cherchés dans un emplacement de la bibliothèque. */
+export type SourceMediaKind = 'video' | 'audio' | 'image';
+
+/**
+ * Emplacement de la bibliothèque, tel que le cœur le passe à une source de plugin (`handles`, `scan`) : un dossier
+ * ou un partage réseau (`path`), ou une adresse (`url`). Les emplacements restent dans la configuration de Mire ;
+ * un dossier n'est passé qu'à une source qui l'a accepté (`handles`), et lui est alors accordé (`ctx.files`) tant
+ * qu'il reste dans la bibliothèque.
+ */
+export interface SourceLocation {
+  /** Emplacement tel que l'utilisateur l'a saisi (`D:\\Films`, `smb://nas/films`, `https://…/films/`). */
+  location: string;
+  /** Dossier à lire (chemin absolu), pour un dossier ou un partage réseau. */
+  path?: string;
+  /** Adresse, pour un serveur web ou une liste de lecture. */
+  url?: string;
+  /** Vrai pour un partage réseau (`\\NAS\\Films`, `smb://…`), lu comme un dossier monté par le système. */
+  network: boolean;
+  /** Types de fichiers demandés à cet emplacement. */
+  kinds: SourceMediaKind[];
+}
+
 /**
  * Source d'éléments (contribution `sources`) : trouve des éléments dans des emplacements configurés (dossier,
  * serveur, liste…) et les donne au catalogue. Elle réunit les sources de la bibliothèque, des jeux et de la
  * télévision.
  *
- * `Location` est l'emplacement tel que la source le reçoit de sa configuration.
+ * `Location` est l'emplacement tel que la source le reçoit. Pour un plugin, c'est un emplacement de la bibliothèque
+ * (`SourceLocation`) : le cœur demande `handles` à chaque source, puis appelle `scan` pour chaque emplacement accepté
+ * (le cœur fixe alors l'instance) ; une source qui n'accepte aucun emplacement reçoit `scan(null)`, une fois, sous
+ * l'identifiant de sa contribution. Seuls les plugins inclus ou du dépôt officiel reçoivent les emplacements de la
+ * bibliothèque, et un dossier seulement s'ils déclarent la permission `folders`.
  */
 export interface ElementSource<Location = unknown> {
   /** Identifiant de la source : celui de la contribution (`src-local`, `src-http`…). */
@@ -29,11 +55,18 @@ export interface ElementSource<Location = unknown> {
   readonly tags: readonly string[];
   /** Vrai si la source sait analyser cet emplacement (emplacements gérés). */
   handles(location: Location): boolean;
-  /** Identifiant stable de l'emplacement : l'`instance` de la source des éléments. */
+  /**
+   * Identifiant stable de l'emplacement : l'`instance` de la source des éléments. Pour un emplacement de la
+   * bibliothèque passé à un plugin, le cœur fixe lui-même l'instance (chemin ou adresse normalisés) : un plugin peut
+   * rendre `location.path ?? location.url`.
+   */
   instance(location: Location): string;
   /**
    * Analyse d'un emplacement : la liste complète de ses éléments. Lève une erreur au message affichable si
    * l'emplacement est inaccessible (le catalogue garde alors les éléments de l'analyse précédente).
+   *
+   * Un fichier local garde la clé que lui donne le cœur (`local:<chemin>`, chemin normalisé) si son `open.path` est
+   * ce même chemin, dans un dossier accordé ; ses images peuvent être des fichiers de ces dossiers.
    */
   scan(location: Location): Promise<ElementInput[]>;
 }

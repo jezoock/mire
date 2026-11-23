@@ -200,6 +200,18 @@ describe('ctx.files', () => {
     assert.equal(((await c.handle('files.walk', [granted, { depth: 0 }], signal())) as unknown[]).length, 1);
   });
 
+  it('walk : `skipHidden` écarte les dossiers cachés ou système et les fichiers cachés, comme la bibliothèque', async () => {
+    const lib = path.join(root, 'bibliotheque-cachee');
+    for (const d of ['.cache', '$RECYCLE.BIN', 'Films']) mkdirSync(path.join(lib, d), { recursive: true });
+    for (const f of ['.cache/a.mkv', '$RECYCLE.BIN/b.mkv', 'Films/c.mkv', 'Films/.d.mkv']) writeFileSync(path.join(lib, f), 'x');
+    const { ctx, folders } = context({ level: 'code', permissions: { folders: true } });
+    folders.set('org.exemple.test', [lib]);
+    const names = async (o: object) =>
+      ((await ctx().handle('files.walk', [lib, o], signal())) as { path: string }[]).map((e) => path.relative(lib, e.path)).sort();
+    assert.deepEqual(await names({ skipHidden: true }), [path.join('Films', 'c.mkv')]);
+    assert.equal((await names({})).length, 4);
+  });
+
   it('les dossiers accordés sont ceux du plugin du port, pas ceux d’un autre ; il faut la permission', async () => {
     const { forPlugin, folders } = context({ level: 'code', permissions: { folders: true } });
     folders.set('org.exemple.a', [granted]);
@@ -367,6 +379,7 @@ describe('ponts', () => {
       },
       levelOf: () => 'code',
       folders: () => [],
+      sourceRights: () => ({ trusted: false, folders: false }),
     };
     const set: unknown[] = [];
     const removed: unknown[] = [];
