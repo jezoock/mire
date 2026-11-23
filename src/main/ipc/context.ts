@@ -14,6 +14,7 @@ import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { RescueRequest } from '@mire/shared';
+import type { ExternalPlayerInfo } from '@mire/shared/ipc';
 import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
@@ -60,7 +61,10 @@ export interface MainContext {
   /** Renommer, déplacer, supprimer sous les dossiers locaux de la configuration (P2-10). */
   readonly fileManager: FilesService;
   /** Hôte de plugins (P3-03). */
-  readonly plugins: Pick<PluginService, 'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders' | 'uninstall' | 'gamepadProfiles'>;
+  readonly plugins: Pick<
+    PluginService,
+    'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders' | 'uninstall' | 'gamepadProfiles' | 'romSitesFor'
+  >;
   /** Client des dépôts (P3-07) : index vérifiés, installation, mise à jour. */
   readonly repos: Pick<
     RepoClient,
@@ -109,6 +113,8 @@ export interface MainContext {
 
   // Lecteur externe et télévision.
   playExternal: Fn;
+  /** Lecteurs externes des plugins actifs (P5-20). */
+  externalPlayers: () => ExternalPlayerInfo[];
   detectTvService: Fn;
   fetchChannels: Fn;
   /** Flux d'une chaîne du service choisi, par sa clé (variante de la qualité préférée). */

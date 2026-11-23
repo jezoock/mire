@@ -7,6 +7,10 @@ import path from 'node:path';
 import { CONFIG_VERSION, DEFAULT_CONFIG, DEFAULT_TV, MIGRATIONS, mergeConfig, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { createConfigService } from '../../src/main/config/service.ts';
 import { homeRowsFromV8 } from '../../src/main/config/migrations/v9.ts';
+import { CONTINUITY_RULES } from '../../src/main/config/migrations/continuity.ts';
+
+// Règles des autres tâches appliquées aux configurations v8 et v9 des fixtures, avant celle de P5-15 (la dernière).
+const BEFORE_P5_15 = CONTINUITY_RULES.map((r) => r.id).filter((id) => id !== 'P5-15');
 import os from 'node:os';
 
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
@@ -239,7 +243,7 @@ test.describe('migration v9 (P2-11)', () => {
     // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15).
     assert.deepEqual(out.plugins, { 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } });
     // File de la continuité (v10, P5-01) : profils de manettes (P5-04), puis TMDB (P5-15).
-    assert.deepEqual(out.continuity, ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15']);
+    assert.deepEqual(out.continuity, [...BEFORE_P5_15, 'P5-15']);
     delete out.plugins;
     delete out.continuity;
     const { tmdbToken: _token, region: _region, ...search } = v8().search;

@@ -10,6 +10,9 @@ import { applyContinuity, checkRules, CONTINUITY_RULES, providerRenames, type Co
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
 type Any = any;
 
+// Règles des autres tâches appliquées aux configurations v8 et v9 des fixtures, avant celle de P5-15 (la dernière).
+const BEFORE_P5_15 = CONTINUITY_RULES.map((r) => r.id).filter((id) => id !== 'P5-15');
+
 const FIXTURES = path.join(import.meta.dirname, '..', 'fixtures');
 const readFixture = (name: string) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
 
@@ -51,13 +54,13 @@ test.describe('migration v10 (P5-01)', () => {
       search,
       plugins,
       catalog,
-      continuity: ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15'],
+      continuity: [...BEFORE_P5_15, 'P5-15'],
       version: CONFIG_VERSION,
     });
     // Normalisée : réglages des autres plugins gardés, secret compris.
     const c = normalizeConfig(config);
     assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
-    assert.deepEqual(c.continuity, ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15']);
+    assert.deepEqual(c.continuity, [...BEFORE_P5_15, 'P5-15']);
   });
 
   test('P5-04 : les trois profils de manettes, plugins inclus, pour toute installation existante', () => {
@@ -75,6 +78,46 @@ test.describe('migration v10 (P5-01)', () => {
         ['mire.gamepad.nintendo', 'bundled', []],
       ],
     );
+  });
+
+  test('P5-07 : sites de jeux (selon la configuration) et jeux libres (toute installation), plugins à installer', () => {
+    const rule = (id: string) => CONTINUITY_RULES.find((r) => r.id === id)!;
+    assert.deepEqual([rule('P5-07-sites').plugin, rule('P5-07-sites').mode, rule('P5-07-sites').settings ?? []], ['mire.game-sites', 'install', []]);
+    assert.deepEqual([rule('P5-07-libres').plugin, rule('P5-07-libres').mode, rule('P5-07-libres').settings ?? []], ['mire.free-games', 'install', []]);
+    const queue = (raw: Any) => (migrate(structuredClone({ ...raw, version: 9 })).config as Any).continuity as string[];
+    // Une console sans liste à elle prenait les sites proposés : le plugin des sites est mis en attente.
+    assert.ok(queue({ emulators: [{ id: 'gb-1', name: 'GB' }] }).includes('P5-07-sites'));
+    assert.ok(queue({ emulators: [{ id: 'a', romSites: [] }, { id: 'b' }] }).includes('P5-07-sites'));
+    // Aucune console, ou que des consoles avec leur propre liste (même vide) : les sites proposés ne servaient pas.
+    for (const emulators of [[], [{ id: 'a', romSites: [] }], [{ id: 'a', romSites: [{ name: 'X', url: 'https://x.example/' }] }], 'mal formé', [null, 4]]) {
+      assert.ok(!queue({ emulators }).includes('P5-07-sites'), JSON.stringify(emulators));
+    }
+    assert.ok(!queue({}).includes('P5-07-sites'));
+    // La configuration ne dit pas si la liste de jeux libres servait : toute installation existante, même mal formée.
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) assert.ok(queue(raw).includes('P5-07-libres'));
+  });
+
+  test('P5-03 : les sept pages prêtes à l’emploi, plugins inclus, pour toute installation existante', () => {
+    const slugs = ['movies', 'series', 'music', 'images', 'streaming', 'tv', 'games'];
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const s of slugs) assert.ok((config as Any).continuity.includes(`P5-03-${s}`), s);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-03-'));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      slugs.map((s) => [`mire.page.${s}`, 'bundled', []]),
+    );
+  });
+
+  test('P5-20 : les lecteurs externes, plugin inclus, pour toute installation existante ; le programme choisi reste', () => {
+    for (const raw of [readFixture('config-v9.json'), {}, { externalPlayer: { path: '/usr/bin/vlc', args: [] } }, { externalPlayer: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-20'));
+      assert.deepEqual((config as Any).externalPlayer, (raw as Any).externalPlayer);
+    }
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-20');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {

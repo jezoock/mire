@@ -179,11 +179,11 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | --- | --- | --- | --- | --- | --- | --- |
 | P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | faite | [#98](https://github.com/jezoock/mire/pull/98) |
 | P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | à faire | |
-| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | à faire | |
+| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | faite | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | faite | |
 | P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
 | P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |
-| P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | à faire | |
+| P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | faite | |
 | P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |
 | P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | à faire | |
 | P5-10 | Thème Mire | S | P4-11, P4-24 |  | à faire | |
@@ -196,7 +196,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
 | P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
-| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | à faire | |
+| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | faite | |
 | P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
 | **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |
 

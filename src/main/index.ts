@@ -45,7 +45,6 @@ import { createDownloads, type PluginDownloader } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { gameConfigFeed } from './games/element-sources.ts';
-import { defaultRomSites } from './games/rom-sites.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
@@ -77,7 +76,7 @@ import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
 import * as http from './net/http.ts';
-import { createLauncher, createPlayers } from './platform/index.ts';
+import { createLauncher, createPlayers, type ExternalPlayerSpec } from './platform/index.ts';
 import { createScraper, guessSystem } from './scrape/index.ts';
 import { createWatchSearch } from './search/watch.ts';
 import { createAccessPolicy } from './security/access-policy.ts';
@@ -153,7 +152,9 @@ function start(pending: PendingFiles): Running {
 
   // Lancement de programmes (jeux, émulateurs, lecteur externe) ; « réduire pendant le jeu ».
   const launcher = createLauncher({ shell, minimizeWhileRunning: window.minimizeWhileRunning });
-  const players = createPlayers({ launcher, shell, settings: () => config.get(), isAllowed: (file) => access.isAllowed(file) });
+  // Lecteurs externes (P5-20) : décrits par les plugins, branchés une fois le service des plugins créé.
+  let pluginPlayers: () => ExternalPlayerSpec[] = () => [];
+  const players = createPlayers({ launcher, shell, settings: () => config.get(), isAllowed: (file) => access.isAllowed(file), players: () => pluginPlayers() });
 
   // Langue de l'interface : réglage ui.language, ou langue du système ; l'interface suit ses changements.
   const i18n = createLanguageService({ config, systemLanguages: () => app.getPreferredSystemLanguages(), dev: !app.isPackaged });
@@ -166,7 +167,8 @@ function start(pending: PendingFiles): Running {
     window: window.get as unknown as WebManagerDeps['window'],
     createView: (webPreferences) => new WebContentsView({ webPreferences }) as unknown as ViewLike,
     config,
-    defaultRomSites,
+    // Sites de jeux des plugins actifs (packs `romSites`, P5-07) ; sans plugin, aucun site proposé d'office.
+    defaultRomSites: (system) => plugins.romSitesFor(system),
     guessSystem: (emu) => guessSystem(emu as SystemHint),
     downloads: () => downloads,
     openInBrowser: players.openInBrowser,
@@ -331,12 +333,18 @@ function start(pending: PendingFiles): Running {
     onChange: (summary) => toUi('plugins:continuity-changed', summary),
   });
   pluginTaggers = plugins.taggerContributors;
+  pluginPlayers = plugins.externalPlayers;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
     // Profils de manettes (P5-04) : l'interface les redemande.
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
+    // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
+    if (kinds.includes('pages')) catalogPages.setBuiltin(plugins.pageDefinitions());
+    // Lecteurs externes (P5-20) : l'interface montre ou cache son bouton.
+    if (kinds.includes('apps')) toUi('player:externalChanged');
   });
+  catalogPages.setBuiltin(plugins.pageDefinitions());
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
@@ -376,6 +384,7 @@ function start(pending: PendingFiles): Running {
     saveConfig: config.replace,
     onProgress: (p) => toUi('store-progress', p),
     extract: archive.extract,
+    freeGames: () => plugins.freeGames(),
     paths: { home: app.getPath('home'), documents: app.getPath('documents'), appData: app.getPath('appData') },
   });
   const downloads = createDownloads({

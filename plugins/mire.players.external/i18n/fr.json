@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Lecteurs externes mpv et VLC",
+      "description": "Ouvre dans mpv ou VLC, s’ils sont installés, les vidéos et musiques que Mire ne lit pas lui-même, ainsi que les chaînes de télévision."
+    },
+    "apps": {
+      "mpv": {
+        "name": "mpv"
+      },
+      "vlc": {
+        "name": "VLC"
+      }
+    }
+  }
+}

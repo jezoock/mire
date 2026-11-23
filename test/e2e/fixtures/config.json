@@ -1,26 +1,65 @@
 {
-  "version": 5,
+  "version": 10,
   "library": {
     "sources": [
-      { "id": "demo-videos", "kind": "video", "location": "@FIXTURES@/bibliotheque/Vidéos" },
-      { "id": "demo-musique", "kind": "audio", "location": "@FIXTURES@/bibliotheque/Musique" },
-      { "id": "demo-images", "kind": "image", "location": "@FIXTURES@/bibliotheque/Images" }
+      {
+        "id": "demo-videos",
+        "kind": "video",
+        "location": "@FIXTURES@/bibliotheque/Vidéos"
+      },
+      {
+        "id": "demo-musique",
+        "kind": "audio",
+        "location": "@FIXTURES@/bibliotheque/Musique"
+      },
+      {
+        "id": "demo-images",
+        "kind": "image",
+        "location": "@FIXTURES@/bibliotheque/Images"
+      }
     ]
   },
   "gameSources": [],
   "tv": {
     "services": [
-      { "id": "demo", "name": "Télé de démonstration", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" },
-      { "id": "secours", "name": "Télé de secours", "kind": "playlist", "url": "@FIXTURES@/chaines.m3u" }
+      {
+        "id": "demo",
+        "name": "Télé de démonstration",
+        "kind": "playlist",
+        "url": "@FIXTURES@/chaines.m3u"
+      },
+      {
+        "id": "secours",
+        "name": "Télé de secours",
+        "kind": "playlist",
+        "url": "@FIXTURES@/chaines.m3u"
+      }
     ],
     "active": "demo",
     "detected": true
   },
-  "ui": { "theme": "ecran", "start": "home" },
-  "scrape": { "auto": false },
-  "adblock": { "enabled": false, "allowlist": [], "customLists": [] },
+  "ui": {
+    "theme": "ecran",
+    "start": "home",
+    "language": "fr"
+  },
+  "scrape": {
+    "auto": false
+  },
+  "adblock": {
+    "enabled": false,
+    "allowlist": [],
+    "customLists": []
+  },
   "web": [
-    { "id": "arte", "group": "video", "name": "Arte", "url": "https://www.arte.tv/fr/", "color": "#FA481C", "search": "https://www.arte.tv/fr/search/?q={q}" },
+    {
+      "id": "arte",
+      "group": "video",
+      "name": "Arte",
+      "url": "https://www.arte.tv/fr/",
+      "color": "#FA481C",
+      "search": "https://www.arte.tv/fr/search/?q={q}"
+    },
     {
       "id": "radio-france",
       "group": "music",
@@ -38,11 +77,20 @@
       "args": ["{rom}"],
       "romsDir": "@FIXTURES@/bibliotheque/Jeux/Super Nintendo",
       "extensions": [".sfc", ".smc"],
-      "system": "Nintendo - Super Nintendo Entertainment System"
+      "system": "Nintendo - Super Nintendo Entertainment System",
+      "id": "super-nintendo-631512"
     }
   ],
   "games": [
-    { "name": "Aventure de démonstration", "path": "@FIXTURES@/bibliotheque/Jeux/PC/aventure.sh", "args": [] },
-    { "name": "Puzzle de démonstration", "path": "@FIXTURES@/bibliotheque/Jeux/PC/puzzle.sh", "args": [] }
+    {
+      "name": "Aventure de démonstration",
+      "path": "@FIXTURES@/bibliotheque/Jeux/PC/aventure.sh",
+      "args": []
+    },
+    {
+      "name": "Puzzle de démonstration",
+      "path": "@FIXTURES@/bibliotheque/Jeux/PC/puzzle.sh",
+      "args": []
+    }
   ]
 }

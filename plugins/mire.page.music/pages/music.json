@@ -1,0 +1,19 @@
+{
+  "id": "music",
+  "name": {
+    "key": "pages.music"
+  },
+  "icon": "music",
+  "require": ["audio"],
+  "groupBy": ["artist", "album"],
+  "sort": [
+    {
+      "by": "track"
+    }
+  ],
+  "display": "list",
+  "menu": {
+    "pinned": true,
+    "order": 3
+  }
+}

@@ -2,7 +2,7 @@
  * Version 9 : les sections deviennent des pages (P2-11, « Reprise des installations existantes » de
  * docs/architecture-cible.md).
  *
- * - Sections → pages : les pages prêtes à l'emploi (`catalog/pages/builtin.ts`) reprennent les sections telles que
+ * - Sections → pages : les pages prêtes à l'emploi (plugins inclus `mire.page.*`, P5-03) reprennent les sections telles que
  *   la v8 les montrait : toutes épinglées, dans l'ordre du menu de la v8, qui n'était ni modifiable ni masquable.
  *   Rien n'est donc écrit dans `catalog/pages.json`, et les pages prêtes à l'emploi pourront encore évoluer (P5-03).
  * - Menu : sa position et son repli (`ui.menu`) ne bougent pas.

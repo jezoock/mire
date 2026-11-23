@@ -11,7 +11,7 @@ import { locationError } from '../../src/main/library/location.ts';
 import { GAME_GENRES, libretroProvider } from '../../src/main/scrape/providers/libretro.ts';
 import { MUSIC_GENRES, musicBrainzProvider } from '../../src/main/scrape/providers/musicbrainz.ts';
 import { steamProvider } from '../../src/main/scrape/providers/steam.ts';
-import { BIOS_HINTS, EMULATORS, FREE_GAMES } from '../../src/main/store/catalog/index.ts';
+import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 import { loadRoutes } from '../scrape/fake-fetch.ts';
 import { providerContext } from '../scrape/helpers.ts';
@@ -49,7 +49,6 @@ describe('clés employées par le processus principal', () => {
       ...Object.values(MUSIC_GENRES).map((id) => `scrape.genres.music.${id}`),
       ...EMULATORS.map((e) => `store.emulators.${e.id}`),
       ...[...BIOS_HINTS].map((id) => `store.bios.${id}`),
-      ...FREE_GAMES.map((g) => `store.games.${g.id}`),
     ];
     for (const key of keys) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
@@ -86,10 +85,28 @@ describe('langue des textes', () => {
     assert.equal(t('store.basedOn', { author: 'andwn', original: 'Daisuke Amaya' }), 'andwn, d’après Daisuke Amaya');
   });
 
+  // Jeu libre d'un plugin factice (P5-07) : adapté d'un autre jeu ; texte de présentation désigné par sa clé.
+  const GAME = {
+    id: 'cavestory',
+    name: 'Cave Story',
+    system: 'md',
+    author: 'andwn',
+    basedOn: 'Daisuke Amaya',
+    url: 'https://x.example/c.gen',
+    file: 'c.gen',
+    descKey: 'store.errors.unknownGame',
+  };
   it('boutique : descriptions, auteur et rappel des BIOS dans la langue de l’interface', (tc: TestContext) => {
     const dir = fs.mkdtempSync(path.join(ROOT, 'node_modules', '.mire-boutique-'));
     tc.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-    const store = createStore({ dataDir: dir, defaultRomsRoot: dir, getConfig: () => DEFAULT_CONFIG, saveConfig: () => {}, extract: async () => {} } as never);
+    const store = createStore({
+      dataDir: dir,
+      defaultRomsRoot: dir,
+      getConfig: () => DEFAULT_CONFIG,
+      saveConfig: () => {},
+      extract: async () => {},
+      freeGames: () => [GAME],
+    } as never);
     const fr = store.catalog();
     assert.match(fr.emulators[0].desc, /^Un seul programme pour les consoles/);
     assert.equal(fr.games.find((g: { id: string }) => g.id === 'cavestory')?.author, 'andwn, d’après Daisuke Amaya');

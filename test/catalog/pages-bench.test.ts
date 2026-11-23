@@ -15,6 +15,7 @@ import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
 import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
 import { fakeCatalog } from './fake-catalog.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
 const N = 20_000;
 const RUNS = 9;
@@ -42,7 +43,7 @@ describe('mesures des pages sur 20 000 éléments factices', () => {
     });
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
     const fresh = () => {
-      const pages = createPages({ file: path.join(dir, 'pages.json'), engine, catalog, translate: (k) => k });
+      const pages = createPages({ builtin: BUILTIN_PAGES, file: path.join(dir, 'pages.json'), engine, catalog, translate: (k) => k });
       pages.load();
       return pages;
     };

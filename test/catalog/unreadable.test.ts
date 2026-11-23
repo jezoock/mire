@@ -14,6 +14,7 @@ import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
 import type { ScrapeRecord } from '../../src/main/scrape/types.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
 const BROKEN = '{ "version": 1, "elements": {';
 
@@ -82,7 +83,7 @@ describe('fichiers du catalogue illisibles : mis de côté, jamais écrasés en 
     const s = setup();
     const { catalog, engine } = engineFor(s.dir);
     fs.writeFileSync(s.file('pages.json'), BROKEN);
-    const pages = createPages({ file: s.file('pages.json'), engine, catalog, translate: (k) => k, onIgnored: s.onIgnored });
+    const pages = createPages({ builtin: BUILTIN_PAGES, file: s.file('pages.json'), engine, catalog, translate: (k) => k, onIgnored: s.onIgnored });
     pages.load();
     assert.equal(pages.list().length, 7);
     assert.deepEqual(keptCopies(s.dir, 'pages.json'), [BROKEN]);
