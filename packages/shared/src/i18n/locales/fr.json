@@ -1021,7 +1021,9 @@
         "label": "Sections du Centre",
         "downloads": "Téléchargements",
         "apps": "Apps",
-        "consoles": "Consoles"
+        "consoles": "Consoles",
+        "plugins": "Plugins",
+        "repos": "Dépôts"
       },
       "downloads": {
         "add": "Ajouter un lien",
@@ -1218,6 +1220,220 @@
         "sites": "Sites de jeux",
         "remove": "Retirer",
         "fromApps": "Installée par les apps"
+      },
+      "plugins": {
+        "intro": "Les plugins ajoutent des fonctions à Mire : sources, infos, palettes, sites… Ouvrez la fiche d’un plugin pour voir ce qu’il apporte et ce qu’il demande, avant de l’installer.",
+        "refresh": "Rechercher des mises à jour",
+        "checked": "Listes des dépôts lues à {time}.",
+        "notChecked": "Les listes des dépôts n’ont pas encore été lues en ligne : « Rechercher des mises à jour » les récupère.",
+        "loading": "Lecture des plugins…",
+        "updates": "Mises à jour",
+        "installed": "Installés",
+        "available": "Disponibles",
+        "noInstalled": "Aucun plugin.",
+        "noAvailable": "Vos dépôts ne proposent pas d’autre plugin pour l’instant.",
+        "version": "Version {version}",
+        "noVersion": "Pas pour cette version de Mire",
+        "noVersionLatest": "Aucune pour cette version de Mire (dernière : {latest})",
+        "updateFrom": "Version {from} → {to}",
+        "level": {
+          "data": "Données seulement, sans code",
+          "code": "Code limité, isolé du reste de l’ordinateur",
+          "privileged": "Accès étendu à l’ordinateur",
+          "unknown": "Inconnu"
+        },
+        "trust": {
+          "bundled": "Livré avec Mire",
+          "official": "Dépôt officiel",
+          "thirdParty": "Tiers",
+          "local": "Installé à la main"
+        },
+        "origin": {
+          "bundled": "Livré avec Mire",
+          "official": "Dépôt officiel",
+          "repository": "Dépôt « {name} »",
+          "local": "Installé à la main"
+        },
+        "badges": {
+          "privileged": "Accès étendu"
+        },
+        "status": {
+          "active": "Actif",
+          "disabled": "Désactivé",
+          "fault": "Arrêté après une erreur",
+          "refused": "Refusé",
+          "restart": "{status} (au prochain démarrage de Mire)",
+          "update": "Mise à jour disponible : {version}"
+        },
+        "permissions": {
+          "hosts": "Se connecter à : {hosts}",
+          "more": {
+            "one": " et {count} autre",
+            "other": " et {count} autres"
+          },
+          "folders": "Vous demander l’accès à des dossiers de votre choix",
+          "localNetwork": "Accéder aux appareils de votre réseau local",
+          "launch": "Lancer des programmes de votre ordinateur",
+          "webViews": "Ouvrir des sites web dans Mire",
+          "deleteFiles": "Supprimer des fichiers",
+          "other": "Autre accès : {name}"
+        },
+        "contributes": {
+          "sources": "Des sources de contenus",
+          "metadata": "Des infos en ligne (fiches, images)",
+          "taggers": "Des tags posés automatiquement",
+          "search": "Des résultats de recherche",
+          "webExtensions": "Des extensions pour les sites web",
+          "downloaders": "Une façon de télécharger",
+          "webApps": "Des sites et des services",
+          "apps": "Des apps",
+          "systems": "Des consoles",
+          "packs": "Des listes prêtes à l’emploi",
+          "pages": "Des pages",
+          "themes": "Des thèmes",
+          "palettes": "Des palettes de couleurs",
+          "languages": "Des langues",
+          "gamepads": "Des profils de manettes"
+        },
+        "actions": {
+          "open": "Voir la fiche",
+          "enable": "Activer",
+          "disable": "Désactiver",
+          "update": "Mettre à jour",
+          "updateTo": "Mettre à jour vers la {version}",
+          "install": "Installer",
+          "uninstall": "Désinstaller",
+          "back": "Retour aux plugins"
+        },
+        "sheet": {
+          "label": "Fiche du plugin",
+          "version": "Version",
+          "update": "Mise à jour",
+          "origin": "Origine",
+          "level": "Niveau",
+          "size": "Taille",
+          "state": "État",
+          "contributes": "Ce qu’il apporte",
+          "noContributes": "Rien de déclaré.",
+          "permissions": "Ce qu’il demande",
+          "noPermissions": "Aucune permission particulière.",
+          "dependencies": "Plugins dont il a besoin",
+          "noDependencies": "Aucun.",
+          "dependency": "{name} ({range}), installé avec lui",
+          "dependencyInstalled": "{name} ({range}), déjà là",
+          "warning": "Ce plugin vient d’un dépôt tiers et demande un accès étendu à votre ordinateur. Mire ne peut pas vérifier ce qu’il fait : installez-le seulement si vous faites confiance à ce dépôt. Votre accord vous sera demandé.",
+          "warningInstalled": "Ce plugin vient d’un dépôt tiers et a, avec votre accord, un accès étendu à votre ordinateur.",
+          "conflict": "Ce plugin est déjà installé depuis un autre dépôt : celui-ci ne peut ni l’installer ni le mettre à jour."
+        },
+        "consent": {
+          "title": "Accès étendu : votre accord",
+          "warning": "Ce que vous allez installer vient d’un dépôt tiers et demande un accès étendu à votre ordinateur. Mire ne peut pas vérifier ce que fait ce code : il pourrait lire, modifier ou supprimer vos fichiers. Continuez seulement si vous faites confiance à ce dépôt.",
+          "plugin": "« {name} », version {version} ({level}) :",
+          "accept": "J’ai compris, installer",
+          "cancel": "Annuler"
+        },
+        "uninstall": {
+          "title": "Désinstaller « {name} » ?",
+          "help": "Ses réglages et ce qu’il a enregistré peuvent être gardés, pour le cas où vous le réinstalleriez.",
+          "keep": "Désinstaller, garder ses données",
+          "erase": "Désinstaller et effacer ses données",
+          "cancel": "Annuler"
+        },
+        "progress": {
+          "resolve": "Préparation de {name}…",
+          "download": "Téléchargement de {name}",
+          "amount": "{received} sur {total}",
+          "verify": "Vérification de {name}",
+          "install": "Installation de {name}"
+        },
+        "messages": {
+          "installed": "« {name} » est installé.",
+          "updated": "« {name} » est à jour.",
+          "uninstalled": "« {name} » est désinstallé.",
+          "uninstalledKept": "« {name} » est désinstallé ; ses données sont gardées.",
+          "restored": "« {name} » revient à la version livrée avec Mire.",
+          "enabled": "« {name} » est activé.",
+          "disabled": "« {name} » est désactivé.",
+          "notConsented": "Rien n’a été installé.",
+          "refused": "Mire a refusé cette demande.",
+          "failed": "L’opération n’a pas abouti.",
+          "gone": "Ce plugin n’est plus dans les listes."
+        },
+        "continuity": {
+          "title": "Fonctions reprises par des plugins",
+          "help": "Des fonctions que vous utilisiez avant cette version de Mire sont maintenant des plugins.",
+          "installed": "« {name} » : installé.",
+          "bundled": "« {name} » : activé (livré avec Mire).",
+          "pending": "« {name} » : sera installé dès que la connexion le permettra.",
+          "failed": "« {name} » : impossible."
+        }
+      },
+      "repos": {
+        "intro": "Les dépôts proposent des plugins. Le dépôt officiel est celui de Mire ; un dépôt tiers est sous la responsabilité de celui qui le publie.",
+        "addButton": "Ajouter un dépôt",
+        "refresh": "Mettre à jour les listes",
+        "official": "Officiel",
+        "thirdParty": "Tiers",
+        "index": "Adresse",
+        "fingerprint": "Empreinte de la clé",
+        "date": "Liste publiée le {date}",
+        "never": "Liste pas encore lue",
+        "remove": "Retirer",
+        "none": "Aucun dépôt.",
+        "loading": "Lecture des dépôts…",
+        "form": {
+          "title": "Ajouter un dépôt",
+          "help": "Collez l’adresse de la liste des plugins du dépôt (index.json) et sa clé publique, telles que le dépôt les publie.",
+          "index": "Adresse de la liste",
+          "indexPlaceholder": "https://…/index.json",
+          "key": "Clé publique",
+          "keyPlaceholder": "-----BEGIN PUBLIC KEY-----",
+          "check": "Vérifier",
+          "cancel": "Annuler",
+          "errors": {
+            "address": "Cette adresse n’est pas valide.",
+            "https": "L’adresse doit commencer par https:// : Mire n’accepte que les dépôts joints de façon sûre.",
+            "key": "Il faut la clé publique du dépôt : un bloc qui commence par « -----BEGIN PUBLIC KEY----- ».",
+            "refused": "L’adresse ou la clé a été refusée."
+          }
+        },
+        "confirm": {
+          "title": "Ajouter « {name} » ?",
+          "help": "Comparez cette empreinte à celle que publie le dépôt, groupe par groupe. Si elles diffèrent, n’ajoutez pas ce dépôt.",
+          "fingerprint": "Empreinte : {fingerprint}",
+          "index": "Adresse : {index}",
+          "plugins": {
+            "one": "{count} plugin proposé.",
+            "other": "{count} plugins proposés."
+          },
+          "sensitive": {
+            "one": "{count} d’entre eux demande un accès étendu à l’ordinateur : votre accord sera demandé avant de l’installer.",
+            "other": "{count} d’entre eux demandent un accès étendu à l’ordinateur : votre accord sera demandé avant de les installer."
+          },
+          "add": "L’empreinte est la bonne : ajouter",
+          "cancel": "Annuler"
+        },
+        "removeForm": {
+          "title": "Retirer « {name} » ?",
+          "help": "Ses plugins peuvent rester installés, sans mises à jour. Vous pouvez aussi les désinstaller.",
+          "keep": "Retirer, garder ses plugins",
+          "uninstall": "Retirer et désinstaller ses plugins, garder leurs données",
+          "erase": "Retirer, désinstaller ses plugins et effacer leurs données",
+          "cancel": "Annuler"
+        },
+        "messages": {
+          "added": "Le dépôt « {name} » est ajouté.",
+          "removed": "Le dépôt est retiré ; ses plugins restent installés, sans mises à jour.",
+          "removedUninstalled": {
+            "one": "Le dépôt est retiré ; {count} plugin désinstallé.",
+            "other": "Le dépôt est retiré ; {count} plugins désinstallés."
+          },
+          "removedNone": "Le dépôt est retiré.",
+          "kept": "Gardé parce qu’un autre plugin en a besoin : {names}.",
+          "refreshed": "Listes des dépôts mises à jour.",
+          "refreshErrors": "Certaines listes n’ont pas pu être lues : les dernières connues servent.",
+          "refused": "Mire a refusé cette demande."
+        }
       }
     },
     "editors": {

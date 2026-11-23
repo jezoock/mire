@@ -4,7 +4,7 @@
  */
 
 /** Onglets du Centre. */
-export const CENTRE_TABS = ['downloads', 'apps', 'consoles'] as const;
+export const CENTRE_TABS = ['downloads', 'apps', 'consoles', 'plugins', 'repos'] as const;
 export type CentreTab = (typeof CENTRE_TABS)[number];
 
 /** Onglet connu, sinon les téléchargements. */
@@ -123,6 +123,35 @@ export interface CentreLabels {
   tabDownloads?: string;
   tabApps?: string;
   tabConsoles?: string;
+  tabPlugins?: string;
+  tabRepos?: string;
+  // Plugins et dépôts (P4-19)
+  pluginsIntro?: string;
+  pluginsRefresh?: string;
+  pluginsLoading?: string;
+  updates?: string;
+  installed?: string;
+  available?: string;
+  noInstalled?: string;
+  noAvailable?: string;
+  back?: string;
+  sheetLabel?: string;
+  sheetPermissions?: string;
+  noPermissions?: string;
+  sheetContributes?: string;
+  noContributes?: string;
+  sheetDependencies?: string;
+  noDependencies?: string;
+  reposIntro?: string;
+  reposAdd?: string;
+  reposRefresh?: string;
+  reposIndex?: string;
+  reposFingerprint?: string;
+  reposRemove?: string;
+  reposNone?: string;
+  reposLoading?: string;
+  continuity?: string;
+  continuityHelp?: string;
   consolesHelp?: string;
   newConsole?: string;
   noConsoles?: string;
