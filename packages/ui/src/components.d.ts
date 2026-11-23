@@ -5,6 +5,7 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { AssistantView } from "./utils/assistant";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 import { PluginsView, ReposView } from "./utils/plugins";
@@ -21,6 +22,7 @@ import { SearchGroupView, SearchLabels, SearchSiteView, WatchView } from "./util
 import { SettingsLabels, SettingsPanelView } from "./utils/settings";
 import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 import { Box, WebBarIcons, WebBarLabels, WebBarView } from "./utils/web";
+export { AssistantView } from "./utils/assistant";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
 export { PluginsView, ReposView } from "./utils/plugins";
@@ -49,6 +51,26 @@ export namespace Components {
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
+    }
+    /**
+     * Hôte de l'assistant du premier lancement (P4-23) : ses méthodes sont les actions du contrôleur `mire-assistant`
+     * (étapes, choix, installation), qui vit avec l'état de l'interface (`src/renderer/controllers/assistant.ts`). Il contient
+     * sa vue (`mire-assistant-view`). Une seule balise dans la page.
+     */
+    interface MireAssistant {
+    }
+    /**
+     * Assistant du premier lancement (P4-23) : une étape à la fois (titre, explications, choix, plugins à installer et
+     * leurs permissions, boutons), déjà rédigée par la page (`src/renderer/assistant/`). Habillage du cœur ; aucun texte
+     * écrit ici ; les noms et descriptions venus de l'index restent des textes. L'élément à focaliser après un changement
+     * d'étape porte la classe `--focus` (premier choix, sinon le bouton principal).
+     */
+    interface MireAssistantView {
+        /**
+          * Étape affichée (`AssistantView`), en propriété ou en JSON.
+          * @default null
+         */
+        "view": AssistantView | string | null;
     }
     /**
      * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
@@ -1306,6 +1328,29 @@ declare global {
         new (): HTMLMireAppElement;
     };
     /**
+     * Hôte de l'assistant du premier lancement (P4-23) : ses méthodes sont les actions du contrôleur `mire-assistant`
+     * (étapes, choix, installation), qui vit avec l'état de l'interface (`src/renderer/controllers/assistant.ts`). Il contient
+     * sa vue (`mire-assistant-view`). Une seule balise dans la page.
+     */
+    interface HTMLMireAssistantElement extends Components.MireAssistant, HTMLStencilElement {
+    }
+    var HTMLMireAssistantElement: {
+        prototype: HTMLMireAssistantElement;
+        new (): HTMLMireAssistantElement;
+    };
+    /**
+     * Assistant du premier lancement (P4-23) : une étape à la fois (titre, explications, choix, plugins à installer et
+     * leurs permissions, boutons), déjà rédigée par la page (`src/renderer/assistant/`). Habillage du cœur ; aucun texte
+     * écrit ici ; les noms et descriptions venus de l'index restent des textes. L'élément à focaliser après un changement
+     * d'étape porte la classe `--focus` (premier choix, sinon le bouton principal).
+     */
+    interface HTMLMireAssistantViewElement extends Components.MireAssistantView, HTMLStencilElement {
+    }
+    var HTMLMireAssistantViewElement: {
+        prototype: HTMLMireAssistantViewElement;
+        new (): HTMLMireAssistantViewElement;
+    };
+    /**
      * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
      * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est
      * lu par les lecteurs d'écran.
@@ -1913,6 +1958,8 @@ declare global {
     };
     interface HTMLElementTagNameMap {
         "mire-app": HTMLMireAppElement;
+        "mire-assistant": HTMLMireAssistantElement;
+        "mire-assistant-view": HTMLMireAssistantViewElement;
         "mire-backdrop": HTMLMireBackdropElement;
         "mire-card": HTMLMireCardElement;
         "mire-centre": HTMLMireCentreElement;
@@ -1964,6 +2011,26 @@ declare namespace LocalJSX {
      * ce que la page place dans ces hôtes n'est jamais touché.
      */
     interface MireApp {
+    }
+    /**
+     * Hôte de l'assistant du premier lancement (P4-23) : ses méthodes sont les actions du contrôleur `mire-assistant`
+     * (étapes, choix, installation), qui vit avec l'état de l'interface (`src/renderer/controllers/assistant.ts`). Il contient
+     * sa vue (`mire-assistant-view`). Une seule balise dans la page.
+     */
+    interface MireAssistant {
+    }
+    /**
+     * Assistant du premier lancement (P4-23) : une étape à la fois (titre, explications, choix, plugins à installer et
+     * leurs permissions, boutons), déjà rédigée par la page (`src/renderer/assistant/`). Habillage du cœur ; aucun texte
+     * écrit ici ; les noms et descriptions venus de l'index restent des textes. L'élément à focaliser après un changement
+     * d'étape porte la classe `--focus` (premier choix, sinon le bouton principal).
+     */
+    interface MireAssistantView {
+        /**
+          * Étape affichée (`AssistantView`), en propriété ou en JSON.
+          * @default null
+         */
+        "view"?: AssistantView | string | null;
     }
     /**
      * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
@@ -3189,6 +3256,9 @@ declare namespace LocalJSX {
         "onMireWebSite"?: (event: MireWebbarCustomEvent<{ site: number }>) => void;
     }
 
+    interface MireAssistantViewAttributes {
+        "view": AssistantView | string | null;
+    }
     interface MireBackdropAttributes {
         "src": string;
         "element": CardElement | string | null;
@@ -3421,6 +3491,8 @@ declare namespace LocalJSX {
 
     interface IntrinsicElements {
         "mire-app": MireApp;
+        "mire-assistant": MireAssistant;
+        "mire-assistant-view": Omit<MireAssistantView, keyof MireAssistantViewAttributes> & { [K in keyof MireAssistantView & keyof MireAssistantViewAttributes]?: MireAssistantView[K] } & { [K in keyof MireAssistantView & keyof MireAssistantViewAttributes as `attr:${K}`]?: MireAssistantViewAttributes[K] } & { [K in keyof MireAssistantView & keyof MireAssistantViewAttributes as `prop:${K}`]?: MireAssistantView[K] };
         "mire-backdrop": Omit<MireBackdrop, keyof MireBackdropAttributes> & { [K in keyof MireBackdrop & keyof MireBackdropAttributes]?: MireBackdrop[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `attr:${K}`]?: MireBackdropAttributes[K] } & { [K in keyof MireBackdrop & keyof MireBackdropAttributes as `prop:${K}`]?: MireBackdrop[K] };
         "mire-card": Omit<MireCard, keyof MireCardAttributes> & { [K in keyof MireCard & keyof MireCardAttributes]?: MireCard[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `attr:${K}`]?: MireCardAttributes[K] } & { [K in keyof MireCard & keyof MireCardAttributes as `prop:${K}`]?: MireCard[K] };
         "mire-centre": MireCentre;
@@ -3475,6 +3547,19 @@ declare module "@stencil/core" {
              * ce que la page place dans ces hôtes n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
+            /**
+             * Hôte de l'assistant du premier lancement (P4-23) : ses méthodes sont les actions du contrôleur `mire-assistant`
+             * (étapes, choix, installation), qui vit avec l'état de l'interface (`src/renderer/controllers/assistant.ts`). Il contient
+             * sa vue (`mire-assistant-view`). Une seule balise dans la page.
+             */
+            "mire-assistant": LocalJSX.IntrinsicElements["mire-assistant"] & JSXBase.HTMLAttributes<HTMLMireAssistantElement>;
+            /**
+             * Assistant du premier lancement (P4-23) : une étape à la fois (titre, explications, choix, plugins à installer et
+             * leurs permissions, boutons), déjà rédigée par la page (`src/renderer/assistant/`). Habillage du cœur ; aucun texte
+             * écrit ici ; les noms et descriptions venus de l'index restent des textes. L'élément à focaliser après un changement
+             * d'étape porte la classe `--focus` (premier choix, sinon le bouton principal).
+             */
+            "mire-assistant-view": LocalJSX.IntrinsicElements["mire-assistant-view"] & JSXBase.HTMLAttributes<HTMLMireAssistantViewElement>;
             /**
              * Fond de page en fondu (P4-05) : l'image de fond de l'élément sélectionné. Deux calques : la nouvelle image se charge
              * derrière, puis passe devant en fondu (aucun fondu si l'utilisateur réduit les animations). Décoratif : rien n'est

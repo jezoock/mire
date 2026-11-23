@@ -874,7 +874,8 @@
         "games": "Jeux",
         "downloads": "Centre",
         "settings": "Réglages",
-        "explorer": "Explorateur"
+        "explorer": "Explorateur",
+        "assistant": "Premiers pas"
       },
       "menu": {
         "label": "Menu principal",
@@ -1551,6 +1552,11 @@
         "notObject": "La liste JSON doit être un objet { \"web\": […], \"games\": […], \"emulators\": […] }.",
         "notList": "« {key} » doit être une liste entre crochets [ ].",
         "saved": "Sites, jeux et consoles enregistrés"
+      },
+      "assistant": {
+        "title": "Assistant de démarrage",
+        "help": "Reprenez les questions du premier lancement : langue, ce que vous voulez faire, votre box et vos services. Rien n’est retiré ; seuls les plugins choisis sont ajoutés.",
+        "run": "Relancer l’assistant"
       },
       "config": {
         "title": "Configuration",

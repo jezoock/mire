@@ -546,6 +546,12 @@ export class MireSettingsView {
             {a.label}
           </ds-trigger>
         );
+      case 'runAssistant':
+        return (
+          <ds-trigger type="button" mods={mods} target="mire-settings" action="runAssistant">
+            {a.label}
+          </ds-trigger>
+        );
       default:
         return null;
     }

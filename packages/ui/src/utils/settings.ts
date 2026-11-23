@@ -129,7 +129,8 @@ export interface SettingsFieldView {
 }
 
 /** Actions des boutons d'un panneau (méthodes du contrôleur `mire-settings`, écrites telles quelles par la vue). */
-export type SettingsPanelAction = 'rescan' | 'scrapeAll' | 'clearScrape' | 'updateFilterLists' | 'exportConfig' | 'importConfig' | 'revealConfig';
+export type SettingsPanelAction =
+  'rescan' | 'scrapeAll' | 'clearScrape' | 'updateFilterLists' | 'exportConfig' | 'importConfig' | 'revealConfig' | 'runAssistant';
 
 /** Bouton d'action d'un panneau ; `mode` : celui de `importConfig` (`replace` ou `merge`). */
 export interface SettingsActionView {

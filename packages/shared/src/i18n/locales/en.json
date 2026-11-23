@@ -874,7 +874,8 @@
         "games": "Games",
         "downloads": "Centre",
         "settings": "Settings",
-        "explorer": "Explorer"
+        "explorer": "Explorer",
+        "assistant": "Getting started"
       },
       "menu": {
         "label": "Main menu",
@@ -1551,6 +1552,11 @@
         "notObject": "The JSON list must be an object { \"web\": […], \"games\": […], \"emulators\": […] }.",
         "notList": "“{key}” must be a list between brackets [ ].",
         "saved": "Sites, games and consoles saved"
+      },
+      "assistant": {
+        "title": "Setup assistant",
+        "help": "Go through the first-launch questions again: language, what you want to do, your TV box and services. Nothing is removed; only the plugins you choose are added.",
+        "run": "Run the assistant again"
       },
       "config": {
         "title": "Configuration",

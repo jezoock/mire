@@ -37,6 +37,7 @@ import { createExplorer } from './explorer/index.ts';
 import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
 import { consoleCards, isGameBookmarkKey, isGameKey } from './games/model.ts';
+import { STEP_FOCUS, createAssistant } from './assistant/index.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -132,6 +133,29 @@ const centre = createCentre({
     if (S.section !== CENTRE_VIEW) return;
     const sel = centre.takeFocus();
     if (sel) return restoreFocus({ el: null, sel: `#view mire-centre ${sel}` });
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) focusFirst();
+  },
+});
+
+// Assistant du premier lancement (P4-23) : section sans cible du routeur, ouverte au démarrage d'une nouvelle
+// installation ou depuis les Réglages ; il installe par les dépôts, comme le Centre.
+const ASSISTANT_VIEW = 'assistant';
+const assistant = createAssistant({
+  t,
+  language: () => i18n.language,
+  show: () => go(ASSISTANT_VIEW, { focus: 'content' }),
+  leave(to) {
+    if (to === 'centre') {
+      centre.showTab('plugins');
+      shell.open('screen:center', { focus: 'content' });
+    } else go(HOME_VIEW, { focus: 'content' });
+  },
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  // Étape changée : le focus va au premier choix (ou au bouton principal) ; s'il s'est perdu, au contenu.
+  onRendered: () => {
+    if (S.section !== ASSISTANT_VIEW) return;
+    if (assistant.takeFocus()) return restoreFocus({ el: null, sel: `#view mire-assistant ${STEP_FOCUS}` });
     const a = document.activeElement;
     if (!a || a === document.body || !a.isConnected) focusFirst();
   },
@@ -516,7 +540,7 @@ function render({ resetScroll = false } = {}) {
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
   // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
   // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
-  const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
+  const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : sec === ASSISTANT_VIEW ? assistant.host : null;
   // L'explorateur a au-dessus de lui le bandeau du mode secours (P4-10), vide hors du mode secours.
   const hostedAll = sec === EXPLORER_VIEW ? [rescue.host, hosted] : [hosted];
   if (hosted) { if (viewEl.childElementCount !== hostedAll.length || hostedAll.some((el, i) => viewEl.children[i] !== el)) viewEl.replaceChildren(...hostedAll); }
@@ -2413,6 +2437,7 @@ api.onPluginsProgress((p) => {
   if (p.phase === 'done' || p.phase === 'error') delete S.pluginProgress[p.id];
   else S.pluginProgress[p.id] = p;
   if (S.section === CENTRE_VIEW) centre.refresh();
+  assistant.progress(p);
 });
 
 async function afterStoreChange(r, okMessage) {
@@ -2464,6 +2489,7 @@ const legacyUi = {
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
   getQueries, rememberQuery, search, explorer, settings,
   rescue: { themes: pageThemes, refresh: () => rescue.refresh() },
+  assistant: { session: () => assistant.session(), refresh: (focus) => assistant.refresh(focus), open: () => assistant.open(), close: (to) => assistant.close(to) },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   loadPlugins,
@@ -2712,4 +2738,7 @@ function tick() {
     if (start.startsWith('web:')) openWeb(start.slice(4));
     else if (start !== 'home' && targetOfLegacyView(start)) shell.open(targetOfLegacyView(start), { focus: 'content' });
   }
+  // Assistant du premier lancement (P4-23) : pas par-dessus le mode secours ni des fichiers ouverts avec Mire.
+  const firstRun = await api.assistantState().catch(() => null);
+  if (firstRun?.open && !pending?.length && !rescue.current()) assistant.open();
 })();

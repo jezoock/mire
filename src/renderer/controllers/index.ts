@@ -4,6 +4,7 @@
  * navigation (`nav/`) et par les lecteurs (`players/`). Conventions : `registry.ts` et docs/adr/0001-dot-stash.md § 8.
  */
 import { AppController } from './app.ts';
+import { AssistantController } from './assistant.ts';
 import { CentreController } from './centre.ts';
 import { DialogsController } from './dialogs.ts';
 import { EditorController } from './editor.ts';
@@ -40,6 +41,7 @@ export const CONTROLLER_CLASSES = {
   'mire-editor': EditorController,
   'mire-games': GamesController,
   'mire-rescue': RescueController,
+  'mire-assistant': AssistantController,
 } as const;
 
 export type ControllerTag = keyof typeof CONTROLLER_CLASSES;
@@ -62,6 +64,7 @@ export interface Controllers {
   editor: EditorController;
   games: GamesController;
   rescue: RescueController;
+  assistant: AssistantController;
 }
 
 /** Crée les contrôleurs et les enregistre (les éléments `mire-*` de la page reçoivent leurs actions). */
@@ -83,6 +86,7 @@ export function createControllers(ctx: ControllerContext): Controllers {
     editor: new EditorController(ctx),
     games: new GamesController(ctx),
     rescue: new RescueController(ctx),
+    assistant: new AssistantController(ctx),
   };
   for (const [tag, Cls] of Object.entries(CONTROLLER_CLASSES)) {
     const instance = Object.values(c).find((x) => x instanceof Cls);
@@ -93,6 +97,7 @@ export function createControllers(ctx: ControllerContext): Controllers {
 
 export {
   AppController,
+  AssistantController,
   CentreController,
   DialogsController,
   EditorController,
