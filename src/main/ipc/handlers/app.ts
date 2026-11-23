@@ -21,5 +21,8 @@ export function appHandlers(ctx: MainContext) {
       ctx.rescue.themeOk();
       return true;
     },
+    // Assistant du premier lancement (P4-23) : sans argument ; rien de ce qui vient de la page n'est lu.
+    assistantState: () => ctx.assistant.state(),
+    assistantFinish: () => ctx.assistant.finish(),
   } satisfies Partial<IpcImplementations>;
 }

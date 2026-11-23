@@ -201,6 +201,8 @@ const ADDED_METHODS: Record<string, string> = {
   // P4-10 : mode secours
   rescueStart: 'rescue:start',
   rescueThemeOk: 'rescue:themeOk',
+  assistantState: 'assistant:state', // P4-23 : ouvrir l'assistant du premier lancement, langues du système
+  assistantFinish: 'assistant:finish', // P4-23 : assistant terminé ou passé
   // P3-07 : client des dépôts
   reposList: 'repos:list',
   reposRefresh: 'repos:refresh',

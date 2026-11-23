@@ -31,6 +31,11 @@ export interface IndexVersion {
   dependencies: Record<string, string>;
   name?: Localized;
   description?: Localized;
+  /**
+   * Catégories (P4-23), facultatives : ce que l'assistant du premier lancement propose (familles, box, services,
+   * langues ; vocabulaire dans `docs/assistant.md`). Lues par `categoriesOf` : une valeur mal formée est ignorée.
+   */
+  categories?: unknown;
   package: { url: string; sha256: string; size: number };
 }
 
@@ -119,6 +124,20 @@ export function verifyIndex(index: unknown, publicKey: KeyObject): RepoIndex {
   if ((index as { format?: unknown }).format !== INDEX_FORMAT)
     throw new RepoError('format', `Unknown index format ${String((index as { format?: unknown }).format)}.`);
   return index as unknown as RepoIndex;
+}
+
+/** Une catégorie : minuscules, chiffres et tirets, avec au plus un suffixe `:<valeur>` (`language:pt-br`). */
+const CATEGORY_RE = /^[a-z][a-z0-9-]{0,31}(?::[a-z0-9][a-z0-9-]{0,31})?$/;
+export const MAX_CATEGORIES = 16;
+
+/**
+ * Catégories d'une version (P4-23) : les chaînes bien formées, sans doublon, au plus `MAX_CATEGORIES`. Un index sans ce
+ * champ (ou avec une valeur inattendue) reste valable : la version n'a simplement pas de catégorie.
+ */
+export function categoriesOf(v: Pick<IndexVersion, 'categories'>): string[] {
+  if (!Array.isArray(v.categories)) return [];
+  const ok = v.categories.filter((c): c is string => typeof c === 'string' && CATEGORY_RE.test(c));
+  return [...new Set(ok)].slice(0, MAX_CATEGORIES);
 }
 
 const isLocalized = (v: unknown): boolean => v === undefined || (isObject(v) && Object.values(v).every((s) => typeof s === 'string'));

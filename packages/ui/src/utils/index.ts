@@ -15,3 +15,4 @@ export * from './video.ts';
 export * from './settings.ts';
 export * from './music.ts';
 export * from './plugins.ts';
+export * from './assistant.ts';

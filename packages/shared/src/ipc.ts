@@ -271,6 +271,11 @@ export interface AvailablePlugin {
   permissions: Record<string, unknown>;
   dependencies: Record<string, string>;
   contributes: string[];
+  /**
+   * Catégories données par l'index (P4-23), facultatives : familles (`movies`, `music`…), `tv-box`,
+   * `streaming-service`, `language:<code>` (`docs/assistant.md`). Vide si l'index n'en donne pas.
+   */
+  categories: string[];
   /** Taille du paquet (octets). */
   size: number;
   /** Version installée (ou incluse), `null` sinon. */
@@ -300,6 +305,13 @@ export interface PluginConsentRequest {
  * Code `consent` : les versions à faire accepter (`pluginsConsent`), plugin par plugin.
  */
 export type PluginsOutcome = { ok: true; plugins: PluginSummary[] } | { ok: false; code: string; error: string; consent?: PluginConsentRequest[] };
+
+/** Assistant du premier lancement (P4-23) : l'ouvrir au démarrage, et les langues préférées du système. */
+export interface AssistantState {
+  open: boolean;
+  /** Codes BCP 47, la langue préférée d'abord (au plus 8). */
+  systemLanguages: string[];
+}
 
 /** Dépôt tiers vérifié (P3-08) : ce que l'interface montre avant de l'ajouter. */
 export interface RepositoryPreview {
@@ -676,6 +688,10 @@ export interface IpcMethods {
   // thème affiché sans souci (les plantages précédents ne comptent plus).
   rescueStart(): RescueRequest | null;
   rescueThemeOk(): boolean;
+  // Assistant du premier lancement (P4-23), sans argument : l'ouvrir au démarrage (premier lancement ou assistant pas
+  // encore terminé) et les langues du système ; terminé ou passé, il ne s'ouvre plus au démarrage.
+  assistantState(): AssistantState;
+  assistantFinish(): boolean;
 }
 
 export type IpcMethodName = keyof IpcMethods;
@@ -790,6 +806,8 @@ export const IPC_METHODS = {
 
   rescueStart: 'rescue:start',
   rescueThemeOk: 'rescue:themeOk',
+  assistantState: 'assistant:state',
+  assistantFinish: 'assistant:finish',
 
   usageGet: 'usage:get',
   usageMigrate: 'usage:migrate',
