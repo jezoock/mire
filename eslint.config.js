@@ -4,8 +4,7 @@ const globals = require('globals');
 
 module.exports = [
   // Constructions (dist/ de la racine et des paquets), cache de Stencil, dépendances.
-  // addons/ : copie temporaire des plugins de P5-03 pour mire-addons (retirée avec le dossier) ; elle y est vérifiée par sa propre chaîne.
-  { ignores: ['**/dist/', '**/.stencil/', 'release/', 'node_modules/', 'vendor/', 'addons/'] },
+  { ignores: ['**/dist/', '**/.stencil/', 'release/', 'node_modules/', 'vendor/'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],
