@@ -4411,7 +4411,9 @@ describe('Test de fumée de Mire', () => {
       const errors = [];
       const onError = (e) => errors.push(e.message);
       page.on('pageerror', onError);
-      await goByKeyboard('settings');
+      // Par le menu, à la souris : l'état du focus laissé par les tests précédents n'y joue pas.
+      await page.locator('#rail [data-go="settings"]').click();
+      await page.waitForFunction(() => document.body.dataset.section === 'settings');
       await palette('velours').click();
       await page.waitForFunction(() => document.documentElement.dataset.palette === 'velours');
       // Feuille fabriquée par le cœur (CSSOM), aucune feuille ni adresse venue du plugin.
@@ -4441,7 +4443,8 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => document.documentElement.dataset.palette === 'ecran');
       assert.equal(await shown(), 'ecran');
       await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
-      await goByKeyboard('home');
+      await page.locator('#rail [data-go="home"]').click();
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
     });
