@@ -1,7 +1,6 @@
 /** Jeux : sources, lancement, consoles, sites de jeux, suppression, nettoyage et copie locale d'un jeu en ligne. */
 import { SYSTEMS } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
-import { defaultRomSites } from '../../games/rom-sites.ts';
 import { guessSystem } from '../../scrape/index.ts';
 import { emulatorChoices, removeConsole, saveConsole, setConsoleEmulator, setGameEmulator, type ConsoleResult } from '../../games/consoles.ts';
 import { t } from '../../i18n/current.ts';
@@ -72,7 +71,7 @@ export function gamesHandlers(ctx: MainContext) {
       return {
         sites: ctx.web.consoleSites(consoleId),
         custom: consoleId === 'pc' ? true : Array.isArray(emu?.romSites),
-        defaults: emu ? defaultRomSites(guessSystem(emu)) : [],
+        defaults: emu ? ctx.plugins.romSitesFor(guessSystem(emu)) : [],
       };
     },
     romDownload: (consoleId, url) => games.downloadGame(consoleId, url),

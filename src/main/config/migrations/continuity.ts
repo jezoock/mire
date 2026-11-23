@@ -50,6 +50,10 @@ export interface ContinuityRule {
 /** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
 const always = (): boolean => true;
 
+/** Une console sans liste de sites à elle : elle prenait ceux que Mire proposait pour son système. */
+const usesDefaultRomSites = (config: Loose): boolean =>
+  Array.isArray(config.emulators) && config.emulators.some((e) => isRecord(e) && !Array.isArray(e.romSites));
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
@@ -68,6 +72,10 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
   // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
   { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
+  // P5-07 : sites de jeux légaux, plugin à installer ; la configuration dit si une console utilisait les sites proposés.
+  { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
+  // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.
+  { id: 'P5-07-libres', plugin: 'mire.free-games', mode: 'install', applies: always },
 ];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;

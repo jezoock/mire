@@ -14,6 +14,7 @@ import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element, PageDefinition } from '@mire/shared';
 import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
+import { freeGamesOf, romSitesFor } from './packs.ts';
 import { readPluginPages } from './pages.ts';
 import { readExternalPlayers } from './apps.ts';
 import type { ExternalPlayerSpec } from '../platform/types.ts';
@@ -633,6 +634,10 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
+    /** Sites de jeux proposés pour un système par les packs `romSites` des plugins actifs (P5-07), vérifiés. */
+    romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
+    /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */
+    freeGames: () => freeGamesOf(registry.list('packs')),
     /** Pages prêtes à l'emploi des plugins actifs (contributions `pages`, P5-03), vérifiées. */
     pageDefinitions: (): PageDefinition[] => readPluginPages(registry.list('pages')),
 

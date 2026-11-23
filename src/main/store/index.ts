@@ -13,14 +13,14 @@ import path from 'node:path';
 import { createJsonStore } from '../storage/json-store.ts';
 import { dataPaths } from '../storage/paths.ts';
 import { biosDir as locateBios } from './bios.ts';
-import { BIOS_HINTS, EMULATORS, FREE_GAMES, RETROARCH_SYSTEMS, type StorePlatform } from './catalog/index.ts';
+import { BIOS_HINTS, EMULATORS, RETROARCH_SYSTEMS, type FreeGame, type StorePlatform } from './catalog/index.ts';
 import { registerConsoles, removeConsoles } from './consoles.ts';
 import { download, type InstallContext } from './installers/files.ts';
 import { installRetroArch } from './installers/retroarch.ts';
 import { installStandalone } from './installers/standalone.ts';
 import { t } from '../i18n/current.ts';
 
-export { EMULATORS, FREE_GAMES, RETROARCH_SYSTEMS } from './catalog/index.ts';
+export { EMULATORS, RETROARCH_SYSTEMS } from './catalog/index.ts';
 export { githubLatest } from './installers/github-release.ts';
 
 const PLATFORM: StorePlatform = process.platform === 'win32' ? 'win32' : process.platform === 'linux' ? 'linux' : 'other';
@@ -33,11 +33,13 @@ export interface StoreOptions {
   onProgress: (p: Record<string, unknown>) => void;
   /** Décompression (service d'archives). */
   extract: (archive: string, dest: string) => Promise<void>;
+  /** Jeux libres des plugins actifs (packs `freeGames`, P5-07) ; la boutique n'en a pas d'autres. */
+  freeGames?: () => readonly FreeGame[];
   /** Dossiers de l'utilisateur, pour trouver les BIOS. */
   paths?: { home?: string; documents?: string; appData?: string };
 }
 
-export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgress, extract, paths = {} }: StoreOptions) {
+export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgress, extract, freeGames = () => [], paths = {} }: StoreOptions) {
   const dataFiles = dataPaths(dataDir);
   const emuRoot = dataFiles.emulatorsDir;
   const tmpRoot = path.join(os.tmpdir(), 'mire-store');
@@ -158,18 +160,18 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
           systems: e.systems.map((s) => ({ id: s.id, name: s.name, installed: installedStore.has(`${e.id}:${s.id}`) })),
         };
       }),
-      games: FREE_GAMES.map(({ basedOn, ...g }) => {
+      games: freeGames().map(({ basedOn, descKey, ...g }) => {
         const target = consoleFor(g.system);
         const sys = RETROARCH_SYSTEMS.find((s) => s.id === g.system);
         const installed = target ? fs.existsSync(path.join(target.romsDir, g.file)) : false;
         const author = basedOn ? t('store.basedOn', { author: g.author, original: basedOn }) : g.author;
-        return { ...g, author, desc: t(`store.games.${g.id}`), systemName: sys ? sys.name : g.system, ready: !!target, installed };
+        return { ...g, author, desc: descKey ? t(descKey) : '', systemName: sys ? sys.name : g.system, ready: !!target, installed };
       }),
     };
   }
 
   async function getGame(id: string) {
-    const g = FREE_GAMES.find((x) => x.id === id);
+    const g = freeGames().find((x) => x.id === id);
     if (!g) return { ok: false, error: t('store.errors.unknownGame') };
     const target = consoleFor(g.system);
     if (!target) return { ok: false, error: t('store.errors.installConsoleFirst') };

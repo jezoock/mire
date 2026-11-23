@@ -47,4 +47,6 @@ export interface FreeGame {
   basedOn?: string;
   url: string;
   file: string;
+  /** Clé complète du texte de présentation (texte du plugin qui apporte le jeu). */
+  descKey?: string;
 }

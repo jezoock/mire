@@ -45,7 +45,6 @@ import { createDownloads, type PluginDownloader } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { gameConfigFeed } from './games/element-sources.ts';
-import { defaultRomSites } from './games/rom-sites.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
@@ -168,7 +167,8 @@ function start(pending: PendingFiles): Running {
     window: window.get as unknown as WebManagerDeps['window'],
     createView: (webPreferences) => new WebContentsView({ webPreferences }) as unknown as ViewLike,
     config,
-    defaultRomSites,
+    // Sites de jeux des plugins actifs (packs `romSites`, P5-07) ; sans plugin, aucun site proposé d'office.
+    defaultRomSites: (system) => plugins.romSitesFor(system),
     guessSystem: (emu) => guessSystem(emu as SystemHint),
     downloads: () => downloads,
     openInBrowser: players.openInBrowser,
@@ -383,6 +383,7 @@ function start(pending: PendingFiles): Running {
     saveConfig: config.replace,
     onProgress: (p) => toUi('store-progress', p),
     extract: archive.extract,
+    freeGames: () => plugins.freeGames(),
     paths: { home: app.getPath('home'), documents: app.getPath('documents'), appData: app.getPath('appData') },
   });
   const downloads = createDownloads({
