@@ -355,7 +355,8 @@
         "programNotFound": "Programme introuvable : {path}",
         "nothingToPlay": "Rien à lire.",
         "notInLibrary": "Ce fichier ne fait pas partie de la bibliothèque.",
-        "noExternalPlayer": "Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages."
+        "noExternalPlayer": "Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages.",
+        "externalPlayersOff": "Le lecteur externe est désactivé. Activez le plugin « Lecteurs externes mpv et VLC » dans le Centre."
       }
     },
     "downloads": {
@@ -2065,7 +2066,8 @@
           "message": "Pas de son ? La piste audio de ce fichier n’est sans doute pas lisible ici.",
           "action": "Ouvrir dans le lecteur externe"
         },
-        "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe"
+        "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe",
+        "unsupportedNoExternal": "Format non lu par le lecteur intégré : {name}"
       },
       "music": {
         "prev": "Morceau précédent",
@@ -2075,7 +2077,8 @@
         "volume": "Volume",
         "stop": "Arrêter la musique",
         "position": "{folder}, {index} sur {count}",
-        "unsupported": "{name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe"
+        "unsupported": "{name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe",
+        "unsupportedNoExternal": "{name} : format non lu par le lecteur intégré"
       },
       "images": {
         "close": "Fermer la visionneuse",

@@ -355,7 +355,8 @@
         "programNotFound": "Program not found: {path}",
         "nothingToPlay": "Nothing to play.",
         "notInLibrary": "This file isn't part of your library.",
-        "noExternalPlayer": "No external player found. Install VLC or mpv, or set its location in Settings."
+        "noExternalPlayer": "No external player found. Install VLC or mpv, or set its location in Settings.",
+        "externalPlayersOff": "The external player is turned off. Turn on the “mpv and VLC external players” plugin in the Centre."
       }
     },
     "downloads": {
@@ -2065,7 +2066,8 @@
           "message": "No sound? This file’s audio track probably can’t be played here.",
           "action": "Open in the external player"
         },
-        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
+        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player",
+        "unsupportedNoExternal": "Format not supported by the built-in player: {name}"
       },
       "music": {
         "prev": "Previous track",
@@ -2075,7 +2077,8 @@
         "volume": "Volume",
         "stop": "Stop the music",
         "position": "{folder}, {index} of {count}",
-        "unsupported": "{name}: this format can’t be played by the built-in player, opening it in the external player"
+        "unsupported": "{name}: this format can’t be played by the built-in player, opening it in the external player",
+        "unsupportedNoExternal": "{name}: format not supported by the built-in player"
       },
       "images": {
         "close": "Close the viewer",

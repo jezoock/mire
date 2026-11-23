@@ -65,6 +65,9 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-03-streaming', plugin: 'mire.page.streaming', mode: 'bundled', applies: always },
   { id: 'P5-03-tv', plugin: 'mire.page.tv', mode: 'bundled', applies: always },
   { id: 'P5-03-games', plugin: 'mire.page.games', mode: 'bundled', applies: always },
+  // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
+  // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
+  { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
 ];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;

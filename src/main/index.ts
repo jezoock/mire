@@ -78,7 +78,7 @@ import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
 import * as http from './net/http.ts';
 import { createTmdbClient } from './net/tmdb.ts';
-import { createLauncher, createPlayers } from './platform/index.ts';
+import { createLauncher, createPlayers, type ExternalPlayerSpec } from './platform/index.ts';
 import { createScraper, guessSystem } from './scrape/index.ts';
 import { streamingSearchProvider } from './search/streaming.ts';
 import { createAccessPolicy } from './security/access-policy.ts';
@@ -153,7 +153,9 @@ function start(pending: PendingFiles): Running {
 
   // Lancement de programmes (jeux, émulateurs, lecteur externe) ; « réduire pendant le jeu ».
   const launcher = createLauncher({ shell, minimizeWhileRunning: window.minimizeWhileRunning });
-  const players = createPlayers({ launcher, shell, settings: () => config.get(), isAllowed: (file) => access.isAllowed(file) });
+  // Lecteurs externes (P5-20) : décrits par les plugins, branchés une fois le service des plugins créé.
+  let pluginPlayers: () => ExternalPlayerSpec[] = () => [];
+  const players = createPlayers({ launcher, shell, settings: () => config.get(), isAllowed: (file) => access.isAllowed(file), players: () => pluginPlayers() });
 
   // Langue de l'interface : réglage ui.language, ou langue du système ; l'interface suit ses changements.
   const i18n = createLanguageService({ config, systemLanguages: () => app.getPreferredSystemLanguages(), dev: !app.isPackaged });
@@ -330,6 +332,7 @@ function start(pending: PendingFiles): Running {
     onChange: (summary) => toUi('plugins:continuity-changed', summary),
   });
   pluginTaggers = plugins.taggerContributors;
+  pluginPlayers = plugins.externalPlayers;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
@@ -337,6 +340,8 @@ function start(pending: PendingFiles): Running {
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
     // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
     if (kinds.includes('pages')) catalogPages.setBuiltin(plugins.pageDefinitions());
+    // Lecteurs externes (P5-20) : l'interface montre ou cache son bouton.
+    if (kinds.includes('apps')) toUi('player:externalChanged');
   });
   catalogPages.setBuiltin(plugins.pageDefinitions());
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.

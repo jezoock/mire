@@ -38,6 +38,9 @@ export class MireVideoPlayer {
   @Prop() hasPrev = false;
   @Prop() hasNext = false;
 
+  /** Un lecteur externe est disponible (plugin actif) ; sinon le bouton « Lecteur externe » est caché. */
+  @Prop() external = true;
+
   /** Libellé du bouton des sous-titres ; vide : la vidéo n'en a pas, le bouton est caché. */
   @Prop() subtitles = '';
 
@@ -140,9 +143,11 @@ export class MireVideoPlayer {
               <div class="mire-video-player__title">{this.heading}</div>
               <div class="mire-video-player__sub">{this.subheading}</div>
             </div>
-            <ds-trigger class="mire-video-player__trigger" target="mire-video-player" action="openExternal">
-              {this.textButton(icons.external, l.external)}
-            </ds-trigger>
+            {this.external && (
+              <ds-trigger class="mire-video-player__trigger" target="mire-video-player" action="openExternal">
+                {this.textButton(icons.external, l.external)}
+              </ds-trigger>
+            )}
           </div>
           <div class="mire-video-player__bottom">
             <ds-range class="mire-video-player__seek">

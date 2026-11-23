@@ -82,6 +82,16 @@ test.describe('migration v10 (P5-01)', () => {
     );
   });
 
+  test('P5-20 : les lecteurs externes, plugin inclus, pour toute installation existante ; le programme choisi reste', () => {
+    for (const raw of [readFixture('config-v9.json'), {}, { externalPlayer: { path: '/usr/bin/vlc', args: [] } }, { externalPlayer: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-20'));
+      assert.deepEqual((config as Any).externalPlayer, (raw as Any).externalPlayer);
+    }
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-20');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
+  });
+
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
     assert.deepEqual(checkRules(CONTINUITY_RULES), []);
     assert.deepEqual(checkRules(RULES), []);

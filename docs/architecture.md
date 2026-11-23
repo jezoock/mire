@@ -66,7 +66,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `games/` | Jeux : jeux PC (dossiers, ajout manuel, lancement), jeux de console (liste, lancement, copie locale), jeux sur disque, marque-pages de jeux, nettoyage, suppression, sites « Ajouter des jeux », fin d'un téléchargement vue des jeux. |
 | `store/` | Boutique : catalogue (données seules, `catalog/`), installateurs (GitHub, page de téléchargement, RetroArch), consoles créées, BIOS. |
 | `tv/` | Télévision : service actif, détection de la box au premier lancement, chaînes (listes M3U), fournisseurs `playlist` et `web` ; variante d'une chaîne (qualité préférée, `pickVariant`) et `tvWatch(clé)` : l'interface ne donne que la clé de la chaîne, l'adresse vient de la liste lue par le service (P4-16). |
-| `platform/` | Ce qui dépend du système : lancement de programmes (`launcher.ts`), lecteurs externes et navigateur (`players.ts`), détection (`detect.ts`). |
+| `platform/` | Ce qui dépend du système : lancement de programmes (`launcher.ts`), lecteurs externes (décrits par les plugins, P5-20) et navigateur (`players.ts`), détection (`detect.ts`). |
 | `archive/` | Décompression `.zip` et `.7z` avec le 7za de `7zip-bin` (boutique, téléchargements). |
 | `i18n/` | Langue de l'interface (`index.ts`), traduction des textes du processus principal (`current.ts`, fonction `t`), langue des fiches (`metadata.ts`). |
 | `fs/` | Parcours générique d'une arborescence de dossiers (`walk.ts`). |
@@ -228,7 +228,8 @@ ni dossier, ni fichier, ni hôte.
   se désactive comme les autres mais ne se désinstalle pas ; une version plus haute installée dans
   `userData/plugins/` (mise à jour par le dépôt, P3-07) passe devant, et sa désinstallation lui rend la place.
   Aujourd'hui : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni jeu), et les
-  profils de manettes `mire.gamepad.xbox`, `mire.gamepad.playstation`, `mire.gamepad.nintendo` (P5-04).
+  profils de manettes `mire.gamepad.xbox`, `mire.gamepad.playstation`, `mire.gamepad.nintendo` (P5-04), et les
+  lecteurs externes mpv et VLC `mire.players.external` (P5-20).
 - **Ajouter un plugin inclus** (phase 5, mécanisme posé par P5-04) : la source de vérité est `jezoock/mire-addons`
   (`plugins/<id>/`, publié comme les autres) ; Mire en versionne une copie dans `plugins/<id>/`, faite par
   `node scripts/bundle-plugin.mjs <clone de mire-addons> <id…>` : identifiant du dépôt officiel (`mire.`) seulement,
@@ -317,6 +318,16 @@ ni dossier, ni fichier, ni hôte.
   (`gamepads:changed`) prévient l'interface quand un plugin de manettes est activé ou désactivé. L'interface
   (`nav/gamepad-data.ts`) garde la mécanique et un profil générique, utilisé pour une manette qu'aucun profil ne
   reconnaît.
+- **Lecteurs externes** (P5-20, `apps.ts`) : lecteur des contributions `apps` de genre `player` (format en tête du
+  fichier). Le plugin décrit le programme (noms, emplacements par système, options plein écran, titre et position,
+  chacune limitée à sa forme) ; le cœur garde le seul mécanisme qui lance un programme (`platform/players.ts`, sans
+  shell) : il cherche lui-même l'exécutable aux emplacements décrits (absolus, sans `..` ni partage réseau, dont le nom
+  de fichier est celui du lecteur) ou prend celui choisi par l'utilisateur (`externalPlayer.path`), et fabrique la ligne
+  de commande (titre et position remplacés par lui, fichier à lire en dernier, désigné par sa clé ou vérifié contre les
+  dossiers autorisés). Seuls comptent les lecteurs des plugins inclus ou du dépôt officiel signé. `externalPlayers()`
+  (`player:externalList`, sans argument) rend les lecteurs disponibles ; `onExternalPlayersChange`
+  (`player:externalChanged`) prévient l'interface. Sans lecteur (plugin désactivé), le bouton « Lecteur externe » du
+  lecteur vidéo disparaît et `playExternal` répond par un message (`platform.errors.externalPlayersOff`).
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 - **Réglages des plugins** (P4-20) : `pluginsSettings()` (`plugins:settings`) rend, pour chaque plugin qui en déclare,

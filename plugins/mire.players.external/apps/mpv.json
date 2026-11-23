@@ -1,0 +1,15 @@
+{
+  "kind": "player",
+  "priority": 10,
+  "names": ["mpv"],
+  "locations": {
+    "windows": ["{programFiles}\\mpv\\mpv.exe", "{localAppData}\\Programs\\mpv\\mpv.exe", "C:\\mpv\\mpv.exe"],
+    "mac": ["/Applications/mpv.app/Contents/MacOS/mpv", "/opt/homebrew/bin/mpv", "/usr/local/bin/mpv"],
+    "linux": ["/usr/bin/mpv", "/usr/local/bin/mpv"]
+  },
+  "options": {
+    "fullscreen": "--fs",
+    "title": "--force-media-title={title}",
+    "start": "--start={start}"
+  }
+}
