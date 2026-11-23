@@ -1862,6 +1862,64 @@ describe('Test de fumée de Mire', () => {
         });
       }
     });
+
+    // Plugins et dépôts (P4-19) : sans réseau (les listes des dépôts ne sont lues en ligne que sur demande).
+    it('plugins (P4-19) : le plugin inclus s’affiche, sa fiche s’ouvre, montre ce qu’il demande et se referme au clavier', async () => {
+      await openCentre('plugins');
+      const card = page.locator(`${VIEW} [data-group="installed"] .mire-centre-view__plugin[data-key="mire.exemple.inclus"]`);
+      await card.waitFor();
+      assert.equal(await card.locator('.mire-centre-view__name').textContent(), 'Exemple de plugin inclus');
+      assert.equal(await card.locator('.mire-centre-view__state').textContent(), 'Actif');
+      assert.match(await card.locator('.mire-centre-view__meta').textContent(), /^Version 1\.0\.0 · Livré avec Mire · Données seulement, sans code$/);
+      await page.evaluate(() => document.getElementById('toast').classList.remove('show'));
+      await page.locator(`${VIEW} .mire-centre-view__tab[data-tab="plugins"]`).focus();
+      await page.mouse.move(1, 1);
+      await settle();
+      await shot('centre-plugins');
+      // Fiche : ouverte par Entrée sur « Voir la fiche », le focus sur « Retour aux plugins ».
+      await card.locator('ds-trigger.--openPlugin.hydrated').focus();
+      await page.keyboard.press('Enter');
+      const sheet = page.locator(`${VIEW} .mire-centre-view__sheet[data-key="mire.exemple.inclus"]`);
+      await sheet.waitFor();
+      await page.waitForFunction(() => document.activeElement?.closest('ds-trigger')?.classList.contains('mire-centre-view__sheet-back'));
+      assert.equal(await sheet.locator('[data-part="permissions"] p').textContent(), 'Aucune permission particulière.');
+      assert.deepEqual(await sheet.locator('[data-part="contributes"] li').allTextContents(), ['Des listes prêtes à l’emploi']);
+      assert.deepEqual(await sheet.locator('.mire-centre-view__facts dd').allTextContents(), [
+        '1.0.0',
+        'Livré avec Mire',
+        'Données seulement, sans code',
+        'Actif',
+      ]);
+      // Livré avec Mire : on le désactive, on ne le désinstalle pas.
+      assert.deepEqual(await sheet.locator('.mire-centre-view__sheet-action').evaluateAll((els) => els.map((e) => e.textContent)), ['Désactiver']);
+      await page.keyboard.press('Enter');
+      await card.waitFor();
+      await page.waitForFunction(() => document.activeElement?.closest('ds-trigger')?.classList.contains('--openPlugin'));
+      assert.deepEqual(errors, []);
+    });
+
+    it('dépôts (P4-19) : le dépôt officiel et son empreinte ; l’ajout refuse une adresse qui n’est pas en https:', async () => {
+      await openCentre('repos');
+      const official = page.locator(`${VIEW} .mire-centre-view__repo[data-key="official"]`);
+      await official.waitFor();
+      assert.match(await official.locator('.mire-centre-view__fingerprint').textContent(), /^([0-9a-f]{4} ){15}[0-9a-f]{4}$/);
+      assert.equal(
+        await official.locator('.mire-centre-view__address').textContent(),
+        'https://github.com/jezoock/mire-addons/releases/download/index/index.json',
+      );
+      assert.equal(await official.locator('ds-trigger').count(), 0, 'le dépôt officiel ne se retire pas');
+      await page.locator(`${VIEW} ds-trigger.mire-centre-view__add-repo.hydrated`).click();
+      const form = page.locator('mire-dialogs mire-form');
+      await form.locator('input[name="index"]').waitFor();
+      await form.locator('input[name="index"]').fill('http://depot.exemple/index.json');
+      await form.locator('textarea[name="key"]').fill('-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA\n-----END PUBLIC KEY-----');
+      await form.locator('ds-trigger.hydrated', { hasText: 'Vérifier' }).click();
+      await form.locator('.mire-form__help', { hasText: 'L’adresse doit commencer par https://' }).waitFor();
+      assert.equal(await page.locator('mire-dialogs mire-form').count(), 1, 'la boîte reste ouverte');
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('mire-dialogs mire-form'));
+      assert.deepEqual(errors, []);
+    });
   });
 
   // Recherche (P4-13) : le catalogue groupé par page, « Où regarder » et les sites dans mire-search ; la frappe ne
@@ -4221,6 +4279,45 @@ describe('Test de fumée de Mire', () => {
       await padPress('b');
       await page.waitForFunction((s) => document.querySelector(s).hidden && !document.querySelector(s).slideshow, VIEWER);
       await disconnectPad();
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  // Profils de manettes (P5-04) : trois plugins inclus, actifs dès le premier lancement ; une manette PlayStation est
+  // reconnue par son plugin et l'aide montre ses boutons.
+  describe('profils de manettes, plugins inclus (P5-04)', () => {
+    it('les trois plugins inclus sont actifs, et une manette PlayStation montre ses boutons', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const f of ['xbox', 'playstation', 'nintendo']) {
+        const p = list.find((x) => x.id === `mire.gamepad.${f}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], f);
+      }
+      const profiles = await page.evaluate(() => window.api.gamepadsProfiles());
+      assert.deepEqual(
+        profiles.map((p) => p.id),
+        ['mire.gamepad.xbox/xbox', 'mire.gamepad.playstation/playstation', 'mire.gamepad.nintendo/nintendo'],
+      );
+      await page.evaluate(() => {
+        window.__pad = {
+          id: 'Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)',
+          index: 0,
+          connected: true,
+          mapping: 'standard',
+          buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+          axes: [0, 0, 0, 0],
+        };
+        navigator.getGamepads = () => [window.__pad];
+      });
+      await page.waitForFunction(() => document.querySelector('mire-padbar')?.textContent.includes('✕'));
+      await page.evaluate(() => {
+        navigator.getGamepads = () => [];
+        window.dispatchEvent(new Event('gamepaddisconnected'));
+        delete window.__pad;
+      });
+      page.off('pageerror', onError);
       assert.deepEqual(errors, []);
     });
   });

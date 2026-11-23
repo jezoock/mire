@@ -46,11 +46,35 @@ test.describe('migration v10 (P5-01)', () => {
     const { tmdbToken: _t, region: _r, ...search } = v9.search;
     const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
     const catalog = { ...v9.catalog, metadataProviders: ['mire.tmdb/tmdb'] };
-    assert.deepEqual(config, { ...v9, search, plugins, catalog, continuity: ['P5-15'], version: CONFIG_VERSION });
+    assert.deepEqual(config, {
+      ...v9,
+      search,
+      plugins,
+      catalog,
+      continuity: ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15'],
+      version: CONFIG_VERSION,
+    });
     // Normalisée : réglages des autres plugins gardés, secret compris.
     const c = normalizeConfig(config);
     assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
-    assert.deepEqual(c.continuity, ['P5-15']);
+    assert.deepEqual(c.continuity, ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15']);
+  });
+
+  test('P5-04 : les trois profils de manettes, plugins inclus, pour toute installation existante', () => {
+    const ids = ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo'];
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const id of ids) assert.ok((config as Any).continuity.includes(id), id);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => ids.includes(r.id));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      [
+        ['mire.gamepad.xbox', 'bundled', []],
+        ['mire.gamepad.playstation', 'bundled', []],
+        ['mire.gamepad.nintendo', 'bundled', []],
+      ],
+    );
   });
 
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
@@ -144,7 +168,8 @@ test.describe('migration v10 (P5-01)', () => {
 
   test('fournisseurs renommés (P5-15) : l’ordre choisi suit TMDB dans son plugin, même sans clé', () => {
     const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'tmdb', 'mire.tmdb/tmdb', 3] } };
-    assert.deepEqual(applyContinuity(raw), []);
+    // Sans clé TMDB, la règle P5-15 ne s'applique pas (seules celles des manettes, P5-04) ; l'ordre est renommé quand même.
+    assert.equal(applyContinuity(raw).includes('P5-15'), false);
     assert.deepEqual(raw.catalog.metadataProviders, ['steam', 'mire.tmdb/tmdb', 3]);
     assert.deepEqual(providerRenames(), { tmdb: 'mire.tmdb/tmdb' });
     // Une règle ne peut renommer un fournisseur que vers un des siens.

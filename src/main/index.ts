@@ -334,6 +334,8 @@ function start(pending: PendingFiles): Running {
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
+    // Profils de manettes (P5-04) : l'interface les redemande.
+    if (kinds.includes('gamepads')) toUi('gamepads:changed');
   });
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });

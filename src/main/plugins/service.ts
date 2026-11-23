@@ -12,7 +12,8 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
-import type { PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import { readGamepadProfiles } from './gamepads.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -436,6 +437,7 @@ export function createPluginService(opts: PluginServiceOptions) {
       trust: trustOf(k),
       level: p?.manifest.level ?? null,
       permissions: structuredClone({ ...(p?.manifest.permissions ?? {}) }),
+      dependencies: { ...(p?.manifest.dependencies ?? {}) },
       name: nameOf(k.id),
       enabled: s.enabled,
       status,
@@ -632,6 +634,9 @@ export function createPluginService(opts: PluginServiceOptions) {
       const m = active.get(id)?.plugin.manifest;
       return m ? [...grantedPermissions(m).hosts] : [];
     },
+
+    /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
+    gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Nintendo controllers",
+      "description": "Recognizes Nintendo controllers (Pro Controller, Joy-Con) and shows their buttons (B, A, L, R, ZL…) in the help at the bottom of the screen."
+    },
+    "gamepads": {
+      "nintendo": {
+        "name": "Nintendo"
+      }
+    }
+  }
+}

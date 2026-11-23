@@ -238,7 +238,8 @@ test.describe('migration v9 (P2-11)', () => {
     delete out.ui.home.rows;
     // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15).
     assert.deepEqual(out.plugins, { 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } });
-    assert.deepEqual(out.continuity, ['P5-15']);
+    // File de la continuité (v10, P5-01) : profils de manettes (P5-04), puis TMDB (P5-15).
+    assert.deepEqual(out.continuity, ['P5-04-xbox', 'P5-04-playstation', 'P5-04-nintendo', 'P5-15']);
     delete out.plugins;
     delete out.continuity;
     const { tmdbToken: _token, region: _region, ...search } = v8().search;

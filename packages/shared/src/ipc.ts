@@ -217,6 +217,8 @@ export interface PluginSummary {
   level: 'data' | 'code' | 'privileged' | null;
   /** Permissions demandées par le manifeste (`permissions`), vide s'il est illisible. */
   permissions: Record<string, unknown>;
+  /** Dépendances déclarées par le manifeste (identifiant → versions acceptées), vide s'il est illisible (P4-19). */
+  dependencies: Record<string, string>;
   /** Nom affiché (textes du plugin), ou l'identifiant. */
   name: string;
   /** Voulu actif (état mémorisé). */
@@ -385,6 +387,25 @@ export interface PluginMetadataProvider {
   name: string;
   /** Natures d'éléments décrites (`video`, `album`, `rom`, `pc`). */
   kinds: string[];
+}
+
+/** Bouton d'une manette qui porte un libellé dans l'aide des commandes. */
+export type GamepadGlyphButton = 'a' | 'b' | 'x' | 'y' | 'lb' | 'rb' | 'lt' | 'rt' | 'select';
+
+/**
+ * Profil de manette d'un plugin actif (contribution `gamepads`, P5-04), vérifié par le processus principal : motifs
+ * de l'identifiant annoncé par la manette (expressions bornées, à compiler sans distinction de casse ; une expression
+ * invalide est ignorée), priorité (la plus petite d'abord), libellés des boutons (un symbole court, ou une clé des
+ * catalogues `pluginTexts.…`), et clé du nom de la famille.
+ */
+export interface GamepadProfile {
+  /** `<plugin>/<contribution>`. */
+  id: string;
+  /** Clé des catalogues du nom de la famille (`pluginTexts.<plugin>.gamepads.<contribution>.name`). */
+  name: string;
+  match: string[];
+  priority: number;
+  glyphs: Partial<Record<GamepadGlyphButton, string>>;
 }
 
 export interface Bounds {
@@ -630,6 +651,8 @@ export interface IpcMethods {
   pluginsSetSetting(id: string, key: string, value: unknown): Outcome<{ plugin: PluginSettingsInfo }>;
   // Fournisseurs d'infos des plugins actifs (P4-20) : ils rejoignent l'ordre des fournisseurs des Réglages.
   pluginsMetadataProviders(): PluginMetadataProvider[];
+  // Profils de manettes des plugins actifs (P5-04) ; sans eux, le cœur garde son profil générique.
+  gamepadsProfiles(): GamepadProfile[];
   // Dépôts (P3-07) : dépôts et état de leur index (sans réseau, ou après mise à jour), plugins proposés.
   reposList(): RepositoryInfo[];
   reposRefresh(): RepositoryInfo[];
@@ -836,6 +859,7 @@ export const IPC_METHODS = {
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
   pluginsMetadataProviders: 'plugins:metadataProviders',
+  gamepadsProfiles: 'gamepads:profiles',
   reposList: 'repos:list',
   reposRefresh: 'repos:refresh',
   reposPlugins: 'repos:plugins',
@@ -906,6 +930,8 @@ export interface IpcEvents {
   onPluginsProgress: PluginsProgress;
   /** Récapitulatif de la continuité changé (plugin activé, installé, devenu impossible) : son message à montrer. */
   onPluginsContinuity: ContinuitySummary;
+  /** Profils de manettes changés (plugin activé ou désactivé) : à redemander. */
+  onGamepadsChange: undefined;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -936,6 +962,7 @@ export const IPC_EVENTS = {
   onRescue: 'rescue:open',
   onPluginsProgress: 'plugins:progress',
   onPluginsContinuity: 'plugins:continuity-changed',
+  onGamepadsChange: 'gamepads:changed',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

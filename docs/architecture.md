@@ -144,7 +144,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `pages/` | Vue de page (P4-11) : l'hôte `<mire-page>` et sa `mire-page-view`, remplis d'après la route (page et chemin) ; niveaux chargés par tranches (`catalog.page`), regroupements (« Autres », « Saison 1 »), chemin parcouru, rangées (`model.ts`, sans DOM). |
 | `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes, Tags, Sources et Dossiers, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) ou les dossiers de `catalog.folder` (source et chemin relatif) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. Gérer ses fichiers (P4-09, `files.ts` sans DOM) : renommer, déplacer, mettre à la corbeille depuis l'aperçu, avec confirmation, désactivés hors des dossiers autorisés (`filesCheck`) ; sélection multiple (Ctrl + clic, Maj + clic pour une plage, Espace, Y à la manette) avec une barre : ajouter ou retirer un tag, ranger dans une liste, mettre à la corbeille. |
 | `home/` | Accueil (P4-12) : l'hôte `<mire-home>` et sa `mire-home-view`, remplis d'après `ui.home` (rangées : barres de la mire vers des cibles, sites épinglés, « Reprendre », pages et listes ; `model.ts`, sans DOM) ; réglages de l'accueil (rangées, barres, sites, ordre ; `settings.ts`, sans DOM). |
-| `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). |
+| `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). Onglets Plugins et Dépôts (P4-19, `plugins.ts`, sans DOM) : plugins présents, proposés et mises à jour, fiche d'un plugin (apports, origine, niveau, permissions, dépendances), cartes des dépôts ; l'accord pour un plugin tiers de code sensible et l'ajout d'un dépôt en deux temps passent par des boîtes (`controllers/centre.ts`). Les listes des dépôts ne sont lues en ligne que sur « Rechercher des mises à jour ». |
 | `themes/` | Moteur de thèmes (P4-11) et thèmes intégrés (`<id>/theme.json` et leurs fichiers) : palette, polices et fond posés sur `<mire-page>` et `<mire-home>` (portée commune, P4-12), mise en page transmise à la vue de page et à l'accueil. Voir `docs/themes.md`. |
 | `controllers/` | Contrôleurs (P4-04) : un par écran (`mire-app`, `mire-page`…), dont les méthodes publiques sont les actions de Mire, appelées par `ds-trigger`, par la navigation et les lecteurs ; registre et pont des `data-action` historiques (`bridge.ts`). Voir `docs/adr/0001-dot-stash.md` § 8. |
 | `i18n/` | Traduction de l'interface : catalogues reçus du processus principal, `t()`, langue courante, `lang` du document. |
@@ -227,8 +227,16 @@ ni dossier, ni fichier, ni hôte.
   est notée dans l'état (`bundled`), son journal le dit ; il est actif, sauf si l'utilisateur l'avait désactivé. Il
   se désactive comme les autres mais ne se désinstalle pas ; une version plus haute installée dans
   `userData/plugins/` (mise à jour par le dépôt, P3-07) passe devant, et sa désinstallation lui rend la place.
-  Aujourd'hui, un seul : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni
-  jeu), qui ne change rien de visible ; la phase 5 le remplacera par les vrais plugins inclus.
+  Aujourd'hui : `mire.exemple.inclus`, un plugin de données neutre (un pack vide : ni chaîne, ni site, ni jeu), et les
+  profils de manettes `mire.gamepad.xbox`, `mire.gamepad.playstation`, `mire.gamepad.nintendo` (P5-04).
+- **Ajouter un plugin inclus** (phase 5, mécanisme posé par P5-04) : la source de vérité est `jezoock/mire-addons`
+  (`plugins/<id>/`, publié comme les autres) ; Mire en versionne une copie dans `plugins/<id>/`, faite par
+  `node scripts/bundle-plugin.mjs <clone de mire-addons> <id…>` : identifiant du dépôt officiel (`mire.`) seulement,
+  manifeste et fichiers listés dans `files` du `package.json` du plugin et rien d'autre, liens symboliques et chemins
+  qui sortent du plugin refusés, dossier cible vidé avant la copie (une copie refusée laisse l'ancienne en place). On
+  ne modifie jamais la copie à la main : on change le plugin dans mire-addons (nouvelle version), puis on relance le
+  script. `test/plugins/bundled-sources.test.ts` vérifie que chaque dossier est accepté par la découverte sans refus.
+  La tâche ajoute aussi sa règle de continuité (mode `bundled`).
 - **Dépendances** (D-19, `dependencies.ts`, plages de `semver.ts`) : au démarrage, un plugin dont une dépendance
   manque, n'est pas dans une version qui convient, est refusée ou forme un cycle est refusé
   (`plugins.refused.dependency`, `dependency-refused`, `cycle`), de proche en proche ; les autres sont activés dans
@@ -308,6 +316,14 @@ ni dossier, ni fichier, ni hôte.
   Mire (`restartRequired`). Les contributions de données (pages, thèmes, palettes, langues, manettes, apps, consoles,
   packs, sites) sont exposées au registre par nature avec le contenu de leur fichier JSON : leur lecteur viendra avec
   leur tâche.
+- **Manettes** (P5-04, `gamepads.ts`) : lecteur des contributions `gamepads` (format en tête du fichier). Motifs de
+  l'identifiant de la manette : expressions courtes et en nombre borné, sans groupe répété ni référence arrière,
+  compilées sans distinction de casse ; une expression invalide ou refusée est ignorée. Libellés : symbole court (affiché
+  comme du texte) ou texte du plugin (`pluginTexts.<plugin>.<clé>`). `gamepadsProfiles()` (`gamepads:profiles`, sans
+  argument) rend les profils des plugins actifs dans leur ordre d'essai ; l'événement `onGamepadsChange`
+  (`gamepads:changed`) prévient l'interface quand un plugin de manettes est activé ou désactivé. L'interface
+  (`nav/gamepad-data.ts`) garde la mécanique et un profil générique, utilisé pour une manette qu'aucun profil ne
+  reconnaît.
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 - **Réglages des plugins** (P4-20) : `pluginsSettings()` (`plugins:settings`) rend, pour chaque plugin qui en déclare,

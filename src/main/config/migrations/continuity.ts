@@ -58,10 +58,17 @@ export interface ContinuityRule {
   providers?: Readonly<Record<string, string>>;
 }
 
+/** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
+const always = (): boolean => true;
+
 const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
 
-/** Table des règles : P5-02 à P5-20 ajoutent la leur (voir plus haut). */
+/** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
+  // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
+  { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
+  { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
+  { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
   // Infos en ligne TMDB et « Où regarder » : ne servaient qu'avec une clé TMDB.
   {
     id: 'P5-15',

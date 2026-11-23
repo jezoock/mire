@@ -888,10 +888,10 @@
         "confirm": "OK",
         "cancel": "Cancel",
         "detected": "{name} controller detected. The controls are shown at the bottom of the screen.",
+        "detectedGeneric": "Controller detected. The controls are shown at the bottom of the screen.",
         "disconnected": "Controller disconnected",
         "buttons": {
-          "view": "View",
-          "create": "Create"
+          "select": "Select"
         },
         "pick": "Choose"
       }
@@ -989,7 +989,9 @@
         "label": "Centre sections",
         "downloads": "Downloads",
         "apps": "Apps",
-        "consoles": "Consoles"
+        "consoles": "Consoles",
+        "plugins": "Plugins",
+        "repos": "Repositories"
       },
       "downloads": {
         "add": "Add a link",
@@ -1186,6 +1188,220 @@
         "sites": "Game sites",
         "remove": "Remove",
         "fromApps": "Installed from apps"
+      },
+      "plugins": {
+        "intro": "Plugins add features to Mire: sources, details, palettes, sites… Open a plugin’s page to see what it brings and what it asks for, before installing it.",
+        "refresh": "Check for updates",
+        "checked": "Repository lists read at {time}.",
+        "notChecked": "The repository lists have not been read online yet: “Check for updates” fetches them.",
+        "loading": "Reading plugins…",
+        "updates": "Updates",
+        "installed": "Installed",
+        "available": "Available",
+        "noInstalled": "No plugins.",
+        "noAvailable": "Your repositories offer no other plugin for now.",
+        "version": "Version {version}",
+        "noVersion": "Not for this version of Mire",
+        "noVersionLatest": "None for this version of Mire (latest: {latest})",
+        "updateFrom": "Version {from} → {to}",
+        "level": {
+          "data": "Data only, no code",
+          "code": "Limited code, kept apart from the rest of the computer",
+          "privileged": "Extended access to the computer",
+          "unknown": "Unknown"
+        },
+        "trust": {
+          "bundled": "Comes with Mire",
+          "official": "Official repository",
+          "thirdParty": "Third party",
+          "local": "Installed by hand"
+        },
+        "origin": {
+          "bundled": "Comes with Mire",
+          "official": "Official repository",
+          "repository": "Repository “{name}”",
+          "local": "Installed by hand"
+        },
+        "badges": {
+          "privileged": "Extended access"
+        },
+        "status": {
+          "active": "On",
+          "disabled": "Off",
+          "fault": "Stopped after an error",
+          "refused": "Refused",
+          "restart": "{status} (next time Mire starts)",
+          "update": "Update available: {version}"
+        },
+        "permissions": {
+          "hosts": "Connect to: {hosts}",
+          "more": {
+            "one": " and {count} other",
+            "other": " and {count} others"
+          },
+          "folders": "Ask you for access to folders of your choice",
+          "localNetwork": "Reach the devices on your local network",
+          "launch": "Start programs on your computer",
+          "webViews": "Open websites in Mire",
+          "deleteFiles": "Delete files",
+          "other": "Other access: {name}"
+        },
+        "contributes": {
+          "sources": "Content sources",
+          "metadata": "Online details (descriptions, pictures)",
+          "taggers": "Tags added automatically",
+          "search": "Search results",
+          "webExtensions": "Extensions for websites",
+          "downloaders": "A way to download",
+          "webApps": "Sites and services",
+          "apps": "Apps",
+          "systems": "Consoles",
+          "packs": "Ready-made lists",
+          "pages": "Pages",
+          "themes": "Themes",
+          "palettes": "Colour palettes",
+          "languages": "Languages",
+          "gamepads": "Controller profiles"
+        },
+        "actions": {
+          "open": "See details",
+          "enable": "Turn on",
+          "disable": "Turn off",
+          "update": "Update",
+          "updateTo": "Update to {version}",
+          "install": "Install",
+          "uninstall": "Uninstall",
+          "back": "Back to plugins"
+        },
+        "sheet": {
+          "label": "Plugin details",
+          "version": "Version",
+          "update": "Update",
+          "origin": "Origin",
+          "level": "Level",
+          "size": "Size",
+          "state": "State",
+          "contributes": "What it brings",
+          "noContributes": "Nothing declared.",
+          "permissions": "What it asks for",
+          "noPermissions": "No particular permission.",
+          "dependencies": "Plugins it needs",
+          "noDependencies": "None.",
+          "dependency": "{name} ({range}), installed with it",
+          "dependencyInstalled": "{name} ({range}), already there",
+          "warning": "This plugin comes from a third-party repository and asks for extended access to your computer. Mire cannot check what it does: only install it if you trust this repository. You will be asked for your consent.",
+          "warningInstalled": "This plugin comes from a third-party repository and has, with your consent, extended access to your computer.",
+          "conflict": "This plugin is already installed from another repository: this one can neither install nor update it."
+        },
+        "consent": {
+          "title": "Extended access: your consent",
+          "warning": "What you are about to install comes from a third-party repository and asks for extended access to your computer. Mire cannot check what this code does: it could read, change or delete your files. Only go on if you trust this repository.",
+          "plugin": "“{name}”, version {version} ({level}):",
+          "accept": "I understand, install",
+          "cancel": "Cancel"
+        },
+        "uninstall": {
+          "title": "Uninstall “{name}”?",
+          "help": "Its settings and what it saved can be kept, in case you install it again.",
+          "keep": "Uninstall, keep its data",
+          "erase": "Uninstall and erase its data",
+          "cancel": "Cancel"
+        },
+        "progress": {
+          "resolve": "Preparing {name}…",
+          "download": "Downloading {name}",
+          "amount": "{received} of {total}",
+          "verify": "Checking {name}",
+          "install": "Installing {name}"
+        },
+        "messages": {
+          "installed": "“{name}” is installed.",
+          "updated": "“{name}” is up to date.",
+          "uninstalled": "“{name}” is uninstalled.",
+          "uninstalledKept": "“{name}” is uninstalled; its data is kept.",
+          "restored": "“{name}” is back to the version that comes with Mire.",
+          "enabled": "“{name}” is on.",
+          "disabled": "“{name}” is off.",
+          "notConsented": "Nothing was installed.",
+          "refused": "Mire refused this request.",
+          "failed": "This did not work.",
+          "gone": "This plugin is no longer in the lists."
+        },
+        "continuity": {
+          "title": "Features taken over by plugins",
+          "help": "Features you used before this version of Mire are now plugins.",
+          "installed": "“{name}”: installed.",
+          "bundled": "“{name}”: turned on (comes with Mire).",
+          "pending": "“{name}”: will be installed as soon as the connection allows.",
+          "failed": "“{name}”: not possible."
+        }
+      },
+      "repos": {
+        "intro": "Repositories offer plugins. The official repository is Mire’s own; a third-party repository is the responsibility of whoever publishes it.",
+        "addButton": "Add a repository",
+        "refresh": "Update the lists",
+        "official": "Official",
+        "thirdParty": "Third party",
+        "index": "Address",
+        "fingerprint": "Key fingerprint",
+        "date": "List published on {date}",
+        "never": "List not read yet",
+        "remove": "Remove",
+        "none": "No repositories.",
+        "loading": "Reading repositories…",
+        "form": {
+          "title": "Add a repository",
+          "help": "Paste the address of the repository’s plugin list (index.json) and its public key, as the repository publishes them.",
+          "index": "List address",
+          "indexPlaceholder": "https://…/index.json",
+          "key": "Public key",
+          "keyPlaceholder": "-----BEGIN PUBLIC KEY-----",
+          "check": "Check",
+          "cancel": "Cancel",
+          "errors": {
+            "address": "This address is not valid.",
+            "https": "The address must start with https://: Mire only accepts repositories reached securely.",
+            "key": "The repository’s public key is needed: a block that starts with “-----BEGIN PUBLIC KEY-----”.",
+            "refused": "The address or the key was refused."
+          }
+        },
+        "confirm": {
+          "title": "Add “{name}”?",
+          "help": "Compare this fingerprint with the one the repository publishes, group by group. If they differ, do not add this repository.",
+          "fingerprint": "Fingerprint: {fingerprint}",
+          "index": "Address: {index}",
+          "plugins": {
+            "one": "{count} plugin offered.",
+            "other": "{count} plugins offered."
+          },
+          "sensitive": {
+            "one": "{count} of them asks for extended access to the computer: you will be asked for your consent before installing it.",
+            "other": "{count} of them ask for extended access to the computer: you will be asked for your consent before installing them."
+          },
+          "add": "The fingerprint is right: add",
+          "cancel": "Cancel"
+        },
+        "removeForm": {
+          "title": "Remove “{name}”?",
+          "help": "Its plugins can stay installed, without updates. You can also uninstall them.",
+          "keep": "Remove, keep its plugins",
+          "uninstall": "Remove and uninstall its plugins, keep their data",
+          "erase": "Remove, uninstall its plugins and erase their data",
+          "cancel": "Cancel"
+        },
+        "messages": {
+          "added": "The repository “{name}” is added.",
+          "removed": "The repository is removed; its plugins stay installed, without updates.",
+          "removedUninstalled": {
+            "one": "The repository is removed; {count} plugin uninstalled.",
+            "other": "The repository is removed; {count} plugins uninstalled."
+          },
+          "removedNone": "The repository is removed.",
+          "kept": "Kept because another plugin needs it: {names}.",
+          "refreshed": "Repository lists updated.",
+          "refreshErrors": "Some lists could not be read: the last known ones are used.",
+          "refused": "Mire refused this request."
+        }
       }
     },
     "editors": {
