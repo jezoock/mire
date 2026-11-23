@@ -428,7 +428,7 @@
           "sourcesHint": "\\\\NAS\\Jeux, smb://nas/jeux ou http://…/jeux/",
           "extensions": "Extensions des jeux (séparées par des virgules)",
           "sites": "Sites de jeux : un par ligne, « Nom | adresse | adresse de recherche avec {q} »",
-          "sitesHint": "Laissez vide pour les sites proposés par Mire."
+          "sitesHint": "Laissez vide pour les sites proposés par vos plugins."
         },
         "remove": {
           "title": "Retirer la console {name} ?",
@@ -483,7 +483,7 @@
     "web": {
       "romSites": "Jeux : {console}",
       "errors": {
-        "noRomSite": "Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».",
+        "noRomSite": "Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console », ou installez le plugin « Sites de jeux » : il propose des sites légaux pour chaque console.",
         "bookmarkNotFound": "Marque-page introuvable.",
         "tvServiceGone": "Ce service de télévision n’existe plus dans la configuration.",
         "tvNotWeb": "{service} n’est pas un portail web : ses chaînes s’affichent dans la page Télévision.",
@@ -647,14 +647,6 @@
         "dolphin": "IPL.bin de votre GameCube (facultatif), à placer dans le sous-dossier de sa région (EUR, USA, JAP).",
         "azahar": "aes_keys.txt et fichiers système de votre 3DS (facultatif).",
         "cemu": "keys.txt, avec les clés de vos jeux Wii U (pour les jeux chiffrés)."
-      },
-      "games": {
-        "nova": "Plateformes : un écureuil qui copie les pouvoirs de ses ennemis.",
-        "thwaite": "Défendez vos villages contre une pluie de missiles.",
-        "croom": "Jeu de mémoire : retrouvez les paires de cartes.",
-        "libbet": "Réflexion : passez sur chaque case du sol sans rester coincé.",
-        "ucity": "Construisez et gérez votre ville, dans l’esprit de SimCity.",
-        "cavestory": "Le grand jeu d’aventure gratuit, adapté pour la Mega Drive, en français."
       },
       "basedOn": "{author}, d’après {original}",
       "errors": {
@@ -1156,6 +1148,7 @@
         },
         "games": "Jeux libres",
         "gamesHelp": "Des jeux récents créés pour ces vieilles consoles, que leurs auteurs distribuent gratuitement.",
+        "gamesNone": "Aucun jeu libre pour l’instant : installez le plugin « Jeux libres » pour en voir la liste ici.",
         "gameMeta": "{system}, par {author}",
         "download": "Télécharger",
         "inLibrary": "Dans votre ludothèque",

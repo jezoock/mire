@@ -50,6 +50,10 @@ export interface ContinuityRule {
 /** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
 const always = (): boolean => true;
 
+/** Une console sans liste de sites à elle : elle prenait ceux que Mire proposait pour son système. */
+const usesDefaultRomSites = (config: Loose): boolean =>
+  Array.isArray(config.emulators) && config.emulators.some((e) => isRecord(e) && !Array.isArray(e.romSites));
+
 /** Palette choisie (`ui.theme`), parmi celles données ; P5-02. */
 const paletteIn =
   (...ids: string[]) =>
@@ -74,6 +78,10 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
   // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
   { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
+  // P5-07 : sites de jeux légaux, plugin à installer ; la configuration dit si une console utilisait les sites proposés.
+  { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
+  // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.
+  { id: 'P5-07-libres', plugin: 'mire.free-games', mode: 'install', applies: always },
   // P5-02 : palettes devenues des plugins à installer (une par plugin). Le réglage `ui.theme` reste en place : la
   // palette revient dès que son plugin est installé. « Automatique » prenait Plein jour en mode clair.
   { id: 'P5-02-jour', plugin: 'mire.palette.jour', mode: 'install', applies: paletteIn('jour', 'auto') },

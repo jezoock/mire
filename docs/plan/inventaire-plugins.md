@@ -50,9 +50,9 @@ Ce qui remplit la section Jeux.
 | `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts |  |
 | `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | src/main/games/roms/ |  |
 | `jeux-disque` | Jeux sur disque | Plugin inclus | Fonction | Fichiers, Internet | src/main/games/disc/ |  |
-| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | src/main/games/rom-sites.ts |  |
+| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | plugin `mire.game-sites` (le cœur lit les packs `romSites`, P5-07) |  |
 | `jeux-marque` | Marque-pages de jeux à télécharger | Plugin inclus | Fonction | Internet, Fichiers | src/main/games/bookmarks.ts |  |
-| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | src/main/store/catalog/games.ts |  |
+| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | plugin `mire.free-games` (le cœur lit les packs `freeGames`, P5-07) |  |
 | `jeux-suppr` | Nettoyage et suppression de jeux | Cœur | Socle | Supprime des fichiers ⚠ | src/main/games/cleanup.ts, games/delete.ts |  |
 | `jeux-systemes` | Référentiel des systèmes de jeu | Cœur | Socle | Données seules | packages/shared (guessSystem) |  |
 | `jeux-consoles` | Consoles créées à la main | Cœur | Fonction | Fichiers, Lance des programmes ⚠ | src/main/config (consoles) |  |
