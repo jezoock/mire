@@ -4,7 +4,7 @@ const globals = require('globals');
 
 module.exports = [
   // Constructions (dist/ de la racine et des paquets), cache de Stencil, dépendances.
-  { ignores: ['**/dist/', '**/.stencil/', 'release/', 'node_modules/', 'vendor/'] },
+  { ignores: ['**/dist/', '**/.stencil/', 'release/', 'node_modules/', 'vendor/', 'addons/'] }, // addons/ : fichiers de mire-addons, temporaires (P5-20)
   js.configs.recommended,
   {
     files: ['**/*.js'],
