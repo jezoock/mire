@@ -14,6 +14,8 @@ import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element } from '@mire/shared';
 import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
+import { readExternalPlayers } from './apps.ts';
+import type { ExternalPlayerSpec } from '../platform/types.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -629,6 +631,15 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
+
+    /**
+     * Lecteurs externes des plugins actifs (contributions `apps` de genre `player`, P5-20), vérifiés, dans l'ordre de
+     * préférence. Ils font lancer un programme : seuls ceux des plugins inclus ou du dépôt officiel signé comptent.
+     */
+    externalPlayers: (): ExternalPlayerSpec[] =>
+      readExternalPlayers(
+        registry.list('apps').filter((e) => ['bundled', 'official'].includes(trustOf(known.get(e.pluginId) ?? { origin: 'installed', repository: null }))),
+      ),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

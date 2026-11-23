@@ -14,6 +14,7 @@ import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { RescueRequest } from '@mire/shared';
+import type { ExternalPlayerInfo } from '@mire/shared/ipc';
 import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
@@ -109,6 +110,8 @@ export interface MainContext {
 
   // Lecteur externe et télévision.
   playExternal: Fn;
+  /** Lecteurs externes des plugins actifs (P5-20). */
+  externalPlayers: () => ExternalPlayerInfo[];
   detectTvService: Fn;
   fetchChannels: Fn;
   /** Flux d'une chaîne du service choisi, par sa clé (variante de la qualité préférée). */

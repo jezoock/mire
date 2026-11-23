@@ -9,6 +9,8 @@ import { validatePluginDir } from '../../packages/plugin-sdk/src/validate-dir.ts
 import { satisfies } from '../../src/main/plugins/semver.ts';
 import { checkPlugin, discoverPlugins } from '../../src/main/plugins/discovery.ts';
 import { readGamepadProfiles } from '../../src/main/plugins/gamepads.ts';
+import { readExternalPlayers } from '../../src/main/plugins/apps.ts';
+import { playerArgs } from '../../src/main/platform/index.ts';
 import { contributionEntries } from '../../src/main/plugins/registry.ts';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -64,5 +66,32 @@ describe('plugins inclus (découverte)', () => {
       profiles.map((p) => [p.id, Object.keys(p.glyphs).length]),
       families.map((f) => [`mire.gamepad.${f}/${f}`, 9]),
     );
+  });
+
+  // P5-20 : le plugin inclus des lecteurs externes donne mpv puis VLC, complets, avec les arguments d'avant le plugin.
+  it('les lecteurs mpv et VLC sont lisibles par le cœur, complets, avec les mêmes arguments qu’avant', async () => {
+    const [c] = discoverPlugins({ bundled: PLUGINS, installed: path.join(PLUGINS, '.aucun') }).candidates.filter((x) => x.id === 'mire.players.external');
+    assert.ok(c);
+    const r = await checkPlugin(c, { appVersion, languages: ['fr', 'en'] });
+    assert.ok(r.ok);
+    const players = readExternalPlayers(contributionEntries(r.plugin.manifest, r.plugin.dir, r.plugin.data, path.join));
+    assert.deepEqual(
+      players.map((p) => [p.id, p.names, Object.keys(p.locations), Object.keys(p.options)]),
+      ['mpv', 'vlc'].map((f) => [`mire.players.external/${f}`, [f], ['win32', 'darwin', 'linux'], ['fullscreen', 'title', 'start']]),
+    );
+    const [mpv, vlc] = players;
+    assert.deepEqual(mpv.locations.win32?.length, 3);
+    assert.deepEqual(playerArgs(mpv, { url: '/films/a.avi', title: 'Film', start: 754.9 }), [
+      '--fs',
+      '--force-media-title=Film',
+      '--start=754',
+      '/films/a.avi',
+    ]);
+    assert.deepEqual(playerArgs(vlc, { url: '/films/a.avi', title: 'Film', start: 90 }), [
+      '--fullscreen',
+      '--meta-title=Film',
+      '--start-time=90',
+      '/films/a.avi',
+    ]);
   });
 });

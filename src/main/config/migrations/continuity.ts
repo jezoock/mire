@@ -56,6 +56,9 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
   { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
   { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
+  // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
+  // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
+  { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
 ];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;

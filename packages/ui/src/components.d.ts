@@ -1113,6 +1113,11 @@ export namespace Components {
      */
     interface MireVideoPlayer {
         /**
+          * Un lecteur externe est disponible (plugin actif) ; sinon le bouton « Lecteur externe » est caché.
+          * @default true
+         */
+        "external": boolean;
+        /**
           * @default false
          */
         "hasNext": boolean;
@@ -3035,6 +3040,11 @@ declare namespace LocalJSX {
      */
     interface MireVideoPlayer {
         /**
+          * Un lecteur externe est disponible (plugin actif) ; sinon le bouton « Lecteur externe » est caché.
+          * @default true
+         */
+        "external"?: boolean;
+        /**
           * @default false
          */
         "hasNext"?: boolean;
@@ -3370,6 +3380,7 @@ declare namespace LocalJSX {
         "playing": boolean;
         "hasPrev": boolean;
         "hasNext": boolean;
+        "external": boolean;
         "subtitles": string;
         "osd": string;
         "osdShown": boolean;
