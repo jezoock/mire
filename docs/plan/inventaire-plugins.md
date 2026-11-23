@@ -296,9 +296,9 @@ Des données seules, sans code. Les anciens thèmes deviennent des palettes de c
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
 | `th-ecran` | Palette Écran éteint | Cœur | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-jour` | Palette Plein jour | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-minuit` | Palette Minuit | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-velours` | Palette Velours | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
+| `th-jour` | Palette Plein jour | À installer | Palette de couleurs | Données seules | plugin `mire.palette.jour` (mire-addons) |  |
+| `th-minuit` | Palette Minuit | À installer | Palette de couleurs | Données seules | plugin `mire.palette.minuit` (mire-addons) |  |
+| `th-velours` | Palette Velours | À installer | Palette de couleurs | Données seules | plugin `mire.palette.velours` (mire-addons) |  |
 | `th-contraste` | Palette Contraste élevé | Cœur | Palette de couleurs | Données seules | src/renderer/styles.css |  |
 | `lang-fr` | Français | À installer | Langue | Données seules | packages/shared/src/i18n/locales/fr.json |  |
 | `lang-en` | Anglais | Cœur | Langue | Données seules | packages/shared/src/i18n/locales/en.json |  |

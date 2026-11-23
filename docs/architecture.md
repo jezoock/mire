@@ -157,7 +157,7 @@ composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui
 | `ui/` | `toast.ts` : message bref en bas de l'écran. |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
 | `styles.css`, `fonts/` | Styles de l'interface historique et police Archivo. |
-| `palettes/` | Palettes du cœur : jetons de couleurs (`<id>/<id>.css`) et métadonnées (`palette.json`), choisies par `data-palette` sur `<html>` (voir `docs/themes.md`). |
+| `palettes/` | Palettes du cœur (Écran éteint, Contraste élevé) : jetons de couleurs (`<id>/<id>.css`) et métadonnées (`palette.json`), choisies par `data-palette` sur `<html>` (voir `docs/themes.md`). Les autres palettes viennent des plugins (P5-02). |
 
 Les modules `nav/` et `players/` ne connaissent pas l'interface : ils reçoivent les contrôleurs à leur
 initialisation (`initKeyboard`, `initVideo`…) et appellent leurs méthodes (retour, modifier, ouvrir le lecteur
@@ -317,6 +317,15 @@ ni dossier, ni fichier, ni hôte.
   (`gamepads:changed`) prévient l'interface quand un plugin de manettes est activé ou désactivé. L'interface
   (`nav/gamepad-data.ts`) garde la mécanique et un profil générique, utilisé pour une manette qu'aucun profil ne
   reconnaît.
+- **Palettes** (P5-02, `palettes.ts`) : lecteur des contributions `palettes` (format en tête du fichier, détail dans
+  `docs/themes.md`). Une palette de plugin est une donnée, jamais du CSS : mode (`light`, `dark`) et jetons, chacun
+  vérifié selon sa forme (`checkPaletteToken` de `@mire/shared` : couleur `#rrggbb`, pourcentage, longueur bornée) ;
+  un jeton obligatoire invalide refuse la palette. Identifiant de la palette = celui de la contribution ; une palette
+  du cœur ne se remplace pas ; entre deux plugins, le premier activé l'emporte. `palettesList()` (`palettes:list`,
+  sans argument) rend `{ ready, palettes }` (`ready` : plugins démarrés) ; l'événement `onPalettesChange`
+  (`palettes:changed`) prévient l'interface. L'interface fabrique elle-même la feuille de chaque palette par le CSSOM,
+  après avoir revérifié les jetons ; la CSP ne change pas. Le fond de la fenêtre suit la palette d'un plugin
+  (`setPalettes` de `window/main-window.ts`).
 - **IPC** : `pluginsList()` (canal `plugins:list`) et `pluginsSetEnabled(id, enabled)` (`plugins:setEnabled`)
   rendent des `PluginSummary` (identifiant, version, origine, niveau, nom, état, message, contributions).
 - **Réglages des plugins** (P4-20) : `pluginsSettings()` (`plugins:settings`) rend, pour chaque plugin qui en déclare,

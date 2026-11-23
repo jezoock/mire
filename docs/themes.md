@@ -32,18 +32,51 @@ L'identifiant (`<id>`) ne contient que des minuscules, des chiffres et des tiret
 
 ### Palettes du cœur
 
-Les palettes sont dans `src/renderer/palettes/`, copiées par la construction dans `dist/renderer/palettes/`.
+Les palettes du cœur sont dans `src/renderer/palettes/`, copiées par la construction dans `dist/renderer/palettes/` ;
+les autres sont des plugins (section suivante).
 
 | Id | Nom | Mode | Où |
 | --- | --- | --- | --- |
 | `ecran` | Écran éteint (par défaut) | sombre | cœur |
 | `contraste` | Contraste élevé | sombre | cœur |
-| `jour` | Plein jour | clair | plugin en P5-02 |
-| `minuit` | Minuit | sombre | plugin en P5-02 |
-| `velours` | Velours | sombre | plugin en P5-02 |
+| `jour` | Plein jour | clair | plugin `mire.palette.jour` (à installer) |
+| `minuit` | Minuit | sombre | plugin `mire.palette.minuit` (à installer) |
+| `velours` | Velours | sombre | plugin `mire.palette.velours` (à installer) |
 
 « Automatique » retient `jour` quand le système est en mode clair, `ecran` sinon (`AUTO_PALETTES` de
-`@mire/shared`), et suit les changements du système sans recharger la page.
+`@mire/shared`), et suit les changements du système sans recharger la page. Sans le plugin Plein jour, il garde
+`ecran` en mode clair, sans message.
+
+### Palettes des plugins (P5-02)
+
+Un plugin de données (`level: "data"`) apporte une palette par la contribution `palettes` de son manifeste :
+
+```json
+{ "contributes": { "palettes": [{ "id": "jour", "file": "palettes/jour.json" }] } }
+```
+
+Le fichier est une **donnée**, jamais du CSS :
+
+```json
+{ "scheme": "light", "tokens": { "bg": "#f1efe8", "bg-rail": "#e7e4db", "…": "…", "ring-mix": "58%", "mire-edge": "1px", "mono-mix": "62%" } }
+```
+
+- `scheme` : `light` ou `dark` (donne `color-scheme`) ;
+- `tokens` : les jetons de la section suivante, sans `--`. Forme de chaque valeur : couleur `#rrggbb` (tous les jetons
+  sauf ceux qui suivent, et `ring-from`), pourcentage entier de `0%` à `100%` (`ring-mix`, `mono-mix`), longueur
+  entière de `0px` à `8px` (`ring-w`, `mire-edge`). Un jeton obligatoire absent ou mal formé refuse la palette ; un
+  jeton facultatif mal formé ou un nom inconnu est ignoré. Le fond de la fenêtre est le jeton `bg` ;
+- l'identifiant de la palette est celui de la contribution (minuscules, chiffres, tirets) : c'est lui que retiennent
+  le réglage `ui.theme` et un thème. `ecran` et `contraste` ne peuvent pas être remplacés ;
+- le nom est le texte `palettes.<id>.name` des catalogues du plugin (`i18n/fr.json`, `i18n/en.json`).
+
+Le processus principal vérifie les données (`src/main/plugins/palettes.ts`) ; l'interface revérifie chaque jeton et
+fabrique elle-même la feuille (`[data-palette="<id>"]`, une propriété par jeton, par le CSSOM). Chaque palette d'un
+plugin actif a sa feuille : elle s'applique à la page, aux aperçus des Réglages et aux thèmes.
+
+**Palette absente** (plugin pas encore installé, désactivé ou désinstallé) : la page affiche la palette par défaut
+et un message simple ; le réglage est gardé, et la palette revient avec son plugin. Un thème qui désigne une palette
+absente garde, sur les pages, les jetons de la palette des réglages (pas d'échec, pas de mode secours).
 
 ## Jetons qu'une palette peut définir
 
@@ -85,8 +118,9 @@ Une palette ne définit rien d'autre : ni règle sur un élément, ni jeton `--d
 - `index.html` lie la feuille de l'habillage (`ui/mire-ui.css`), puis les palettes du cœur, dans cet ordre : à
   spécificité égale, la palette l'emporte sur les valeurs par défaut des jetons facultatifs.
 - `<html data-palette="…">` désigne la palette affichée. Le **chargeur de palette** (`@mire/ui/palettes`) change cet
-  attribut : la bascule est immédiate, sans rechargement. Une palette qui n'est pas liée par la page (celle d'un
-  plugin, plus tard) voit sa feuille ajoutée à la première demande ; elle n'est affichée qu'une fois chargée.
+  attribut : la bascule est immédiate, sans rechargement. Une palette du cœur qui n'est pas liée par la page voit sa
+  feuille ajoutée à la première demande ; elle n'est affichée qu'une fois chargée. Les palettes des plugins ont une
+  feuille fabriquée par le chargeur (voir plus haut).
 - Un bloc peut porter sa propre palette (`data-palette` : aperçus des réglages, page de démonstration) : les jetons
   de la palette, et ceux du moteur qui en dérivent, s'y appliquent.
 - L'habillage règle le moteur de dot-stash une fois pour toutes (`theme/_tokens.scss`) : ses couleurs
