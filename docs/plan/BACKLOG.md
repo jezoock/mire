@@ -179,7 +179,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | --- | --- | --- | --- | --- | --- | --- |
 | P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | faite | [#98](https://github.com/jezoock/mire/pull/98) |
 | P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | à faire | |
-| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | à faire | |
+| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | faite | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | faite | |
 | P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
 | P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |

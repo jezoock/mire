@@ -7,11 +7,10 @@
  * effacent ses niveaux en cache et annoncent les pages touchées (`onChange`).
  */
 import type { ElementKey, PageDefinition, PageGroup, PageLevel, PageOrigin, PageOverview, PagePath, PagePreview, PageSaveResult } from '@mire/shared';
-import { tagIdOfPage, validatePage } from '@mire/shared';
+import { PAGE_ID_RE, tagIdOfPage, validatePage } from '@mire/shared';
 import type { Catalog } from '../index.ts';
 import type { TagEngine } from '../tags/engine.ts';
 import { corruptReason, createJsonStore } from '../../storage/json-store.ts';
-import { BUILTIN_PAGES } from './builtin.ts';
 import { followPath, groupBy, matchesPage, matchesWhere, sortKeys, type RawGroup } from './compute.ts';
 
 export const PAGES_VERSION = 1;
@@ -35,6 +34,7 @@ export interface PagesOptions {
   catalog: Pick<Catalog, 'get'>;
   /** Texte des catalogues (nom du groupe « Autres »). */
   translate: (key: string) => string;
+  /** Pages prêtes à l'emploi au départ : aucune dans le cœur, elles viennent des plugins (`setBuiltin`, P5-03). */
   builtin?: readonly PageDefinition[];
   onIgnored?: (file: string, reason: string) => void;
 }
@@ -51,14 +51,15 @@ interface PageCache {
 const empty = (): PagesFile => ({ version: PAGES_VERSION, pages: {}, removed: [] });
 const isScalarOrNull = (v: unknown) => v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v));
 
-export function createPages({ file, engine, catalog, translate, builtin = BUILTIN_PAGES, onIgnored = logIgnored }: PagesOptions) {
+export function createPages({ file, engine, catalog, translate, builtin: initialBuiltin = [], onIgnored = logIgnored }: PagesOptions) {
   const store = createJsonStore<PagesFile>(file, {
     defaults: empty,
     space: 2,
     setAside: true,
     onCorrupt: (err, f, kept) => onIgnored(f, corruptReason(err, kept)),
   });
-  const builtinById = new Map(builtin.map((p) => [p.id, p]));
+  let builtin: readonly PageDefinition[] = initialBuiltin;
+  let builtinById = new Map(builtin.map((p) => [p.id, p]));
   let data = empty();
   const caches = new Map<string, PageCache>();
   const listeners = new Set<(ids: string[]) => void>();
@@ -75,7 +76,9 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
       if (r.ok && r.page.id === id) data.pages[id] = r.page;
       else onIgnored(file, `page ${id}`);
     }
-    data.removed = (Array.isArray(raw.removed) ? raw.removed : []).filter((id) => typeof id === 'string' && builtinById.has(id));
+    // Pas de tri selon les pages prêtes à l'emploi connues : leurs plugins ne sont pas encore actifs au chargement, et
+    // une page supprimée doit le rester si son plugin est désactivé puis réactivé.
+    data.removed = (Array.isArray(raw.removed) ? raw.removed : []).filter((id) => typeof id === 'string' && PAGE_ID_RE.test(id));
     caches.clear();
   }
 
@@ -201,6 +204,22 @@ export function createPages({ file, engine, catalog, translate, builtin = BUILTI
 
   return {
     load,
+
+    /**
+     * Remplace les pages prêtes à l'emploi (celles des plugins actifs, P5-03). Une page qui apparaît, disparaît ou
+     * change est recalculée et annoncée ; les pages de l'utilisateur, y compris une copie modifiée d'une page dont le
+     * plugin est désactivé, ne changent pas.
+     */
+    setBuiltin(next: readonly PageDefinition[]): void {
+      const before = builtinById;
+      builtin = next;
+      builtinById = new Map(next.map((p) => [p.id, p]));
+      const touched = [...new Set([...before.keys(), ...builtinById.keys()])].filter(
+        (id) => JSON.stringify(before.get(id)) !== JSON.stringify(builtinById.get(id)) && !Object.hasOwn(data.pages, id),
+      );
+      for (const id of touched) caches.delete(id);
+      emit(touched);
+    },
 
     /** Pages, dans l'ordre du menu (`pages.list`). */
     list: (): PageDefinition[] => structuredClone(all()),

@@ -256,13 +256,13 @@ Remplace les sections fixes (Vidéos, Musique, Jeux…) : chaque élément porte
 | `tagauto-consoles` | Tags auto : consoles | Plugin inclus | Tags automatiques | Données seules | packages/shared (guessSystem) |  |
 | `tagauto-images` | Tags auto : photos | Plugin inclus | Tags automatiques | Fichiers | src/renderer/app.js (groupes par dossier) |  |
 | `tagauto-genres` | Tags auto : genres et années | Plugin inclus | Tags automatiques | Internet | src/main/scrape/ |  |
-| `page-films` | Page Films | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-series` | Page Séries | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-musique` | Page Musique | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-images` | Page Images | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-streaming` | Page Streaming | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-tv` | Page Télévision | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-jeux` | Page Jeux | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
+| `page-films` | Page Films | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.movies` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-series` | Page Séries | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.series` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-musique` | Page Musique | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.music` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-images` | Page Images | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.images` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-streaming` | Page Streaming | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.streaming` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-tv` | Page Télévision | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.tv` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-jeux` | Page Jeux | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.games` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `ecran-accueil` | Accueil | Cœur | Écran | Données seules | src/renderer/app.js |  |
 | `ecran-recherche` | Recherche globale | Cœur | Écran | Internet | src/renderer/app.js, renderer/domain/search.ts |  |
 | `ecran-centre` | Centre (téléchargements, dépôts, plugins) | Cœur | Écran | Internet | src/renderer/app.js |  |

@@ -69,6 +69,19 @@ test.describe('migration v10 (P5-01)', () => {
     );
   });
 
+  test('P5-03 : les sept pages prêtes à l’emploi, plugins inclus, pour toute installation existante', () => {
+    const slugs = ['movies', 'series', 'music', 'images', 'streaming', 'tv', 'games'];
+    for (const raw of [readFixture('config-v9.json'), {}, { ui: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const s of slugs) assert.ok((config as Any).continuity.includes(`P5-03-${s}`), s);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-03-'));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      slugs.map((s) => [`mire.page.${s}`, 'bundled', []]),
+    );
+  });
+
   test('P5-20 : les lecteurs externes, plugin inclus, pour toute installation existante ; le programme choisi reste', () => {
     for (const raw of [readFixture('config-v9.json'), {}, { externalPlayer: { path: '/usr/bin/vlc', args: [] } }, { externalPlayer: 'mal formé' }]) {
       const { config } = migrate(structuredClone({ ...raw, version: 9 }));
