@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Tags automatiques : musique",
+      "description": "Trouve l’artiste, l’album, le numéro de piste et le titre d’après les noms des dossiers et des fichiers (« Daft Punk - Discovery/01 - One More Time »)."
+    },
+    "infos": {
+      "title": "Titre",
+      "artist": "Artiste",
+      "album": "Album",
+      "track": "Piste"
+    }
+  }
+}

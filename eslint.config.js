@@ -36,6 +36,16 @@ module.exports = [
     languageOptions: { ecmaVersion: 'latest', globals: { ...globals.node, ...globals.browser, ...globals.worker } },
   },
   {
+    // Plugins inclus (copie de mire-addons) : leur code tourne dans l'hôte isolé (Worker, sans Node) ; leurs tests
+    // tournent sous Node.
+    files: ['plugins/**/*.mjs'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.worker },
+  },
+  {
+    files: ['plugins/*/test/**/*.mjs'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.
     files: ['test/e2e/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },

@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Automatic tags: movies",
+      "description": "Files videos that are not episodes as movies, with the title and year taken from the file name (“Amélie (2001)”)."
+    },
+    "tags": {
+      "movie": "Movies"
+    },
+    "infos": {
+      "title": "Title",
+      "year": "Year"
+    }
+  }
+}

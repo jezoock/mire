@@ -76,6 +76,13 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
   // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.
   { id: 'P5-07-libres', plugin: 'mire.free-games', mode: 'install', applies: always },
+  // P5-09 : tags automatiques (séries, films, musique, consoles, photos), plugins inclus ; tout le monde les avait.
+  // Aucun réglage : les tags et infos saisis à la main restent dans `userData/catalog/overrides.json`.
+  { id: 'P5-09-series', plugin: 'mire.tags.series', mode: 'bundled', applies: always },
+  { id: 'P5-09-movies', plugin: 'mire.tags.movies', mode: 'bundled', applies: always },
+  { id: 'P5-09-music', plugin: 'mire.tags.music', mode: 'bundled', applies: always },
+  { id: 'P5-09-consoles', plugin: 'mire.tags.consoles', mode: 'bundled', applies: always },
+  { id: 'P5-09-photos', plugin: 'mire.tags.photos', mode: 'bundled', applies: always },
 ];
 
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
