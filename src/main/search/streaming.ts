@@ -2,7 +2,7 @@
  * Recherche « où regarder » : titres trouvés sur TMDB (films et séries) avec les services qui les proposent dans
  * la région choisie (données JustWatch, servies par TMDB), rapprochés des sites de streaming configurés.
  */
-import { fold, type Config, type WebSite } from '@mire/shared';
+import { fold, isSiteAvailable, type Config, type WebSite } from '@mire/shared';
 import type { SearchProvider as SdkSearchProvider } from '@mire/plugin-sdk';
 import { HttpError } from '../net/http.ts';
 import { tmdbImageUrl, type TmdbClient, type TmdbParams } from '../net/tmdb.ts';
@@ -97,7 +97,9 @@ export function streamingSearchProvider(client: TmdbClient): SearchProvider<Stre
       const q = String(query || '').trim();
       if (!q) return { ok: true, results: [] };
       if (!client.hasKey()) return { ok: false, reason: 'nokey' };
-      const { search, web } = ctx.getConfig();
+      const { search, web: all } = ctx.getConfig();
+      // Un service dont le plugin est désactivé ou absent n'est plus proposé (P5-05).
+      const web = all.filter(isSiteAvailable);
       const language = metadataLanguage(search.language);
       const region = String(search.region || 'FR').toUpperCase();
       const data = await tmdb('/search/multi', { query: q, language, include_adult: 'false', page: '1' });

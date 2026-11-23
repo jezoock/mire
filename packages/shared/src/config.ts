@@ -58,6 +58,10 @@ export interface WebSite {
   color?: string;
   providers?: string[];
   background?: boolean;
+  /** Plugin (P5-05) dont le service est ce site ; sans lui, le site est celui de l'utilisateur. */
+  app?: string;
+  /** Le plugin du service est désactivé ou absent : le site quitte Streaming et « Où regarder » (réglages gardés). */
+  inactive?: boolean;
   [key: string]: unknown;
 }
 

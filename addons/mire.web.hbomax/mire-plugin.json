@@ -1,0 +1,18 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.web.hbomax",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "webApps": [
+      {
+        "id": "hbomax",
+        "file": "app/site.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

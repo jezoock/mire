@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Spotify",
+      "description": "Spotify dans Streaming : ouvre le site dans Mire (la musique) et le propose dans « Où regarder »."
+    }
+  }
+}

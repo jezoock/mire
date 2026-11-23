@@ -4,7 +4,7 @@
  * Validé au point G1 : on ne garde que les sites que l'utilisateur a réellement ; les autres sites connus ne sont
  * plus ajoutés (rien n'est installé d'office).
  */
-import { DEFAULT_WEB } from '../catalogs/web.ts';
+import { DEFAULT_WEB } from './legacy-web.ts';
 import type { Migration } from './types.ts';
 
 export const v3: Migration = {

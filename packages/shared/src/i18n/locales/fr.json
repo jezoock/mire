@@ -855,6 +855,10 @@
       },
       "reasons": {
         "missing": "« {name} » n’est pas livré avec cette version de Mire."
+      },
+      "notes": {
+        "juststream": "JustStream n’est plus proposé par Mire. Il reste dans vos sites, comme un site ajouté à la main : vous pouvez toujours l’ouvrir ou le retirer.",
+        "voir-anime": "Voir-Anime n’est plus proposé par Mire. Il reste dans vos sites, comme un site ajouté à la main : vous pouvez toujours l’ouvrir ou le retirer."
       }
     },
     "shell": {

@@ -214,6 +214,25 @@ describe('continuité : plugins inclus et à installer', () => {
     assert.equal(m.continuity.summary().notice, null);
   });
 
+  it('JustStream et Voir-Anime (P5-05) : un message une fois, sans plugin, et rien à installer', async () => {
+    const repo = testRepo([]);
+    repo.offline = true;
+    const userData = tempDir();
+    const m = await mire(repo, userData, { queue: ['P5-05-juststream', 'P5-05-voir-anime'] });
+    await m.continuity.start();
+    assert.deepEqual(m.status(), {});
+    const notice = m.continuity.summary().notice!;
+    assert.match(notice, /continuity\.notes\.juststream/);
+    assert.match(notice, /continuity\.notes\.voir-anime/);
+    assert.equal(m.config.get().continuity, undefined);
+    // Montré, il ne revient pas, même après un redémarrage ou un import du même fichier.
+    m.continuity.seen();
+    assert.equal(m.continuity.summary().notice, null);
+    const again = await mire(repo, userData, { queue: [] });
+    await again.continuity.start();
+    assert.equal(again.continuity.summary().notice, null);
+  });
+
   it('plugin inclus absent de cette version de Mire : impossible avec sa raison', async () => {
     const repo = testRepo([]);
     repo.offline = true;

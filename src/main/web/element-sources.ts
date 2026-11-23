@@ -1,15 +1,14 @@
 /**
  * Sources d'éléments des sites, une par plugin prévu à l'inventaire :
- * - `svc-<id>` : site du catalogue intégré (`svc-netflix`…), chacun deviendra une app ;
+ * - `svc-<id>` : service d'un plugin (`svc-netflix`…, contribution `webApps`) ;
  * - `web-perso` : sites ajoutés par l'utilisateur ;
  * - `web-bm` : marque-pages de pages de streaming (`config.bookmarks`).
  *
  * Toutes posent le tag `stream` et l'info `category` (rangement du site dans Streaming : `video`, `music`…). Leurs
  * éléments se déduisent de la configuration (`config.web`, `config.bookmarks`) : ils suivent ses changements.
  */
-import { siteOf } from '@mire/shared';
+import { isSiteAvailable, siteOf } from '@mire/shared';
 import type { Bookmark, Config, WebSite } from '@mire/shared';
-import { DEFAULT_WEB } from '../config/catalogs/web.ts';
 import { bookmarkKey, siteKey } from '../catalog/keys.ts';
 import { compact, configSet, configSource, type ConfigFeed, type ConfigSource } from '../catalog/sync.ts';
 import type { ElementInput } from '../catalog/types.ts';
@@ -17,10 +16,8 @@ import type { ElementInput } from '../catalog/types.ts';
 /** Tags des sources des sites. */
 export const SITE_TAGS = ['stream'] as const;
 
-const BUILTIN = new Set(DEFAULT_WEB.map((w) => w.id));
-
-/** Source d'un site : son app (`svc-<id>`) s'il vient du catalogue intégré, sinon `web-perso`. */
-export const siteSourceId = (site: Pick<WebSite, 'id'>): string => (BUILTIN.has(site.id) ? `svc-${site.id}` : 'web-perso');
+/** Source d'un site : son app (`svc-<id>`) s'il est le service d'un plugin (P5-05), sinon `web-perso`. */
+export const siteSourceId = (site: Pick<WebSite, 'id' | 'app'>): string => (typeof site.app === 'string' ? `svc-${site.id}` : 'web-perso');
 
 /** Vrai pour les sources des sites et de leurs marque-pages. */
 export const isSiteSource = (plugin: string): boolean => plugin.startsWith('svc-') || plugin === 'web-perso' || plugin === 'web-bm';
@@ -56,7 +53,8 @@ export function bookmarkElement(bm: Bookmark, sites: readonly WebSite[]): Elemen
   };
 }
 
-const validSites = (config: Config) => config.web.filter((site) => site?.id && site.url);
+// Un service dont le plugin est désactivé ou absent quitte Streaming ; il reste dans la configuration.
+const validSites = (config: Config) => config.web.filter((site) => site?.id && site.url && isSiteAvailable(site));
 
 /**
  * Sources des sites de cette configuration : une par app de site du catalogue intégré présente, puis les sites

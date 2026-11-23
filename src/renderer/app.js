@@ -8,7 +8,7 @@ import { toast } from './ui/toast.ts';
 import * as dialogs from './ui/dialogs.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
-import { DEFAULT_PALETTE, fold, splitAlbumFolder } from '@mire/shared';
+import { DEFAULT_PALETTE, fold, isSiteAvailable, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
@@ -110,7 +110,7 @@ const home = createHome({
   element: (key) => api.catalogElement(key),
   // « Reprendre » : la copie locale de la liste, que le contrôleur `mire-home` relit pour reprendre une lecture.
   recent: () => (S.recent = getRecent()),
-  sites: () => S.config?.web ?? [],
+  sites: () => (S.config?.web ?? []).filter(isSiteAvailable),
   openSites: () => new Set(S.webSessions.map((x) => x.id)),
   color: safeColor,
   ink: onColor,
@@ -155,7 +155,7 @@ const search = createSearch({
   catalog: (q) => api.catalogSearch(q),
   watch: (q) => (S.config?.search?.tmdbToken ? api.searchStreaming(q) : null),
   pages: () => shell.pages(),
-  sites: () => S.config?.web ?? [],
+  sites: () => (S.config?.web ?? []).filter(isSiteAvailable),
   color: safeColor,
   ink: onColor,
   recent: () => getQueries(),
@@ -207,7 +207,7 @@ const settings = createSettings({
   sources: () => ({
     config: S.config,
     languages: i18n.available,
-    sites: S.config?.web ?? [],
+    sites: (S.config?.web ?? []).filter(isSiteAvailable),
     pageThemes: pages.engine.list().map((th) => ({ id: th.id, name: themeText(th.name), description: th.description ? themeText(th.description) : '' })),
     currentPageTheme: pages.engine.current().id,
     homeLists: ['rows', 'bars', 'sites'].map((kind) => ({ kind, label: t(`home.settings.${kind}`), items: homeOptions(S.config.ui.home, kind, { t, pages: shell.pages(), lists: home.lists(), sites: S.config.web, color: safeColor }) })),

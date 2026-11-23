@@ -1,0 +1,7 @@
+{
+  "name": "Canal+",
+  "url": "https://www.canalplus.com",
+  "color": "#2B2B2B",
+  "providers": ["canal+", "canal plus"],
+  "category": "video"
+}

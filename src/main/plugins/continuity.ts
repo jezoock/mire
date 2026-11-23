@@ -13,7 +13,7 @@
  */
 import type { AvailablePlugin, ContinuityItem, ContinuitySummary, PluginSummary, PluginsOutcome, RepositoryInfo } from '@mire/shared/ipc';
 import type { Config } from '@mire/shared';
-import { CONTINUITY_RULES, checkRules, type ContinuityRule } from '../config/migrations/continuity.ts';
+import { CONTINUITY_NOTES, CONTINUITY_RULES, checkRules, type ContinuityNote, type ContinuityRule } from '../config/migrations/continuity.ts';
 import type { ConfigService } from '../config/service.ts';
 import { createJsonStore } from '../storage/json-store.ts';
 
@@ -40,13 +40,18 @@ export interface ContinuityEntry {
 interface StateFile {
   version: number;
   plugins: Record<string, ContinuityEntry>;
+  /** Messages sans plugin (`CONTINUITY_NOTES`) : identifiant de la note → montrée ou non. */
+  notes: Record<string, { seen: boolean }>;
 }
 
 const STATUSES = new Set<ContinuityStatus>(['pending', 'installed', 'failed']);
 
 /** Ne garde que des entrées bien formées (fichier modifié à la main). */
 export function normalizeContinuityState(raw: unknown): StateFile {
-  const out: StateFile = { version: CONTINUITY_STATE_VERSION, plugins: {} };
+  const out: StateFile = { version: CONTINUITY_STATE_VERSION, plugins: {}, notes: {} };
+  const notes = (raw as { notes?: unknown })?.notes;
+  if (notes && typeof notes === 'object' && !Array.isArray(notes))
+    for (const [id, v] of Object.entries(notes as Record<string, { seen?: unknown }>)) out.notes[id] = { seen: v?.seen === true };
   const plugins = (raw as { plugins?: unknown })?.plugins;
   if (!plugins || typeof plugins !== 'object' || Array.isArray(plugins)) return out;
   for (const [id, v] of Object.entries(plugins as Record<string, Partial<ContinuityEntry>>)) {
@@ -76,21 +81,23 @@ export interface ContinuityOptions {
   /** Le récapitulatif a changé (un plugin installé, devenu impossible…) : à montrer. */
   onChange?(summary: ContinuitySummary): void;
   rules?: readonly ContinuityRule[];
+  notes?: readonly ContinuityNote[];
   log?(message: string): void;
 }
 
 export function createContinuity(opts: ContinuityOptions) {
   const rules = opts.rules ?? CONTINUITY_RULES;
+  const noteTable = opts.notes ?? CONTINUITY_NOTES;
   const log = opts.log ?? ((m: string) => console.error(m));
   for (const problem of checkRules(rules)) log(`Continuité : règle ignorée (${problem})`);
   const valid = rules.filter((r) => !checkRules([r]).length);
   const store = createJsonStore<StateFile>(opts.file, {
-    defaults: { version: CONTINUITY_STATE_VERSION, plugins: {} },
+    defaults: { version: CONTINUITY_STATE_VERSION, plugins: {}, notes: {} },
     setAside: true,
     space: 2,
     onCorrupt: (err, f, kept) => log(`Continuité : ${f} illisible (${err.message})${kept ? `, mis de côté dans ${kept}` : ''}.`),
   });
-  let state: StateFile = { version: CONTINUITY_STATE_VERSION, plugins: {} };
+  let state: StateFile = { version: CONTINUITY_STATE_VERSION, plugins: {}, notes: {} };
   let running: Promise<void> | null = null;
   // Demande arrivée pendant un passage (import, mise à jour des index) : un passage de plus à la fin.
   let again: { status?: RepositoryInfo[] } | null = null;
@@ -118,6 +125,12 @@ export function createContinuity(opts: ContinuityOptions) {
     const queue = config.continuity ?? [];
     if (!queue.length) return false;
     for (const ruleId of queue) {
+      const note = noteTable.find((n) => n.id === ruleId);
+      if (note) {
+        // Rejouée : la note déjà montrée ne revient pas.
+        state.notes[note.id] ??= { seen: false };
+        continue;
+      }
       const rule = valid.find((r) => r.id === ruleId);
       if (!rule) {
         log(`Continuité : règle inconnue ${ruleId}, ignorée.`);
@@ -186,6 +199,7 @@ export function createContinuity(opts: ContinuityOptions) {
     if (count('pending')) parts.push(opts.translate('continuity.notice.pending', { count: count('pending') }));
     for (const [id, e] of unseen)
       if (e.status === 'failed') parts.push(opts.translate('continuity.notice.failed', { name: nameOf(id), reason: e.reason ?? '' }));
+    for (const n of noteTable) if (state.notes[n.id] && !state.notes[n.id].seen) parts.push(opts.translate(`continuity.notes.${n.key}`));
     return { items, notice: parts.length ? parts.join(' ') : null };
   }
 
@@ -245,7 +259,9 @@ export function createContinuity(opts: ContinuityOptions) {
     seen(): boolean {
       const entries = Object.values(state.plugins).filter((e) => e.seen !== e.status);
       for (const e of entries) e.seen = e.status;
-      if (entries.length) save();
+      const notes = Object.values(state.notes).filter((n) => !n.seen);
+      for (const n of notes) n.seen = true;
+      if (entries.length || notes.length) save();
       return true;
     },
     flush: () => store.flush(),

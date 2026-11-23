@@ -1,0 +1,7 @@
+{
+  "name": "france.tv",
+  "url": "https://www.france.tv",
+  "color": "#3046F0",
+  "providers": ["france tv", "france.tv"],
+  "category": "video"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Crunchyroll",
+  "url": "https://www.crunchyroll.com/fr",
+  "color": "#F47521",
+  "search": "https://www.crunchyroll.com/fr/search?q={query}",
+  "providers": ["crunchyroll"],
+  "category": "video"
+}

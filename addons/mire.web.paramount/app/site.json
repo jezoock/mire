@@ -1,0 +1,7 @@
+{
+  "name": "Paramount+",
+  "url": "https://www.paramountplus.com/fr/",
+  "color": "#0064FF",
+  "providers": ["paramount"],
+  "category": "video"
+}

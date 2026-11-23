@@ -1,0 +1,8 @@
+{
+  "name": "Netflix",
+  "url": "https://www.netflix.com/browse",
+  "color": "#E50914",
+  "search": "https://www.netflix.com/search?q={query}",
+  "providers": ["netflix"],
+  "category": "video"
+}

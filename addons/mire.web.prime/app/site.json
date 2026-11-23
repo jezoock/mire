@@ -1,0 +1,8 @@
+{
+  "name": "Prime Video",
+  "url": "https://www.primevideo.com",
+  "color": "#1A98FF",
+  "search": "https://www.primevideo.com/search/ref=atv_nb_sug?ie=UTF8&phrase={query}",
+  "providers": ["prime video"],
+  "category": "video"
+}

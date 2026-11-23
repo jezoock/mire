@@ -17,6 +17,7 @@ import { readGamepadProfiles } from './gamepads.ts';
 import { freeGamesOf, romSitesFor } from './packs.ts';
 import { readPluginPages } from './pages.ts';
 import { readExternalPlayers } from './apps.ts';
+import { readWebApps, type WebApp } from './web-apps.ts';
 import type { ExternalPlayerSpec } from '../platform/types.ts';
 import { readPluginPalettes } from './palettes.ts';
 import type { Messages } from '@mire/shared/i18n';
@@ -642,6 +643,8 @@ export function createPluginService(opts: PluginServiceOptions) {
     romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
     /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */
     freeGames: () => freeGamesOf(registry.list('packs')),
+    /** Services de streaming des plugins actifs (contributions `webApps`, P5-05), vérifiés. */
+    webApps: (): WebApp[] => readWebApps(registry.list('webApps')),
     /** Pages prêtes à l'emploi des plugins actifs (contributions `pages`, P5-03), vérifiées. */
     pageDefinitions: (): PageDefinition[] => readPluginPages(registry.list('pages')),
 

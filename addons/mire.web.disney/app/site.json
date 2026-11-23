@@ -1,0 +1,7 @@
+{
+  "name": "Disney+",
+  "url": "https://www.disneyplus.com/fr-fr",
+  "color": "#1A3FD8",
+  "providers": ["disney plus", "disney+"],
+  "category": "video"
+}

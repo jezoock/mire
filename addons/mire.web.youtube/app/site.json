@@ -1,0 +1,8 @@
+{
+  "name": "YouTube",
+  "url": "https://www.youtube.com",
+  "color": "#FF0033",
+  "search": "https://www.youtube.com/results?search_query={query}",
+  "providers": ["youtube"],
+  "category": "video"
+}

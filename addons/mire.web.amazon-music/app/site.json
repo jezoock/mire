@@ -1,0 +1,8 @@
+{
+  "name": "Amazon Music",
+  "url": "https://music.amazon.fr",
+  "color": "#25D1DA",
+  "search": "https://music.amazon.fr/search/{query}",
+  "background": true,
+  "category": "music"
+}

@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Crunchyroll",
+      "description": "Crunchyroll in Streaming: opens the site inside Mire (films and series) and offers it in “Where to watch”."
+    }
+  }
+}

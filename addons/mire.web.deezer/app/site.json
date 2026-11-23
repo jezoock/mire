@@ -1,0 +1,8 @@
+{
+  "name": "Deezer",
+  "url": "https://www.deezer.com/fr/",
+  "color": "#A238FF",
+  "search": "https://www.deezer.com/search/{query}",
+  "background": true,
+  "category": "music"
+}
