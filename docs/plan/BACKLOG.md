@@ -196,7 +196,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
 | P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
-| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | à faire | |
+| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | faite | |
 | P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
 | **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |
 

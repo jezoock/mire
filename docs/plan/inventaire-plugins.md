@@ -231,7 +231,7 @@ Ce qui lit les fichiers finaux ou les confie à un autre programme.
 | `lec-audio` | Lecteur de musique | Cœur | Lecteur | Fichiers | src/renderer/players/audio.ts |  |
 | `lec-images` | Visionneuse d'images | Cœur | Lecteur | Fichiers | src/renderer/players/images.ts |  |
 | `lec-reprise` | Reprendre et volume | Cœur | Socle | Fichiers | src/main/usage/, renderer/players/volume.ts |  |
-| `lec-externes` | Lecteurs externes mpv et VLC | Plugin inclus | App (programme) | Lance des programmes ⚠ | src/main/platform/detect.ts, platform/players.ts |  |
+| `lec-externes` | Lecteurs externes mpv et VLC | Plugin inclus | App (programme) | Lance des programmes ⚠ | plugin `mire.players.external` (mire-addons ; copie incluse dans `plugins/`) ; lancement par le cœur (src/main/platform/players.ts, lecteur src/main/plugins/apps.ts) |  |
 | `lec-perso` | Lecteur externe choisi à la main | Cœur | Fonction | Lance des programmes ⚠ | src/main/platform/players.ts |  |
 | `lec-navigateur` | Navigateur du système | Cœur | Socle | Lance des programmes ⚠ | src/main/platform/players.ts |  |
 | `lec-lanceur` | Lanceur de programmes | Cœur | Socle | Lance des programmes ⚠ | src/main/platform/launcher.ts |  |
