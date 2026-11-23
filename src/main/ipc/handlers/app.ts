@@ -5,6 +5,8 @@ import type { IpcImplementations } from '../register.ts';
 export function appHandlers(ctx: MainContext) {
   return {
     playExternal: (...args) => ctx.playExternal(...args),
+    // Sans argument : rien de ce qui vient de la page n'est lu.
+    externalPlayers: () => ctx.externalPlayers(),
     toggleFullscreen: () => {
       const { mainWindow } = ctx;
       if (!mainWindow) return false;

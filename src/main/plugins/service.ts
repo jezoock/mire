@@ -11,9 +11,13 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
-import type { Element } from '@mire/shared';
+import type { Element, PageDefinition } from '@mire/shared';
 import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
+import { freeGamesOf, romSitesFor } from './packs.ts';
+import { readPluginPages } from './pages.ts';
+import { readExternalPlayers } from './apps.ts';
+import type { ExternalPlayerSpec } from '../platform/types.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -630,6 +634,21 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
+    /** Sites de jeux proposés pour un système par les packs `romSites` des plugins actifs (P5-07), vérifiés. */
+    romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
+    /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */
+    freeGames: () => freeGamesOf(registry.list('packs')),
+    /** Pages prêtes à l'emploi des plugins actifs (contributions `pages`, P5-03), vérifiées. */
+    pageDefinitions: (): PageDefinition[] => readPluginPages(registry.list('pages')),
+
+    /**
+     * Lecteurs externes des plugins actifs (contributions `apps` de genre `player`, P5-20), vérifiés, dans l'ordre de
+     * préférence. Ils font lancer un programme : seuls ceux des plugins inclus ou du dépôt officiel signé comptent.
+     */
+    externalPlayers: (): ExternalPlayerSpec[] =>
+      readExternalPlayers(
+        registry.list('apps').filter((e) => ['bundled', 'official'].includes(trustOf(known.get(e.pluginId) ?? { origin: 'installed', repository: null }))),
+      ),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),

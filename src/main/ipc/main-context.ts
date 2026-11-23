@@ -2,6 +2,7 @@
  * Contexte des handlers IPC, assemblé à partir des services créés par la racine de composition
  * (src/main/index.ts). La fenêtre, les fichiers en attente et les infos manuelles sont lus au moment de l'appel.
  */
+import type { ExternalPlayerInfo } from '@mire/shared/ipc';
 import type { PendingFiles } from '../app/lifecycle.ts';
 import type { Catalog } from '../catalog/index.ts';
 import type { TagEngine } from '../catalog/tags/engine.ts';
@@ -55,7 +56,7 @@ export interface MainServices {
   store: MainContext['store'];
   downloads: MainContext['downloads'];
   adblock: MainContext['adblock'];
-  players: { playExternal: Fn };
+  players: { playExternal: Fn; list: () => ExternalPlayerInfo[] };
   tv: { detect: Fn; channels: Fn; watch: Fn };
   drm: Pick<Drm, 'status'>;
   searchStreaming: Fn;
@@ -112,6 +113,7 @@ export function mainContext(s: MainServices): MainContext {
     setMeta: s.meta.set,
     pickMetaImage: s.meta.pickImage,
     playExternal: s.players.playExternal,
+    externalPlayers: s.players.list,
     detectTvService: s.tv.detect,
     fetchChannels: s.tv.channels,
     channelStream: s.tv.watch,

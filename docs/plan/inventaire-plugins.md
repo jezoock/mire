@@ -50,9 +50,9 @@ Ce qui remplit la section Jeux.
 | `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts |  |
 | `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | src/main/games/roms/ |  |
 | `jeux-disque` | Jeux sur disque | Plugin inclus | Fonction | Fichiers, Internet | src/main/games/disc/ |  |
-| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | src/main/games/rom-sites.ts |  |
+| `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | plugin `mire.game-sites` (le cœur lit les packs `romSites`, P5-07) |  |
 | `jeux-marque` | Marque-pages de jeux à télécharger | Plugin inclus | Fonction | Internet, Fichiers | src/main/games/bookmarks.ts |  |
-| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | src/main/store/catalog/games.ts |  |
+| `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | plugin `mire.free-games` (le cœur lit les packs `freeGames`, P5-07) |  |
 | `jeux-suppr` | Nettoyage et suppression de jeux | Cœur | Socle | Supprime des fichiers ⚠ | src/main/games/cleanup.ts, games/delete.ts |  |
 | `jeux-systemes` | Référentiel des systèmes de jeu | Cœur | Socle | Données seules | packages/shared (guessSystem) |  |
 | `jeux-consoles` | Consoles créées à la main | Cœur | Fonction | Fichiers, Lance des programmes ⚠ | src/main/config (consoles) |  |
@@ -231,7 +231,7 @@ Ce qui lit les fichiers finaux ou les confie à un autre programme.
 | `lec-audio` | Lecteur de musique | Cœur | Lecteur | Fichiers | src/renderer/players/audio.ts |  |
 | `lec-images` | Visionneuse d'images | Cœur | Lecteur | Fichiers | src/renderer/players/images.ts |  |
 | `lec-reprise` | Reprendre et volume | Cœur | Socle | Fichiers | src/main/usage/, renderer/players/volume.ts |  |
-| `lec-externes` | Lecteurs externes mpv et VLC | Plugin inclus | App (programme) | Lance des programmes ⚠ | src/main/platform/detect.ts, platform/players.ts |  |
+| `lec-externes` | Lecteurs externes mpv et VLC | Plugin inclus | App (programme) | Lance des programmes ⚠ | plugin `mire.players.external` (mire-addons ; copie incluse dans `plugins/`) ; lancement par le cœur (src/main/platform/players.ts, lecteur src/main/plugins/apps.ts) |  |
 | `lec-perso` | Lecteur externe choisi à la main | Cœur | Fonction | Lance des programmes ⚠ | src/main/platform/players.ts |  |
 | `lec-navigateur` | Navigateur du système | Cœur | Socle | Lance des programmes ⚠ | src/main/platform/players.ts |  |
 | `lec-lanceur` | Lanceur de programmes | Cœur | Socle | Lance des programmes ⚠ | src/main/platform/launcher.ts |  |
@@ -256,13 +256,13 @@ Remplace les sections fixes (Vidéos, Musique, Jeux…) : chaque élément porte
 | `tagauto-consoles` | Tags auto : consoles | Plugin inclus | Tags automatiques | Données seules | packages/shared (guessSystem) |  |
 | `tagauto-images` | Tags auto : photos | Plugin inclus | Tags automatiques | Fichiers | src/renderer/app.js (groupes par dossier) |  |
 | `tagauto-genres` | Tags auto : genres et années | Plugin inclus | Tags automatiques | Internet | src/main/scrape/ |  |
-| `page-films` | Page Films | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-series` | Page Séries | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-musique` | Page Musique | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-images` | Page Images | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-streaming` | Page Streaming | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-tv` | Page Télévision | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
-| `page-jeux` | Page Jeux | Plugin inclus | Page prête à l'emploi | Données seules | à créer |  |
+| `page-films` | Page Films | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.movies` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-series` | Page Séries | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.series` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-musique` | Page Musique | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.music` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-images` | Page Images | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.images` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-streaming` | Page Streaming | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.streaming` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-tv` | Page Télévision | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.tv` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `page-jeux` | Page Jeux | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.games` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `ecran-accueil` | Accueil | Cœur | Écran | Données seules | src/renderer/app.js |  |
 | `ecran-recherche` | Recherche globale | Cœur | Écran | Internet | src/renderer/app.js, renderer/domain/search.ts |  |
 | `ecran-centre` | Centre (téléchargements, dépôts, plugins) | Cœur | Écran | Internet | src/renderer/app.js |  |

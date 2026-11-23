@@ -4329,4 +4329,60 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  // Pages prêtes à l'emploi (P5-03) : sept plugins inclus, actifs dès le premier lancement ; le cœur n'a plus de page
+  // intégrée, celles du menu viennent des plugins.
+  describe('pages prêtes à l’emploi, plugins inclus (P5-03)', () => {
+    const PAGES = {
+      movies: ['movies', 1],
+      series: ['series', 2],
+      music: ['music', 3],
+      images: ['images', 4],
+      streaming: ['streaming', 5],
+      tv: ['tv', 6],
+      games: ['games', 7],
+    };
+
+    it('les sept plugins inclus sont actifs et leurs pages sont celles du cœur, dans l’ordre du menu', async () => {
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const slug of Object.keys(PAGES)) {
+        const p = list.find((x) => x.id === `mire.page.${slug}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], slug);
+      }
+      const pages = await page.evaluate(() => window.api.pagesList());
+      assert.deepEqual(
+        pages.map((p) => [p.id, p.menu?.order]),
+        Object.values(PAGES),
+      );
+      // Le nom vient des textes du plugin (pas d'une clé brute).
+      assert.ok(pages.every((p) => typeof p.name === 'object' && p.name.key.startsWith('pluginTexts.mire_page_')));
+      const overview = await page.evaluate(() => window.api.pagesOverview());
+      assert.deepEqual([...new Set(overview.map((o) => o.origin))], ['builtin']);
+    });
+  });
+
+  // Lecteurs externes (P5-20) : plugin inclus, actif dès le premier lancement ; désactivé, le bouton « Lecteur
+  // externe » du lecteur vidéo disparaît sans erreur, et revient avec le plugin.
+  describe('lecteurs externes, plugin inclus (P5-20)', () => {
+    it('le plugin inclus est actif ; le désactiver cache le bouton du lecteur externe', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      const p = (await page.evaluate(() => window.api.pluginsList())).find((x) => x.id === 'mire.players.external');
+      assert.deepEqual([p?.origin, p?.status], ['bundled', 'active']);
+      const players = await page.evaluate(() => window.api.externalPlayers());
+      assert.deepEqual(
+        players.map((x) => x.id),
+        ['mire.players.external/mpv', 'mire.players.external/vlc'],
+      );
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === true);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.players.external', false));
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === false);
+      assert.deepEqual(await page.evaluate(() => window.api.externalPlayers()), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.players.external', true));
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === true);
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
 });

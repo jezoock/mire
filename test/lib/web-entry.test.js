@@ -43,7 +43,8 @@ test.describe('resolveWebEntry', () => {
   });
 
   test('console sans site, ou inconnue : erreur', () => {
-    const msg = 'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».';
+    const msg =
+      'Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console », ou installez le plugin « Sites de jeux » : il propose des sites légaux pour chaque console.';
     assert.deepEqual(resolveWebEntry('rom:inconnue', config, { romSites }), { error: msg });
     assert.deepEqual(resolveWebEntry('rom:snes-a1b2c3', config), { error: msg });
   });

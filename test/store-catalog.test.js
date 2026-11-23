@@ -7,7 +7,7 @@ globalThis.fetch = () => {
   throw new Error('accès réseau interdit pendant les tests');
 };
 
-const { EMULATORS, FREE_GAMES, RETROARCH_SYSTEMS } = require('../src/main/store/catalog/index.ts');
+const { EMULATORS, RETROARCH_SYSTEMS } = require('../src/main/store/catalog/index.ts');
 const ALL_SYSTEMS = EMULATORS.flatMap((e) => e.systems);
 
 const duplicates = (ids) => ids.filter((id, i) => ids.indexOf(id) !== i);
@@ -15,7 +15,6 @@ const duplicates = (ids) => ids.filter((id, i) => ids.indexOf(id) !== i);
 test('catalogue : identifiants uniques', () => {
   assert.deepEqual(duplicates(EMULATORS.map((e) => e.id)), []);
   assert.deepEqual(duplicates(ALL_SYSTEMS.map((s) => s.id)), []);
-  assert.deepEqual(duplicates(FREE_GAMES.map((g) => g.id)), []);
 });
 
 test('catalogue : RetroArch propose exactement les systèmes RetroArch', () => {
@@ -29,15 +28,6 @@ test('catalogue : chaque système a un nom libretro et des extensions valides', 
     assert.ok(s.libretro.length > 0, s.id);
     assert.ok(s.ext.length > 0, s.id);
     for (const ext of s.ext) assert.match(ext, /^\.[a-z0-9]+$/, `${s.id} : ${ext}`);
-  }
-});
-
-test('catalogue : chaque jeu libre vise un système RetroArch et un fichier qu’il sait ouvrir', () => {
-  for (const g of FREE_GAMES) {
-    const system = RETROARCH_SYSTEMS.find((s) => s.id === g.system);
-    assert.ok(system, `${g.id} : système ${g.system} inconnu`);
-    assert.ok(system.ext.includes(g.file.slice(g.file.lastIndexOf('.')).toLowerCase()), g.id);
-    assert.match(g.url, /^https:\/\//, g.id);
   }
 });
 

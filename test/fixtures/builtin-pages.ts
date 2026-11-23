@@ -1,7 +1,4 @@
-/**
- * Les sept pages prêtes à l'emploi (architecture cible, « Pages, regroupements et listes »), en données intégrées.
- * Elles deviendront un plugin inclus (P5-03). L'utilisateur peut les modifier ou les supprimer (`pages.json`).
- */
+/** Les sept pages prêtes à l'emploi telles que les apportent les plugins inclus (P5-03), avec des noms du catalogue du cœur pour les tests. */
 import type { PageDefinition } from '@mire/shared';
 
 export const BUILTIN_PAGES: readonly PageDefinition[] = [

@@ -420,6 +420,17 @@ export interface GamepadProfile {
   glyphs: Partial<Record<GamepadGlyphButton, string>>;
 }
 
+/**
+ * Lecteur externe d'un plugin actif (contribution `apps` de genre `player`, P5-20) : ce que l'interface en montre. Le
+ * programme et ses arguments restent dans le processus principal.
+ */
+export interface ExternalPlayerInfo {
+  /** `<plugin>/<contribution>`. */
+  id: string;
+  /** Clé des catalogues du nom du lecteur (`pluginTexts.<plugin>.apps.<contribution>.name`). */
+  name: string;
+}
+
 export interface Bounds {
   x: number;
   y: number;
@@ -464,6 +475,8 @@ export interface IpcMethods {
 
   // Lecteur externe et télévision
   playExternal(target: string, title?: string, start?: number): Outcome;
+  /** Lecteurs externes des plugins actifs (P5-20) ; vide : pas de lecteur externe, son bouton disparaît. */
+  externalPlayers(): ExternalPlayerInfo[];
   tvChannels(): Outcome<Record<string, unknown>>;
   /** Regarde une chaîne du service choisi, désignée par sa clé d'élément : la variante est choisie par le service. */
   tvWatch(key: string): Outcome;
@@ -714,6 +727,7 @@ export const IPC_METHODS = {
   pickFile: 'dialog:file',
 
   playExternal: 'player:external',
+  externalPlayers: 'player:externalList',
   tvChannels: 'tv:channels',
 
   webOpen: 'web:open',
@@ -941,6 +955,8 @@ export interface IpcEvents {
   onPluginsContinuity: ContinuitySummary;
   /** Profils de manettes changés (plugin activé ou désactivé) : à redemander. */
   onGamepadsChange: undefined;
+  /** Lecteurs externes changés (plugin activé ou désactivé) : à redemander. */
+  onExternalPlayersChange: undefined;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -972,6 +988,7 @@ export const IPC_EVENTS = {
   onPluginsProgress: 'plugins:progress',
   onPluginsContinuity: 'plugins:continuity-changed',
   onGamepadsChange: 'gamepads:changed',
+  onExternalPlayersChange: 'player:externalChanged',
 } as const satisfies Record<IpcEventName, string>;
 
 /* ------------------------------------------------------------------ */

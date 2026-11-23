@@ -355,7 +355,8 @@
         "programNotFound": "Programme introuvable : {path}",
         "nothingToPlay": "Rien à lire.",
         "notInLibrary": "Ce fichier ne fait pas partie de la bibliothèque.",
-        "noExternalPlayer": "Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages."
+        "noExternalPlayer": "Aucun lecteur externe trouvé. Installez VLC ou mpv, ou indiquez son emplacement dans Réglages.",
+        "externalPlayersOff": "Le lecteur externe est désactivé. Activez le plugin « Lecteurs externes mpv et VLC » dans le Centre."
       }
     },
     "downloads": {
@@ -430,7 +431,7 @@
           "sourcesHint": "\\\\NAS\\Jeux, smb://nas/jeux ou http://…/jeux/",
           "extensions": "Extensions des jeux (séparées par des virgules)",
           "sites": "Sites de jeux : un par ligne, « Nom | adresse | adresse de recherche avec {q} »",
-          "sitesHint": "Laissez vide pour les sites proposés par Mire."
+          "sitesHint": "Laissez vide pour les sites proposés par vos plugins."
         },
         "remove": {
           "title": "Retirer la console {name} ?",
@@ -485,7 +486,7 @@
     "web": {
       "romSites": "Jeux : {console}",
       "errors": {
-        "noRomSite": "Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console ».",
+        "noRomSite": "Aucun site configuré pour cette console. Ajoutez-en dans « Modifier la console », ou installez le plugin « Sites de jeux » : il propose des sites légaux pour chaque console.",
         "bookmarkNotFound": "Marque-page introuvable.",
         "tvServiceGone": "Ce service de télévision n’existe plus dans la configuration.",
         "tvNotWeb": "{service} n’est pas un portail web : ses chaînes s’affichent dans la page Télévision.",
@@ -649,14 +650,6 @@
         "dolphin": "IPL.bin de votre GameCube (facultatif), à placer dans le sous-dossier de sa région (EUR, USA, JAP).",
         "azahar": "aes_keys.txt et fichiers système de votre 3DS (facultatif).",
         "cemu": "keys.txt, avec les clés de vos jeux Wii U (pour les jeux chiffrés)."
-      },
-      "games": {
-        "nova": "Plateformes : un écureuil qui copie les pouvoirs de ses ennemis.",
-        "thwaite": "Défendez vos villages contre une pluie de missiles.",
-        "croom": "Jeu de mémoire : retrouvez les paires de cartes.",
-        "libbet": "Réflexion : passez sur chaque case du sol sans rester coincé.",
-        "ucity": "Construisez et gérez votre ville, dans l’esprit de SimCity.",
-        "cavestory": "Le grand jeu d’aventure gratuit, adapté pour la Mega Drive, en français."
       },
       "basedOn": "{author}, d’après {original}",
       "errors": {
@@ -1158,6 +1151,7 @@
         },
         "games": "Jeux libres",
         "gamesHelp": "Des jeux récents créés pour ces vieilles consoles, que leurs auteurs distribuent gratuitement.",
+        "gamesNone": "Aucun jeu libre pour l’instant : installez le plugin « Jeux libres » pour en voir la liste ici.",
         "gameMeta": "{system}, par {author}",
         "download": "Télécharger",
         "inLibrary": "Dans votre ludothèque",
@@ -2065,7 +2059,8 @@
           "message": "Pas de son ? La piste audio de ce fichier n’est sans doute pas lisible ici.",
           "action": "Ouvrir dans le lecteur externe"
         },
-        "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe"
+        "unsupported": "Format non lu par le lecteur intégré : {name} s’ouvre dans le lecteur externe",
+        "unsupportedNoExternal": "Format non lu par le lecteur intégré : {name}"
       },
       "music": {
         "prev": "Morceau précédent",
@@ -2075,7 +2070,8 @@
         "volume": "Volume",
         "stop": "Arrêter la musique",
         "position": "{folder}, {index} sur {count}",
-        "unsupported": "{name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe"
+        "unsupported": "{name} : format non lu par le lecteur intégré, ouverture dans le lecteur externe",
+        "unsupportedNoExternal": "{name} : format non lu par le lecteur intégré"
       },
       "images": {
         "close": "Fermer la visionneuse",

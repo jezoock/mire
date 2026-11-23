@@ -355,7 +355,8 @@
         "programNotFound": "Program not found: {path}",
         "nothingToPlay": "Nothing to play.",
         "notInLibrary": "This file isn't part of your library.",
-        "noExternalPlayer": "No external player found. Install VLC or mpv, or set its location in Settings."
+        "noExternalPlayer": "No external player found. Install VLC or mpv, or set its location in Settings.",
+        "externalPlayersOff": "The external player is turned off. Turn on the “mpv and VLC external players” plugin in the Centre."
       }
     },
     "downloads": {
@@ -430,7 +431,7 @@
           "sourcesHint": "\\\\NAS\\Games, smb://nas/games or http://…/games/",
           "extensions": "Game file extensions (separated by commas)",
           "sites": "Game sites: one per line, “Name | address | search address with {q}”",
-          "sitesHint": "Leave empty for the sites Mire suggests."
+          "sitesHint": "Leave empty for the sites your plugins suggest."
         },
         "remove": {
           "title": "Remove the {name} console?",
@@ -485,7 +486,7 @@
     "web": {
       "romSites": "Games: {console}",
       "errors": {
-        "noRomSite": "No site set up for this console. Add one in \"Edit console\".",
+        "noRomSite": "No site set up for this console. Add one in \"Edit console\", or install the \"Game sites\" plugin: it suggests legal sites for each console.",
         "bookmarkNotFound": "Bookmark not found.",
         "tvServiceGone": "This TV service is no longer in the configuration.",
         "tvNotWeb": "{service} isn't a web portal: its channels are shown on the TV page.",
@@ -649,14 +650,6 @@
         "dolphin": "IPL.bin from your GameCube (optional), placed in the subfolder for its region (EUR, USA, JAP).",
         "azahar": "aes_keys.txt and system files from your 3DS (optional).",
         "cemu": "keys.txt, with the keys of your Wii U games (for encrypted games)."
-      },
-      "games": {
-        "nova": "Platformer: a squirrel who copies the powers of its enemies.",
-        "thwaite": "Defend your villages from a rain of missiles.",
-        "croom": "Memory game: find the matching pairs of cards.",
-        "libbet": "Puzzle: step on every tile of the floor without getting stuck.",
-        "ucity": "Build and run your own city, in the spirit of SimCity.",
-        "cavestory": "The great free adventure game, ported to the Mega Drive, in French."
       },
       "basedOn": "{author}, based on {original}",
       "errors": {
@@ -1158,6 +1151,7 @@
         },
         "games": "Free games",
         "gamesHelp": "Recent games made for these old consoles, given away for free by their authors.",
+        "gamesNone": "No free games yet: install the “Free games” plugin to see the list here.",
         "gameMeta": "{system}, by {author}",
         "download": "Download",
         "inLibrary": "In your library",
@@ -2065,7 +2059,8 @@
           "message": "No sound? This file’s audio track probably can’t be played here.",
           "action": "Open in the external player"
         },
-        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player"
+        "unsupported": "This format can’t be played by the built-in player: {name} opens in the external player",
+        "unsupportedNoExternal": "Format not supported by the built-in player: {name}"
       },
       "music": {
         "prev": "Previous track",
@@ -2075,7 +2070,8 @@
         "volume": "Volume",
         "stop": "Stop the music",
         "position": "{folder}, {index} of {count}",
-        "unsupported": "{name}: this format can’t be played by the built-in player, opening it in the external player"
+        "unsupported": "{name}: this format can’t be played by the built-in player, opening it in the external player",
+        "unsupportedNoExternal": "{name}: format not supported by the built-in player"
       },
       "images": {
         "close": "Close the viewer",

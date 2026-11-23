@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Page Séries",
+      "description": "Une page « Séries » : vos séries rangées par série, puis par saison."
+    },
+    "pages": {
+      "series": "Séries"
+    }
+  }
+}

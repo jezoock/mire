@@ -19,6 +19,7 @@ import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
 import type { MainContext } from '../../src/main/ipc/context.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
 const LIB: ElementSourceRef = { plugin: 'src-local', instance: '/bib' };
 
@@ -232,7 +233,14 @@ describe('Listes', () => {
   it('IPC : lists.* et catalog.page sur une liste ou une page', () => {
     const s = setup();
     s.catalog.setSource(LIB, FILMS.map(file));
-    const pages = createPages({ file: path.join(s.dir, 'pages.json'), engine: s.engine, catalog: s.catalog, translate: s.t, onIgnored: () => {} });
+    const pages = createPages({
+      builtin: BUILTIN_PAGES,
+      file: path.join(s.dir, 'pages.json'),
+      engine: s.engine,
+      catalog: s.catalog,
+      translate: s.t,
+      onIgnored: () => {},
+    });
     pages.load();
     const h = catalogHandlers({ tags: s.engine, pages, lists: s.lists } as unknown as MainContext);
     const { id } = h.listsCreate('Ma liste')!;

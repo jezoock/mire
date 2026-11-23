@@ -28,15 +28,27 @@ export interface PlayerVariables {
   start: number;
 }
 
-/** Lecteur externe (mpv, VLC…) : futur addon « lecteur externe ». */
-export interface ExternalPlayer {
+/** Emplacements d'un lecteur par système (`process.platform`), vérifiés par `src/main/plugins/apps.ts`. */
+export type PlayerLocations = Partial<Record<'win32' | 'darwin' | 'linux', string[]>>;
+
+/** Options choisies par le plugin, chacune limitée à sa forme (`--fs`, `--titre={title}`, `--debut={start}`). */
+export interface PlayerOptions {
+  fullscreen?: string;
+  title?: string;
+  start?: string;
+}
+
+/** Lecteur externe décrit par un plugin (contribution `apps` de genre `player`, P5-20), données vérifiées. */
+export interface ExternalPlayerSpec {
+  /** `<plugin>/<contribution>`. */
   id: string;
-  /** Le programme choisi est-il ce lecteur ? (d'après le nom du fichier) */
-  matches(command: string, denv?: DetectEnv): boolean;
-  /** Emplacement du lecteur installé, ou null. */
-  detect(denv?: DetectEnv): string | null;
-  /** Arguments de lancement, variables remplacées. */
-  args(variables: PlayerVariables): string[];
+  /** Clé du nom affiché (`pluginTexts.<plugin>.apps.<contribution>.name`). */
+  name: string;
+  priority: number;
+  /** Noms du programme, en minuscules, sans extension. */
+  names: string[];
+  locations: PlayerLocations;
+  options: PlayerOptions;
 }
 
 /** Réglage d'un programme externe (lecteur, navigateur) : emplacement et arguments, vides = automatique. */

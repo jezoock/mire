@@ -20,6 +20,7 @@ import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
 import type { MainContext } from '../../src/main/ipc/context.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
 const LIB: ElementSourceRef = { plugin: 'src-local', instance: '/bib' };
 
@@ -41,7 +42,7 @@ function setup(elements: ElementInput[], language = 'fr') {
     rules: () => fileTagRules(undefined),
     contributors: builtinTaggers(() => []).map(taggerContributor),
   });
-  const pages = createPages({ file: path.join(dir, 'pages.json'), engine, catalog, translate: t, onIgnored: () => {} });
+  const pages = createPages({ builtin: BUILTIN_PAGES, file: path.join(dir, 'pages.json'), engine, catalog, translate: t, onIgnored: () => {} });
   pages.load();
   catalog.setSource(LIB, elements);
   const search = createSearch({ engine, catalog, pages, registry, translate: t });

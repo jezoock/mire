@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Element as CatalogElement, HomeRow, HomeSettings, PageLevel, PagePath } from '@mire/shared';
 import { migrate, normalizeConfig } from '../../src/main/config/index.ts';
-import { BUILTIN_PAGES } from '../../src/main/catalog/pages/builtin.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 import { HOME_ROW_SIZE, barColor, homeBars, homeSections, recentCard, recentKey } from '../../src/renderer/home/model.ts';
 import type { HomeSources } from '../../src/renderer/home/model.ts';
 import { chosen, homeOptions, moveChosen, rowId, rowOf, toggleChosen, withChosen } from '../../src/renderer/home/settings.ts';

@@ -31,6 +31,7 @@ import {
 } from './video-model.ts';
 import type { SubtitleInfo } from './video-model.ts';
 import type { Playable } from './types.ts';
+import { hasExternalPlayer, initExternalPlayers, onExternalPlayersChange } from './external.ts';
 import type { Controllers } from '../controllers/index.ts';
 import type { VideoUi } from '../controllers/types.ts';
 
@@ -57,6 +58,7 @@ type PlayerEl = HTMLElement & {
   idle: boolean;
   labels: string;
   icons: string;
+  external: boolean;
 };
 
 let ctrl: VideoControllers;
@@ -203,11 +205,9 @@ function checkSilence(): void {
   if (player.hidden || video.paused) return;
   const decoded = (video as HTMLVideoElement & { webkitAudioDecodedByteCount?: number }).webkitAudioDecodedByteCount;
   if (isSilent(decoded, video.currentTime)) {
-    toast(t('player.video.silent.message'), {
-      action: t('player.video.silent.action'),
-      onAction: openCurrentExternally,
-      duration: 10000,
-    });
+    // Sans lecteur externe (plugin désactivé), le message reste, sans le bouton qui y renvoie.
+    const action = hasExternalPlayer() ? { action: t('player.video.silent.action'), onAction: openCurrentExternally } : {};
+    toast(t('player.video.silent.message'), { ...action, duration: 10000 });
   }
 }
 
@@ -390,6 +390,10 @@ function onVideoError(): void {
   if (player.hidden || !video.getAttribute('src')) return;
   const it = current() as Playable;
   closeVideo();
+  if (!hasExternalPlayer()) {
+    toast(t('player.video.unsupportedNoExternal', { name: it.name }), { duration: 5000 });
+    return;
+  }
   toast(t('player.video.unsupported', { name: it.name }), { duration: 5000 });
   api.playExternal(it.path, it.name, 0).then((r) => {
     if (!r.ok) toast(r.error as string, { duration: 7000 });
@@ -401,6 +405,9 @@ export function initVideo(controllers: VideoControllers): void {
   ctrl = controllers;
   player.icons = JSON.stringify(ICON);
   player.labels = labels();
+  // Lecteurs externes des plugins (P5-20) : le bouton suit leur disponibilité.
+  onExternalPlayersChange(() => (player.external = hasExternalPlayer()));
+  void initExternalPlayers();
   i18n.onChange(() => {
     player.labels = labels();
     showHeading();
