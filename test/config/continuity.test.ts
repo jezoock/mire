@@ -10,9 +10,6 @@ import { applyContinuity, checkRules, CONTINUITY_RULES, providerRenames, type Co
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
 type Any = any;
 
-// Règles des autres tâches appliquées aux configurations v8 et v9 des fixtures, avant celle de P5-15 (la dernière).
-const BEFORE_P5_15 = CONTINUITY_RULES.map((r) => r.id).filter((id) => id !== 'P5-15');
-
 const FIXTURES = path.join(import.meta.dirname, '..', 'fixtures');
 const readFixture = (name: string) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'));
 
@@ -54,13 +51,13 @@ test.describe('migration v10 (P5-01)', () => {
       search,
       plugins,
       catalog,
-      continuity: [...BEFORE_P5_15, 'P5-15'],
+      continuity: readFixture('config-v9.migrated.json').raw.continuity,
       version: CONFIG_VERSION,
     });
     // Normalisée : réglages des autres plugins gardés, secret compris.
     const c = normalizeConfig(config);
     assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
-    assert.deepEqual(c.continuity, [...BEFORE_P5_15, 'P5-15']);
+    assert.deepEqual(c.continuity, readFixture('config-v9.migrated.json').raw.continuity);
   });
 
   test('P5-04 : les trois profils de manettes, plugins inclus, pour toute installation existante', () => {
@@ -118,6 +115,30 @@ test.describe('migration v10 (P5-01)', () => {
     }
     const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-20');
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
+  });
+
+  test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
+    const queue = (ui: unknown) => {
+      const { config } = migrate({ version: 9, ui });
+      return ((config as Any).continuity ?? []).filter((id: string) => id.startsWith('P5-02'));
+    };
+    assert.deepEqual(queue({ theme: 'jour' }), ['P5-02-jour']);
+    // « Automatique » prenait Plein jour en mode clair.
+    assert.deepEqual(queue({ theme: 'auto' }), ['P5-02-jour']);
+    assert.deepEqual(queue({ theme: 'minuit' }), ['P5-02-minuit']);
+    assert.deepEqual(queue({ theme: 'velours' }), ['P5-02-velours']);
+    for (const ui of [{ theme: 'ecran' }, { theme: 'contraste' }, {}, 'mal formé', null, { theme: 3 }]) assert.deepEqual(queue(ui), [], JSON.stringify(ui));
+    // Le réglage reste en place : la palette revient quand le plugin est installé.
+    assert.equal((migrate({ version: 9, ui: { theme: 'minuit' } }).config as Any).ui.theme, 'minuit');
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-02'));
+    assert.deepEqual(
+      rules.map((r) => [r.id, r.plugin, r.mode, r.settings ?? []]),
+      [
+        ['P5-02-jour', 'mire.palette.jour', 'install', []],
+        ['P5-02-minuit', 'mire.palette.minuit', 'install', []],
+        ['P5-02-velours', 'mire.palette.velours', 'install', []],
+      ],
+    );
   });
 
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {

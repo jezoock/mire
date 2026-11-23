@@ -126,9 +126,6 @@
     },
     "palettes": {
       "ecran": "Écran éteint",
-      "jour": "Plein jour",
-      "minuit": "Minuit",
-      "velours": "Velours",
       "contraste": "Contraste élevé"
     },
     "settings": {
@@ -1478,7 +1475,8 @@
         "sites": "Directement sur un service"
       },
       "palettes": {
-        "auto": "Automatique"
+        "auto": "Automatique",
+        "missing": "La palette choisie n’est pas disponible : son plugin n’est pas installé ou il est désactivé. Mire utilise « {name} » en attendant."
       },
       "providers": {
         "musicbrainz": "MusicBrainz (musique)",

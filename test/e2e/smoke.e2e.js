@@ -16,6 +16,15 @@ const ROOT = path.join(__dirname, '..', '..');
 const FIXTURES = path.join(__dirname, 'fixtures');
 const SHOTS = path.join(__dirname, '__screenshots__');
 const THEMES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'];
+// Palettes du cœur (P5-02) ; Plein jour, Minuit et Velours viennent d'un plugin factice (test/e2e/palettes/), posé dans
+// le dossier de données comme un plugin installé.
+const CORE_PALETTES = ['ecran', 'contraste'];
+const PALETTE_PLUGIN = path.join(__dirname, 'palettes', 'org.exemple.palettes');
+// Fond d'une palette : palette.json pour celles du cœur, jeton `bg` du plugin factice pour les autres.
+const paletteBackground = (id) =>
+  CORE_PALETTES.includes(id)
+    ? JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', id, 'palette.json'), 'utf8')).background
+    : JSON.parse(fs.readFileSync(path.join(PALETTE_PLUGIN, 'palettes', `${id}.json`), 'utf8')).tokens.bg;
 // Ordre des entrées du menu principal, de haut en bas : on s'y déplace aux flèches.
 const RAIL = ['search', 'home', 'videos', 'music', 'images', 'streaming', 'tv', 'games', 'downloads', 'settings'];
 // Sections visitées par le test, avec leur titre.
@@ -80,6 +89,8 @@ function prepareData() {
   for (const file of ['config.json', 'telechargements.json']) {
     fs.writeFileSync(path.join(data, file), fs.readFileSync(path.join(FIXTURES, file), 'utf8').replaceAll('@FIXTURES@', prefix));
   }
+  // Plugin de palettes factice, installé à la main : userData/plugins/<id>/<version>/ (P5-02).
+  fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
   return data;
 }
 
@@ -169,6 +180,8 @@ describe('Test de fumée de Mire', () => {
     await page.clock.setFixedTime(new Date('2026-10-30T20:45:00+01:00'));
     // L'horloge est rendue par mire-header : elle peut manquer aux premières images (?. : l'attente continue).
     await page.waitForFunction(() => document.getElementById('clock')?.textContent === '20:45', null, { timeout: 10000 });
+    // Plugins démarrés, palettes du plugin factice connues de l'interface (P5-02).
+    await page.waitForFunction(() => window.api.palettesList().then((p) => p.ready && p.palettes.length === 3), null, { timeout: 20000 });
   });
 
   after(async () => {
@@ -240,12 +253,13 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() =>
         [...document.querySelectorAll('#view *')].filter((e) => e.localName.startsWith('ds-')).every((e) => e.classList.contains('hydrated')),
       );
-      assert.equal(await page.locator('.mire-ui-demo__palette').count(), 5);
+      // Les palettes du cœur (celles des plugins n'y figurent pas, P5-02).
+      assert.equal(await page.locator('.mire-ui-demo__palette').count(), CORE_PALETTES.length);
       // Chaque cadre affiche sa palette : son fond est celui de palette.json.
       const frames = await page.$$eval('.mire-ui-demo__palette', (els) => els.map((e) => [e.dataset.palette, getComputedStyle(e).backgroundColor]));
       assert.deepEqual(
         frames,
-        THEMES.map((id) => [id, hexToRgb(JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', id, 'palette.json'), 'utf8')).background)]),
+        CORE_PALETTES.map((id) => [id, hexToRgb(paletteBackground(id))]),
       );
       assert.equal(await page.locator('mire-demo .mire-demo__count').textContent(), countText(0));
 
@@ -333,8 +347,8 @@ describe('Test de fumée de Mire', () => {
       await goByKeyboard('settings');
       await page.locator(`#view .mire-settings-view__palette.hydrated[data-key="${theme}"]`).click();
       await page.waitForFunction((t) => document.documentElement.dataset.palette === t, theme);
-      // Couleur de fond de la palette (palette.json), appliquée tout de suite.
-      const bg = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', theme, 'palette.json'), 'utf8')).background;
+      // Couleur de fond de la palette (palette.json, ou jeton du plugin factice), appliquée tout de suite.
+      const bg = paletteBackground(theme);
       assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), hexToRgb(bg));
       await goByKeyboard('home');
       await page.waitForFunction(() => document.body.dataset.section === 'home');
@@ -4373,6 +4387,56 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await page.evaluate(() => window.api.externalPlayers()), []);
       await page.evaluate(() => window.api.pluginsSetEnabled('mire.players.external', true));
       await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === true);
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  // Palettes des plugins (P5-02) : la palette d'un plugin factice s'applique comme une palette du cœur, avec une
+  // feuille fabriquée par l'interface ; absente (plugin désactivé), la palette par défaut et un message ; elle revient
+  // avec son plugin.
+  describe('palettes des plugins (P5-02)', () => {
+    const palette = (id) => page.locator(`#view .mire-settings-view__palette.hydrated[data-key="${id}"]`);
+    const shown = () => page.evaluate(() => document.documentElement.dataset.palette);
+
+    it('la palette d’un plugin factice s’applique ; plugin désactivé : palette par défaut et message ; réactivé : elle revient', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      // Par le menu, à la souris : l'état du focus laissé par les tests précédents n'y joue pas.
+      await page.locator('#rail [data-go="settings"]').click();
+      await page.waitForFunction(() => document.body.dataset.section === 'settings');
+      await palette('velours').click();
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'velours');
+      // Feuille fabriquée par le cœur (CSSOM), aucune feuille ni adresse venue du plugin.
+      const sheet = await page.evaluate(() => {
+        const style = document.querySelector('style[data-palette-tokens="velours"]');
+        return {
+          rules: [...(style?.sheet?.cssRules ?? [])].map((r) => r.selectorText),
+          link: !!document.querySelector('link[href*="velours"]'),
+          bg: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
+        };
+      });
+      assert.deepEqual(sheet, { rules: ['[data-palette="velours"]'], link: false, bg: '#1c1513' });
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), hexToRgb(paletteBackground('velours')));
+
+      // Plugin désactivé : la palette par défaut, un message simple, le réglage gardé.
+      assert.ok(await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.palettes', false)));
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'ecran');
+      await page.locator('#toast', { hasText: 'La palette choisie n’est pas disponible' }).waitFor();
+      assert.equal(await page.evaluate(() => window.api.getConfig().then((r) => r.config.ui.theme)), 'velours');
+      // Les Réglages, redessinés à l'arrivée de la nouvelle liste, ne la proposent plus.
+      await palette('velours').waitFor({ state: 'detached', timeout: 5000 });
+
+      // Réactivé : la palette revient, sans rien choisir de nouveau.
+      await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.palettes', true));
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'velours');
+      await palette('ecran').click();
+      await page.waitForFunction(() => document.documentElement.dataset.palette === 'ecran');
+      assert.equal(await shown(), 'ecran');
+      await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
+      await page.locator('#rail [data-go="home"]').click();
+      await page.waitForFunction(() => document.body.dataset.section === 'home');
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
     });

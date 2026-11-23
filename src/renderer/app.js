@@ -8,7 +8,7 @@ import { toast } from './ui/toast.ts';
 import * as dialogs from './ui/dialogs.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
-import { fold, splitAlbumFolder } from '@mire/shared';
+import { DEFAULT_PALETTE, fold, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
@@ -62,6 +62,17 @@ const allLocalGames = () => D.allLocalGames({ games: S.config.games, autoGames: 
 
 // Le réglage « thème » désigne une palette (P4-02) ; le chargeur suit aussi le mode du système (« Automatique »).
 const palette = createPaletteLoader();
+// Palettes des plugins (P5-02) : la feuille de chacune est fabriquée par le chargeur à partir de jetons vérifiés. Une
+// palette choisie absente (plugin pas encore installé, désactivé) laisse place à la palette par défaut, avec un message.
+let pluginPalettes = [];
+palette.onMissing(() => toast(t('settingsView.palettes.missing', { name: t(`palettes.${DEFAULT_PALETTE}`) }), { duration: 8000 }));
+async function loadPluginPalettes() {
+  const info = await api.palettesList().catch(() => null);
+  if (!info) return;
+  pluginPalettes = info.palettes;
+  palette.setPlugins(info);
+  if (S.section === SETTINGS_VIEW) settings.refresh();
+}
 function applyTheme() {
   palette.set(S.config?.ui?.theme);
   // Thème des pages (P4-11) : sa palette, ses polices et sa mise en page, sans redémarrage ; il peut placer le menu.
@@ -206,6 +217,7 @@ const settings = createSettings({
     sourceStatus: S.sourceStatus,
     gameSourceStatus: S.gameSourceStatus,
     scanning: !!S.scanning,
+    pluginPalettes: pluginPalettes.map((p) => ({ id: p.id, name: p.name })),
   }),
   plugins: () => api.pluginsSettings(),
   pages: () => api.pagesOverview(),
@@ -2691,6 +2703,8 @@ function tick() {
     if (S.section === CENTRE_VIEW) centre.refresh();
   });
   api.pluginsContinuity().then(continuityNotice).catch(() => {});
+  api.onPalettesChange(() => void loadPluginPalettes());
+  void loadPluginPalettes();
   tick();
   setInterval(tick, 5000);
 

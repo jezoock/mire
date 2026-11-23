@@ -335,8 +335,14 @@ function start(pending: PendingFiles): Running {
   pluginTaggers = plugins.taggerContributors;
   pluginPlayers = plugins.externalPlayers;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
+  // Palettes des plugins (P5-02) : fond de la fenêtre, et l'interface les redemande.
+  const palettesChanged = () => {
+    window.setPalettes((id) => plugins.palettes().palettes.find((p) => p.id === id) ?? null);
+    toUi('palettes:changed');
+  };
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
+    if (kinds.includes('palettes')) palettesChanged();
     // Profils de manettes (P5-04) : l'interface les redemande.
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
     // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
@@ -449,7 +455,9 @@ function start(pending: PendingFiles): Running {
       // Sans attendre : les installations en attente dépendent du réseau.
       void continuity.start();
     })
-    .catch((err: Error) => console.error('Plugins :', err.message));
+    .catch((err: Error) => console.error('Plugins :', err.message))
+    // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
+    .finally(palettesChanged);
 
   return {
     async onSecondInstance(paths) {

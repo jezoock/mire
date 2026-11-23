@@ -102,7 +102,7 @@ describe('modifications', () => {
     s.load();
     let calls = 0;
     s.onChange(() => calls++);
-    const c = s.replace({ ui: { theme: 'fluo' }, web: [{ name: 'Mon Site', url: 'https://a/' }] });
+    const c = s.replace({ ui: { theme: 'Fluo !' }, web: [{ name: 'Mon Site', url: 'https://a/' }] });
     assert.equal(calls, 1);
     assert.equal(c.ui.theme, 'ecran');
     assert.deepEqual(

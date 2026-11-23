@@ -1,12 +1,11 @@
 /** Configuration par défaut d'une installation neuve, et listes de valeurs admises. */
-import type { Config, HomeBar, Theme } from '@mire/shared';
+import type { Config, HomeBar } from '@mire/shared';
 import { DEFAULT_TV } from './catalogs/tv.ts';
 
 export const CONFIG_VERSION = 10;
 
 // Barres de la mire proposées sur l'accueil, dans l'ordre d'origine.
 export const HOME_BARS: readonly HomeBar[] = ['search', 'videos', 'music', 'images', 'streaming', 'tv', 'games'];
-export const THEMES: readonly Theme[] = ['auto', 'ecran', 'jour', 'minuit', 'velours', 'contraste'];
 
 export const DEFAULT_CONFIG: Readonly<Config> = {
   version: CONFIG_VERSION,

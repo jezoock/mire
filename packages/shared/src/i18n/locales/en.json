@@ -126,9 +126,6 @@
     },
     "palettes": {
       "ecran": "Screen off",
-      "jour": "Daylight",
-      "minuit": "Midnight",
-      "velours": "Velvet",
       "contraste": "High contrast"
     },
     "settings": {
@@ -1478,7 +1475,8 @@
         "sites": "Straight to a service"
       },
       "palettes": {
-        "auto": "Automatic"
+        "auto": "Automatic",
+        "missing": "The chosen palette isn’t available: its plugin isn’t installed or is turned off. Mire uses “{name}” in the meantime."
       },
       "providers": {
         "musicbrainz": "MusicBrainz (music)",

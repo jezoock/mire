@@ -104,17 +104,34 @@ describe('panneaux générés depuis le schéma', () => {
   it('blocs personnalisés : palettes avec aperçu, thèmes, listes ordonnables, réglages des pages', () => {
     const config = structuredClone(DEFAULT_CONFIG) as Data;
     config.ui.theme = 'jour';
-    const panels = schemaPanels(sources({ config }));
+    // Palettes des plugins actifs (P5-02) : après celles du cœur, nommées par leur texte ; une palette du cœur ne
+    // s'ajoute pas une deuxième fois.
+    const pluginPalettes = [
+      { id: 'jour', name: 'pluginTexts.mire_palette_jour.palettes.jour.name' },
+      { id: 'velours', name: 'pluginTexts.mire_palette_velours.palettes.velours.name' },
+      { id: 'ecran', name: 'pluginTexts.org_x.palettes.ecran.name' },
+    ];
+    const panels = schemaPanels(sources({ config, pluginPalettes }));
     const theme = fieldOf(panels, 'appearance.theme');
     assert.equal(theme.kind, 'themes');
     assert.deepEqual(
-      theme.palettes?.map((p) => [p.id, p.current, p.preview.join('+')]),
+      theme.palettes?.map((p) => [p.id, p.current, p.preview.join('+'), p.name]),
       [
-        ['auto', false, 'ecran+jour'],
+        ['auto', false, 'ecran+jour', 'Automatique'],
+        ['ecran', false, 'ecran', 'Écran éteint'],
+        ['contraste', false, 'contraste', 'Contraste élevé'],
+        ['jour', true, 'jour', 'pluginTexts.mire_palette_jour.palettes.jour.name'],
+        ['velours', false, 'velours', 'pluginTexts.mire_palette_velours.palettes.velours.name'],
+      ],
+    );
+    // Sans plugin : les palettes du cœur ; l'aperçu d'« Automatique » garde la palette par défaut en clair, et une
+    // palette choisie absente n'est pas cochée.
+    const core = fieldOf(schemaPanels(sources({ config })), 'appearance.theme');
+    assert.deepEqual(
+      core.palettes?.map((p) => [p.id, p.current, p.preview.join('+')]),
+      [
+        ['auto', false, 'ecran+ecran'],
         ['ecran', false, 'ecran'],
-        ['jour', true, 'jour'],
-        ['minuit', false, 'minuit'],
-        ['velours', false, 'velours'],
         ['contraste', false, 'contraste'],
       ],
     );

@@ -378,6 +378,30 @@ export interface PluginSettingsInfo {
   secrets: string[];
 }
 
+/**
+ * Palette d'un plugin actif (contribution `palettes`, P5-02), vérifiée par le processus principal : des données,
+ * jamais du CSS. L'interface fabrique elle-même la feuille de la palette à partir des jetons.
+ */
+export interface PluginPalette {
+  /** Identifiant de la palette (celui de la contribution), retenu par le réglage `ui.theme`. */
+  id: string;
+  /** Plugin qui l'apporte. */
+  plugin: string;
+  /** Clé des catalogues du nom de la palette (`pluginTexts.<plugin>.palettes.<id>.name`). */
+  name: string;
+  scheme: 'light' | 'dark';
+  /** Couleur de fond (jeton `bg`). */
+  background: string;
+  /** Jetons vérifiés, par nom (sans `--`). */
+  tokens: Record<string, string>;
+}
+
+/** Palettes des plugins actifs ; `ready` : les plugins ont démarré (avant, une palette absente n'est pas manquante). */
+export interface PluginPalettes {
+  ready: boolean;
+  palettes: PluginPalette[];
+}
+
 /** Fournisseur d'infos en ligne d'un plugin actif (contribution `metadata`), pour l'ordre des fournisseurs (P4-20). */
 export interface PluginMetadataProvider {
   /** `<plugin>/<contribution>`, en minuscules : la clé de ses fiches et de `catalog.metadataProviders`. */
@@ -662,6 +686,8 @@ export interface IpcMethods {
   // Rend les réglages du plugin, ou l'erreur à afficher (valeur refusée) ; jamais la valeur d'un secret.
   pluginsSettings(): PluginSettingsInfo[];
   pluginsSetSetting(id: string, key: string, value: unknown): Outcome<{ plugin: PluginSettingsInfo }>;
+  // Palettes des plugins actifs (P5-02) : elles rejoignent le choix des Réglages.
+  palettesList(): PluginPalettes;
   // Fournisseurs d'infos des plugins actifs (P4-20) : ils rejoignent l'ordre des fournisseurs des Réglages.
   pluginsMetadataProviders(): PluginMetadataProvider[];
   // Profils de manettes des plugins actifs (P5-04) ; sans eux, le cœur garde son profil générique.
@@ -872,6 +898,7 @@ export const IPC_METHODS = {
   tvWatch: 'tv:watch',
   pluginsSettings: 'plugins:settings',
   pluginsSetSetting: 'plugins:setSetting',
+  palettesList: 'palettes:list',
   pluginsMetadataProviders: 'plugins:metadataProviders',
   gamepadsProfiles: 'gamepads:profiles',
   reposList: 'repos:list',
@@ -942,6 +969,8 @@ export interface IpcEvents {
   onRescue: RescueRequest;
   /** Avancement d'une installation de plugin depuis un dépôt (P3-07). */
   onPluginsProgress: PluginsProgress;
+  /** Palettes des plugins changées (plugin activé ou désactivé, plugins démarrés) : à redemander. */
+  onPalettesChange: undefined;
   /** Récapitulatif de la continuité changé (plugin activé, installé, devenu impossible) : son message à montrer. */
   onPluginsContinuity: ContinuitySummary;
   /** Profils de manettes changés (plugin activé ou désactivé) : à redemander. */
@@ -977,6 +1006,7 @@ export const IPC_EVENTS = {
   onFoldersChange: 'folders:changed',
   onRescue: 'rescue:open',
   onPluginsProgress: 'plugins:progress',
+  onPalettesChange: 'palettes:changed',
   onPluginsContinuity: 'plugins:continuity-changed',
   onGamepadsChange: 'gamepads:changed',
   onExternalPlayersChange: 'player:externalChanged',

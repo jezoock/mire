@@ -63,7 +63,7 @@ export interface MainContext {
   /** Hôte de plugins (P3-03). */
   readonly plugins: Pick<
     PluginService,
-    'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders' | 'uninstall' | 'gamepadProfiles' | 'romSitesFor'
+    'list' | 'setEnabled' | 'settingsList' | 'setSetting' | 'metadataProviders' | 'uninstall' | 'gamepadProfiles' | 'romSitesFor' | 'palettes'
   >;
   /** Client des dépôts (P3-07) : index vérifiés, installation, mise à jour. */
   readonly repos: Pick<
