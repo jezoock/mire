@@ -10,6 +10,7 @@ import { api } from '../api/index.ts';
 import { cleanTrack, folderText } from '../domain/index.ts';
 import type { MediaItem } from '@mire/shared/ipc';
 import type { Playable } from './types.ts';
+import { hasExternalPlayer } from './external.ts';
 import type { Controllers } from '../controllers/index.ts';
 import type { MusicUi } from '../controllers/types.ts';
 import { focusFirst } from '../nav/focus.ts';
@@ -145,6 +146,10 @@ export function initAudio(controllers: AudioControllers): void {
     if (!audio.getAttribute('src')) return;
     const tr = current();
     if (!tr) return;
+    if (!hasExternalPlayer()) {
+      toast(t('player.music.unsupportedNoExternal', { name: tr.name }), { duration: 5000 });
+      return;
+    }
     toast(t('player.music.unsupported', { name: tr.name }), { duration: 5000 });
     api.playExternal(tr.path, tr.name, 0);
   });

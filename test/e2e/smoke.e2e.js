@@ -4329,4 +4329,29 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  // Lecteurs externes (P5-20) : plugin inclus, actif dès le premier lancement ; désactivé, le bouton « Lecteur
+  // externe » du lecteur vidéo disparaît sans erreur, et revient avec le plugin.
+  describe('lecteurs externes, plugin inclus (P5-20)', () => {
+    it('le plugin inclus est actif ; le désactiver cache le bouton du lecteur externe', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      const p = (await page.evaluate(() => window.api.pluginsList())).find((x) => x.id === 'mire.players.external');
+      assert.deepEqual([p?.origin, p?.status], ['bundled', 'active']);
+      const players = await page.evaluate(() => window.api.externalPlayers());
+      assert.deepEqual(
+        players.map((x) => x.id),
+        ['mire.players.external/mpv', 'mire.players.external/vlc'],
+      );
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === true);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.players.external', false));
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === false);
+      assert.deepEqual(await page.evaluate(() => window.api.externalPlayers()), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.players.external', true));
+      await page.waitForFunction(() => document.querySelector('mire-video-player')?.external === true);
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
 });
