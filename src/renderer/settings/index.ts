@@ -58,7 +58,7 @@ export interface Settings {
   /** Brouillon d'un champ (texte à ajouter à une liste, `advanced` : éditeur JSON), et l'effacer. */
   draft(key: string): string | undefined;
   clearDraft(key: string): void;
-  /** Donne le focus au champ d'une clé (`search.tmdbToken`), ou au premier élément d'un panneau ; faux s'il manque. */
+  /** Donne le focus au champ d'une clé (`ui.menu.position`, `plugin:<id>:<réglage>`), ou au premier élément d'un panneau ; faux s'il manque. */
   focus(key: string): Promise<boolean>;
 }
 

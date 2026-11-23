@@ -174,7 +174,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     const tasks: Task[] = [];
     for (const provider of all()) {
       if (!kinds.includes(provider.group)) continue;
-      const missing = provider.requires?.(ctx);
+      const missing = await provider.requires?.(ctx);
       if (missing) {
         stats.skipped.push(missing.skipped);
         continue;
@@ -254,7 +254,7 @@ export function createScrapeEngine(deps: ScrapeEngineDeps) {
     if (!q) return { ok: false, error: t('scrape.errors.noTitle') };
     const provider = providerFor(kind);
     if (!provider) return { ok: false, error: t('scrape.errors.unknownType') };
-    const missing = provider.requires?.(ctx);
+    const missing = await provider.requires?.(ctx);
     if (missing) return { ok: false, error: missing.error };
     try {
       return { ok: true, items: await provider.candidates({ item, query: q, year, artist }, ctx) };

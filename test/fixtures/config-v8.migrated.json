@@ -113,8 +113,6 @@
       "language": "en"
     },
     "search": {
-      "tmdbToken": "jeton-tmdb",
-      "region": "BE",
       "language": "en-US"
     },
     "scrape": {
@@ -213,7 +211,17 @@
       "fileTags": {
         ".mkv": ["video", "anime"]
       },
-      "metadataProviders": ["tmdb"]
+      "metadataProviders": ["mire.tmdb/tmdb"]
+    },
+    "plugins": {
+      "mire.tmdb": {
+        "token": {
+          "$secret": "jeton-tmdb",
+          "encrypted": false
+        },
+        "region": "be",
+        "language": "en-US"
+      }
     },
     "continuity": [
       "P5-04-xbox",
@@ -229,7 +237,8 @@
       "P5-20",
       "P5-07-sites",
       "P5-07-libres",
-      "P5-02-minuit"
+      "P5-02-minuit",
+      "P5-15"
     ]
   },
   "changed": true

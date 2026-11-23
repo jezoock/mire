@@ -1,7 +1,7 @@
 /**
- * Langue des métadonnées (fiches TMDB et Steam) : celle de l'interface, sauf si l'utilisateur a fixé
+ * Langue des métadonnées (fiches Steam) : celle de l'interface, sauf si l'utilisateur a fixé
  * `search.language` dans la configuration. Une valeur vide (par défaut depuis la version 8 de la configuration)
- * suit l'interface. La région des disponibilités (`search.region`) reste un réglage à part.
+ * suit l'interface. (TMDB : réglage `language` du plugin `mire.tmdb`, P5-15.)
  */
 import { canonicalLanguage } from '@mire/shared/i18n';
 import { currentLanguage } from './current.ts';

@@ -198,8 +198,9 @@ describe('fiche → infos et images d’origine metadata', () => {
 
 describe('ordre des fournisseurs', () => {
   it('ceux de la configuration d’abord, puis les autres ; un fournisseur inconnu est ignoré', () => {
-    assert.deepEqual(metadataOrder(undefined), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['steam', 'inconnu', 'libretro'] }), ['steam', 'libretro', 'tmdb', 'musicbrainz']);
+    // TMDB est devenu le plugin mire.tmdb (P5-15) : ses fiches déjà enregistrées restent connues sous son fournisseur.
+    assert.deepEqual(metadataOrder(undefined), ['musicbrainz', 'libretro', 'steam', 'mire.tmdb/tmdb']);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['steam', 'inconnu', 'libretro'] }), ['steam', 'libretro', 'musicbrainz', 'mire.tmdb/tmdb']);
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: [' Steam ', 'steam', 3, ''] }), { metadataProviders: ['steam'] });
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: 'steam' }), { metadataProviders: [] });
     // Section absente : rien n'est ajouté.
@@ -207,10 +208,16 @@ describe('ordre des fournisseurs', () => {
   });
 
   it('fournisseurs des plugins actifs (P4-20) : après ceux du cœur, sauf ordre choisi ; ignorés une fois le plugin désactivé', () => {
-    const known = ['tmdb', 'musicbrainz', 'libretro', 'steam', 'org.films/infos'];
+    const known = ['musicbrainz', 'libretro', 'steam', 'mire.tmdb/tmdb', 'org.films/infos'];
     assert.deepEqual(metadataOrder(undefined, known), known);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'tmdb'] }, known), ['org.films/infos', 'tmdb', 'musicbrainz', 'libretro', 'steam']);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'tmdb'] }), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }, known), [
+      'org.films/infos',
+      'mire.tmdb/tmdb',
+      'musicbrainz',
+      'libretro',
+      'steam',
+    ]);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }), ['mire.tmdb/tmdb', 'musicbrainz', 'libretro', 'steam']);
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: ['Org.Films/Infos'] }), { metadataProviders: ['org.films/infos'] });
   });
 
@@ -225,7 +232,26 @@ describe('ordre des fournisseurs', () => {
     engine.setContributors(metadataContributors(store, metadataOrder({ metadataProviders: ['steam'] })));
     assert.equal(engine.element(key)!.infos.title, 'Par Steam');
     assert.equal(engine.element(key)!.infos.overview, 'TMDB seul.');
-    engine.setContributors(metadataContributors(store, metadataOrder(undefined)));
+    engine.setContributors(metadataContributors(store, metadataOrder({ metadataProviders: ['mire.tmdb/tmdb'] })));
     assert.equal(engine.element(key)!.infos.title, 'Par TMDB');
+  });
+
+  it('fiches d’un fournisseur devenu un plugin (P5-15) : montrées sous le plugin, qui l’emporte dès qu’il a la sienne', () => {
+    const { catalog, metadata } = setup(null);
+    catalog.setSource(FILMS, [local('/films/Dune.mkv')]);
+    const key = localFileKey('/films/Dune.mkv', 'linux');
+    metadata.scrapeStore.set('v:/films/Dune.mkv', rec({ title: 'Ancienne fiche TMDB', source: 'TMDB' }));
+    assert.equal(metadata.forElement(key)?.get('mire.tmdb/tmdb')?.infos?.title, 'Ancienne fiche TMDB');
+    assert.equal(metadata.forElement(key)?.has('tmdb'), false);
+    // Le plugin range sa fiche sous la même clé (pont des plugins) : elle remplace l'ancienne.
+    metadata.scrapeStore.set('v:/films/Dune.mkv', rec({ title: 'Fiche du plugin', source: 'mire.tmdb/tmdb' }));
+    assert.equal(metadata.forElement(key)?.get('mire.tmdb/tmdb')?.infos?.title, 'Fiche du plugin');
+    // Deux écritures du même fichier, l'une ancienne, l'autre du plugin : celle du plugin l'emporte.
+    metadata.scrapeStore.set('v:/films/./Dune.mkv', rec({ title: 'Ancienne, autre écriture', source: 'TMDB' }));
+    assert.equal(metadata.forElement(key)?.get('mire.tmdb/tmdb')?.infos?.title, 'Fiche du plugin');
+    // Sans renommage, chaque source garde son nom.
+    const plain = createMetadataStore({ file: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-meta-')), 'm.json'), renamed: {} });
+    plain.scrapeStore.set('x', rec({ title: 'T', source: 'TMDB' }));
+    assert.equal(plain.scrapeStore.get('x')?.title, 'T');
   });
 });
