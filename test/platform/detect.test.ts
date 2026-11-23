@@ -1,9 +1,10 @@
-// Plateforme (P1-11) : détection de mpv, VLC et des navigateurs sous Windows, macOS et Linux, sur un système de
-// fichiers simulé (aucun programme réel n'est cherché ni lancé).
+// Plateforme (P1-11) : détection des lecteurs externes (décrits par des plugins factices, P5-20) et des navigateurs
+// sous Windows, macOS et Linux, sur un système de fichiers simulé (aucun programme réel n'est cherché ni lancé). Les
+// emplacements de mpv et VLC sont des données du plugin `mire.players.external`, testées avec lui.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { detectBrowser, detectPlayer, MPV, VLC } from '../../src/main/platform/index.ts';
-import type { DetectEnv } from '../../src/main/platform/index.ts';
+import { detectBrowser, detectPlayer, playerCandidates } from '../../src/main/platform/index.ts';
+import type { DetectEnv, ExternalPlayerSpec } from '../../src/main/platform/index.ts';
 
 const WIN_ENV = { ProgramFiles: 'C:\\Program Files', 'ProgramFiles(x86)': 'C:\\Program Files (x86)', LOCALAPPDATA: 'C:\\Users\\a\\AppData\\Local' };
 
@@ -22,37 +23,57 @@ function fakeEnv(platform: NodeJS.Platform, files: string[], env: Record<string,
   };
 }
 
+// Lecteurs factices, tels que les lit `src/main/plugins/apps.ts` : Alpha préféré, puis Beta.
+const player = (id: string, priority: number, locations: ExternalPlayerSpec['locations']): ExternalPlayerSpec => ({
+  id: `org.essai/${id}`,
+  name: id,
+  priority,
+  names: [id],
+  locations,
+  options: {},
+});
+const ALPHA = player('alpha', 10, {
+  win32: ['{programFiles}\\Alpha\\alpha.exe', '{localAppData}\\Programs\\Alpha\\alpha.exe', 'C:\\alpha\\alpha.exe'],
+  darwin: ['/Applications/Alpha.app/Contents/MacOS/alpha', '/opt/homebrew/bin/alpha'],
+  linux: ['/usr/bin/alpha', '/usr/local/bin/alpha'],
+});
+const BETA = player('beta', 20, {
+  win32: ['{programFiles}\\Beta\\beta.exe', '{programFilesX86}\\Beta\\beta.exe'],
+  darwin: ['/Applications/Beta.app/Contents/MacOS/beta'],
+  linux: ['/usr/bin/beta', '/snap/bin/beta'],
+});
+const PLAYERS = [ALPHA, BETA];
+
 test.describe('detectPlayer', () => {
-  test('Windows : mpv dans Program Files, avant VLC', () => {
-    const files = ['C:\\Program Files\\mpv\\mpv.exe', 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe'];
-    assert.equal(detectPlayer(fakeEnv('win32', files, WIN_ENV)), 'C:\\Program Files\\mpv\\mpv.exe');
+  test('Windows : dossiers d’installation remplacés, Alpha avant Beta', () => {
+    const files = ['C:\\Program Files\\Alpha\\alpha.exe', 'C:\\Program Files\\Beta\\beta.exe'];
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('win32', files, WIN_ENV)), 'C:\\Program Files\\Alpha\\alpha.exe');
+    const local = 'C:\\Users\\a\\AppData\\Local\\Programs\\Alpha\\alpha.exe';
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('win32', [local], WIN_ENV)), local);
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('win32', ['C:\\alpha\\alpha.exe'], WIN_ENV)), 'C:\\alpha\\alpha.exe');
   });
 
-  test('Windows : mpv installé pour l’utilisateur, ou dans C:\\mpv', () => {
-    const local = 'C:\\Users\\a\\AppData\\Local\\Programs\\mpv\\mpv.exe';
-    assert.equal(detectPlayer(fakeEnv('win32', [local], WIN_ENV)), local);
-    assert.equal(detectPlayer(fakeEnv('win32', ['C:\\mpv\\mpv.exe'], WIN_ENV)), 'C:\\mpv\\mpv.exe');
+  test('Windows : Program Files (x86), variables d’environnement absentes', () => {
+    const beta86 = 'C:\\Program Files (x86)\\Beta\\beta.exe';
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('win32', [beta86], WIN_ENV)), beta86);
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('win32', [beta86], {})), null);
+    assert.deepEqual(playerCandidates(BETA.locations, fakeEnv('win32', [], {})), [null, null]);
   });
 
-  test('Windows : VLC 32 bits, variables d’environnement absentes', () => {
-    const vlc86 = 'C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe';
-    assert.equal(detectPlayer(fakeEnv('win32', [vlc86], WIN_ENV)), vlc86);
-    assert.equal(detectPlayer(fakeEnv('win32', [vlc86], {})), null);
-    assert.equal(VLC.detect(fakeEnv('win32', [vlc86], WIN_ENV)), vlc86);
-    assert.equal(MPV.detect(fakeEnv('win32', [vlc86], WIN_ENV)), null);
+  test('macOS et Linux : ordre des plugins ; un dossier ne compte pas ; autre Unix : emplacements de Linux', () => {
+    assert.equal(
+      detectPlayer(PLAYERS, fakeEnv('darwin', ['/opt/homebrew/bin/alpha', '/Applications/Beta.app/Contents/MacOS/beta'])),
+      '/opt/homebrew/bin/alpha',
+    );
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('darwin', ['/Applications/Beta.app/Contents/MacOS/beta'])), '/Applications/Beta.app/Contents/MacOS/beta');
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('linux', ['/usr/local/bin/alpha', '/usr/bin/beta'])), '/usr/local/bin/alpha');
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('linux', ['/snap/bin/beta'])), '/snap/bin/beta');
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('linux', [], {}, ['/usr/bin/alpha'])), null);
+    assert.equal(detectPlayer(PLAYERS, fakeEnv('freebsd', ['/usr/bin/beta'])), '/usr/bin/beta');
   });
 
-  test('macOS : application mpv, Homebrew, puis VLC', () => {
-    assert.equal(detectPlayer(fakeEnv('darwin', ['/opt/homebrew/bin/mpv', '/Applications/VLC.app/Contents/MacOS/VLC'])), '/opt/homebrew/bin/mpv');
-    assert.equal(detectPlayer(fakeEnv('darwin', ['/Applications/VLC.app/Contents/MacOS/VLC'])), '/Applications/VLC.app/Contents/MacOS/VLC');
-    assert.equal(detectPlayer(fakeEnv('darwin', ['/Applications/mpv.app/Contents/MacOS/mpv'])), '/Applications/mpv.app/Contents/MacOS/mpv');
-  });
-
-  test('Linux : mpv, puis VLC (paquet ou snap) ; un dossier ne compte pas', () => {
-    assert.equal(detectPlayer(fakeEnv('linux', ['/usr/local/bin/mpv', '/usr/bin/vlc'])), '/usr/local/bin/mpv');
-    assert.equal(detectPlayer(fakeEnv('linux', ['/snap/bin/vlc'])), '/snap/bin/vlc');
-    assert.equal(detectPlayer(fakeEnv('linux', [], {}, ['/usr/bin/mpv'])), null);
-    assert.equal(detectPlayer(fakeEnv('linux', [])), null);
+  test('aucun plugin : aucun lecteur', () => {
+    assert.equal(detectPlayer([], fakeEnv('linux', ['/usr/bin/alpha'])), null);
   });
 });
 

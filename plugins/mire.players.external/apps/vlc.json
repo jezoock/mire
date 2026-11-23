@@ -1,0 +1,15 @@
+{
+  "kind": "player",
+  "priority": 20,
+  "names": ["vlc"],
+  "locations": {
+    "windows": ["{programFiles}\\VideoLAN\\VLC\\vlc.exe", "{programFilesX86}\\VideoLAN\\VLC\\vlc.exe"],
+    "mac": ["/Applications/VLC.app/Contents/MacOS/VLC"],
+    "linux": ["/usr/bin/vlc", "/snap/bin/vlc"]
+  },
+  "options": {
+    "fullscreen": "--fullscreen",
+    "title": "--meta-title={title}",
+    "start": "--start-time={start}"
+  }
+}

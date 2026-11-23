@@ -1,0 +1,14 @@
+{
+  "id": "images",
+  "name": {
+    "key": "pages.images"
+  },
+  "icon": "image",
+  "require": ["image"],
+  "groupBy": ["folder"],
+  "display": "thumbnails",
+  "menu": {
+    "pinned": true,
+    "order": 4
+  }
+}

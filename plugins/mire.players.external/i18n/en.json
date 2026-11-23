@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "mpv and VLC external players",
+      "description": "Opens in mpv or VLC, when installed, the videos and music Mire can't play itself, as well as TV channels."
+    },
+    "apps": {
+      "mpv": {
+        "name": "mpv"
+      },
+      "vlc": {
+        "name": "VLC"
+      }
+    }
+  }
+}

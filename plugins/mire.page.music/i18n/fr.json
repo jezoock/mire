@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Page Musique",
+      "description": "Une page « Musique » : vos morceaux rangés par artiste, puis par album."
+    },
+    "pages": {
+      "music": "Musique"
+    }
+  }
+}

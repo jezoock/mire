@@ -1,7 +1,10 @@
-/** Détection des lecteurs (mpv, VLC) et navigateurs installés, selon le système. */
+/**
+ * Détection des programmes installés, selon le système : les lecteurs externes décrits par les plugins (P5-20) et le
+ * navigateur.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DetectEnv } from './types.ts';
+import type { DetectEnv, PlayerLocations } from './types.ts';
 
 export function systemDetectEnv(): DetectEnv {
   return { platform: process.platform, env: process.env, fs };
@@ -34,22 +37,25 @@ function winDirs(denv: DetectEnv) {
   };
 }
 
-/** Emplacements possibles d'un lecteur, dans l'ordre de préférence. */
-export function playerCandidates(id: string, denv: DetectEnv): (string | null)[] {
+/**
+ * Emplacements d'un lecteur sur ce système, dans l'ordre de préférence ; les dossiers d'installation de Windows
+ * (`{programFiles}`, `{programFilesX86}`, `{localAppData}`) sont remplacés ici ; null si la variable manque.
+ */
+export function playerCandidates(locations: PlayerLocations, denv: DetectEnv): (string | null)[] {
+  // Les autres systèmes de type Unix prennent les emplacements de Linux, comme avant les plugins.
+  const system = denv.platform === 'win32' || denv.platform === 'darwin' ? denv.platform : 'linux';
+  const list = locations[system] ?? [];
+  if (denv.platform !== 'win32') return [...list];
   const { pf, pf86, local } = winDirs(denv);
-  const win = denv.platform === 'win32';
-  const mac = denv.platform === 'darwin';
-  if (id === 'mpv') {
-    if (win) return [pf('mpv', 'mpv.exe'), local('Programs', 'mpv', 'mpv.exe'), 'C:\\mpv\\mpv.exe'];
-    if (mac) return ['/Applications/mpv.app/Contents/MacOS/mpv', '/opt/homebrew/bin/mpv', '/usr/local/bin/mpv'];
-    return ['/usr/bin/mpv', '/usr/local/bin/mpv'];
-  }
-  if (id === 'vlc') {
-    if (win) return [pf('VideoLAN', 'VLC', 'vlc.exe'), pf86('VideoLAN', 'VLC', 'vlc.exe')];
-    if (mac) return ['/Applications/VLC.app/Contents/MacOS/VLC'];
-    return ['/usr/bin/vlc', '/snap/bin/vlc'];
-  }
-  return [];
+  const dirs: [string, (...rest: string[]) => string | null][] = [
+    ['{programFiles}', pf],
+    ['{programFilesX86}', pf86],
+    ['{localAppData}', local],
+  ];
+  return list.map((l) => {
+    const d = dirs.find(([name]) => l.startsWith(name));
+    return d ? d[1](...l.slice(d[0].length).split(/[\\/]/).filter(Boolean)) : l;
+  });
 }
 
 /** Navigateur installé (Edge, Chrome, Brave, Chromium), ou null. */
@@ -85,9 +91,4 @@ export function detectBrowser(denv: DetectEnv = systemDetectEnv()): string | nul
 /** Nom du fichier d'un programme, selon les chemins du système. */
 export function programName(command: string, denv: DetectEnv = systemDetectEnv()): string {
   return pathFor(denv).basename(command);
-}
-
-/** Lecteur installé : mpv en premier, puis VLC ; null si aucun. */
-export function detectPlayer(denv: DetectEnv = systemDetectEnv()): string | null {
-  return firstExisting(denv, [...playerCandidates('mpv', denv), ...playerCandidates('vlc', denv)]);
 }
