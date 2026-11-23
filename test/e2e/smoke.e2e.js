@@ -4317,7 +4317,8 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => document.documentElement.dataset.palette === 'ecran');
       await page.locator('#toast', { hasText: 'La palette choisie n’est pas disponible' }).waitFor();
       assert.equal(await page.evaluate(() => window.api.getConfig().then((r) => r.config.ui.theme)), 'velours');
-      assert.equal(await palette('velours').count(), 0);
+      // Les Réglages, redessinés à l'arrivée de la nouvelle liste, ne la proposent plus.
+      await palette('velours').waitFor({ state: 'detached', timeout: 5000 });
 
       // Réactivé : la palette revient, sans rien choisir de nouveau.
       await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.palettes', true));
