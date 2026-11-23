@@ -7,6 +7,7 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { CardElement, CardLabels, GridGroup } from "./utils/elements";
 import { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
+import { PluginsView, ReposView } from "./utils/plugins";
 import { ExplorerColumn, ExplorerLabels, ExplorerPreview, ExplorerSelection } from "./utils/explorer";
 import { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 import { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -22,6 +23,7 @@ import { VideoPlayerIcons, VideoPlayerLabels } from "./utils/video";
 import { Box, WebBarIcons, WebBarLabels, WebBarView } from "./utils/web";
 export { CardElement, CardLabels, GridGroup } from "./utils/elements";
 export { AppsView, CentreLabels, ConsoleCard, DownloadRow, DownloadRowLabels } from "./utils/centre";
+export { PluginsView, ReposView } from "./utils/plugins";
 export { ExplorerColumn, ExplorerLabels, ExplorerPreview, ExplorerSelection } from "./utils/explorer";
 export { ActionSpec, Candidate, Field, FormLabels, FormValues, Tab } from "./utils/forms";
 export { DialogEventDetail } from "./components/mire-form/mire-form";
@@ -146,6 +148,15 @@ export namespace Components {
          */
         "others": DownloadRow[] | string;
         /**
+          * Onglets des plugins et des dépôts (P4-19) ; `null` tant que les listes ne sont pas lues.
+          * @default null
+         */
+        "plugins": PluginsView | string | null;
+        /**
+          * @default null
+         */
+        "repos": ReposView | string | null;
+        /**
           * @default ''
          */
         "rowLabels": DownloadRowLabels | string;
@@ -155,7 +166,7 @@ export namespace Components {
          */
         "running": DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads`, `apps` ou `consoles`.
+          * Onglet affiché : `downloads`, `apps`, `consoles`, `plugins` ou `repos`.
           * @default 'downloads'
          */
         "tab": string;
@@ -1113,6 +1124,11 @@ export namespace Components {
      */
     interface MireVideoPlayer {
         /**
+          * Un lecteur externe est disponible (plugin actif) ; sinon le bouton « Lecteur externe » est caché.
+          * @default true
+         */
+        "external": boolean;
+        /**
           * @default false
          */
         "hasNext": boolean;
@@ -2047,6 +2063,15 @@ declare namespace LocalJSX {
          */
         "others"?: DownloadRow[] | string;
         /**
+          * Onglets des plugins et des dépôts (P4-19) ; `null` tant que les listes ne sont pas lues.
+          * @default null
+         */
+        "plugins"?: PluginsView | string | null;
+        /**
+          * @default null
+         */
+        "repos"?: ReposView | string | null;
+        /**
           * @default ''
          */
         "rowLabels"?: DownloadRowLabels | string;
@@ -2056,7 +2081,7 @@ declare namespace LocalJSX {
          */
         "running"?: DownloadRow[] | string;
         /**
-          * Onglet affiché : `downloads`, `apps` ou `consoles`.
+          * Onglet affiché : `downloads`, `apps`, `consoles`, `plugins` ou `repos`.
           * @default 'downloads'
          */
         "tab"?: string;
@@ -3035,6 +3060,11 @@ declare namespace LocalJSX {
      */
     interface MireVideoPlayer {
         /**
+          * Un lecteur externe est disponible (plugin actif) ; sinon le bouton « Lecteur externe » est caché.
+          * @default true
+         */
+        "external"?: boolean;
+        /**
           * @default false
          */
         "hasNext"?: boolean;
@@ -3180,6 +3210,8 @@ declare namespace LocalJSX {
         "others": DownloadRow[] | string;
         "apps": AppsView | string | null;
         "consoles": ConsoleCard[] | string;
+        "plugins": PluginsView | string | null;
+        "repos": ReposView | string | null;
         "labels": CentreLabels | string;
         "rowLabels": DownloadRowLabels | string;
     }
@@ -3370,6 +3402,7 @@ declare namespace LocalJSX {
         "playing": boolean;
         "hasPrev": boolean;
         "hasNext": boolean;
+        "external": boolean;
         "subtitles": string;
         "osd": string;
         "osdShown": boolean;

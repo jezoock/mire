@@ -21,6 +21,7 @@ import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { createExplorerModel, folderNode, levelNode } from '../../src/renderer/explorer/index.ts';
 import type { ExplorerState } from '../../src/renderer/explorer/index.ts';
 import { fakeCatalog } from '../catalog/fake-catalog.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
 const N = 20_000;
 // Seuil d'une étape sur une machine rapide.
@@ -68,7 +69,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
     // Un parcours complet à froid (service des pages neuf, rien en cache) ; rend le temps de chaque étape.
     async function route(): Promise<{ times: Map<string, number>; state: () => ExplorerState }> {
-      const pages = createPages({ file: path.join(dir, 'pages.json'), engine, catalog, translate: tr });
+      const pages = createPages({ builtin: BUILTIN_PAGES, file: path.join(dir, 'pages.json'), engine, catalog, translate: tr });
       pages.load();
       // Dossier autorisé `/bib` (absent du disque : le contrôle des liens lit le disque, puis laisse passer).
       const folders = createFolders({ catalog, engine, roots: () => ['/bib'], platform: 'linux', fs: fs.promises });

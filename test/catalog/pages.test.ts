@@ -9,11 +9,11 @@ import { validatePage, type ElementSourceRef, type PageDefinition, type PageLeve
 import { createCatalog } from '../../src/main/catalog/index.ts';
 import { localFileKey, pcGameKey, romKey } from '../../src/main/catalog/keys.ts';
 import { createOverrides } from '../../src/main/catalog/overrides.ts';
-import { BUILTIN_PAGES } from '../../src/main/catalog/pages/builtin.ts';
 import { createPages, PAGE_SIZE } from '../../src/main/catalog/pages/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
+import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
@@ -50,7 +50,7 @@ function setup(language = 'fr') {
     contributors: builtinTaggers(() => []).map(taggerContributor),
   });
   const file_ = path.join(dir, 'pages.json');
-  const pages = createPages({ file: file_, engine, catalog, translate: t, onIgnored: () => {} });
+  const pages = createPages({ builtin: BUILTIN_PAGES, file: file_, engine, catalog, translate: t, onIgnored: () => {} });
   pages.load();
   return { dir, file: file_, catalog, engine, pages, t };
 }
@@ -311,7 +311,7 @@ describe('pages.json', () => {
     const r = pages.save({ id: 'x', name: 'X' });
     assert.deepEqual(r, { ok: false, errors: ['require'] });
 
-    const again = createPages({ file: f, engine, catalog, translate: t, onIgnored: () => {} });
+    const again = createPages({ builtin: BUILTIN_PAGES, file: f, engine, catalog, translate: t, onIgnored: () => {} });
     again.load();
     assert.deepEqual(
       again.list().map((p) => p.id),
@@ -335,7 +335,7 @@ describe('pages.json', () => {
       f,
       JSON.stringify({ version: 1, pages: { bonne: { id: 'bonne', name: 'B', require: [] }, mauvaise: { id: 'mauvaise' } }, removed: ['tv', 'inconnue'] }),
     );
-    const pages = createPages({ file: f, engine, catalog, translate: t, onIgnored: (_f, reason) => ignored.push(reason) });
+    const pages = createPages({ builtin: BUILTIN_PAGES, file: f, engine, catalog, translate: t, onIgnored: (_f, reason) => ignored.push(reason) });
     pages.load();
     assert.ok(pages.get('bonne'));
     assert.equal(pages.get('mauvaise'), null);
@@ -456,7 +456,7 @@ describe('administration des pages (P4-21)', () => {
     assert.equal(pages.reset('games')?.id, 'games');
     assert.equal(pages.get('games')?.id, 'games');
     // Gardé dans pages.json : une autre instance relit la même chose.
-    const again = createPages({ file: f, engine, catalog, translate: t, onIgnored: () => {} });
+    const again = createPages({ builtin: BUILTIN_PAGES, file: f, engine, catalog, translate: t, onIgnored: () => {} });
     again.load();
     assert.equal(again.overview().find((o) => o.page.id === 'movies')?.origin, 'builtin');
     assert.equal(again.get('games')?.id, 'games');

@@ -1,0 +1,18 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.page.music",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "pages": [
+      {
+        "id": "music",
+        "file": "pages/music.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

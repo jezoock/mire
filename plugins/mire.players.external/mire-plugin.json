@@ -1,0 +1,22 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.players.external",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "apps": [
+      {
+        "id": "mpv",
+        "file": "apps/mpv.json"
+      },
+      {
+        "id": "vlc",
+        "file": "apps/vlc.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

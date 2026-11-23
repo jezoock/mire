@@ -62,6 +62,18 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
   { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
   { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
+  // P5-03 : les sept pages prêtes à l'emploi, plugins inclus ; tout le monde les avait. Les pages modifiées ou supprimées
+  // par l'utilisateur restent dans `userData/catalog/pages.json`, que le moteur des pages relit tel quel.
+  { id: 'P5-03-movies', plugin: 'mire.page.movies', mode: 'bundled', applies: always },
+  { id: 'P5-03-series', plugin: 'mire.page.series', mode: 'bundled', applies: always },
+  { id: 'P5-03-music', plugin: 'mire.page.music', mode: 'bundled', applies: always },
+  { id: 'P5-03-images', plugin: 'mire.page.images', mode: 'bundled', applies: always },
+  { id: 'P5-03-streaming', plugin: 'mire.page.streaming', mode: 'bundled', applies: always },
+  { id: 'P5-03-tv', plugin: 'mire.page.tv', mode: 'bundled', applies: always },
+  { id: 'P5-03-games', plugin: 'mire.page.games', mode: 'bundled', applies: always },
+  // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
+  // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
+  { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
   // P5-02 : palettes devenues des plugins à installer (une par plugin). Le réglage `ui.theme` reste en place : la
   // palette revient dès que son plugin est installé. « Automatique » prenait Plein jour en mode clair.
   { id: 'P5-02-jour', plugin: 'mire.palette.jour', mode: 'install', applies: paletteIn('jour', 'auto') },

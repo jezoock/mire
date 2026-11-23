@@ -1,0 +1,18 @@
+{
+  "id": "tv",
+  "name": {
+    "key": "pages.tv"
+  },
+  "icon": "antenna",
+  "require": ["tv"],
+  "sort": [
+    {
+      "by": "channel"
+    }
+  ],
+  "display": "list",
+  "menu": {
+    "pinned": true,
+    "order": 6
+  }
+}

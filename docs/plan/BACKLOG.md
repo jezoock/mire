@@ -141,7 +141,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-16 | Vue web et télévision | M | P4-11 | 🧑 | faite | [#85](https://github.com/jezoock/mire/pull/85) |
 | P4-17 | Jeux : consoles et émulateurs | M | P4-11, P4-06 | 🧑 | faite | [#84](https://github.com/jezoock/mire/pull/84) |
 | P4-18 | Centre : téléchargements et apps | M | P4-07, P4-06 |  | faite | [#75](https://github.com/jezoock/mire/pull/75) |
-| P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | à faire | |
+| P4-19 | Centre : plugins et dépôts | M | P4-18, P3-07, P3-08 | 🧑 | faite | [#99](https://github.com/jezoock/mire/pull/99) |
 | P4-20 | Réglages | M | P4-07, P3-04, P1-26, DS-06 |  | faite ([#80](https://github.com/jezoock/mire/pull/80), [#86](https://github.com/jezoock/mire/pull/86)) | |
 | P4-21 | Administration des tags, des pages et des listes | M | P4-20, P2-07, P2-08 |  | faite ([#91](https://github.com/jezoock/mire/pull/91), [#93](https://github.com/jezoock/mire/pull/93)) | |
 | P4-22 | Éditeurs | M | P4-06, P4-11 |  | faite | [#78](https://github.com/jezoock/mire/pull/78), [#81](https://github.com/jezoock/mire/pull/81) |
@@ -179,7 +179,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | --- | --- | --- | --- | --- | --- | --- |
 | P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | faite | [#98](https://github.com/jezoock/mire/pull/98) |
 | P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | faite | |
-| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | à faire | |
+| P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | faite | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | faite | |
 | P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
 | P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |
@@ -196,7 +196,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
 | P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
-| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | à faire | |
+| P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | faite | |
 | P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
 | **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |
 
