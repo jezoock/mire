@@ -31,7 +31,7 @@ export interface AssistantItem {
   /** État pendant l'installation, sinon vide. */
   status: string;
   tone: 'ok' | 'error' | 'busy' | 'off' | '';
-  /** Avancement du téléchargement (0 à 1), ou `null`. */
+  /** Avancement du téléchargement (pourcentage), ou `null`. */
   progress: number | null;
 }
 

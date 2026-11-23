@@ -2099,6 +2099,107 @@
       "themes": "Choisir un autre thème",
       "home": "Aller à l’accueil",
       "chosen": "Thème « {theme} » choisi."
+    },
+    "assistant": {
+      "progress": "Étape {step} sur {count}",
+      "buttons": {
+        "start": "Commencer",
+        "back": "Retour",
+        "next": "Continuer",
+        "skip": "Passer",
+        "install": "Installer",
+        "nothing": "Ne rien installer",
+        "finish": "Terminer",
+        "openCentre": "Ouvrir le Centre"
+      },
+      "welcome": {
+        "title": "Bienvenue dans Mire",
+        "help": "Quelques questions pour préparer Mire selon ce que vous aimez regarder, écouter et jouer. Cela prend une minute.",
+        "network": "Mire va lire la liste des plugins sur Internet. Rien n’est installé sans votre accord.",
+        "loading": "Lecture de la liste des plugins…"
+      },
+      "language": {
+        "title": "Langue",
+        "current": "Mire s’affiche en {language}.",
+        "system": "Votre ordinateur est réglé en {language}.",
+        "pack": "Le pack de langue « {name} » sera installé avec le reste.",
+        "packInstalled": "Le pack de langue « {name} » est déjà installé.",
+        "builtin": "Mire s’affiche déjà dans cette langue.",
+        "missing": "Mire n’est pas encore traduit dans cette langue : il s’affiche en {language}."
+      },
+      "uses": {
+        "title": "Ce que vous voulez faire",
+        "help": "Choisissez tout ce qui vous intéresse. Vous pourrez changer d’avis plus tard.",
+        "none": "Aucun plugin n’est proposé pour l’instant. Vous pourrez en ajouter plus tard dans le Centre.",
+        "offline": "La liste des plugins n’a pas pu être lue (pas de connexion ?). Vous pourrez en ajouter plus tard dans le Centre.",
+        "families": {
+          "movies": {
+            "label": "Films et séries",
+            "help": "Vos vidéos, avec affiches et résumés"
+          },
+          "music": {
+            "label": "Musique",
+            "help": "Vos morceaux, par artiste et par album"
+          },
+          "photos": {
+            "label": "Photos",
+            "help": "Vos images et vos diaporamas"
+          },
+          "games": {
+            "label": "Jeux",
+            "help": "Vos jeux et vos consoles"
+          },
+          "tv": {
+            "label": "Télévision",
+            "help": "Les chaînes de votre box"
+          },
+          "streaming": {
+            "label": "Streaming",
+            "help": "Vos services de vidéo et de musique en ligne"
+          }
+        }
+      },
+      "box": {
+        "title": "Votre box",
+        "help": "Choisissez votre box pour regarder ses chaînes dans Mire.",
+        "none": "Je n’ai pas de box"
+      },
+      "services": {
+        "title": "Vos services de streaming",
+        "help": "Choisissez les services que vous utilisez."
+      },
+      "summary": {
+        "title": "Plugins à installer",
+        "help": "Voici ce qui va être installé, avec ce que chaque plugin demande. Rien n’est installé tant que vous n’avez pas choisi « Installer ».",
+        "empty": "Il n’y a rien à installer pour ces choix.",
+        "later": "Tout se change ensuite dans le Centre, onglet Plugins. L’assistant se relance depuis les Réglages.",
+        "requiredBy": "Nécessaire à {names}",
+        "consentNeeded": "Accord demandé",
+        "reasons": {
+          "language": "Langue",
+          "box": "Votre box",
+          "service": "Service de streaming"
+        }
+      },
+      "install": {
+        "title": "Installation",
+        "help": "Les plugins s’installent. Vous pouvez suivre leur avancement ici.",
+        "busy": "Installation en cours…",
+        "states": {
+          "waiting": "En attente",
+          "running": "Installation…",
+          "installed": "Installé",
+          "failed": "Pas installé",
+          "declined": "Pas installé (accord non donné)"
+        }
+      },
+      "done": {
+        "title": "C’est prêt",
+        "help": "Tout est installé. Bonne découverte !",
+        "someFailed": "Certains plugins n’ont pas pu être installés. Mire reste utilisable : vous pourrez réessayer dans le Centre."
+      },
+      "skipped": "Vous pourrez tout régler plus tard dans le Centre.",
+      "failed": "L’assistant n’a pas pu lire la liste des plugins."
     }
   }
 }
