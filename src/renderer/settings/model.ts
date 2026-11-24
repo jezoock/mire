@@ -70,6 +70,8 @@ export interface SourceStatus {
   ok: boolean;
   count?: number;
   error?: string;
+  /** Emplacement vide sans erreur : la raison (aucun plugin actif ne le lit). */
+  note?: string;
 }
 
 /** Natures des sources, dans l'ordre de l'écran ; `game` : dossiers de jeux PC (`gameSources`). */
@@ -129,7 +131,7 @@ function sourceGroup(kind: (typeof SOURCE_KINDS)[number], src: PanelSources): Se
         ? t('settingsView.sources.scanning')
         : ''
       : st.ok
-        ? t(`settingsView.sources.count.${kind}`, { count: st.count ?? 0 })
+        ? st.note || t(`settingsView.sources.count.${kind}`, { count: st.count ?? 0 })
         : st.error || '';
     const type = t(`settingsView.sources.type.${locationType(location)}`);
     return { id: asText(x.id), label: location, sub: state ? `${type} · ${state}` : type, ...(st && !st.ok ? { error: true } : {}) };

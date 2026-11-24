@@ -7,8 +7,6 @@ import type { Bookmark, LibrarySource, MediaKind } from '@mire/shared';
 import fsp from 'node:fs/promises';
 import { pathKey } from '../fs/walk.ts';
 import { locationError, resolveLocation } from './location.ts';
-import { httpIndexProvider } from './providers/http-index.ts';
-import { m3uProvider } from './providers/m3u.ts';
 import type { LibraryItem, RemoteSubtitles, ScanContext, ScannedLocation, ScanResult, SourceProvider, SourceStatus, SourceTarget } from './types.ts';
 import { t } from '../i18n/current.ts';
 
@@ -16,10 +14,12 @@ import { t } from '../i18n/current.ts';
 export const MAX_ITEMS = 150000;
 
 /**
- * Fournisseurs essayés dans l'ordre : le premier qui sait lire l'emplacement l'analyse. Les dossiers et les partages
- * réseau sont lus par des plugins inclus (`mire.source.local`, P5-11c ; `mire.source.network`, P5-11d).
+ * Fournisseurs du cœur, essayés dans l'ordre : le premier qui sait lire l'emplacement l'analyse. Il n'en reste aucun
+ * (les tests en passent un factice) : les dossiers et les partages réseau sont lus par des plugins inclus
+ * (`mire.source.local`, P5-11c ; `mire.source.network`, P5-11d), les serveurs web et les listes M3U par des plugins à
+ * installer (`mire.source.http`, `mire.source.m3u`, P5-12).
  */
-export const DEFAULT_PROVIDERS: readonly SourceProvider[] = [m3uProvider, httpIndexProvider];
+export const DEFAULT_PROVIDERS: readonly SourceProvider[] = [];
 
 export interface ScanOptions {
   sources: readonly LibrarySource[];
@@ -104,6 +104,7 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
   for (const g of groupSources(sources, platform)) {
     const start = items.length;
     let error: string | null = null;
+    let note: string | null = null;
     try {
       const taken = pluginItems?.(g.target, g.kinds);
       if (taken) {
@@ -112,13 +113,15 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
       } else {
         const provider = providers.find((p) => p.canHandle(g.target));
         if (provider) await provider.scan(g.target, g.kinds, ctx);
+        // Aucun plugin actif ne lit cet emplacement (absent ou désactivé) : rien à montrer, et l'état le dit.
+        else note = t('library.noReader');
       }
     } catch (err) {
       error = (err as Error).message;
     }
     for (const src of g.sources) {
       const count = items.slice(start).filter((it) => it.kind === src.kind).length;
-      status[src.id] = { ok: !error, error, count };
+      status[src.id] = { ok: !error, error, count, ...(note && !error ? { note } : {}) };
     }
     // Nombre maximal atteint : la liste de cet emplacement peut être incomplète.
     const complete = !error && items.length < maxItems;

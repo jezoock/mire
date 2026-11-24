@@ -191,7 +191,6 @@ describe('sources de la bibliothèque : `library.scan` inchangé', () => {
       src('images', 'image', at('Images')),
       src('absent', 'video', at('Absent')),
       src('web', 'video', `${server.base}/films/`),
-      src('liste', 'video', `${server.base}/listes/chaines.m3u`),
     ];
     const cfg = { library: { sources }, bookmarks: [{ id: 'b', url: 'https://site/x', title: 'X', type: 'movie' }] } as unknown as Config;
     const access = { allowFile: () => {}, isAllowed: () => true };
@@ -205,53 +204,31 @@ describe('sources de la bibliothèque : `library.scan` inchangé', () => {
   });
 });
 
-describe('sources de la bibliothèque : serveur web et liste M3U', () => {
-  it('serveur web : tag `remote`, serveur, sous-titres et images en ligne', async () => {
-    const { catalog: c, library } = setup([src('web', 'video', `${server.base}/films/`)]);
-    await library.scan();
-    const video = `${server.base}/films/Am%C3%A9lie%20(2001).mkv`;
-    const el = c.element(remoteFileKey(video));
-    assert.equal(el?.source.plugin, 'src-http');
-    assert.equal(el?.source.instance, `${server.base}/films/`);
-    assert.deepEqual(el?.tags, ['remote']);
-    assert.deepEqual(el?.open, { kind: 'file', path: video });
-    assert.deepEqual(el?.infos, {
-      folder: 'films',
-      server: new URL(server.base).host,
-      subtitles: [`${server.base}/films/Am%C3%A9lie%20(2001).fr.srt`, `${server.base}/films/Am%C3%A9lie%20(2001).en.vtt`],
-    });
-    assert.deepEqual(el?.images, { poster: `${server.base}/films/Am%C3%A9lie%20(2001).jpg`, background: `${server.base}/films/fanart.jpg` });
-    assert.equal(c.size(), 2);
+describe('sources de la bibliothèque : serveur web et liste M3U lus par des plugins (P5-12)', () => {
+  it('sans plugin qui les lit : rien n’est montré, sans erreur, et l’état le dit', async () => {
+    const web = src('web', 'video', `${server.base}/films/`);
+    const liste = src('liste', 'audio', `${server.base}/listes/chaines.m3u`);
+    const { catalog, library } = setup([web, liste]);
+    const { items, status } = await library.scan();
+    assert.deepEqual(items, []);
+    const note = 'Rien à afficher : aucun plugin activé ne lit cet emplacement. Ajoutez-en un depuis le Centre.';
+    assert.deepEqual(status, { web: { ok: true, error: null, count: 0, note }, liste: { ok: true, error: null, count: 0, note } });
+    assert.equal(catalog.size(), 0);
   });
 
-  it('liste M3U : une entrée par flux, ouverte comme un flux, avec son logo', async () => {
+  it('les éléments que le cœur avait rangés sous `src-http` et `src-m3u` quittent le catalogue', async () => {
+    const { catalog, library } = setup([src('web', 'video', `${server.base}/films/`)]);
+    const video = `${server.base}/films/a.mkv`;
     const list = `${server.base}/listes/chaines.m3u`;
-    const { catalog, library } = setup([src('v', 'video', list), src('a', 'audio', list)]);
-    await library.scan();
-    assert.deepEqual(
-      catalog.keys().sort(),
-      [
-        m3uEntryKey(list, 'http://flux/a', PLATFORM),
-        m3uEntryKey(list, `${server.base}/listes/musique/b.mp3`, PLATFORM),
-        m3uEntryKey(list, `${server.base}/listes/video/c.mkv`, PLATFORM),
-      ].sort(),
-    );
-    const chaine = catalog.element(m3uEntryKey(list, 'http://flux/a', PLATFORM));
-    assert.equal(chaine?.source.plugin, 'src-m3u');
-    assert.equal(chaine?.name, 'Chaîne A');
-    assert.deepEqual(chaine?.tags, ['remote']);
-    assert.deepEqual(chaine?.open, { kind: 'stream', url: 'http://flux/a' });
-    // Sans extension : le type de média vient de celui de la source (P2-04) ; avec, le moteur de tags le déduit.
-    assert.deepEqual(chaine?.infos, { playlist: 'chaines', mediaType: 'video' });
-    assert.deepEqual(catalog.element(m3uEntryKey(list, `${server.base}/listes/musique/b.mp3`, PLATFORM))?.infos, { playlist: 'chaines' });
-    assert.deepEqual(chaine?.images, { logo: 'http://logo/a.png' });
-  });
-
-  it('liste inaccessible : rien n’est ajouté ni retiré', async () => {
-    const { catalog, changes, library } = setup([src('y', 'video', `${server.base}/absente.m3u`)]);
+    catalog.setSource({ plugin: 'src-http', instance: `${server.base}/films/` }, [
+      { key: remoteFileKey(video), name: 'a', open: { kind: 'file', path: video }, tags: ['remote'], infos: {}, images: {} },
+    ]);
+    catalog.setSource({ plugin: 'src-m3u', instance: list }, [
+      { key: m3uEntryKey(list, 'http://flux/a', PLATFORM), name: 'A', open: { kind: 'stream', url: 'http://flux/a' }, tags: ['remote'], infos: {}, images: {} },
+    ]);
+    assert.equal(catalog.size(), 2);
     await library.scan();
     assert.equal(catalog.size(), 0);
-    assert.deepEqual(changes, []);
     assert.deepEqual(catalog.sources(), []);
   });
 });
@@ -271,18 +248,20 @@ describe('sources de la bibliothèque : `ElementSource`', () => {
     assert.equal(sourceFor('smb://nas/Films', 'win32'), undefined);
     assert.equal(sourceFor('smb://nas/Films', 'linux'), undefined);
     assert.equal(sourceFor('/home/moi/Films/', 'linux'), undefined);
-    assert.deepEqual(sourceFor('HTTPS://Nas.local/films/', 'linux'), { id: 'src-http', tags: ['remote'], instance: 'https://nas.local/films/' });
-    assert.deepEqual(sourceFor('https://box/liste.m3u#x', 'linux'), { id: 'src-m3u', tags: ['remote'], instance: 'https://box/liste.m3u' });
+    // Serveur web, liste M3U : lus par les plugins à installer `mire.source.http` et `mire.source.m3u` (P5-12).
+    assert.equal(sourceFor('HTTPS://Nas.local/films/', 'linux'), undefined);
+    assert.equal(sourceFor('https://box/liste.m3u#x', 'linux'), undefined);
+    assert.deepEqual(librarySources(), []);
   });
 
   it('`scan` d’un emplacement seul rend les mêmes éléments que l’analyse de la bibliothèque', async () => {
-    for (const location of [`${server.base}/films/`, `${server.base}/listes/chaines.m3u`]) {
+    for (const location of [at('Films'), at('Images')]) {
       const kinds = new Set(['video', 'image'] as const);
       const loc = { target: target(location, PLATFORM), kinds };
-      const source = librarySources(PLATFORM).find((s) => s.handles(loc));
+      const source = withFake().find((s) => s.handles(loc));
       assert.ok(source, location);
       const scanned: ScannedLocation[] = [];
-      await scanLibrary({ sources: [src('v', 'video', location), src('i', 'image', location)], onScanned: (s) => scanned.push(s) });
+      await asShares({ sources: [src('v', 'video', location), src('i', 'image', location)], onScanned: (s) => scanned.push(s) });
       assert.deepEqual(await source.scan(loc), source.elementsOf(scanned[0]), location);
     }
   });

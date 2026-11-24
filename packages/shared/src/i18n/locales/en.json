@@ -298,12 +298,12 @@
         "crawlTimeout": "timed out",
         "crawlUnreachable": "server unreachable",
         "crawlStatus": "the server responded with code {status}",
-        "playlistUnavailable": "Can't open this playlist.",
         "serverStatus": "The server responded with code {status}.",
         "addressUnreachable": "Can't reach this address."
       },
       "subtitles": "Subtitles",
-      "streamingFolder": "Streaming"
+      "streamingFolder": "Streaming",
+      "noReader": "Nothing to show: no enabled plugin reads this location. Add one from the Centre."
     },
     "net": {
       "errors": {
