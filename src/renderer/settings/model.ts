@@ -5,6 +5,7 @@
 import { SETTINGS_SCHEMA, valueAtPath } from '@mire/shared/settings/schema';
 import type { SettingsBlock, SettingsField, SettingsSchema } from '@mire/shared/settings/schema';
 import type { PluginMetadataProvider, PluginSettingsInfo } from '@mire/shared/ipc';
+import { AUTO_PALETTES, DEFAULT_PALETTE } from '@mire/shared';
 import type { ListSummary, PageOverview, TagOverview } from '@mire/shared';
 import { pagesGroup } from './pages.ts';
 import { fileRulesGroup, listsGroup, listsOrder, tagsGroup } from './tags.ts';
@@ -25,10 +26,10 @@ import type {
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** Fournisseurs d'infos du cœur, dans l'ordre par défaut (`METADATA_PROVIDERS` du processus principal). */
-export const METADATA_PROVIDERS = ['tmdb', 'musicbrainz', 'libretro', 'steam'] as const;
+export const METADATA_PROVIDERS = ['musicbrainz', 'libretro', 'steam'] as const;
 
-/** Palettes du cœur et « Automatique » (P4-02) ; noms : `palettes.<id>`. */
-export const PALETTES = ['auto', 'ecran', 'jour', 'minuit', 'velours', 'contraste'] as const;
+/** « Automatique » et palettes du cœur (P4-02) ; noms : `palettes.<id>`. Celles des plugins suivent (P5-02). */
+export const PALETTES = ['auto', 'ecran', 'contraste'] as const;
 
 /** Ce que les panneaux affichent, hors configuration : textes, langues, listes de l'accueil, informations. */
 export interface PanelSources {
@@ -44,6 +45,8 @@ export interface PanelSources {
   /** Listes ordonnables de l'accueil (`rows`, `bars`, `sites`), lignes déjà rédigées (`homeOptions`). */
   homeLists: readonly Omit<OrderListView, 'toggle'>[];
   plugins: readonly PluginSettingsInfo[];
+  /** Palettes des plugins actifs (P5-02) : identifiant et clé de leur nom dans les catalogues. */
+  pluginPalettes?: readonly { id: string; name: string }[];
   /** Fournisseurs d'infos des plugins actifs : ils rejoignent l'ordre des fournisseurs. */
   providers?: readonly PluginMetadataProvider[];
   /** État des sources après la dernière analyse (par identifiant de source), et analyse en cours. */
@@ -238,12 +241,17 @@ function customFields(field: Extract<SettingsField, { type: 'custom' }>, block: 
   const base = { key: `${block.id}.${field.id}`, label: t(field.label), ...(field.help ? { help: t(field.help) } : {}) };
   if (field.component === 'themes') {
     const theme = asText(valueAtPath(src.config, 'ui.theme')) || 'ecran';
-    const palettes: PaletteView[] = PALETTES.map((id) => ({
-      id,
-      name: t(id === 'auto' ? 'settingsView.palettes.auto' : `palettes.${id}`),
-      preview: id === 'auto' ? ['ecran', 'jour'] : [id],
-      current: id === theme,
-    }));
+    const extra = (src.pluginPalettes ?? []).filter((p) => !(PALETTES as readonly string[]).includes(p.id));
+    // Aperçu d'« Automatique » : sa palette claire si un plugin l'apporte, sinon la palette par défaut.
+    const light = extra.some((p) => p.id === AUTO_PALETTES.light) ? AUTO_PALETTES.light : DEFAULT_PALETTE;
+    const palettes: PaletteView[] = [
+      ...PALETTES.map((id) => ({
+        id,
+        name: t(id === 'auto' ? 'settingsView.palettes.auto' : `palettes.${id}`),
+        preview: id === 'auto' ? [AUTO_PALETTES.dark, light] : [id],
+      })),
+      ...extra.map((p) => ({ id: p.id, name: t(p.name), preview: [p.id] })),
+    ].map((p) => ({ ...p, current: p.id === theme }));
     const pageThemes = src.pageThemes.map((th) => ({ ...th, current: th.id === src.currentPageTheme }));
     return [{ ...base, kind: 'themes', palettes, pageThemes }];
   }

@@ -1,4 +1,4 @@
-// P1-29 : textes du processus principal en français et en anglais, langue des fiches (TMDB, Steam).
+// P1-29 : textes du processus principal en français et en anglais, langue des fiches (Steam ; TMDB : plugin mire.tmdb, P5-15, testé dans mire-addons).
 import { afterEach, describe, it, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,13 +8,9 @@ import { BUILTIN_CATALOGS, flattenMessages } from '@mire/shared/i18n';
 import { DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { builtinTranslator, createLanguageService, currentLanguage, metadataLanguage, steamLocale, t, useLanguage } from '../../src/main/i18n/index.ts';
 import { locationError } from '../../src/main/library/location.ts';
-import { HttpError } from '../../src/main/net/http.ts';
-import type { TmdbClient, TmdbParams } from '../../src/main/net/tmdb.ts';
 import { GAME_GENRES, libretroProvider } from '../../src/main/scrape/providers/libretro.ts';
 import { MUSIC_GENRES, musicBrainzProvider } from '../../src/main/scrape/providers/musicbrainz.ts';
 import { steamProvider } from '../../src/main/scrape/providers/steam.ts';
-import { tmdbProvider } from '../../src/main/scrape/providers/tmdb.ts';
-import { streamingSearchProvider } from '../../src/main/search/streaming.ts';
 import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 import { loadRoutes } from '../scrape/fake-fetch.ts';
@@ -165,58 +161,9 @@ describe('langue des fiches', () => {
     assert.deepEqual(steamLocale('xx'), { l: 'english', cc: 'US' });
   });
 
-  function fakeTmdb(reply: unknown) {
-    const calls: { pathname: string; params: TmdbParams }[] = [];
-    const client: TmdbClient = {
-      hasKey: () => true,
-      async get<T>(pathname: string, params: TmdbParams = {}) {
-        calls.push({ pathname, params });
-        if (reply instanceof HttpError) throw reply;
-        return reply as T;
-      },
-    };
-    return { client, calls };
-  }
-  const searchContext = (language: string) => ({
-    getConfig: () => ({ search: { tmdbToken: 'cle', region: 'FR', language }, web: [] }),
-  });
-
-  it('« où regarder » : TMDB demandé dans la langue de l’interface, sauf langue fixée', async () => {
-    const { client, calls } = fakeTmdb({ results: [] });
-    const search = streamingSearchProvider(client);
-    await search.search('dune', searchContext(''));
-    english();
-    await search.search('dune', searchContext(''));
-    await search.search('dune', searchContext('fr-FR'));
-    assert.deepEqual(
-      calls.map((c) => c.params.language),
-      ['fr-FR', 'en-US', 'fr-FR'],
-    );
-  });
-
-  it('clé TMDB refusée : le message arrive dans la langue de l’interface', async () => {
-    const { client } = fakeTmdb(new HttpError('status', 'https://api.themoviedb.org/3/search/multi', 'x', { status: 401 }));
-    const search = streamingSearchProvider(client);
-    await assert.rejects(search.search('dune', searchContext('')), { message: 'Clé TMDB refusée. Vérifiez-la dans Réglages.' });
-    english();
-    await assert.rejects(search.search('dune', searchContext('')), { message: 'TMDB key refused. Check it in Settings.' });
-  });
-
-  it('fiches TMDB : genres et recherche en anglais avec ui.language en, en français sinon', async (tc) => {
-    const languages = async () => {
-      const { client, calls } = fakeTmdb({ results: [], genres: [] });
-      const { ctx } = providerContext(tc, {}, { search: { tmdbToken: 'cle', region: 'FR', language: '' } });
-      await tmdbProvider(client).scrape({ path: '/v/Dune (2021).mkv', name: 'Dune (2021).mkv' }, undefined, ctx('v:dune'));
-      return [...new Set(calls.map((c) => c.params.language))];
-    };
-    assert.deepEqual(await languages(), ['fr-FR']);
-    english();
-    assert.deepEqual(await languages(), ['en-US']);
-  });
-
   it('Steam : l=french&cc=FR en français (comme avant), l=english&cc=US en anglais', async (tc) => {
     const urls = async () => {
-      const { ctx, fetch } = providerContext(tc, loadRoutes('steam'), { search: { tmdbToken: '', region: 'FR', language: '' } });
+      const { ctx, fetch } = providerContext(tc, loadRoutes('steam'), { search: { language: '' } });
       await steamProvider().scrape({ name: 'Hades', path: 'C:/Hades.exe' }, undefined, ctx('g:hades'));
       return fetch.calls.filter((u) => u.includes('store.steampowered.com'));
     };

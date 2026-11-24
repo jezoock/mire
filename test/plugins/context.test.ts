@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { PluginSetting } from '@mire/plugin-sdk';
 import type { PluginSettingsSection } from '@mire/shared';
-import { checkElements, checkFacts, createPluginBridges, type BridgeService } from '../../src/main/plugins/bridges.ts';
+import { checkElements, checkFacts, checkMissing, createPluginBridges, factsKey, imageAllowed, type BridgeService } from '../../src/main/plugins/bridges.ts';
 import { createContextHandler, LIMITS, type ContextDeps } from '../../src/main/plugins/context.ts';
 import { grantedPermissions, hostDeclared, isLocalHost } from '../../src/main/plugins/permissions.ts';
 import { createPluginStorage, pluginDataDir } from '../../src/main/plugins/plugin-storage.ts';
@@ -335,6 +335,26 @@ describe('ctx.settings', () => {
     assert.ok(logs.length && !logs.join().includes('API-789'));
   });
 
+  it('seal : un secret déplacé en clair (continuité, P5-01) est chiffré quand le système le permet', () => {
+    const plain = { cle: { $secret: 'API-321', encrypted: false }, langue: 'en' };
+    const sealed = store();
+    // Pas de section : rien à faire.
+    assert.equal(sealed.s.seal('org.exemple.t'), 0);
+    sealed.s.set('org.exemple.t', declared, 'langue', 'en');
+    Object.assign(sealed.section()!['org.exemple.t'], plain);
+    assert.equal(sealed.s.seal('org.exemple.t'), 1);
+    assert.ok(!JSON.stringify(sealed.section()).includes('API-321'));
+    assert.equal(sealed.section()!['org.exemple.t'].langue, 'en');
+    assert.equal(sealed.s.values('org.exemple.t', declared).cle, 'API-321');
+    // Déjà chiffré : rien de plus.
+    assert.equal(sealed.s.seal('org.exemple.t'), 0);
+    // Sans chiffrement du système : gardé en clair.
+    const clear = store({ ...box, available: () => false });
+    clear.s.set('org.exemple.t', declared, 'cle', 'API-321');
+    assert.equal(clear.s.seal('org.exemple.t'), 0);
+    assert.deepEqual(clear.section()!['org.exemple.t'].cle, { $secret: 'API-321', encrypted: false });
+  });
+
   it('configuration sans plugin : inchangée (pas de section, pas de nouvelle version)', () => {
     const c = normalizeConfig({});
     assert.equal('plugins' in c, false);
@@ -360,6 +380,9 @@ describe('ponts', () => {
     assert.equal(checkElements('org.exemple.r', 'privileged', [], raw).elements.length, 4);
     assert.equal(checkFacts('p/m', { title: 'Film', image: 'file:///etc/passwd', source: 'tmdb' })?.image, null);
     assert.equal(checkFacts('p/m', { title: 'Film' })?.source, 'p/m');
+    // Fiche choisie par l'utilisateur : la marque est gardée.
+    assert.equal(checkFacts('p/m', { title: 'Film', picked: true })?.picked, true);
+    assert.equal(checkFacts('p/m', { title: 'Film', picked: 'oui' })?.picked, undefined);
   });
 
   it('sources au catalogue à l’activation, retirées à la désactivation ; recherche réunie', async () => {
@@ -379,6 +402,7 @@ describe('ponts', () => {
       },
       levelOf: () => 'code',
       folders: () => [],
+      hosts: () => [],
       sourceRights: () => ({ trusted: false, folders: false }),
     };
     const set: unknown[] = [];
@@ -399,5 +423,102 @@ describe('ponts', () => {
     for (const l of listeners) l(['sources']);
     assert.deepEqual(removed, [{ plugin: 'org.exemple.r', instance: 'radios' }]);
     assert.deepEqual(await b.search('  dune '), [{ pluginId: 'org.exemple.r', id: 'ou', result: { query: 'dune', method: 'search' } }]);
+  });
+
+  it('infos en ligne d’un plugin factice : requires relayé, images des seuls hôtes déclarés, échec rendu → message', async () => {
+    let key = 'cle';
+    let fail = false;
+    const calls: string[] = [];
+    const service: BridgeService = {
+      contributions: (kind) =>
+        (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
+      onContributionsChange: () => () => {},
+      call: async (_p, _k, _id, method, args) => {
+        calls.push(method);
+        if (method === 'requires') return key ? null : { skipped: 'vidéos (clé absente)', error: 'Ajoutez la clé.' };
+        if (fail) return { failure: 'Clé refusée.' };
+        if (method === 'candidates') return [{ id: 'movie:1', title: 'Dune', image: 'https://img.exemple.org/d.jpg' }, { id: 2 }];
+        return {
+          title: `Dune ${(args?.[0] as { name?: string })?.name ?? ''}`.trim(),
+          image: 'https://img.exemple.org/affiche.jpg',
+          backdrop: 'https://ailleurs.example/fond.jpg',
+          source: 'autre',
+        };
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => ['img.exemple.org'],
+      sourceRights: () => ({ trusted: false, folders: false }),
+    };
+    const b = createPluginBridges({ service, catalog: { setSource: () => {}, removeSource: () => {} }, log: () => {} });
+    const [provider] = b.metadataProviders();
+    assert.equal(provider.id, 'org.exemple.f/films');
+    assert.equal(await provider.requires?.({} as never), null);
+    key = '';
+    assert.deepEqual(await provider.requires?.({} as never), { skipped: 'vidéos (clé absente)', error: 'Ajoutez la clé.' });
+
+    const saved: string[] = [];
+    const job = {
+      key: 'k',
+      io: {
+        saveImage: async (url: string) => {
+          saved.push(url);
+          return `/img/${url.split('/').pop()}`;
+        },
+      },
+    } as never;
+    const a = await provider.scrape({ name: 'A', path: '/v/a' } as never, undefined, job);
+    const c = await provider.scrape({ name: 'B', path: '/v/b' } as never, undefined, job);
+    assert.deepEqual(a, { title: 'Dune A', image: '/img/affiche.jpg', backdrop: null, source: 'org.exemple.f/films' });
+    assert.equal(c?.image, '/img/affiche.jpg');
+    // Même adresse : copiée une seule fois ; hôte non déclaré : jamais téléchargé.
+    assert.deepEqual(saved, ['https://img.exemple.org/affiche.jpg']);
+    // Clé du cœur pour une vidéo : la fiche rejoint son élément, celle de l'ancien fournisseur est reprise.
+    assert.equal(provider.key({ path: '/v/a' } as never), 'v:/v/a');
+    assert.equal(provider.key({ name: 'sans chemin' } as never), 'plugin:org.exemple.f/films|');
+    assert.equal(factsKey('album', { dir: '/m/A' }), 'a:/m/A');
+    assert.equal(factsKey('rom', { path: '/r/x.sfc' }), 'r:/r/x.sfc');
+    assert.equal(factsKey('pc', { name: 'Hadès' }), 'g:hades');
+    assert.equal(factsKey('video', {}), null);
+    assert.deepEqual(await provider.candidates({ query: 'Dune' } as never, {} as never), [
+      { id: 'movie:1', title: 'Dune', year: '', sub: '', image: 'https://img.exemple.org/d.jpg' },
+    ]);
+
+    fail = true;
+    await assert.rejects(
+      provider.scrape({ name: 'A' } as never, undefined, job),
+      (err: Error) => err.name === 'ScrapeRefusal' && err.message === 'Clé refusée.',
+    );
+    await assert.rejects(provider.candidates({ query: 'Dune' } as never, {} as never), { message: 'Clé refusée.' });
+  });
+
+  it('requires absent ou en panne : la source est interrogée', async () => {
+    const service: BridgeService = {
+      contributions: (kind) =>
+        (kind === 'metadata' ? [{ pluginId: 'org.exemple.f', kind: 'metadata', id: 'films', declaration: { kinds: ['video'] } }] : []) as never,
+      onContributionsChange: () => () => {},
+      call: async () => {
+        throw new Error('requires.notFound');
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: false, folders: false }),
+    };
+    const [provider] = createPluginBridges({ service, catalog: { setSource: () => {}, removeSource: () => {} }, log: () => {} }).metadataProviders();
+    assert.equal(await provider.requires?.({} as never), null);
+  });
+
+  it('imageAllowed et checkMissing', () => {
+    assert.equal(imageAllowed('https://image.tmdb.org/t/p/w342/a.jpg', ['image.tmdb.org']), true);
+    assert.equal(imageAllowed('http://image.tmdb.org/a.jpg', ['image.tmdb.org']), false);
+    assert.equal(imageAllowed('https://u:p@image.tmdb.org/a.jpg', ['image.tmdb.org']), false);
+    assert.equal(imageAllowed('https://evil.example/a.jpg', ['image.tmdb.org']), false);
+    assert.equal(imageAllowed('pas une adresse', ['image.tmdb.org']), false);
+    assert.equal(imageAllowed('https://cdn.exemple.org/a.jpg', ['*.exemple.org']), true);
+    assert.deepEqual(checkMissing({ skipped: ' a ', error: 'b' }), { skipped: 'a', error: 'b' });
+    assert.equal(checkMissing({ skipped: 'a' }), null);
+    assert.equal(checkMissing('x'), null);
+    assert.equal(checkMissing({ skipped: 'a', error: 'x'.repeat(900) })?.error.length, 500);
   });
 });

@@ -189,7 +189,7 @@ export class MireSearchView {
         <ds-scroller key="watch" class="mire-search-view__watch" label={l.watch} labels={this.scrollerLabels || undefined}>
           {w.cards.map((c) => this.renderWatchCard(c))}
         </ds-scroller>,
-        <p class="mire-search-view__attribution">{l.attribution}</p>,
+        w.attribution ? <p class="mire-search-view__attribution">{w.attribution}</p> : null,
       ];
     else
       body = (

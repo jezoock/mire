@@ -77,12 +77,15 @@ async function mire(repo: TestRepo, userData: string, { queue = [] as string[], 
     log: () => {},
   });
   const changes: ContinuitySummary[] = [];
+  const sealed: string[] = [];
   const continuity = createContinuity({
     file: path.join(installed, 'continuity.json'),
     config,
     plugins,
     repos,
     translate,
+    // Réglages secrets déplacés en clair : chiffrés dès que le plugin est là (P5-15).
+    secrets: { seal: (id) => void sealed.push(id) },
     rules: RULES,
     onChange: (s) => changes.push(s),
     log: () => {},
@@ -90,7 +93,7 @@ async function mire(repo: TestRepo, userData: string, { queue = [] as string[], 
   await plugins.start();
   const status = () => Object.fromEntries(continuity.summary().items.map((i) => [i.plugin, i.status]));
   const active = (id: string) => plugins.list().find((p) => p.id === id)?.status;
-  return { config, plugins, repos, continuity, changes, status, active };
+  return { config, plugins, repos, continuity, changes, status, active, sealed };
 }
 
 describe('continuité : plugins inclus et à installer', () => {
@@ -102,6 +105,7 @@ describe('continuité : plugins inclus et à installer', () => {
     await m.continuity.start();
     assert.deepEqual(m.status(), { [BUNDLED]: 'installed', [INSTALL]: 'pending' });
     assert.equal(m.active(BUNDLED), 'active');
+    assert.deepEqual(m.sealed, [BUNDLED]);
     // La file de la configuration est reprise puis effacée, sur le disque aussi.
     assert.equal(m.config.get().continuity, undefined);
     assert.equal('continuity' in JSON.parse(fs.readFileSync(path.join(userData, 'config.json'), 'utf8')), false);
@@ -128,6 +132,7 @@ describe('continuité : plugins inclus et à installer', () => {
     await again.continuity.afterRefresh(status);
     assert.deepEqual(again.status(), { [BUNDLED]: 'installed', [INSTALL]: 'installed' });
     assert.equal(again.active(INSTALL), 'active');
+    assert.deepEqual(again.sealed, [INSTALL]);
     assert.equal(again.plugins.list().find((p) => p.id === INSTALL)?.repository, 'official');
     assert.match(again.changes.at(-1)!.notice!, /continuity\.notice\.installed \{"count":1\}/);
 

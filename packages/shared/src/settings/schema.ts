@@ -123,14 +123,6 @@ export const SETTINGS_SCHEMA: SettingsSchema = keyed([
     fields: [{ id: 'service', type: 'custom', component: 'tv-services', paths: ['tv.active', 'tv.services'] }],
   },
   {
-    id: 'search',
-    help: true,
-    fields: [
-      { id: 'tmdbToken', type: 'secret', path: 'search.tmdbToken', default: '', help: true, placeholder: true },
-      { id: 'region', type: 'choice', path: 'search.region', default: 'FR', options: ['FR', 'BE', 'CH', 'LU', 'CA'] },
-    ],
-  },
-  {
     id: 'scrape',
     help: true,
     fields: [

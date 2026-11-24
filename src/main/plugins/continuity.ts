@@ -73,6 +73,11 @@ export interface ContinuityOptions {
     available(): AvailablePlugin[];
   };
   translate(key: string, vars?: Record<string, string | number>): string;
+  /**
+   * Réglages des plugins : les secrets déplacés en clair par la migration (`encrypted: false`) sont chiffrés dès que
+   * leur plugin est là (`seal` de `settings.ts`).
+   */
+  secrets?: { seal(id: string): void };
   /** Le récapitulatif a changé (un plugin installé, devenu impossible…) : à montrer. */
   onChange?(summary: ContinuitySummary): void;
   rules?: readonly ContinuityRule[];
@@ -111,6 +116,13 @@ export function createContinuity(opts: ContinuityOptions) {
     else delete e.reason;
     save();
     log(`Continuité : ${id} ${status}${reason ? ` (${reason})` : ''}.`);
+    if (status !== 'installed') return;
+    try {
+      opts.secrets?.seal(id);
+    } catch (err) {
+      // Le secret reste en clair, comme avant ; il sera chiffré à son prochain changement.
+      log(`Continuité : réglages secrets de ${id} non chiffrés (${(err as Error)?.message ?? err}).`);
+    }
   }
 
   /** Reprend la file de la configuration (migration v10, import d'un fichier ancien) ; rend vrai si elle n'était pas vide. */

@@ -7,10 +7,10 @@
 import type { PageDefinition, SearchResult, WebSite } from '@mire/shared';
 import { keepGroups } from '@mire/ui/utils';
 import type { SearchGroupView } from '@mire/ui/utils';
-import { pageOfResult, searchGroups, siteViews, watchView } from './model.ts';
-import type { SiteColors, WatchResult, WatchState } from './model.ts';
+import { pageOfResult, searchGroups, siteViews, watchState, watchView } from './model.ts';
+import type { SiteColors, WatchAnswer, WatchResult, WatchState } from './model.ts';
 
-export { MAX_RECENT, pageOfResult, searchGroups, siteName, siteViews, watchTargets, watchView, withRecent } from './model.ts';
+export { MAX_RECENT, pageOfResult, searchGroups, siteName, siteViews, watchState, watchTargets, watchView, withRecent } from './model.ts';
 export type { WatchResult, WatchState } from './model.ts';
 
 /** Pause après la dernière frappe avant de chercher dans le catalogue, puis avant d'interroger « Où regarder ». */
@@ -21,8 +21,8 @@ export interface SearchOptions extends SiteColors {
   t(key: string, vars?: Record<string, string | number>): string;
   raw(key: string): unknown;
   catalog(query: string): Promise<SearchResult>;
-  /** Fournisseur `search` du cœur ; `null` s'il manque la clé du catalogue. */
-  watch(query: string): Promise<{ ok: boolean; results?: unknown[]; reason?: string; error?: string }> | null;
+  /** « Où regarder » : recherche d'un plugin (`searchStreaming`). */
+  watch(query: string): Promise<WatchAnswer>;
   pages(): readonly PageDefinition[];
   sites(): readonly WebSite[];
   /** Recherches récentes, et en retenir une (validée, ou dont un résultat est ouvert). */
@@ -44,6 +44,8 @@ export interface Search {
   refresh(): Promise<void>;
   /** Oublie « Où regarder » (la clé ou le pays ont changé) ; la prochaine mise à jour le relance. */
   resetWatch(): void;
+  /** Réglage à remplir pour « Où regarder » (la clé d'un plugin), s'il en manque un. */
+  watchSetup(): { plugin: string; setup: string } | null;
   /** Donne le focus au champ. */
   focusField(): void;
   /** Page d'un résultat affiché ; titre de « Où regarder » par sa clé. */
@@ -81,7 +83,6 @@ export function createSearch(opts: SearchOptions, doc: Document = document): Sea
       watch: t('search.watch.heading'),
       sites: t('search.sites.heading'),
       addKey: t('search.watch.addKey'),
-      attribution: t('search.watch.attribution'),
       none: t('search.none'),
     };
   }
@@ -97,17 +98,9 @@ export function createSearch(opts: SearchOptions, doc: Document = document): Sea
     showWatch();
     await new Promise((r) => setTimeout(r, WATCH_PAUSE));
     if (id !== watchSeq) return;
-    const asked = opts.watch(q);
-    if (!asked) {
-      watch = { q, status: 'nokey', results: [] };
-      showWatch();
-      return;
-    }
-    const r = await asked.catch((err: Error) => ({ ok: false, error: err.message, results: undefined, reason: undefined }));
+    const r: WatchAnswer = await opts.watch(q).catch((err: Error) => ({ ok: false, error: err.message }));
     if (id !== watchSeq) return;
-    if (r.ok) watch = { q, status: 'done', results: (r.results ?? []) as WatchResult[] };
-    else if (r.reason === 'nokey') watch = { q, status: 'nokey', results: [] };
-    else watch = { q, status: 'error', results: [], error: r.error || '' };
+    watch = watchState(q, r);
     showWatch();
   }
 
@@ -196,6 +189,7 @@ export function createSearch(opts: SearchOptions, doc: Document = document): Sea
       tryFocus(30);
     },
     pageOf: (key) => pageOfResult(groups, key),
+    watchSetup: () => (watch.status === 'nokey' && watch.plugin && watch.setup ? { plugin: watch.plugin, setup: watch.setup } : null),
     watchResult: (key) => (watch.status === 'done' && watch.results.find((r) => r.key === key)) || null,
   };
 }

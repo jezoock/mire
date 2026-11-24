@@ -74,21 +74,20 @@ describe('panneaux générés depuis le schéma', () => {
   it('chaque champ simple a sa valeur dans la configuration, et le contrôle de son type', () => {
     const config = structuredClone(DEFAULT_CONFIG) as Data;
     config.ui.home.clock = false;
-    config.search.region = 'BE';
     config.adblock.allowlist = ['exemple.com'];
     config.externalPlayer.path = '/usr/bin/mpv';
     const panels = schemaPanels(sources({ config }));
     assert.deepEqual(fieldOf(panels, 'ui.home.clock'), { key: 'ui.home.clock', kind: 'toggle', label: 'Afficher l’heure et la date', value: false });
-    const region = fieldOf(panels, 'search.region');
-    assert.equal(region.kind, 'choice');
-    assert.equal(region.value, 'BE');
-    assert.deepEqual(region.options?.[1], { value: 'BE', label: 'Belgique' });
     assert.deepEqual(fieldOf(panels, 'adblock.allowlist').value, ['exemple.com']);
     const player = fieldOf(panels, 'externalPlayer.path');
     assert.equal(player.kind, 'path');
     assert.equal(player.pick, 'program');
     assert.equal(player.placeholder, 'Détection automatique');
-    assert.equal(fieldOf(panels, 'search.tmdbToken').kind, 'secret');
+    // Clé TMDB et pays de « Où regarder » : réglages du plugin mire.tmdb (P5-15), plus du cœur.
+    assert.equal(
+      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.') && f.key !== 'search.language'),
+      false,
+    );
   });
 
   it('choix tirés de l’état : langues sous leur propre nom, sites de streaming groupés', () => {
@@ -105,17 +104,34 @@ describe('panneaux générés depuis le schéma', () => {
   it('blocs personnalisés : palettes avec aperçu, thèmes, listes ordonnables, réglages des pages', () => {
     const config = structuredClone(DEFAULT_CONFIG) as Data;
     config.ui.theme = 'jour';
-    const panels = schemaPanels(sources({ config }));
+    // Palettes des plugins actifs (P5-02) : après celles du cœur, nommées par leur texte ; une palette du cœur ne
+    // s'ajoute pas une deuxième fois.
+    const pluginPalettes = [
+      { id: 'jour', name: 'pluginTexts.mire_palette_jour.palettes.jour.name' },
+      { id: 'velours', name: 'pluginTexts.mire_palette_velours.palettes.velours.name' },
+      { id: 'ecran', name: 'pluginTexts.org_x.palettes.ecran.name' },
+    ];
+    const panels = schemaPanels(sources({ config, pluginPalettes }));
     const theme = fieldOf(panels, 'appearance.theme');
     assert.equal(theme.kind, 'themes');
     assert.deepEqual(
-      theme.palettes?.map((p) => [p.id, p.current, p.preview.join('+')]),
+      theme.palettes?.map((p) => [p.id, p.current, p.preview.join('+'), p.name]),
       [
-        ['auto', false, 'ecran+jour'],
+        ['auto', false, 'ecran+jour', 'Automatique'],
+        ['ecran', false, 'ecran', 'Écran éteint'],
+        ['contraste', false, 'contraste', 'Contraste élevé'],
+        ['jour', true, 'jour', 'pluginTexts.mire_palette_jour.palettes.jour.name'],
+        ['velours', false, 'velours', 'pluginTexts.mire_palette_velours.palettes.velours.name'],
+      ],
+    );
+    // Sans plugin : les palettes du cœur ; l'aperçu d'« Automatique » garde la palette par défaut en clair, et une
+    // palette choisie absente n'est pas cochée.
+    const core = fieldOf(schemaPanels(sources({ config })), 'appearance.theme');
+    assert.deepEqual(
+      core.palettes?.map((p) => [p.id, p.current, p.preview.join('+')]),
+      [
+        ['auto', false, 'ecran+ecran'],
         ['ecran', false, 'ecran'],
-        ['jour', true, 'jour'],
-        ['minuit', false, 'minuit'],
-        ['velours', false, 'velours'],
         ['contraste', false, 'contraste'],
       ],
     );
@@ -126,7 +142,7 @@ describe('panneaux générés depuis le schéma', () => {
     const providers = fieldOf(panels, 'scrape.providers');
     assert.deepEqual(
       providers.lists?.[0]?.items.map((x) => x.id),
-      ['tmdb', 'musicbrainz', 'libretro', 'steam'],
+      ['musicbrainz', 'libretro', 'steam'],
     );
     assert.equal(providers.lists?.[0]?.toggle, false);
     // Plus aucun bouton « Régler dans … » : chaque bloc propre aux pages est un champ de l'écran.
@@ -146,26 +162,25 @@ describe('panneaux générés depuis le schéma', () => {
     assert.equal(fieldOf(panels, 'search.language').kind, 'segmented');
     assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
     assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
-    assert.equal(fieldOf(panels, 'search.region').kind, 'choice');
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'tmdb'] } }), ['steam', 'tmdb', 'musicbrainz', 'libretro']);
-    assert.deepEqual(providerOrder({}), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'libretro'] } }), ['steam', 'libretro', 'musicbrainz']);
+    // TMDB est un plugin (P5-15) : sans lui, son fournisseur n'est pas dans la liste.
+    assert.deepEqual(providerOrder({}), ['musicbrainz', 'libretro', 'steam']);
   });
 
   it('les fournisseurs des plugins actifs rejoignent l’ordre, sous le nom de leur plugin', () => {
     const extra = ['org.films/infos'];
-    assert.deepEqual(providerOrder({}, extra), ['tmdb', 'musicbrainz', 'libretro', 'steam', 'org.films/infos']);
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }, extra), [
+    assert.deepEqual(providerOrder({}, extra), ['musicbrainz', 'libretro', 'steam', 'org.films/infos']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }, extra), [
       'org.films/infos',
-      'tmdb',
+      'steam',
       'musicbrainz',
       'libretro',
-      'steam',
     ]);
     // Un plugin désactivé : son fournisseur quitte la liste.
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'tmdb'] } }), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }), ['steam', 'musicbrainz', 'libretro']);
     const providers = [{ id: 'org.films/infos', plugin: 'org.films', name: 'Films libres', kinds: ['video'] }];
     for (const [t, label] of [
       [fr.t, 'Films libres (plugin)'],
@@ -433,8 +448,8 @@ function context(answers: Record<string, unknown> = {}) {
 describe('contrôleur mire-settings (P4-20)', () => {
   it('un champ s’enregistre dès qu’il change, puis l’écran se relit', async () => {
     const { ctx, named } = context();
-    await new SettingsController(ctx).setValue({ key: 'search.region', value: 'BE' });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.region', 'BE']]);
+    await new SettingsController(ctx).setValue({ key: 'search.language', value: 'en-US' });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.language', 'en-US']]);
     assert.equal(named('ui.settings.refresh').length, 1);
   });
 
@@ -466,8 +481,8 @@ describe('contrôleur mire-settings (P4-20)', () => {
     const home = { clock: true, recent: false, bars: [], services: [], rows: [{ kind: 'recent' }, { kind: 'bars', targets: [] }] } as Data;
     const { ctx, named } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate({ home }) });
     const c = new SettingsController(ctx);
-    await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'tmdb'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['steam', 'tmdb']]]);
+    await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'libretro'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['steam', 'libretro']]]);
     let saved: Data | null = null;
     const { ctx: ctx2 } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate((saved = { home })) });
     await new SettingsController(ctx2).setOrder({ kind: 'rows', keys: ['bars', 'recent'] });
@@ -509,8 +524,8 @@ describe('contrôleur mire-settings (P4-20)', () => {
 
   it('nouvel ordre : les fournisseurs des plugins actifs sont gardés', async () => {
     const { ctx, named } = context({ 'api.pluginsMetadataProviders': [{ id: 'org.films/infos' }] });
-    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'tmdb'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'tmdb']]]);
+    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'steam'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'steam']]]);
   });
 
   it('sources : un dossier choisi par le processus principal, une adresse, un retrait ; nature vérifiée', async () => {
@@ -597,11 +612,15 @@ describe('contrôleur mire-settings (P4-20)', () => {
     assert.deepEqual(named('ui.showCentreTab'), [['ui.showCentreTab', 'consoles']]);
   });
 
-  it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
-    const { ctx, named } = context();
+  it('« Ouvrir ses réglages » de la Recherche mène au réglage qui manque au plugin « Où regarder »', async () => {
+    const { ctx, named } = context({ 'ui.search.watchSetup': { plugin: 'mire.tmdb', setup: 'token' } });
     await new SearchController(ctx).addKey();
     assert.deepEqual(named('ui.go'), [['ui.go', 'settings', { focus: 'content' }]]);
-    assert.deepEqual(named('ui.settings.focus'), [['ui.settings.focus', 'search.tmdbToken']]);
+    assert.deepEqual(named('ui.settings.focus'), [['ui.settings.focus', 'plugin:mire.tmdb:token']]);
+    // Rien ne manque : rien ne s'ouvre.
+    const none = context();
+    await new SearchController(none.ctx).addKey();
+    assert.deepEqual(none.named('ui.go'), []);
   });
 });
 

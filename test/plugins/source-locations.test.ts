@@ -96,6 +96,7 @@ function fakeService(opts: { trusted?: boolean; folders?: boolean; handles?: (l:
     },
     levelOf: (id) => (entries.some((e) => e.pluginId === id) ? 'code' : null),
     folders: () => [],
+    hosts: () => [],
     sourceRights: () => ({ trusted: opts.trusted ?? true, folders: opts.folders ?? true }),
   };
   const set = (list: ContributionEntry[]) => {
@@ -200,8 +201,8 @@ describe('sources des plugins : emplacements de la bibliothèque', () => {
       config: { get: () => ({ library: { sources: [{ id: 'a', kind: 'video', location: films }] }, bookmarks: [] }) as never },
       access: { allowFile: () => {}, isAllowed: () => true },
       catalog: {
-        setSource: (ref) => void set.push(ref.plugin),
-        removeSource: (ref) => void removed.push(`${ref.plugin}|${ref.instance}`),
+        setSource: (ref: ElementSourceRef) => void set.push(ref.plugin),
+        removeSource: (ref: ElementSourceRef) => void removed.push(`${ref.plugin}|${ref.instance}`),
         sources: () => [{ plugin: 'src-local', instance: key }],
       } as never,
       claimed: (k) => k === key,
