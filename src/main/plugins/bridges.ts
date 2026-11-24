@@ -106,6 +106,12 @@ function localAllowed(p: unknown, level: PluginLevel, granted: readonly string[]
 /** Segment `..` dans un chemin (sans découper le chemin : des dizaines de milliers par analyse). */
 const POSIX_DOTS = /(^|\/)\.\.(\/|$)/;
 const WIN_DOTS = /(^|[\\/])\.\.([\\/]|$)/;
+/**
+ * `path.resolve` d'un chemin, sans le recalculer pour un chemin POSIX absolu déjà normalisé (ni `//`, ni segment `.`
+ * ou `..`, ni `/` final) : `resolve` le rendrait tel quel.
+ */
+const NOT_NORMAL = /\/\/|\/\.\.?(\/|$)|.\/$/;
+const resolvePath = (p: string): string => (process.platform !== 'win32' && p.startsWith('/') && !NOT_NORMAL.test(p) ? p : path.resolve(p));
 const grantedTests = new WeakMap<readonly string[], (p: string) => boolean>();
 function insideGranted(granted: readonly string[]): (p: string) => boolean {
   let test = grantedTests.get(granted);
@@ -116,7 +122,7 @@ function insideGranted(granted: readonly string[]): (p: string) => boolean {
     .filter((g) => typeof g === 'string' && path.isAbsolute(g))
     .map((g) => ({ exact: path.resolve(g), prefix: key(g).endsWith(path.sep) ? key(g) : key(g) + path.sep }));
   test = (p: string) => {
-    const exact = path.resolve(p);
+    const exact = resolvePath(p);
     const t = win ? exact.toLowerCase() : exact;
     const dots = (win ? WIN_DOTS : POSIX_DOTS).test(p);
     return roots.some((r) => exact === r.exact || (!dots && t.startsWith(r.prefix)));
