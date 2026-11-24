@@ -1,0 +1,144 @@
+@use '../../theme/tokens' as *;
+
+// Assistant du premier lancement (P4-23) : une colonne centrée, habillage du cœur et palette des réglages.
+.mire-assistant-view {
+  display: block;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: ds-spacing(5) ds-spacing(4);
+
+  &__progress {
+    margin: 0 0 ds-spacing(1);
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    font-weight: 700;
+  }
+
+  &__title {
+    margin: 0 0 ds-spacing(3);
+    font-size: ds-token(font-size, 600);
+  }
+
+  &__help {
+    margin: 0 0 ds-spacing(2);
+    color: var(--muted);
+  }
+
+  &__choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: ds-spacing(3);
+    margin: ds-spacing(4) 0;
+  }
+
+  &__choice {
+    display: block;
+
+    // Choix retenu : bordure de l'anneau de focus, pour qu'il se distingue aussi sans couleur d'accent.
+    &[aria-pressed='true'] button {
+      border-color: var(--ring);
+      background: var(--surface-2);
+    }
+  }
+
+  &__choice-label {
+    display: block;
+    font-weight: 700;
+  }
+
+  &__choice-help {
+    display: block;
+    margin-top: ds-spacing(1);
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+    font-weight: 400;
+  }
+
+  &__items {
+    display: grid;
+    gap: ds-spacing(3);
+    margin: ds-spacing(4) 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    padding: ds-spacing(3) ds-spacing(4);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md, 12px);
+    background: var(--surface);
+
+    &.--error {
+      border-color: var(--line-strong);
+    }
+  }
+
+  &__item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(2);
+  }
+
+  &__item-name {
+    font-weight: 700;
+  }
+
+  &__item-reason {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+  }
+
+  &__badge {
+    padding: ds-spacing(1) ds-spacing(3);
+    border-radius: ds-radius(pill);
+    background: var(--surface-2);
+    font-size: ds-token(font-size, 100);
+    font-weight: 700;
+  }
+
+  &__lines {
+    margin: ds-spacing(2) 0 0;
+    padding-left: ds-spacing(4);
+    color: var(--muted);
+    font-size: ds-token(font-size, 200);
+
+    .--sensitive {
+      color: inherit;
+      font-weight: 700;
+    }
+  }
+
+  &__bar {
+    height: 6px;
+    margin-top: ds-spacing(2);
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+
+    i {
+      display: block;
+      height: 100%;
+      background: var(--ring);
+    }
+  }
+
+  &__status {
+    margin: ds-spacing(1) 0 0;
+    font-size: ds-token(font-size, 200);
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: ds-spacing(3);
+    margin-top: ds-spacing(5);
+  }
+
+  &__busy {
+    margin-top: ds-spacing(5);
+    color: var(--muted);
+  }
+}

@@ -463,6 +463,13 @@ export function settingsPanels(src: PanelSources): SettingsPanelView[] {
     { id: 'drm', title: t('settingsView.drm.title'), fields: [], notes: [src.drmStatus || t('settingsView.checking')] },
     { id: 'advanced', title: t('settingsView.advanced.title'), help: t('settingsView.advanced.help'), fields: [], json: advancedJson(src.config) },
     {
+      id: 'assistant',
+      title: t('settingsView.assistant.title'),
+      help: t('settingsView.assistant.help'),
+      fields: [],
+      actions: [{ label: t('settingsView.assistant.run'), action: 'runAssistant' }],
+    },
+    {
       id: 'config',
       title: t('settingsView.config.title'),
       help: t('settingsView.config.help'),

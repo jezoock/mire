@@ -26,6 +26,7 @@ import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
 import { createRescue } from './app/rescue.ts';
+import { createAssistant } from './app/assistant.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, defaultKnown, metadataContributors, metadataOrder } from './catalog/metadata.ts';
@@ -117,6 +118,8 @@ function start(pending: PendingFiles): Running {
   const dist = (...parts: string[]) => path.join(__dirname, '..', ...parts);
 
   // Configuration et données d'usage (« Reprendre », positions, volume, recherches récentes).
+  // Premier lancement (P4-23) : la configuration n'existe pas encore ; à lire avant que le service ne la crée.
+  const fresh = !fs.existsSync(files.config);
   const config = createConfigService({ file: files.config });
   const usage = createUsageService({ file: files.usage });
   // Catalogue d'éléments : alimenté par les analyses de la bibliothèque ; l'interface historique ne s'en sert pas.
@@ -475,7 +478,9 @@ function start(pending: PendingFiles): Running {
     search: pluginBridges.search, // Un service dont le plugin est désactivé ou absent n'est plus proposé (P5-05).
     sites: () => config.get().web.filter(isSiteAvailable),
   });
-  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
+  // Assistant du premier lancement (P4-23) : ouvert au démarrage d'une nouvelle installation, jusqu'à la fin ou « Passer ».
+  const assistant = createAssistant({ file: files.assistant, fresh, systemLanguages: () => app.getPreferredSystemLanguages() });
+  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue, assistant }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
   // Code sensible des plugins inclus (P3-05) : extensions des vues web et moteurs de téléchargement, branchés une fois,

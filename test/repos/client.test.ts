@@ -99,6 +99,19 @@ describe('installation depuis un dépôt', () => {
     assert.ok(repo.requests.every((u) => u.startsWith('https://')));
   });
 
+  it('donne les catégories de l’index (P4-23), mal formées ignorées, absentes vides', async () => {
+    const repo = testRepo([
+      { id: B, version: '1.0.0' },
+      { id: A, version: '1.0.0', categories: ['movies', 'tv-box', 'language:pt-br', 'movies', 'Pas<b>', 3, 'x'.repeat(40)] },
+      { id: 'org.exemple.autre', version: '1.0.0', categories: 'movies' },
+    ]);
+    const m = mire(repo);
+    await m.service.start();
+    await m.client.refresh();
+    const cats = Object.fromEntries(m.client.available().map((p) => [p.id, p.categories]));
+    assert.deepEqual(cats, { [B]: [], [A]: ['movies', 'tv-box', 'language:pt-br'], 'org.exemple.autre': [] });
+  });
+
   it('met à jour, puis désinstalle', async () => {
     const repo = testRepo(published());
     const m = mire(repo);

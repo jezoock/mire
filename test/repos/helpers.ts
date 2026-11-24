@@ -81,6 +81,8 @@ export interface PluginSpec {
   /** Plugin de code (une contribution `taggers`) de ce niveau, avec ces permissions (P3-08). */
   level?: 'code' | 'privileged';
   permissions?: Record<string, unknown>;
+  /** Catégories écrites dans l'index (P4-23), telles quelles. */
+  categories?: unknown;
 }
 
 /** Fichiers d'un plugin de données valide (`packs`), comme `writePlugin` des tests de `mire-addons`. */
@@ -174,6 +176,7 @@ export function testRepo(plugins: PluginSpec[], { generated = '2026-11-19T12:00:
           permissions: spec.level ? (spec.permissions ?? {}) : {},
           dependencies: spec.dependencies ?? {},
           name: { en: `Test ${spec.id}`, fr: `Essai ${spec.id}` },
+          ...(spec.categories !== undefined ? { categories: spec.categories } : {}),
           package: { url, sha256: sha256(bytes), size: bytes.length },
         };
         byId.set(spec.id, [v, ...(byId.get(spec.id) ?? [])]);

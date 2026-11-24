@@ -458,6 +458,11 @@ export class SettingsController extends Controller {
     } else if (r && !r.canceled) toast(r?.error || t('settingsView.config.importFailed'), { duration: 8000 });
   }
 
+  /** Relance l'assistant du premier lancement (P4-23) : rien n'est retiré, seuls les plugins choisis s'ajoutent. */
+  runAssistant(): void {
+    this.ctx.ui.assistant.open();
+  }
+
   revealConfig(): void {
     this.ctx.api.revealConfig();
   }

@@ -32,6 +32,7 @@ import { resolveInstall, type DependencyNode, type DependencyProblem } from '../
 import { compareVersions, parseVersion, satisfies } from '../plugins/semver.ts';
 import { RepoError, repoErrorCode } from './errors.ts';
 import type { IndexVersion, Localized } from './index-file.ts';
+import { categoriesOf } from './index-file.ts';
 import type { Committed, InstallItem, Installer } from './installer.ts';
 import { OFFICIAL_REPOSITORY } from './official.ts';
 import type { Repositories } from './repositories.ts';
@@ -162,6 +163,7 @@ export function createRepoClient(opts: RepoClientOptions) {
           permissions: structuredClone(shown.entry.permissions),
           dependencies: { ...shown.entry.dependencies },
           contributes: [...shown.entry.contributes],
+          categories: categoriesOf(shown.entry),
           size: shown.entry.package.size,
           installed: installed?.version ?? null,
           update,
