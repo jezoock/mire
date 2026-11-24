@@ -1,0 +1,16 @@
+{
+  "name": "mire.games.roms",
+  "private": true,
+  "description": "Jeux de console des dossiers de chaque console",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}
