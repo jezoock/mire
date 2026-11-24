@@ -90,3 +90,29 @@ export function urlRefusal(g: Granted, url: URL): string | null {
   if (net.isIP(host.replace(/^\[|\]$/g, ''))) return `${host}: IP addresses are not allowed, declare a host name.`;
   return hostDeclared(g.hosts, host) ? null : `${host} is not declared in permissions.hosts.`;
 }
+
+/** Barre oblique ou contre-oblique encodée : un serveur pourrait la décoder et sortir du chemin accordé. */
+const ENCODED_SEPARATOR = /%2f|%5c/i;
+
+/**
+ * Adresse accordée par la configuration (P5-12) : un serveur web ou une liste en ligne de la bibliothèque, saisis par
+ * l'utilisateur et pris par ce plugin. Accord étroit : même origine exacte (schéma, hôte, port, `http:` compris) que
+ * l'une des adresses accordées, et chemin égal au sien ou en dessous (`/films` accorde `/films` et `/films/…`, pas
+ * `/films-2`). Ni identifiants dans l'adresse, ni séparateur encodé. Le réseau local et les adresses IP sont permis
+ * pour cette origine seule (l'utilisateur l'a saisie lui-même).
+ */
+export function urlGranted(url: URL, grants: readonly string[]): boolean {
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
+  if (url.username || url.password || ENCODED_SEPARATOR.test(url.pathname)) return false;
+  return grants.some((g) => {
+    let base: URL;
+    try {
+      base = new URL(g);
+    } catch {
+      return false;
+    }
+    if (base.origin !== url.origin || base.username || base.password) return false;
+    const p = base.pathname;
+    return url.pathname === p || url.pathname.startsWith(p.endsWith('/') ? p : `${p}/`);
+  });
+}

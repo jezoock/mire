@@ -4,7 +4,10 @@
  * permissions s'appliquent ici, aucune n'est laissée à l'hôte (ADR 0002, « Pour P3-04 »).
  *
  * - `http.*` : client HTTP du cœur (`net/http.ts`) ; tout hôte absent de `permissions.hosts` est refusé, à chaque
- *   redirection comme à la première adresse ; le réseau local et les adresses IP demandent `localNetwork`.
+ *   redirection comme à la première adresse ; le réseau local et les adresses IP demandent `localNetwork`. Sauf
+ *   les adresses accordées par la configuration (`origins`, P5-12) : un serveur web ou une liste en ligne de la
+ *   bibliothèque pris par ce plugin, sa seule origine et sous son chemin (`urlGranted`), réseau local compris ; une
+ *   redirection n'est suivie que vers une adresse accordée ou permise par le manifeste.
  * - `files.*` : dossiers accordés par l'utilisateur à ce plugin seulement (`requestFolder`), vérifiés par la
  *   politique d'accès (`security/access-policy.ts`, une instance par plugin : celle de l'interface n'est jamais
  *   élargie), puis une seconde fois sur le chemin réel (liens symboliques). `walk` parcourt ici, sans suivre les liens.
@@ -21,7 +24,7 @@ import type { FileEntry, FilePath, HttpRequestOptions, HttpResponse, WalkOptions
 import { HttpError, request, type FetchLike } from '../net/http.ts';
 import { createAccessPolicy } from '../security/access-policy.ts';
 import { CHANNEL_ERRORS, ChannelError } from './channel.ts';
-import { grantedPermissions, isLocalHost, urlRefusal, type Granted } from './permissions.ts';
+import { grantedPermissions, isLocalHost, urlGranted, urlRefusal, type Granted } from './permissions.ts';
 import type { PluginStorage } from './plugin-storage.ts';
 
 /** Bornes du contexte, par plugin. */
@@ -60,6 +63,11 @@ export interface ContextDeps {
   pickFolder(pluginId: string, purpose: string): Promise<string | null>;
   /** Dossiers accordés à chaque plugin, mémorisés. */
   folders: { list(pluginId: string): string[]; add(pluginId: string, dir: string): void };
+  /**
+   * Adresses accordées à chaque plugin d'après la configuration (P5-12) : celles des emplacements de la bibliothèque
+   * qu'il lit, tant qu'ils y restent. Rien n'est mémorisé.
+   */
+  origins?: { list(pluginId: string): string[] };
   storage(pluginId: string): PluginStorage;
   platform?: NodeJS.Platform;
 }
@@ -209,9 +217,12 @@ export function createContextHandler(deps: ContextDeps) {
       const o = httpOptions(raw);
       let { method, body } = o;
       for (let hop = 0; ; hop++) {
-        const why = urlRefusal(granted, target);
-        if (why) throw refused(why);
-        if (!granted.localNetwork) await checkResolved(target.hostname);
+        // Adresse saisie par l'utilisateur et prise par ce plugin : ni hôte du manifeste, ni `localNetwork` demandés.
+        if (!urlGranted(target, deps.origins?.list(id) ?? [])) {
+          const why = urlRefusal(granted, target);
+          if (why) throw refused(why);
+          if (!granted.localNetwork) await checkResolved(target.hostname);
+        }
         const res = await request(target.href, { method, headers: o.headers, body, timeout: o.timeout, signal, redirect: 'manual', fetch: deps.fetch }).catch(
           (err) => {
             throw httpFailure(err);

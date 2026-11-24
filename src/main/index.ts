@@ -338,6 +338,8 @@ function start(pending: PendingFiles): Running {
         list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? []), ...(pluginBridges?.lentFolders(id) ?? [])])],
         add: pluginState.addFolder,
       },
+      // Adresses de la bibliothèque qu'il lit (serveur web, liste en ligne, P5-12), tant qu'elles y restent.
+      origins: { list: (id) => pluginBridges?.assignedUrls(id) ?? [] },
       storage: storages.of,
     }),
     settings: pluginSettings,

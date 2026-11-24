@@ -635,6 +635,13 @@ export function createPluginBridges({
   const assignedFolders = (pluginId: string): string[] =>
     [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId ? [a.location.path, a.location.console?.images].filter((d): d is string => !!d) : []));
   const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
+  /**
+   * Adresses de la bibliothèque lues par un plugin (serveur web, liste en ligne, P5-12) : accordées à ce plugin
+   * (`ctx.http`, origine exacte et sous leur chemin) tant qu'elles restent dans la configuration.
+   */
+  const assignedUrls = (pluginId: string): string[] => [
+    ...new Set([...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId && a.location.url ? [a.location.url] : []))),
+  ];
   /** Consoles des dossiers de jeux proposés : les seules qu'un jeu d'un plugin de code limité peut désigner. */
   const knownConsoles = (): Set<string> => new Set(locations.flatMap((l) => (l.location.console ? [l.location.console.id] : [])));
 
@@ -935,6 +942,8 @@ export function createPluginBridges({
     claimed: (key: string): boolean => assigned.has(key),
     /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */
     assignedFolders,
+    /** Adresses de la bibliothèque lues par ce plugin : accordées tant qu'elles restent dans la configuration (P5-12). */
+    assignedUrls,
     /** Fin des synchronisations en cours (tests, et la liste des jeux d'une console au démarrage). */
     idle: (): Promise<void> => queue,
 
