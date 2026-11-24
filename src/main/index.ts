@@ -21,7 +21,7 @@ import {
   webContents,
 } from 'electron';
 import { path7za } from '7zip-bin';
-import { MIME, type SystemHint } from '@mire/shared';
+import { MIME, isSiteAvailable, type SystemHint } from '@mire/shared';
 import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
@@ -72,6 +72,7 @@ import {
 import { createInstaller } from './repos/installer.ts';
 import { createRepoClient } from './repos/client.ts';
 import { createContinuity } from './plugins/continuity.ts';
+import { withWebApps } from './plugins/web-apps.ts';
 import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
@@ -347,10 +348,22 @@ function start(pending: PendingFiles): Running {
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
     // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
     if (kinds.includes('pages')) catalogPages.setBuiltin(plugins.pageDefinitions());
+    // Services de streaming (P5-05) : les sites de la configuration suivent les plugins actifs.
+    if (kinds.includes('webApps')) syncWebApps();
     // Lecteurs externes (P5-20) : l'interface montre ou cache son bouton.
     if (kinds.includes('apps')) toUi('player:externalChanged');
   });
   catalogPages.setBuiltin(plugins.pageDefinitions());
+  // Services de streaming des plugins (P5-05) : ajoutés, mis à jour ou masqués dans `config.web` ; sans changement,
+  // rien n'est écrit (donc pas de boucle avec l'abonnement à la configuration).
+  // Seulement une fois les plugins démarrés : avant, le registre est vide et tous les services paraîtraient absents.
+  let pluginsStarted = false;
+  function syncWebApps(): void {
+    if (!pluginsStarted) return;
+    const next = withWebApps(config.get(), plugins.webApps());
+    if (next !== config.get()) config.update(() => next);
+  }
+  config.onChange(() => setImmediate(syncWebApps));
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   const pluginBridges = createPluginBridges({ service: plugins, catalog });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
@@ -441,7 +454,10 @@ function start(pending: PendingFiles): Running {
     adblock,
   };
   // « Où regarder » : recherche d'un plugin (P5-15), rapprochée des sites configurés.
-  const searchStreaming = createWatchSearch({ search: pluginBridges.search, sites: () => config.get().web });
+  const searchStreaming = createWatchSearch({
+    search: pluginBridges.search, // Un service dont le plugin est désactivé ou absent n'est plus proposé (P5-05).
+    sites: () => config.get().web.filter(isSiteAvailable),
+  });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
@@ -457,7 +473,11 @@ function start(pending: PendingFiles): Running {
     })
     .catch((err: Error) => console.error('Plugins :', err.message))
     // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
-    .finally(palettesChanged);
+    .finally(() => {
+      pluginsStarted = true;
+      syncWebApps();
+      palettesChanged();
+    });
 
   return {
     async onSecondInstance(paths) {

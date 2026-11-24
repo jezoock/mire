@@ -27,3 +27,6 @@ export const isHttpUrl = (s: unknown): boolean => /^https?:\/\//i.test(String(s)
 
 /** Cible à ouvrir par son protocole (steam://, http://…) plutôt qu'un chemin de fichier (pas C:\). */
 export const isUrlTarget = (t: unknown): boolean => /^[a-z][\w+.-]*:\/\//i.test(String(t));
+
+/** Un site de la configuration est-il disponible ? Non quand le plugin de son service est désactivé ou absent (P5-05). */
+export const isSiteAvailable = (site: { inactive?: unknown }): boolean => site.inactive !== true;

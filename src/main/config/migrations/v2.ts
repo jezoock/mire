@@ -4,7 +4,7 @@
  * Validé au point G1 : les valeurs viennent de `DEFAULT_WEB`, et non plus de `DEFAULT_CONFIG.web`, vide depuis que
  * rien n'est installé d'office.
  */
-import { DEFAULT_WEB } from '../catalogs/web.ts';
+import { DEFAULT_WEB } from './legacy-web.ts';
 import { isObjectLike, type Loose } from '../normalize/common.ts';
 import type { Migration } from './types.ts';
 

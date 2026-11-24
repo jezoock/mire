@@ -1,11 +1,11 @@
 /**
- * Sites de streaming connus : rien n'est installé d'office, mais la migration des anciennes configurations
- * complète les sites de l'utilisateur à partir de cette liste (adresse de recherche, lecture en fond, fournisseurs).
+ * Sites de streaming connus des anciennes versions de Mire : copie figée, lue seulement par les migrations v2 et v3
+ * (elles complètent la configuration d'une ancienne installation : adresse de recherche, lecture en fond,
+ * fournisseurs, ordre). Ne plus la modifier : depuis P5-05, les services sont décrits par les plugins `mire.web.*`
+ * (contribution `webApps`, voir `src/main/plugins/web-apps.ts`) ; JustStream et Voir-Anime n'y sont pas (D-21).
  * mode « integrated » : vue web dans Mire ; « browser » : navigateur externe (secours).
- * search : adresse de recherche ({q} = mots cherchés). Vide : à apprendre avec « Mémoriser la recherche ».
- * providers : noms utilisés par TMDB/JustWatch pour ce service (« =nom » : correspondance exacte).
- * background : la lecture continue quand on quitte le site (musique). group : rangement dans Streaming.
- * Données : futur contenu d'un addon (phase 3).
+ * search : adresse de recherche ({q} = mots cherchés). providers : noms utilisés par TMDB/JustWatch (« =nom » :
+ * correspondance exacte). background : la lecture continue quand on quitte le site. group : rangement dans Streaming.
  */
 import type { WebSite } from '@mire/shared';
 

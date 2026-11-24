@@ -1,3 +1,4 @@
+import { isSiteAvailable } from '@mire/shared';
 import { pluginFieldKey } from '@mire/ui/utils';
 import { searchUrlFor } from '../domain/index.ts';
 import { siteName, watchTargets } from '../search/model.ts';
@@ -52,7 +53,7 @@ export class SearchController extends Controller {
     const r = ui.search.watchResult(key);
     if (!r) return;
     this.#remember();
-    const sites = ((S.config as Data | null)?.web ?? []) as never[];
+    const sites = (((S.config as Data | null)?.web ?? []) as Data[]).filter(isSiteAvailable) as never[];
     const target = watchTargets(r, sites, t);
     const [first, second] = target.sites;
     if (!first) {

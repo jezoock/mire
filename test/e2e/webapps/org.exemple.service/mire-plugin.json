@@ -1,0 +1,17 @@
+{
+  "id": "org.exemple.service",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "data",
+  "contributes": {
+    "webApps": [
+      {
+        "id": "essai-tv",
+        "file": "app/site.json"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

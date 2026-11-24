@@ -270,3 +270,54 @@ test.describe('migration v10 (P5-01)', () => {
     assert.equal('continuity' in mergeConfig(normalizeConfig({}), {}), false);
   });
 });
+
+test.describe('services de streaming (P5-05)', () => {
+  const SERVICES = [
+    'netflix',
+    'prime',
+    'disney',
+    'canal',
+    'hbomax',
+    'appletv',
+    'paramount',
+    'crunchyroll',
+    'youtube',
+    'francetv',
+    'amazon-music',
+    'spotify',
+    'deezer',
+  ];
+  const site = (id: string) => ({ id, name: id, url: `https://${id}.example/`, mode: 'integrated', search: '' });
+  const queue = (web: unknown) => (((migrate({ version: 9, web }).config as Any).continuity ?? []) as string[]).filter((id) => id.startsWith('P5-05'));
+
+  test('un service configuré fait installer son plugin (à installer, réglages gardés dans la liste des sites)', () => {
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-05'));
+    assert.deepEqual(
+      rules.map((r) => [r.id, r.plugin, r.mode, r.settings ?? []]),
+      SERVICES.map((s) => [`P5-05-${s}`, `mire.web.${s}`, 'install', []]),
+    );
+    assert.deepEqual(queue([site('netflix'), site('spotify')]), ['P5-05-netflix', 'P5-05-spotify']);
+    // Seuls les services en place : un site de l'utilisateur ou un service absent n'installe rien.
+    assert.deepEqual(queue([site('arte'), site('deezer')]), ['P5-05-deezer']);
+    for (const web of [[], undefined, 'mal formé', [null, 3, 'x']]) assert.deepEqual(queue(web), [], JSON.stringify(web));
+  });
+
+  test('le site reste dans `web`, avec son identifiant : sa connexion et ses réglages sont retrouvés', () => {
+    const web = [{ ...site('netflix'), search: 'https://www.netflix.com/search?q={q}', color: '#E50914' }];
+    const { config } = migrate({ version: 9, web: structuredClone(web) });
+    assert.deepEqual((config as Any).web, web);
+  });
+
+  test('JustStream et Voir-Anime : pas de plugin, gardés comme sites ajoutés à la main, avec un message', () => {
+    assert.deepEqual(queue([site('juststream'), site('voir-anime'), site('arte')]), ['P5-05-juststream', 'P5-05-voir-anime']);
+    assert.deepEqual(queue([site('voir-anime')]), ['P5-05-voir-anime']);
+    assert.deepEqual(queue([site('arte')]), []);
+    const { config } = migrate({ version: 9, web: [site('juststream')] });
+    assert.equal((config as Any).web[0].id, 'juststream');
+    assert.equal((config as Any).web[0].app, undefined);
+    assert.equal(
+      CONTINUITY_RULES.some((r) => /juststream|voir-anime/.test(r.plugin)),
+      false,
+    );
+  });
+});

@@ -1,4 +1,4 @@
-// Sites → éléments (P2-03) : sites du catalogue intégré (une source par app, `svc-<id>`), sites ajoutés (`web-perso`),
+// Sites → éléments (P2-03) : services des plugins (une source par app, `svc-<id>`), sites ajoutés (`web-perso`),
 // marque-pages de pages (`web-bm`) ; tag `stream` et info `category`, suivis des changements de la configuration.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,8 +12,8 @@ import { syncFeeds } from '../../src/main/catalog/sync.ts';
 import { bookmarkElement, siteConfigFeed, siteElement, siteSourceId, siteSources } from '../../src/main/web/element-sources.ts';
 
 const site = (o: Partial<WebSite>): WebSite => ({ id: 'x', url: 'https://x.example/', mode: 'integrated', search: '', ...o });
-const NETFLIX = site({ id: 'netflix', name: 'Netflix', url: 'https://www.netflix.com/browse', group: 'video' });
-const DEEZER = site({ id: 'deezer', name: 'Deezer', url: 'https://www.deezer.com/fr/', group: 'music' });
+const NETFLIX = site({ id: 'netflix', name: 'Netflix', url: 'https://www.netflix.com/browse', group: 'video', app: 'mire.web.netflix' });
+const DEEZER = site({ id: 'deezer', name: 'Deezer', url: 'https://www.deezer.com/fr/', group: 'music', app: 'mire.web.deezer' });
 const MINE = site({ id: 'arte', name: 'Arte', url: 'https://www.arte.tv/fr/' });
 const BM: Bookmark = { id: 'b1', url: 'https://www.netflix.com/watch/1', title: 'Dark', type: 'tv', season: 2, episode: 3, site: 'netflix.com', added: 1 };
 
@@ -23,6 +23,14 @@ function setup() {
 const config = (web: WebSite[], bookmarks: Bookmark[] = []) => ({ web, bookmarks }) as unknown as Config;
 
 describe('sites → éléments', () => {
+  it('un service dont le plugin est désactivé ou absent quitte les sources, sans rien effacer', () => {
+    const off = { ...NETFLIX, inactive: true };
+    assert.deepEqual(
+      siteSources(config([off, DEEZER, MINE])).map((s) => s.id),
+      ['svc-deezer', 'web-perso', 'web-bm'],
+    );
+  });
+
   it('un site : tag `stream`, info `category`, ouvert par son identifiant', () => {
     assert.deepEqual(siteElement(NETFLIX), {
       key: siteKey('netflix'),
@@ -35,7 +43,7 @@ describe('sites → éléments', () => {
     assert.deepEqual(siteElement(MINE).infos, {});
   });
 
-  it('une source par app du catalogue intégré, `web-perso` pour les sites ajoutés', () => {
+  it('une source par service de plugin, `web-perso` pour les sites ajoutés', () => {
     assert.equal(siteSourceId(NETFLIX), 'svc-netflix');
     assert.equal(siteSourceId(MINE), 'web-perso');
     assert.deepEqual(
