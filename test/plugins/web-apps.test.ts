@@ -22,6 +22,7 @@ const entry = (data: unknown, pluginId = 'mire.web.netflix', id = 'netflix'): Co
   declaration: { id, file: 'app/site.json' },
   data,
 });
+const site0 = (o: Partial<WebSite>) => site({ id: 'netflix', ...o });
 const site = (o: Partial<WebSite>): WebSite => ({ id: 'x', url: 'https://x.example/', mode: 'integrated', search: '', ...o });
 
 describe('lecture des services des plugins', () => {

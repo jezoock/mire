@@ -88,11 +88,17 @@ export function readWebApp(entry: ContributionEntry): WebApp | null {
   };
 }
 
-/** Services des contributions données (un identifiant de site n'est donné qu'une fois : le premier plugin l'emporte). */
+/**
+ * Services des contributions données. Un identifiant de site n'est donné qu'une fois : les plugins officiels (`mire.`)
+ * passent avant les autres, qui ne peuvent donc pas prendre l'identifiant d'un service officiel ; à rang égal, le
+ * premier l'emporte.
+ */
 export function readWebApps(entries: readonly ContributionEntry[]): WebApp[] {
+  const official = (e: ContributionEntry) => e.pluginId.startsWith(OFFICIAL_PREFIX);
+  const ordered = [...entries.filter(official), ...entries.filter((e) => !official(e))];
   const seen = new Set<string>();
   const out: WebApp[] = [];
-  for (const e of entries) {
+  for (const e of ordered) {
     const app = readWebApp(e);
     if (!app || seen.has(app.id)) continue;
     seen.add(app.id);

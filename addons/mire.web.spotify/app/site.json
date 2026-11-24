@@ -1,8 +1,0 @@
-{
-  "name": "Spotify",
-  "url": "https://open.spotify.com",
-  "color": "#1ED760",
-  "search": "https://open.spotify.com/search/{query}",
-  "background": true,
-  "category": "music"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "Apple TV",
-  "url": "https://tv.apple.com/fr",
-  "color": "#DADADF",
-  "search": "https://tv.apple.com/fr/search?term={query}",
-  "providers": ["apple tv"],
-  "category": "video"
-}

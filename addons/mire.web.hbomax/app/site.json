@@ -1,7 +1,0 @@
-{
-  "name": "HBO Max",
-  "url": "https://play.hbomax.com",
-  "color": "#4B2BD6",
-  "providers": ["hbo max", "=max"],
-  "category": "video"
-}
