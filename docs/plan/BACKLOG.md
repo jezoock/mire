@@ -192,7 +192,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-11c | Dossier local | M | P5-11a |  | à faire | |
 | P5-11d | Partage réseau | S | P5-11a, P5-11c | 🧑 | à faire | |
 | P5-12 | Serveur web, liste M3U | M | P5-11a |  | à faire | |
-| P5-13 | Jeux PC | M | P5-01 | 🧑 | à faire | |
+| P5-13 | Jeux PC | M | P5-01 | 🧑 | faite | [#111](https://github.com/jezoock/mire/pull/111) |
 | P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | M | P5-01 |  | à faire | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | faite | [#101](https://github.com/jezoock/mire/pull/101) |
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | à faire | |

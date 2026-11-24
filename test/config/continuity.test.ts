@@ -117,6 +117,22 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
+  test('P5-13 : les dossiers de jeux PC, plugin inclus, pour toute installation existante ; dossiers et jeux restent en place', () => {
+    const raw = {
+      gameSources: [{ id: 'g1', location: 'D:\\Jeux' }],
+      games: [{ name: 'Portal', path: 'C:\\Jeux\\Portal.exe', args: ['-novid'], image: '' }],
+    };
+    for (const r of [readFixture('config-v9.json'), {}, raw, { gameSources: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...r, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-13'));
+    }
+    const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+    assert.deepEqual([(config as Any).gameSources, (config as Any).games], [raw.gameSources, raw.games]);
+    assert.equal((config as Any).plugins?.['mire.games.pc'], undefined);
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-13');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.games.pc', 'bundled', []]);
+  });
+
   test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
     const queue = (ui: unknown) => {
       const { config } = migrate({ version: 9, ui });

@@ -121,6 +121,11 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     ],
     providers: { tmdb: 'mire.tmdb/tmdb' },
   },
+  // P5-13 : dossiers de jeux PC, plugin inclus ; toute installation existante (un dossier peut être ajouté plus tard).
+  // Les dossiers restent dans `gameSources`, accordés au plugin tant qu'ils y restent (P5-11a) : rien à déplacer. Les
+  // jeux gardent leur clé (`pc:<chemin>`) : favoris, temps de jeu, listes et fiches sont retrouvés. Les jeux ajoutés à
+  // la main (`games`) restent au cœur jusqu'à P5-13b.
+  { id: 'P5-13', plugin: 'mire.games.pc', mode: 'bundled', applies: always },
   // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.
   // Le site reste dans `web` (même identifiant : sa connexion et ses réglages sont retrouvés), le plugin le reprend.
   { id: 'P5-05-netflix', plugin: 'mire.web.netflix', mode: 'install', applies: hasSite('netflix') },

@@ -1,13 +1,13 @@
 /** Types du domaine des jeux : jeux PC trouvés dans les dossiers, jeux de console (ROMs) et dépendances du service. */
-import type { Config, GameSource } from '@mire/shared';
+import type { Config } from '@mire/shared';
 import type { ElementInput } from '../catalog/types.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { CacheResult, DownloadContext } from '../downloads/types.ts';
-import type { ResolvedLocation } from '../library/location.ts';
 import type { Launcher } from '../platform/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
+import type { PcFolderDeps } from './pc/folders.ts';
 
-/** Jeu PC trouvé dans un dossier de jeux. */
+/** Jeu PC trouvé dans un dossier de jeux (par un plugin, P5-13). */
 export interface PcGame {
   name: string;
   path: string;
@@ -20,17 +20,6 @@ export interface SourceStatus {
   ok: boolean;
   error: string | null;
   count: number;
-}
-
-/**
- * Fournisseur de jeux PC : sait lire un type d'emplacement (dossier local ou partage réseau aujourd'hui ; plus
- * tard, un addon pourra lire une bibliothèque de lanceur).
- */
-export interface GameSourceProvider {
-  readonly id: string;
-  canHandle(loc: ResolvedLocation): boolean;
-  /** Jeux trouvés ; une erreur levée signale un emplacement inaccessible. */
-  scan(loc: ResolvedLocation, source: GameSource): Promise<PcGame[]>;
 }
 
 /** Jeu de console listé (fichier local ou adresse d'une source web). */
@@ -79,8 +68,8 @@ export interface GamesDeps {
   pickFile: (kind: string) => Promise<string | null>;
   /** Message vers l'interface (avancement du téléchargement d'un jeu en ligne). */
   toUi: (channel: string, payload: unknown) => void;
-  /** Fournisseurs de jeux PC ; par défaut, le dossier local. */
-  providers?: GameSourceProvider[];
+  /** Jeux PC des dossiers de jeux, trouvés par les sources des plugins (P5-13). */
+  pcFolders?: PcFolderDeps;
   platform?: NodeJS.Platform;
   /** Catalogue d'éléments que chaque liste de jeux alimente (`element-sources.ts`). */
   catalog?: { setSource(source: { plugin: string; instance: string }, elements: ElementInput[]): unknown };

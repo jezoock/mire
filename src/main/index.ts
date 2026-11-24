@@ -201,6 +201,12 @@ function start(pending: PendingFiles): Running {
     pickFile: dialogs.pickFile,
     toUi,
     catalog,
+    // Jeux PC des dossiers de jeux (P5-13) : trouvés par les sources des plugins (pont créé plus bas).
+    pcFolders: {
+      rescan: () => pluginBridges?.rescan() ?? Promise.resolve(),
+      claimed: (key) => pluginBridges?.claimed(key) ?? false,
+      catalog,
+    },
   });
 
   // Lecture des données, puis services qui en dépendent.
