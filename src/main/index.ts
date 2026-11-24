@@ -44,6 +44,7 @@ import { createConfigService } from './config/index.ts';
 import { createDownloads, type PluginDownloader } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
+import { gameLocations } from './games/pc/locations.ts';
 import { gameConfigFeed } from './games/element-sources.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { t } from './i18n/current.ts';
@@ -205,6 +206,12 @@ function start(pending: PendingFiles): Running {
     pickFile: dialogs.pickFile,
     toUi,
     catalog,
+    // Jeux PC des dossiers de jeux (P5-13) : trouvés par les sources des plugins (pont créé plus bas).
+    pcFolders: {
+      rescan: () => pluginBridges?.rescan() ?? Promise.resolve(),
+      claimed: (key) => pluginBridges?.claimed(key) ?? false,
+      catalog,
+    },
   });
 
   // Lecture des données, puis services qui en dépendent.
@@ -388,10 +395,12 @@ function start(pending: PendingFiles): Running {
   // un, la bibliothèque du cœur est analysée de nouveau pour retirer ou retrouver ses propres éléments.
   const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescan });
   pluginBridges = bridges;
-  const syncLocations = (cfg: Config) => void bridges.setLocations(libraryLocations(cfg.library.sources));
+  // Dossiers de jeux PC (P5-13) : proposés aux sources des plugins de la même façon, avec le type `game`.
+  const syncLocations = (cfg: Config) => void bridges.setLocations([...libraryLocations(cfg.library.sources), ...gameLocations(cfg.gameSources)]);
   syncLocations(config.get());
   config.onChange((next, prev) => {
-    if (JSON.stringify(next.library.sources) !== JSON.stringify(prev.library.sources)) syncLocations(next);
+    const where = (c: Config) => JSON.stringify([c.library.sources, c.gameSources]);
+    if (where(next) !== where(prev)) syncLocations(next);
   });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.

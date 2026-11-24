@@ -119,7 +119,8 @@ Règles communes à chaque extraction :
 | P5-11c | Dossier local | `src-local` | inclus | P5-11a | M | |
 | P5-11d | Partage réseau | `src-smb` | inclus | P5-11a, P5-11c | S | 🧑 |
 | P5-12 | Serveur web, liste M3U | `src-http`, `src-m3u` | à installer | P5-11a | M | |
-| P5-13 | Jeux PC (dossiers et jeux ajoutés à la main) | `jeux-pc`, `jeux-pc-manuel` | inclus | P5-01 | M | 🧑 |
+| P5-13a | Jeux PC : dossiers de jeux (voir plus bas) | `jeux-pc` | inclus | P5-01, P5-11a | M | 🧑 |
+| P5-13b | Jeux PC : jeu ajouté à la main (voir plus bas) | `jeux-pc-manuel` | inclus | P5-13a | M | 🧑 |
 | P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | `jeux-roms`, `jeux-disque`, `jeux-marque` | inclus | P5-01 | M | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | `info-tmdb`, `info-ouregarder` | à installer | P5-01, P2-06 | M | |
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | `info-mb`, `info-libretro`, `info-steam` | à installer | P5-01, P2-06 | M | |
@@ -127,6 +128,17 @@ Règles communes à chaque extraction :
 | P5-20 | Lecteurs externes mpv et VLC | `lec-externes` | inclus | P5-01 | S | |
 | P5-21 | Bilan du cœur | — | — | P5-02 à P5-20 | S | |
 
+- **P5-13** (découpée, décision de la session de pilotage, 24/11/2026) :
+  - **P5-13a — Dossiers de jeux** (fait) : plugin inclus `mire.games.pc` (`privileged`, `folders` + `launch` : le pont
+    des sources n'accepte un élément « programme » que de ce niveau). Socle : chaque dossier de `config.gameSources`
+    est proposé aux sources des plugins avec le type `game` (`SourceMediaKind`), sous l'instance `game:<chemin>` ;
+    mêmes règles que P5-11a. Les clés des jeux ne changent pas (`pc:<chemin>`). Le cœur lance un programme par la clé
+    de son élément (`gameLaunch`) : jeu ajouté à la main avec ses arguments, sinon seulement un programme d'un dossier
+    de jeux (chemin écrit puis réel), sans les arguments du plugin.
+  - **P5-13b — Jeu ajouté à la main** : demande d'abord une décision de SDK, le SDK ne donnant pas à un plugin un
+    programme choisi par l'utilisateur ni la liste `config.games` (nom, chemin, arguments, image, édités par les
+    Réglages). Deux options : `ctx.files.requestProgram` + stockage du plugin + migration de `config.games` ; ou
+    proposer les jeux ajoutés à la main comme emplacements (type à définir), la liste restant dans la configuration.
 - **P5-15** : la clé TMDB d'une installation existante devient le réglage `secret` du plugin.
 - **P5-17** : les dépendances `@ghostery/*` quittent l'application ; 🧑 YouTube sans publicité.
 - **P5-21** : le cœur ne contient plus que les éléments « Cœur » de l'inventaire (vérification dans la PR) ;

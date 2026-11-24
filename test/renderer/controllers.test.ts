@@ -159,7 +159,11 @@ describe('contrôleurs', () => {
     await assert.rejects(ctl.page.openElement({ key: 'local:/absent' }), /introuvable/);
     assert.deepEqual(
       log.filter((c) => c[0] === 'api.gameLaunch'),
-      [['api.gameLaunch', 'rom:3|/r/z.sfc', undefined]],
+      [
+        ['api.gameLaunch', 'rom:3|/r/z.sfc', undefined],
+        // Jeu PC (P5-13) : lancé par sa clé lui aussi ; aucun chemin ne part de l'interface.
+        ['api.gameLaunch', 'pc:/g/a.exe', undefined],
+      ],
     );
     assert.deepEqual(
       log.filter((c) => !c[0].startsWith('api.')),
@@ -169,7 +173,7 @@ describe('contrôleurs', () => {
         ['ui.openWeb', 'arte', 'https://arte.tv'],
         // Jeu de console (P4-17) : lancé par sa clé (`api.gameLaunch`, émulateur choisi pour lui) par `mire-games`.
         ['ui.pauseAudio'],
-        ['ui.launchEntry', { name: 'Jeu', path: '/g/a.exe' }],
+        ['ui.pauseAudio'],
         // La chaîne est désignée par sa clé : le processus principal choisit sa variante.
         ['ui.playChannel', { key: 'tv:x|1', name: 'Une' }],
         ['ui.openTvWeb', { id: 'sfr' }],

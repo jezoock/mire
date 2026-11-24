@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Jeux PC",
+      "description": "Trouve les jeux posés dans vos dossiers de jeux PC : un jeu par raccourci, par programme ou par sous-dossier."
+    }
+  }
+}

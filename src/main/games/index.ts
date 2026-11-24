@@ -1,5 +1,5 @@
 /**
- * Service des jeux : jeux PC (dossiers de jeux, ajout manuel), jeux de console (liste, lancement, copie locale),
+ * Service des jeux : jeux PC (dossiers de jeux lus par un plugin, ajout manuel), jeux de console (liste, lancement, copie locale),
  * nettoyage, suppression et marque-pages de jeux. Les dépendances (configuration, lanceur, téléchargements…) sont
  * injectées : le service ne connaît ni Electron ni la fenêtre.
  */
@@ -7,8 +7,8 @@ import type { GameRef, GameBookmarkInput } from '@mire/shared/ipc';
 import * as bookmarks from './bookmarks.ts';
 import { cleanupGames } from './cleanup.ts';
 import { deleteGame, deleteGameElement } from './delete.ts';
-import { addGame, launchGame, launchGamePath } from './pc/launch.ts';
-import { localPcProvider, scanGameSources } from './pc/scanner.ts';
+import { addGame, launchGame, launchGamePath, launchProgram } from './pc/launch.ts';
+import { scanPcFolders } from './pc/folders.ts';
 import { downloadGame } from './roms/download.ts';
 import { launchRom } from './roms/launch.ts';
 import { consoleLocations, listRoms, type ListOptions } from './roms/list.ts';
@@ -16,12 +16,10 @@ import { gameCatalogFeed } from './element-sources.ts';
 import type { GamesDeps } from './types.ts';
 
 export { consoleLocations, listRoms, citedByPlaylists } from './roms/list.ts';
-export { bestExecutable, gameFileExtensions, JUNK_EXE, localPcProvider, scanGameSources } from './pc/scanner.ts';
 export { bookmarkKey, identifyGameFile } from './bookmarks.ts';
 export type * from './types.ts';
 
 export function createGames(deps: GamesDeps) {
-  const providers = deps.providers || [localPcProvider(deps.platform)];
   const feed = deps.catalog ? gameCatalogFeed(deps.catalog, deps.platform) : null;
   /** Le catalogue ne doit jamais empêcher une liste de jeux de répondre. */
   const guarded = (fn: () => void) => {
@@ -33,14 +31,12 @@ export function createGames(deps: GamesDeps) {
   };
   const onScanned = feed ? (...args: Parameters<typeof feed.roms>) => guarded(() => feed.roms(...args)) : undefined;
   return {
-    async scanGameSources() {
-      const sources = deps.config.get().gameSources;
-      const result = await scanGameSources(sources, providers);
-      if (feed) guarded(() => feed.pc(sources, result));
-      return result;
-    },
+    /** Jeux PC des dossiers de jeux (interface historique) : ceux que les plugins ont rangés au catalogue. */
+    scanGameSources: () => scanPcFolders(deps.config.get().gameSources, deps.pcFolders, deps.platform),
     launchGame: (index: number) => launchGame(deps, index),
     launchGamePath: (target: unknown) => launchGamePath(deps, target),
+    /** Programme d'un élément du catalogue, désigné par sa clé (le chemin vient du catalogue). */
+    launchProgram: (target: string) => launchProgram(deps, target),
     addGame: () => addGame(deps),
     consoleLocations,
     listRoms: (consoleId: unknown, opts?: ListOptions) => listRoms({ ...deps, onScanned }, consoleId, opts),

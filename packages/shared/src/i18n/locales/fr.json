@@ -359,6 +359,7 @@
         "fileNotFound": "Fichier introuvable : {path}",
         "notInGameFolders": "Ce jeu ne fait pas partie de vos dossiers de jeux.",
         "pcLocation": "Les jeux PC doivent se trouver sur un disque ou un partage réseau.",
+        "pcNoPlugin": "Aucun plugin actif ne lit ce dossier de jeux. Vérifiez dans les Réglages que le plugin des jeux PC est activé.",
         "consoleGone": "Cette console n’existe plus dans la configuration.",
         "setMainFolderFirst": "Indiquez d’abord le dossier principal de {console} (Modifier la console).",
         "indexUnreadable": "Index du jeu illisible ({reason}).",

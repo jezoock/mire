@@ -394,9 +394,9 @@ export async function openCatalogElement(ctx: ControllerContext, key: string): P
   const el = (await api.catalogElement(key)) as CatalogElement | null;
   if (!el) throw new Error(`Élément introuvable : ${key}`);
   const o = el.open;
-  // Jeux (P4-17) : un jeu de console se lance par sa clé (émulateur choisi pour lui) ; un marque-page « à
-  // télécharger » ouvre sa boîte (télécharger, retirer).
-  if (o.kind === 'game') {
+  // Jeux (P4-17) : un jeu de console ou un jeu PC se lance par sa clé (P5-13 : le processus principal vérifie le
+  // programme) ; un marque-page « à télécharger » ouvre sa boîte (télécharger, retirer).
+  if (o.kind === 'game' || o.kind === 'program') {
     await callAction('mire-games', 'launch', { key });
     return;
   }
@@ -410,9 +410,6 @@ export async function openCatalogElement(ctx: ControllerContext, key: string): P
     // Portail d'un service de télévision (`tv:<service>`) : sa vue web, résolue par le processus principal.
     if (o.site.startsWith('tv:')) ui.openTvWeb({ id: o.site.slice(3) });
     else ui.openWeb(o.site, o.url);
-  } else if (o.kind === 'program') {
-    const manualIndex = (S.config?.games ?? []).findIndex((g: Data) => g.path === o.path);
-    ui.launchEntry(manualIndex >= 0 ? { manualIndex, name: el.name, path: o.path } : { name: el.name, path: o.path });
   } else if (el.tags.includes('tv')) ui.playChannel({ key, name: el.name });
   // Autre flux (entrée d'une liste M3U de la bibliothèque) : son adresse vient du catalogue.
   else ui.openExternal({ path: o.url, name: el.name });

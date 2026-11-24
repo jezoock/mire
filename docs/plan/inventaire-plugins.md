@@ -46,8 +46,8 @@ Ce qui remplit la section Jeux.
 
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
-| `jeux-pc` | Dossiers de jeux PC | Plugin inclus | Source | Fichiers, Lance des programmes ⚠ | src/main/games/pc/scanner.ts |  |
-| `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts |  |
+| `jeux-pc` | Dossiers de jeux PC | Plugin inclus | Source | Fichiers, Lance des programmes ⚠ | plugin `mire.games.pc` (mire-addons ; copie incluse dans `plugins/`, P5-13) ; cœur : dossiers proposés (src/main/games/pc/locations.ts), lancement par la clé (src/main/games/pc/launch.ts) | Niveau `privileged` : seul niveau dont le pont accepte un élément « programme » |
+| `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts, src/main/games/element-sources.ts (encore au cœur) | Reporté à P5-13b : le SDK ne donne pas à un plugin un programme choisi par l'utilisateur |
 | `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | src/main/games/roms/ |  |
 | `jeux-disque` | Jeux sur disque | Plugin inclus | Fonction | Fichiers, Internet | src/main/games/disc/ |  |
 | `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | plugin `mire.game-sites` (le cœur lit les packs `romSites`, P5-07) |  |

@@ -53,6 +53,9 @@ export function gamesHandlers(ctx: MainContext) {
       return rom ? commit(setGameEmulator(ctx.config.get().emulators, rom.console, rom.key, emulator)) : gameGone();
     },
     gameLaunch: (key, emulator) => {
+      // Jeu PC (P5-13) : le programme de l'élément, désigné par sa clé ; jamais un chemin venu de l'interface.
+      const open = typeof key === 'string' && key ? ctx.tags.element(key)?.open : null;
+      if (open?.kind === 'program') return games.launchProgram(open.path);
       const rom = romOf(key);
       return rom ? games.launchRom(rom.console, rom.path, emulator) : gameGone();
     },

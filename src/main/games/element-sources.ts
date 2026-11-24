@@ -1,25 +1,24 @@
 /**
  * Sources d'éléments des jeux, une par plugin prévu à l'inventaire :
  * - `jeux-roms` : jeux de console (dossiers et sources en ligne d'une console, jeux sur disque compris) ;
- * - `jeux-pc` : jeux PC trouvés dans les dossiers de jeux ;
+ * - `jeux-pc` : jeux PC trouvés dans les dossiers de jeux, jusqu'à P5-13 : ils viennent désormais du plugin inclus
+ *   `mire.games.pc` (`pc/locations.ts`) ; les éléments que le cœur avait rangés sous cette source sont retirés ;
  * - `jeux-pc-manuel` : jeux PC ajoutés à la main (`config.games`) ;
  * - `jeux-marque` : marque-pages de jeux à télécharger (`config.gameBookmarks`).
  *
  * Toutes posent le tag `game` et l'info `system` (système libretro de la console, `pc` pour un jeu PC). Pour un jeu
  * de console, le tag automatique « Consoles » (P2-05) pose aussi `system` ; sa valeur passe avant celle de la source
- * (priorité des origines, P2-04). Les listes de l'interface historique (`listRoms`, `scanGameSources`) alimentent le
+ * (priorité des origines, P2-04). Les listes de l'interface historique (`listRoms`) alimentent le
  * catalogue après chaque analyse (`index.ts`) ; `scan` analyse un emplacement seul, comme le fera l'hôte des plugins.
  */
 import path from 'node:path';
 import { guessSystem, isUrlTarget } from '@mire/shared';
-import type { Config, Emulator, Game, GameBookmark, GameSource } from '@mire/shared';
+import type { Config, Emulator, Game, GameBookmark } from '@mire/shared';
 import { gameBookmarkKey, normalizeLocation, pcGameKey, romKey } from '../catalog/keys.ts';
 import { compact, configSet, configSource, type ConfigFeed } from '../catalog/sync.ts';
 import type { ElementInput, ElementSource } from '../catalog/types.ts';
-import { resolveLocation } from '../library/location.ts';
 import { consoleLocations, listIn, type ScannedRomLocation } from './roms/list.ts';
-import { localPcProvider } from './pc/scanner.ts';
-import type { GameSourceProvider, PcGame, Rom } from './types.ts';
+import type { Rom } from './types.ts';
 
 /** Tags de chaque source. */
 export const GAME_SOURCE_TAGS = {
@@ -54,17 +53,6 @@ export function romElement(emu: Emulator, rom: Rom, platform: NodeJS.Platform = 
     tags: tagsOf('jeux-roms'),
     infos: compact({ system: guessSystem(emu) }),
     images: compact({ poster: rom.image }),
-  };
-}
-
-export function pcElement(game: PcGame, platform: NodeJS.Platform = process.platform): ElementInput {
-  return {
-    key: pcGameKey(game.path, platform),
-    name: game.name,
-    open: { kind: 'program', path: game.path },
-    tags: tagsOf('jeux-pc'),
-    infos: { system: PC_SYSTEM },
-    images: {},
   };
 }
 
@@ -117,28 +105,12 @@ export function romSource(fetchText: (url: string) => Promise<string>, platform:
   };
 }
 
-/** Jeux PC des dossiers de jeux : un emplacement par dossier. */
-export function pcSource(providers: readonly GameSourceProvider[], platform: NodeJS.Platform = process.platform): ElementSource<GameSource> {
-  const provider = (src: GameSource) => providers.find((p) => p.canHandle(resolveLocation(src.location)));
-  return {
-    id: 'jeux-pc',
-    tags: GAME_SOURCE_TAGS['jeux-pc'],
-    handles: (src) => !!provider(src),
-    instance: (src) => normalizeLocation(src.location, platform),
-    async scan(src) {
-      const p = provider(src) ?? localPcProvider(platform);
-      return (await p.scan(resolveLocation(src.location), src)).map((g) => pcElement(g, platform));
-    },
-  };
-}
-
 /**
  * Catalogue d'éléments alimenté par les listes des jeux : chaque emplacement accessible et complet donne ses jeux ; un
  * emplacement inaccessible garde ceux de l'analyse précédente.
  */
 export interface GameCatalogFeed {
   roms(emu: Emulator, scanned: readonly ScannedRomLocation[]): void;
-  pc(sources: readonly GameSource[], result: { games: PcGame[]; status: Record<string, { ok: boolean }> }): void;
 }
 
 export function gameCatalogFeed(
@@ -153,13 +125,6 @@ export function gameCatalogFeed(
           { plugin: 'jeux-roms', instance: romInstance(emu.id, s.location, platform) },
           s.roms.map((r) => romElement(emu, r, platform)),
         );
-      }
-    },
-    pc(sources, { games, status }) {
-      for (const src of sources) {
-        if (!status[src.id]?.ok) continue;
-        const found = games.filter((g) => g.source === src.id).map((g) => pcElement(g, platform));
-        catalog.setSource({ plugin: 'jeux-pc', instance: normalizeLocation(src.location, platform) }, found);
       }
     },
   };
@@ -179,14 +144,14 @@ export const gameBookmarksSource = () =>
 
 /**
  * Ce que la configuration donne au catalogue : jeux ajoutés à la main, marque-pages en attente de téléchargement ;
- * les consoles et les dossiers de jeux encore configurés gardent leurs éléments (les autres sont retirés).
+ * les consoles encore configurées gardent leurs éléments (les autres sont retirés), comme ceux des dossiers de jeux que
+ * le cœur analysait avant P5-13 (`jeux-pc`), désormais trouvés par un plugin.
  */
 export function gameConfigFeed(config: Config, platform: NodeJS.Platform = process.platform): ConfigFeed {
   const romInstances = new Set(config.emulators.flatMap((emu) => consoleLocations(emu).map((l) => romInstance(emu.id, l.location, platform))));
-  const pcInstances = new Set(config.gameSources.map((src) => normalizeLocation(src.location, platform)));
   return {
     owns: (plugin) => Object.hasOwn(GAME_SOURCE_TAGS, plugin),
     sets: [configSet(manualGamesSource(platform), config), configSet(gameBookmarksSource(), config)],
-    keeps: (ref) => (ref.plugin === 'jeux-roms' ? romInstances.has(ref.instance) : ref.plugin === 'jeux-pc' && pcInstances.has(ref.instance)),
+    keeps: (ref) => ref.plugin === 'jeux-roms' && romInstances.has(ref.instance),
   };
 }

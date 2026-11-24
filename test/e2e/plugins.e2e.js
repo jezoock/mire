@@ -31,6 +31,10 @@ let proxy;
 const chromiumRequests = [];
 let started;
 let granted;
+let pcGames;
+let pcGame;
+/** Jeu posé dans le dossier de jeux PC, selon le système (le programme n'est jamais lancé). */
+const PC_GAME_FILE = { win32: 'Celeste\\Celeste.exe', darwin: 'Celeste.app/Contents/Info.plist', linux: 'Celeste/Celeste.x86_64' };
 
 // Proxy de Chromium : note chaque requête et la refuse, pour qu'aucune ne sorte réellement.
 function startProxy() {
@@ -60,6 +64,12 @@ function prepareData() {
   fs.writeFileSync(path.join(granted, 'note.txt'), 'bonjour du dossier\n');
   fs.writeFileSync(path.join(granted, 'film.mkv'), '');
   fs.writeFileSync(path.join(tmp, 'hors.txt'), 'interdit');
+  // Dossier de jeux PC (P5-13) : lu par le plugin inclus mire.games.pc ; un jeu par sous-dossier.
+  pcGames = path.join(tmp, 'jeux-pc');
+  pcGame = PC_GAME_FILE[process.platform] ?? PC_GAME_FILE.linux;
+  fs.mkdirSync(path.dirname(path.join(pcGames, pcGame)), { recursive: true });
+  fs.writeFileSync(path.join(pcGames, pcGame), '');
+  config.gameSources = [{ id: 'e2e-pc', location: pcGames }];
   config.plugins = { 'org.exemple.dossier': { dossier: granted, cle: { $secret: 'CLE-E2E', encrypted: false } } };
   fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify(config, null, 2));
   fs.mkdirSync(path.join(data, 'plugins'), { recursive: true });
@@ -259,6 +269,36 @@ describe('Hôte de plugins', () => {
     await page.locator(`${VIEW} .mire-centre-view__sheet .mire-centre-view__error`, { hasText: 'autre version de Mire' }).waitFor();
     assert.equal(await page.locator(`${VIEW} .mire-centre-view__sheet-action`).count(), 1, 'désinstaller seulement');
     await page.locator(`${VIEW} ds-trigger.mire-centre-view__sheet-back.hydrated`).click();
+  });
+
+  it('jeux PC (P5-13) : le plugin inclus lit le dossier de jeux ; désactivé, ses jeux partent, réactivé, ils reviennent', async () => {
+    const p = await until('plugin des jeux PC actif', async () => {
+      const all = await byId();
+      return all['mire.games.pc']?.status === 'active' ? all['mire.games.pc'] : null;
+    });
+    assert.equal(p.origin, 'bundled');
+    assert.equal(p.level, 'privileged');
+    const games = () => page.evaluate(() => window.api.scanGameSources());
+    const found = await until('jeu trouvé', async () => {
+      const r = await games();
+      return r.games.length ? r : null;
+    });
+    assert.deepEqual(
+      found.games.map((g) => [g.name, g.source]),
+      [['Celeste', 'e2e-pc']],
+    );
+    assert.deepEqual(found.status['e2e-pc'], { ok: true, error: null, count: 1 });
+    // Même clé qu'avant l'extraction (`pc:<chemin>`, sans casse sous Windows) : favoris et temps de jeu retrouvés.
+    const file = found.games[0].path;
+    const key = process.platform === 'win32' ? `pc:${file.replace(/\\/g, '/').toLowerCase()}` : `pc:${file}`;
+    const el = await page.evaluate((k) => window.api.catalogElement(k), key);
+    assert.deepEqual([el?.name, el?.open], ['Celeste', { kind: 'program', path: file }]);
+    assert.equal((await page.evaluate(() => window.api.pluginsSetEnabled('mire.games.pc', false))).status, 'disabled');
+    const off = await games();
+    assert.deepEqual(off.games, []);
+    assert.equal(off.status['e2e-pc'].ok, false);
+    assert.equal((await page.evaluate(() => window.api.pluginsSetEnabled('mire.games.pc', true))).status, 'active');
+    await until('jeu revenu', async () => ((await games()).games.length === 1 ? true : null));
   });
 });
 

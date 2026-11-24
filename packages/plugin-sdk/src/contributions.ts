@@ -15,14 +15,18 @@ import type { PluginContext } from './context.ts';
 /** Élément tel qu'une source le donne : le catalogue y ajoute sa source et sa date d'ajout. */
 export type ElementInput = Omit<Element, 'source' | 'added'> & { added?: number };
 
-/** Type de fichiers cherchés dans un emplacement de la bibliothèque. */
-export type SourceMediaKind = 'video' | 'audio' | 'image';
+/**
+ * Type de fichiers cherchés dans un emplacement : vidéos, musique et images pour un emplacement de la bibliothèque ;
+ * `game` pour un dossier de jeux PC (P5-13), proposé de la même façon. Une source ne prend que les emplacements dont
+ * elle sait lire le type.
+ */
+export type SourceMediaKind = 'video' | 'audio' | 'image' | 'game';
 
 /**
- * Emplacement de la bibliothèque, tel que le cœur le passe à une source de plugin (`handles`, `scan`) : un dossier
- * ou un partage réseau (`path`), ou une adresse (`url`). Les emplacements restent dans la configuration de Mire ;
- * un dossier n'est passé qu'à une source qui l'a accepté (`handles`), et lui est alors accordé (`ctx.files`) tant
- * qu'il reste dans la bibliothèque.
+ * Emplacement de la bibliothèque ou dossier de jeux PC, tel que le cœur le passe à une source de plugin (`handles`,
+ * `scan`) : un dossier ou un partage réseau (`path`), ou une adresse (`url`). Les emplacements restent dans la
+ * configuration de Mire ; un dossier n'est passé qu'à une source qui l'a accepté (`handles`), et lui est alors accordé
+ * (`ctx.files`) tant qu'il reste dans la bibliothèque ou dans les dossiers de jeux.
  */
 export interface SourceLocation {
   /** Emplacement tel que l'utilisateur l'a saisi (`D:\\Films`, `smb://nas/films`, `https://…/films/`). */

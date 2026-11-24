@@ -1,13 +1,11 @@
-// Jeux PC (P1-20) sur dossiers temporaires : raccourcis et exécutables posés dans le dossier, choix de l'exécutable
-// d'un sous-dossier, utilitaires ignorés, dossiers inaccessibles ; lancement avec un faux lanceur (aucun programme
-// réel n'est lancé).
+// Jeux PC (P1-20) : lancement avec un faux lanceur (aucun programme réel n'est lancé) et ajout à la main. L'analyse
+// des dossiers de jeux est partie avec le plugin inclus `mire.games.pc` (P5-13, ses tests dans plugins/mire.games.pc/test/).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { bestExecutable, localPcProvider, scanGameSources } from '../../src/main/games/pc/scanner.ts';
-import { addGame, launchGame, launchGamePath } from '../../src/main/games/pc/launch.ts';
+import { addGame, launchGame, launchGamePath, launchProgram } from '../../src/main/games/pc/launch.ts';
 import { createConfigService } from '../../src/main/config/index.ts';
 import { createAccessPolicy } from '../../src/main/security/access-policy.ts';
 
@@ -20,75 +18,10 @@ const write = (rel: string, size = 1) => {
   return file;
 };
 
-test('bestExecutable : nom proche du dossier, puis le plus gros ; utilitaires, raccourcis et redistribuables écartés', async () => {
-  const dir = path.join(root, 'choix', 'Super Jeu');
-  write('choix/Super Jeu/unins000.exe', 5000);
-  write('choix/Super Jeu/UnityCrashHandler64.exe', 5000);
-  write('choix/Super Jeu/Super Jeu.lnk', 5000);
-  write('choix/Super Jeu/_CommonRedist/vcredist.exe', 9000);
-  write('choix/Super Jeu/redist/autre.exe', 9000);
-  write('choix/Super Jeu/outil.exe', 100);
-  const main = write('choix/Super Jeu/bin/SuperJeu.exe', 10);
-  assert.equal(await bestExecutable(dir, 'Super Jeu', 'win32'), main);
-  // À nom égal (aucun ne ressemble), le plus gros l'emporte.
-  const other = path.join(root, 'taille', 'Zzz');
-  write('taille/Zzz/a.exe', 10);
-  const big = write('taille/Zzz/b.exe', 500);
-  assert.equal(await bestExecutable(other, 'Zzz', 'win32'), big);
-  // Trop profond (plus de trois niveaux) : ignoré.
-  write('profond/Jeu/1/2/3/Jeu.exe');
-  assert.equal(await bestExecutable(path.join(root, 'profond', 'Jeu'), 'Jeu', 'win32'), null);
-});
-
-test('scanGameSources : un jeu par raccourci, par exécutable ou par sous-dossier, triés ; état de chaque dossier', async () => {
-  write('jeux/Mon_jeu.exe');
-  write('jeux/Raccourci.lnk');
-  write('jeux/setup.exe');
-  write('jeux/.cache/x.exe');
-  write('jeux/lisezmoi.txt');
-  const exe = write('jeux/Aventure/Aventure.exe');
-  fs.mkdirSync(path.join(root, 'jeux', 'Vide'), { recursive: true });
-  const sources = [
-    { id: 's1', location: path.join(root, 'jeux') },
-    { id: 's2', location: path.join(root, 'absent') },
-    { id: 's3', location: 'https://exemple.org/jeux/' },
-  ];
-  const { games, status } = await scanGameSources(sources, [localPcProvider('win32')]);
-  assert.deepEqual(
-    games.map((g) => [g.name, path.relative(root, g.path), g.source]),
-    [
-      ['Aventure', path.relative(root, exe), 's1'],
-      ['Mon jeu', path.join('jeux', 'Mon_jeu.exe'), 's1'],
-      ['Raccourci', path.join('jeux', 'Raccourci.lnk'), 's1'],
-    ],
-  );
-  assert.deepEqual(status.s1, { ok: true, error: null, count: 3 });
-  assert.equal(status.s2.ok, false);
-  assert.match(status.s2.error!, /introuvable|inaccessible|accès/i);
-  assert.deepEqual(status.s3, { ok: false, error: 'Les jeux PC doivent se trouver sur un disque ou un partage réseau.', count: 0 });
-});
-
-test('scanGameSources : extensions propres à Linux et à macOS', async () => {
-  write('linux/Jeu.appimage');
-  write('linux/Jeu.exe');
-  const linux = await scanGameSources([{ id: 'l', location: path.join(root, 'linux') }], [localPcProvider('linux')]);
-  assert.deepEqual(
-    linux.games.map((g) => g.name),
-    ['Jeu'],
-  );
-  assert.equal(path.extname(linux.games[0].path), '.appimage');
-  fs.mkdirSync(path.join(root, 'mac', 'Jeu Mac.app', 'Contents'), { recursive: true });
-  const mac = await scanGameSources([{ id: 'm', location: path.join(root, 'mac') }], [localPcProvider('darwin')]);
-  assert.deepEqual(
-    mac.games.map((g) => [g.name, path.basename(g.path)]),
-    [['Jeu Mac', 'Jeu Mac.app']],
-  );
-});
-
-function launchDeps(games: unknown[], allowed: string[] = []) {
+function launchDeps(games: unknown[], allowed: string[] = [], gameSources: unknown[] = []) {
   const calls: unknown[] = [];
   const config = createConfigService({ file: path.join(root, `config-${Math.random().toString(36).slice(2)}.json`) });
-  config.replace({ games });
+  config.replace({ games, gameSources });
   const launcher = {
     launchProcess: async (...args: unknown[]) => (calls.push(['launchProcess', ...args]), { ok: true }),
     openTarget: async (...args: unknown[]) => (calls.push(['openTarget', ...args]), { ok: true }),
@@ -127,4 +60,24 @@ test('addGame : ajoute le fichier choisi sous son nom, ou rien si l’utilisateu
   assert.equal(await addGame({ ...deps, pickFile: async () => null }), null);
   const next = await addGame({ ...deps, pickFile: async () => path.join(root, 'Mon Jeu.exe') });
   assert.deepEqual(next!.games, [{ name: 'Mon Jeu', path: path.join(root, 'Mon Jeu.exe'), args: [], image: '' }]);
+});
+
+test('launchProgram (P5-13) : jeu ajouté à la main avec ses arguments ; sinon seulement dans un dossier de jeux, sans arguments', async () => {
+  const manual = write('ailleurs-main/Jeu.exe');
+  const inFolder = write('dossier-jeux/Celeste/Celeste.exe');
+  const outside = write('hors/Autre.exe');
+  // Lien posé dans le dossier de jeux qui mène ailleurs : refusé sur le chemin réel.
+  const link = path.join(root, 'dossier-jeux', 'lien.exe');
+  fs.symlinkSync(outside, link);
+  const { deps, calls } = launchDeps([{ name: 'Jeu', path: manual, args: ['-plein'] }], [], [{ id: 'g', location: path.join(root, 'dossier-jeux') }]);
+  assert.deepEqual(await launchProgram(deps, manual), { ok: true });
+  assert.deepEqual(await launchProgram(deps, inFolder), { ok: true });
+  assert.match((await launchProgram(deps, outside)).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, link)).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, path.join(root, 'dossier-jeux', '..', 'hors', 'Autre.exe'))).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, path.join(root, 'dossier-jeux', 'absent.exe'))).error!, /Fichier introuvable/);
+  assert.deepEqual(calls, [
+    ['openTarget', manual, ['-plein'], { cwd: path.dirname(manual), hideWhileRunning: true }],
+    ['openTarget', inFolder, [], { cwd: path.dirname(inFolder), hideWhileRunning: true }],
+  ]);
 });

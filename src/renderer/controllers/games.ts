@@ -196,13 +196,10 @@ export class GamesController extends Controller {
     const { api, ui, toast } = this.ctx;
     const el = (await api.catalogElement(key)) as CatalogElement | null;
     if (!el) return false;
-    if (el.open.kind === 'program') {
-      ui.launchEntry({ name: el.name, path: el.open.path });
-      return true;
-    }
+    // Jeu PC comme jeu de console : lancé par sa clé (le processus principal vérifie le programme, P5-13).
     toast(this.k('game.launching', { name: el.name }), { duration: 2500 });
     ui.pauseAudio();
-    const r = (await api.gameLaunch(key, emulator)) as Outcome | null;
+    const r = (await api.gameLaunch(key, el.open.kind === 'program' ? undefined : emulator)) as Outcome | null;
     if (!r?.ok) toast(r?.error || this.k('failed'), { duration: 7000 });
     return !!r?.ok;
   }

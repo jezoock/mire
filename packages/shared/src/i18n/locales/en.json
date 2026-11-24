@@ -359,6 +359,7 @@
         "fileNotFound": "File not found: {path}",
         "notInGameFolders": "This game isn't in your game folders.",
         "pcLocation": "PC games must be on a disk or a network share.",
+        "pcNoPlugin": "No active plugin reads this game folder. Check in Settings that the PC games plugin is turned on.",
         "consoleGone": "This console is no longer in the configuration.",
         "setMainFolderFirst": "First set the main folder for {console} (Edit console).",
         "indexUnreadable": "Can't read the game index ({reason}).",

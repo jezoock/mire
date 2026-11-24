@@ -1,0 +1,22 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.games.pc",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "privileged",
+  "contributes": {
+    "sources": [
+      {
+        "id": "folders",
+        "main": "src/folders.mjs"
+      }
+    ]
+  },
+  "permissions": {
+    "folders": true,
+    "launch": true
+  },
+  "i18n": "i18n/"
+}
