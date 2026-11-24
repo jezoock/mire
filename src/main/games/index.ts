@@ -7,7 +7,7 @@ import type { GameRef, GameBookmarkInput } from '@mire/shared/ipc';
 import * as bookmarks from './bookmarks.ts';
 import { cleanupGames } from './cleanup.ts';
 import { deleteGame, deleteGameElement } from './delete.ts';
-import { addGame, launchGame, launchGamePath } from './pc/launch.ts';
+import { addGame, launchGame, launchGamePath, launchProgram } from './pc/launch.ts';
 import { localPcProvider, scanGameSources } from './pc/scanner.ts';
 import { downloadGame } from './roms/download.ts';
 import { launchRom } from './roms/launch.ts';
@@ -41,6 +41,8 @@ export function createGames(deps: GamesDeps) {
     },
     launchGame: (index: number) => launchGame(deps, index),
     launchGamePath: (target: unknown) => launchGamePath(deps, target),
+    /** Programme d'un élément du catalogue, désigné par sa clé (le chemin vient du catalogue). */
+    launchProgram: (target: string) => launchProgram(deps, target),
     addGame: () => addGame(deps),
     consoleLocations,
     listRoms: (consoleId: unknown, opts?: ListOptions) => listRoms({ ...deps, onScanned }, consoleId, opts),

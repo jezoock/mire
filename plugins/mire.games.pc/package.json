@@ -1,0 +1,16 @@
+{
+  "name": "mire.games.pc",
+  "private": true,
+  "description": "Jeux PC des dossiers de jeux",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "PC games",
+      "description": "Finds the games in your PC game folders: one game per shortcut, program or subfolder."
+    }
+  }
+}

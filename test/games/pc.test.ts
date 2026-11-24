@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { bestExecutable, localPcProvider, scanGameSources } from '../../src/main/games/pc/scanner.ts';
-import { addGame, launchGame, launchGamePath } from '../../src/main/games/pc/launch.ts';
+import { addGame, launchGame, launchGamePath, launchProgram } from '../../src/main/games/pc/launch.ts';
 import { createConfigService } from '../../src/main/config/index.ts';
 import { createAccessPolicy } from '../../src/main/security/access-policy.ts';
 
@@ -85,10 +85,10 @@ test('scanGameSources : extensions propres à Linux et à macOS', async () => {
   );
 });
 
-function launchDeps(games: unknown[], allowed: string[] = []) {
+function launchDeps(games: unknown[], allowed: string[] = [], gameSources: unknown[] = []) {
   const calls: unknown[] = [];
   const config = createConfigService({ file: path.join(root, `config-${Math.random().toString(36).slice(2)}.json`) });
-  config.replace({ games });
+  config.replace({ games, gameSources });
   const launcher = {
     launchProcess: async (...args: unknown[]) => (calls.push(['launchProcess', ...args]), { ok: true }),
     openTarget: async (...args: unknown[]) => (calls.push(['openTarget', ...args]), { ok: true }),
@@ -127,4 +127,24 @@ test('addGame : ajoute le fichier choisi sous son nom, ou rien si l’utilisateu
   assert.equal(await addGame({ ...deps, pickFile: async () => null }), null);
   const next = await addGame({ ...deps, pickFile: async () => path.join(root, 'Mon Jeu.exe') });
   assert.deepEqual(next!.games, [{ name: 'Mon Jeu', path: path.join(root, 'Mon Jeu.exe'), args: [], image: '' }]);
+});
+
+test('launchProgram (P5-13) : jeu ajouté à la main avec ses arguments ; sinon seulement dans un dossier de jeux, sans arguments', async () => {
+  const manual = write('ailleurs-main/Jeu.exe');
+  const inFolder = write('dossier-jeux/Celeste/Celeste.exe');
+  const outside = write('hors/Autre.exe');
+  // Lien posé dans le dossier de jeux qui mène ailleurs : refusé sur le chemin réel.
+  const link = path.join(root, 'dossier-jeux', 'lien.exe');
+  fs.symlinkSync(outside, link);
+  const { deps, calls } = launchDeps([{ name: 'Jeu', path: manual, args: ['-plein'] }], [], [{ id: 'g', location: path.join(root, 'dossier-jeux') }]);
+  assert.deepEqual(await launchProgram(deps, manual), { ok: true });
+  assert.deepEqual(await launchProgram(deps, inFolder), { ok: true });
+  assert.match((await launchProgram(deps, outside)).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, link)).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, path.join(root, 'dossier-jeux', '..', 'hors', 'Autre.exe'))).error!, /ne fait pas partie/);
+  assert.match((await launchProgram(deps, path.join(root, 'dossier-jeux', 'absent.exe'))).error!, /Fichier introuvable/);
+  assert.deepEqual(calls, [
+    ['openTarget', manual, ['-plein'], { cwd: path.dirname(manual), hideWhileRunning: true }],
+    ['openTarget', inFolder, [], { cwd: path.dirname(inFolder), hideWhileRunning: true }],
+  ]);
 });
