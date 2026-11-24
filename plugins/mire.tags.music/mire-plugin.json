@@ -1,0 +1,32 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.tags.music",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "music",
+        "main": "src/tagger.mjs",
+        "infos": {
+          "title": {
+            "type": "text"
+          },
+          "artist": {
+            "type": "text"
+          },
+          "album": {
+            "type": "text"
+          },
+          "track": {
+            "type": "number"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

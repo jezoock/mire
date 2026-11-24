@@ -16,7 +16,7 @@ import { createPages } from '../../src/main/catalog/pages/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from '../catalog/bundled-taggers.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { createExplorerModel, folderNode, levelNode } from '../../src/renderer/explorer/index.ts';
 import type { ExplorerState } from '../../src/renderer/explorer/index.ts';
@@ -64,7 +64,7 @@ describe('mesure de l’explorateur sur 20 000 éléments factices', () => {
       overrides,
       registry: createRegistry(tr),
       rules: () => fileTagRules(undefined),
-      contributors: builtinTaggers(() => []).map(taggerContributor),
+      contributors: bundledTaggers(),
     });
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
     // Un parcours complet à froid (service des pages neuf, rien en cache) ; rend le temps de chaque étape.

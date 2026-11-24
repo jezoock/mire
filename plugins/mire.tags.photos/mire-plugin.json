@@ -1,0 +1,23 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.tags.photos",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "photos",
+        "main": "src/tagger.mjs",
+        "infos": {
+          "folder": {
+            "type": "text"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

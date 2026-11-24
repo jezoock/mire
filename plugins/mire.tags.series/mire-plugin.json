@@ -1,0 +1,30 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.tags.series",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "series",
+        "main": "src/tagger.mjs",
+        "tags": ["series"],
+        "infos": {
+          "series": {
+            "type": "text"
+          },
+          "season": {
+            "type": "number"
+          },
+          "episode": {
+            "type": "number"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

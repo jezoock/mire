@@ -219,6 +219,40 @@ export interface SearchProvider<Result = unknown, Ctx = PluginContext> {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Sous-titres (`subtitles`)
+
+/**
+ * Sous-titre trouvé pour une vidéo : un fichier local (`path`) ou une adresse `https:` (`url`), au format SubRip
+ * (`.srt`) ou WebVTT (`.vtt`). Mire le lit lui-même, le convertit en WebVTT et l'affiche comme du texte, jamais comme
+ * du HTML.
+ */
+export interface SubtitleFound {
+  /** Fichier `.srt` ou `.vtt` (chemin absolu), dans un dossier accordé au plugin. */
+  path?: string;
+  /** Adresse `https:` du fichier, sur un hôte déclaré dans `permissions.hosts`. */
+  url?: string;
+  /** Langue (code ISO 639 : `fr`, `en`, `pt-BR`), ou vide si elle n'est pas connue. */
+  lang?: string;
+  /** Nom montré dans le choix des sous-titres (`fr`, `forced.fr`…) ; à défaut, Mire écrit « Sous-titres ». */
+  label?: string;
+}
+
+/**
+ * Fournisseur de sous-titres (contribution `subtitles`) : à l'ouverture d'une vidéo, Mire demande ses sous-titres à
+ * chaque fournisseur actif et réunit les résultats.
+ *
+ * `videoPath` est le chemin absolu d'une vidéo locale que Mire a déjà le droit de lire. Pendant l'appel, le dossier
+ * de cette vidéo est accordé au plugin (`ctx.files`) s'il déclare la permission `folders`. Seuls les plugins inclus
+ * ou du dépôt officiel sont interrogés. Rendre `[]` quand rien n'est trouvé ; une erreur levée compte comme une panne
+ * du plugin.
+ */
+export interface SubtitleProvider {
+  /** Identifiant : celui de la contribution. */
+  id: string;
+  find(videoPath: string): Promise<SubtitleFound[]>;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Extensions des vues web (`webExtensions`, niveau `privileged`)
 
 /** En-têtes d'une requête. */
@@ -357,6 +391,7 @@ export interface CodeContributionTypes {
   metadata: MetadataProvider;
   taggers: Tagger;
   search: SearchProvider;
+  subtitles: SubtitleProvider;
   webExtensions: WebExtension;
   downloaders: Downloader;
 }

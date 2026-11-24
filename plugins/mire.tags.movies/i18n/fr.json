@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Tags automatiques : films",
+      "description": "Range comme films les vidéos qui ne sont pas des épisodes, avec le titre et l’année tirés du nom du fichier (« Amélie (2001) »)."
+    },
+    "tags": {
+      "movie": "Films"
+    },
+    "infos": {
+      "title": "Titre",
+      "year": "Année"
+    }
+  }
+}

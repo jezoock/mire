@@ -695,8 +695,6 @@
         "local": "Sur cet ordinateur",
         "network": "Sur le réseau",
         "remote": "En ligne",
-        "series": "Séries",
-        "movie": "Films",
         "game": "Jeux",
         "tv": "Télévision",
         "stream": "Streaming"
@@ -1248,6 +1246,7 @@
           "metadata": "Des infos en ligne (fiches, images)",
           "taggers": "Des tags posés automatiquement",
           "search": "Des résultats de recherche",
+          "subtitles": "Des sous-titres",
           "webExtensions": "Des extensions pour les sites web",
           "downloaders": "Une façon de télécharger",
           "webApps": "Des sites et des services",

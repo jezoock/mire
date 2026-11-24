@@ -133,6 +133,15 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.games.pc', 'bundled', []]);
   });
 
+  test('P5-11b : les sous-titres posés à côté des vidéos, plugin inclus, pour toute installation existante', () => {
+    for (const raw of [readFixture('config-v9.json'), {}, { library: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-11b'));
+    }
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-11b');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.subtitles', 'bundled', []]);
+  });
+
   test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
     const queue = (ui: unknown) => {
       const { config } = migrate({ version: 9, ui });
@@ -154,6 +163,20 @@ test.describe('migration v10 (P5-01)', () => {
         ['P5-02-minuit', 'mire.palette.minuit', 'install', []],
         ['P5-02-velours', 'mire.palette.velours', 'install', []],
       ],
+    );
+  });
+
+  test('P5-09 : les cinq tags automatiques, plugins inclus, pour toute installation existante ; aucun réglage', () => {
+    const kinds = ['series', 'movies', 'music', 'consoles', 'photos'];
+    for (const raw of [readFixture('config-v9.json'), {}, { catalog: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const k of kinds) assert.ok((config as Any).continuity.includes(`P5-09-${k}`), k);
+      assert.equal((config as Any).plugins?.['mire.tags.series'], undefined);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-09-'));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      kinds.map((k) => [`mire.tags.${k}`, 'bundled', []]),
     );
   });
 

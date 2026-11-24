@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Subtitles next to videos",
+      "description": "Finds .srt and .vtt subtitles stored in a video’s folder when their name starts with the video’s name (Movie.en.srt for Movie.mkv)."
+    }
+  }
+}
