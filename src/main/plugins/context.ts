@@ -276,8 +276,10 @@ export function createContextHandler(deps: ContextDeps) {
     }
 
     async function walk(rootArg: unknown, raw: unknown, signal: AbortSignal): Promise<FileEntry[]> {
-      const root = await checkedPath(rootArg);
-      if (!root) throw new ChannelError(CHANNEL_ERRORS.io, 'Folder not found.');
+      if (!(await checkedPath(rootArg))) throw new ChannelError(CHANNEL_ERRORS.io, 'Folder not found.');
+      // Chemins rendus sous la racine telle que donnée (vérifiée ci-dessus, chemin réel compris) : un dossier de la
+      // bibliothèque atteint par un lien symbolique garde les chemins, donc les clés, qu'il a dans la configuration.
+      const root = path.resolve(String(rootArg));
       const o = (raw && typeof raw === 'object' ? raw : {}) as WalkOptions;
       const exts = Array.isArray(o.extensions) ? new Set(o.extensions.map((e) => `.${String(e).toLowerCase().replace(/^\./, '')}`)) : null;
       const depth = Number.isInteger(o.depth) && o.depth! >= 0 ? o.depth! : Infinity;
