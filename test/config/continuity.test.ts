@@ -137,6 +137,22 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.games.pc', 'bundled', []]);
   });
 
+  test('P5-14a : les dossiers des consoles, plugin inclus, pour toute installation existante ; consoles et jeux restent en place', () => {
+    const raw = {
+      emulators: [{ id: 'snes-1', name: 'Super Nintendo', path: 'C:\\Emu\\snes.exe', romsDir: 'D:\\Jeux\\SNES', sources: ['E:\\SNES'], extensions: ['.sfc'] }],
+      gameBookmarks: [{ id: 'b1', source: 'https://jeux.exemple.org/a.zip', console: 'snes-1' }],
+    };
+    for (const r of [readFixture('config-v9.json'), {}, raw, { emulators: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...r, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-14a'));
+    }
+    const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+    assert.deepEqual([(config as Any).emulators, (config as Any).gameBookmarks], [raw.emulators, raw.gameBookmarks]);
+    assert.equal((config as Any).plugins?.['mire.games.roms'], undefined);
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-14a');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.games.roms', 'bundled', []]);
+  });
+
   test('P5-11b : les sous-titres posés à côté des vidéos, plugin inclus, pour toute installation existante', () => {
     for (const raw of [readFixture('config-v9.json'), {}, { library: 'mal formé' }]) {
       const { config } = migrate(structuredClone({ ...raw, version: 9 }));
