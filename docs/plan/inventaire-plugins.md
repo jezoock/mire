@@ -250,12 +250,12 @@ Remplace les sections fixes (Vidéos, Musique, Jeux…) : chaque élément porte
 | `pages-moteur` | Pages | Cœur | Socle | Données seules | à créer (remplace les sections de src/renderer/app.js) |  |
 | `grp-auto` | Regroupements automatiques | Cœur | Fonction | Données seules | à créer |  |
 | `grp-manuel` | Regroupements à la main | Cœur | Fonction | Fichiers | à créer |  |
-| `tagauto-series` | Tags auto : séries | Plugin inclus | Tags automatiques | Données seules | packages/shared (parseVideo), renderer/domain/videos.ts |  |
-| `tagauto-films` | Tags auto : films | Plugin inclus | Tags automatiques | Données seules | packages/shared (parseVideo) |  |
-| `tagauto-musique` | Tags auto : musique | Plugin inclus | Tags automatiques | Fichiers | src/renderer/domain/items.ts |  |
-| `tagauto-consoles` | Tags auto : consoles | Plugin inclus | Tags automatiques | Données seules | packages/shared (guessSystem) |  |
-| `tagauto-images` | Tags auto : photos | Plugin inclus | Tags automatiques | Fichiers | src/renderer/app.js (groupes par dossier) |  |
-| `tagauto-genres` | Tags auto : genres et années | Plugin inclus | Tags automatiques | Internet | src/main/scrape/ |  |
+| `tagauto-series` | Tags auto : séries | Plugin inclus | Tags automatiques | Données seules | plugin `mire.tags.series` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `tagauto-films` | Tags auto : films | Plugin inclus | Tags automatiques | Données seules | plugin `mire.tags.movies` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `tagauto-musique` | Tags auto : musique | Plugin inclus | Tags automatiques | Fichiers | plugin `mire.tags.music` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `tagauto-consoles` | Tags auto : consoles | Plugin inclus | Tags automatiques | Données seules | plugin `mire.tags.consoles` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `tagauto-images` | Tags auto : photos | Plugin inclus | Tags automatiques | Fichiers | plugin `mire.tags.photos` (mire-addons ; copie incluse dans `plugins/`) |  |
+| `tagauto-genres` | Tags auto : genres et années | Plugin inclus | Tags automatiques | Internet | src/main/scrape/ ; rien à extraire (P5-09) : l’année tirée du nom est dans `mire.tags.movies`, les genres et années en ligne viennent des plugins d’infos en ligne (P5-15, P5-16) | Pas de tag automatique : un `Tagger` est sans réseau et ne voit pas les fiches |
 | `page-films` | Page Films | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.movies` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `page-series` | Page Séries | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.series` (mire-addons ; copie incluse dans `plugins/`) |  |
 | `page-musique` | Page Musique | Plugin inclus | Page prête à l'emploi | Données seules | plugin `mire.page.music` (mire-addons ; copie incluse dans `plugins/`) |  |
