@@ -11,69 +11,18 @@
  */
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { _electron: electron } = require('playwright-core');
+const { fakeRepository } = require('./fake-repo.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const FIXTURES = path.join(__dirname, 'fixtures');
 const SHOTS = path.join(__dirname, '__screenshots__');
-const INDEX_URL = 'https://depot.invalid/index.json';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-e2e-assistant-'));
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
-
-// Forme canonique de l'index (clés triées, sans espace), comme `canonicalJson` de src/main/repos/index-file.ts.
-function canonical(v) {
-  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
-  if (v && typeof v === 'object')
-    return `{${Object.keys(v)
-      .sort()
-      .map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`)
-      .join(',')}}`;
-  return JSON.stringify(v);
-}
-
-const version = (name, categories, dependencies = {}) => ({
-  version: '1.0.0',
-  engines: { mire: '>=0.0.0' },
-  level: 'data',
-  contributes: ['packs'],
-  permissions: {},
-  dependencies,
-  name: { en: name, fr: name },
-  categories,
-  package: { url: 'https://depot.invalid/p.tgz', sha256: '0'.repeat(64), size: 10 },
-});
-
-// Dépôt tiers factice : sa déclaration (trust.json) et son index signé, en cache comme après une lecture en ligne.
-function fakeRepository(data) {
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
-  const raw = publicKey.export({ type: 'spki', format: 'der' }).subarray(-32);
-  const fingerprint = crypto.createHash('sha256').update(raw).digest('hex');
-  const id = `repo-${fingerprint.slice(0, 16)}`;
-  const body = {
-    format: 1,
-    repository: { name: { en: 'Test repository', fr: 'Dépôt d’essai' }, index: INDEX_URL },
-    generated: '2026-11-20T12:00:00.000Z',
-    plugins: [
-      { id: 'org.essai.box', versions: [version('Box d’essai', ['tv-box'], { 'org.essai.chaines': '^1.0.0' })] },
-      { id: 'org.essai.chaines', versions: [version('Chaînes d’essai', ['tv'])] },
-      { id: 'org.essai.films', versions: [version('Films d’essai', ['movies'], { 'org.essai.infos': '^1.0.0' })] },
-      { id: 'org.essai.infos', versions: [version('Infos d’essai', [])] },
-      { id: 'org.essai.service', versions: [version('Service d’essai', ['streaming-service'])] },
-    ],
-  };
-  const value = crypto.sign(null, Buffer.from(`mire-addons-index:1\n${canonical(body)}`), privateKey).toString('base64');
-  const index = { ...body, signature: { algorithm: 'ed25519', keyId: fingerprint, value } };
-  fs.mkdirSync(path.join(data, 'repos', id), { recursive: true });
-  fs.writeFileSync(path.join(data, 'repos', id, 'index.json'), JSON.stringify(index));
-  const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
-  const trust = { repositories: [{ id, index: INDEX_URL, publicKey: pem, fingerprint, addedAt: 1 }], consents: [] };
-  fs.writeFileSync(path.join(data, 'repos', 'trust.json'), JSON.stringify(trust));
-}
 
 async function launch(data) {
   const app = await electron.launch({
