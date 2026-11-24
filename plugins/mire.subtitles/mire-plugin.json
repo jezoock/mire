@@ -1,0 +1,21 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.subtitles",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "subtitles": [
+      {
+        "id": "sidecar",
+        "main": "src/subtitles.mjs"
+      }
+    ]
+  },
+  "permissions": {
+    "folders": true
+  },
+  "i18n": "i18n/"
+}

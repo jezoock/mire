@@ -117,6 +117,15 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
+  test('P5-11b : les sous-titres posés à côté des vidéos, plugin inclus, pour toute installation existante', () => {
+    for (const raw of [readFixture('config-v9.json'), {}, { library: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-11b'));
+    }
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-11b');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.subtitles', 'bundled', []]);
+  });
+
   test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
     const queue = (ui: unknown) => {
       const { config } = migrate({ version: 9, ui });

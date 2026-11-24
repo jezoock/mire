@@ -63,6 +63,12 @@
             "$ref": "#/$defs/search"
           }
         },
+        "subtitles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/subtitles"
+          }
+        },
         "webExtensions": {
           "type": "array",
           "items": {
@@ -338,6 +344,20 @@
       }
     },
     "search": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "main"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/localId"
+        },
+        "main": {
+          "$ref": "#/$defs/path",
+          "description": "Fichier JavaScript de la contribution, relatif au dossier du plugin."
+        }
+      }
+    },
+    "subtitles": {
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "main"],

@@ -4548,4 +4548,22 @@ describe('Test de fumée de Mire', () => {
       await page.evaluate((k) => window.api.catalogSetTags(k, { 'garde-e2e': null }), key);
     });
   });
+
+  describe('sous-titres (P5-11b)', () => {
+    it('le plugin inclus mire.subtitles est actif ; désactivé, la vidéo de démonstration n’a plus de sous-titres, réactivé ils reviennent', async () => {
+      const file = path.join(tmp, 'fixtures', 'media', 'Démonstration.webm');
+      const plugin = () => page.evaluate(() => window.api.pluginsList().then((l) => l.find((p) => p.id === 'mire.subtitles')));
+      assert.deepEqual(await plugin().then((p) => p && [p.origin, p.enabled, p.status]), ['bundled', true, 'active']);
+      // Fichier ouvert : autorisé par la politique d'accès, comme à l'ouverture depuis le système.
+      await page.evaluate((f) => window.api.fromPaths([f]), file);
+      const langs = () => page.evaluate((f) => window.api.subtitles(f).then((l) => l.map((s) => s.lang).sort()), file);
+      assert.deepEqual(await langs(), ['en', 'fr']);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', false));
+      await until(async () => (await plugin())?.status === 'disabled', { timeout: 10000 });
+      assert.deepEqual(await langs(), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', true));
+      await until(async () => (await plugin())?.status === 'active', { timeout: 10000 });
+      assert.deepEqual(await langs(), ['en', 'fr']);
+    });
+  });
 });
