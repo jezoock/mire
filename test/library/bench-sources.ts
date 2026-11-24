@@ -32,7 +32,12 @@ const catalog = createCatalog({
   debounceMs: 0,
   onIgnored: () => {},
 });
-const { library } = await wireLocalPlugin({ config: { get: () => cfg }, catalog, plugin: kind === 'network' ? 'network' : 'local', asShares: kind === 'network' });
+const { library } = await wireLocalPlugin({
+  config: { get: () => cfg },
+  catalog,
+  plugin: kind === 'network' ? 'network' : 'local',
+  asShares: kind === 'network',
+});
 for (let i = 0; i < 4; i++) {
   const t = performance.now();
   const { items } = await library.scan();
