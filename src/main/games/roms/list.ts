@@ -2,26 +2,38 @@
  * Liste des jeux d'une console : dossier principal et sources supplémentaires (dossiers, partages réseau, pages web
  * qui listent des fichiers). Un jeu à plusieurs disques est représenté par sa liste .m3u ; ses disques ne sont pas
  * listés à part. Les jaquettes locales sont prises dans le dossier d'images de la console.
+ *
+ * Depuis P5-14a, les dossiers locaux et les partages sont lus par la source d'un plugin (`locations.ts`) : leurs jeux
+ * viennent du catalogue, sous l'instance `rom:<console>|<chemin>` ; un dossier qu'aucun plugin actif ne lit n'a pas
+ * de jeux. Le cœur ne lit plus lui-même que les sources en ligne d'une console (jusqu'à P5-14b).
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { KIND, cleanRomName, isHttpUrl, safeDecode } from '@mire/shared';
-import type { Config, Emulator } from '@mire/shared';
+import type { Config, ElementSourceRef, Emulator, OpenSpec } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
-import { walkDirs } from '../../fs/walk.ts';
 import { crawlHttp } from '../../library/providers/http-index.ts';
 import { locationError, resolveLocation } from '../../library/location.ts';
 import * as disc from '../disc/index.ts';
-import type { ConsoleLocation, GameDownloads, Rom } from '../types.ts';
+import type { GameDownloads, Rom } from '../types.ts';
 import { t } from '../../i18n/current.ts';
+import { consoleLocations, romFolder, romLocationKey } from './locations.ts';
+
+export { consoleLocations } from './locations.ts';
 
 const MAX_ROMS = 20000;
 
-/** Les emplacements d'une console : local (dossier principal) et distants (sources web ou réseau). */
-export function consoleLocations(emu: Emulator): ConsoleLocation[] {
-  const main = emu.romsDir ? [{ location: emu.romsDir, remote: false }] : [];
-  const extra = (emu.sources || []).map((loc) => ({ location: loc, remote: isHttpUrl(loc) }));
-  return [...main, ...extra];
+/** Ce que la lecture des dossiers d'une console demande au pont des sources et au catalogue (P5-14a). */
+export interface RomFolderDeps {
+  /** Analyse de nouveau ces emplacements (clés) avec la source du plugin qui les lit. */
+  rescan(keys: string[]): Promise<void>;
+  /** Vrai si la source d'un plugin actif lit cet emplacement. */
+  claimed(key: string): boolean;
+  catalog: {
+    sources(): ElementSourceRef[];
+    keysOf(source: ElementSourceRef): string[];
+    get(key: string): { name: string; open: OpenSpec; images?: { poster?: string } } | undefined;
+  };
 }
 
 export interface ListOptions {
@@ -37,8 +49,11 @@ export interface ListDeps {
   config: { get(): Config };
   /** Lecture d'un index distant (.m3u) : celle du gestionnaire de téléchargements. */
   downloads: () => Pick<GameDownloads, 'fetchText'>;
-  /** Après chaque liste : ce que chaque emplacement a donné (le service des jeux en alimente le catalogue). */
+  /** Après chaque liste : ce que chaque emplacement lu par le cœur a donné (le service des jeux en alimente le catalogue). */
   onScanned?: (emu: Emulator, scanned: ScannedRomLocation[]) => void;
+  /** Dossiers locaux d'une console, lus par les sources des plugins (P5-14a). */
+  romFolders?: RomFolderDeps;
+  platform?: NodeJS.Platform;
 }
 
 const extSet = (emu: Emulator) => new Set((emu.extensions || []).map((e) => (String(e).startsWith('.') ? e : `.${e}`).toLowerCase()));
@@ -52,47 +67,27 @@ interface Collected {
   failed: Set<string>;
 }
 
+/** Jeux des sources en ligne d'une console (pages web qui listent des fichiers), seules lues par le cœur. */
 async function collect(locations: string[], exts: Set<string>): Promise<Collected> {
   const roms: Rom[] = [];
   const errors: string[] = [];
   const origin = new Map<Rom, string>();
   const failed = new Set<string>();
-  let current = '';
-  const add = (p: string, fileName: string, dir: string, remote = false) => {
-    const name = path.basename(fileName, path.extname(fileName));
-    const rom: Rom = { path: p, name, displayName: cleanRomName(name), dir, image: null, remote };
-    roms.push(rom);
-    origin.set(rom, current);
-  };
   const wanted = (fileName: string) => !exts.size || exts.has(path.extname(fileName).toLowerCase());
   for (const location of locations) {
-    current = location;
     const loc = resolveLocation(location);
     try {
-      if (loc.type === 'url') {
-        await crawlHttp(loc.url, async (dirUrl, _dirName, files) => {
-          for (const u of files) {
-            const fileName = safeDecode(u.pathname.split('/').pop() || '');
-            if (wanted(fileName)) add(u.href, fileName, dirUrl, true);
-          }
-        });
-      } else {
-        try {
-          await fsp.access(loc.path);
-        } catch {
-          throw new Error(locationError(location, loc));
+      if (loc.type !== 'url') throw new Error(locationError(location, loc));
+      await crawlHttp(loc.url, async (dirUrl, _dirName, files) => {
+        for (const u of files) {
+          const fileName = safeDecode(u.pathname.split('/').pop() || '');
+          if (!wanted(fileName)) continue;
+          const name = path.basename(fileName, path.extname(fileName));
+          const rom: Rom = { path: u.href, name, displayName: cleanRomName(name), dir: dirUrl, image: null, remote: true };
+          roms.push(rom);
+          origin.set(rom, location);
         }
-        await walkDirs(
-          loc.path,
-          (dir, entries) => {
-            for (const e of entries) {
-              if (e.isDirectory() || e.name.startsWith('.') || !wanted(e.name)) continue;
-              add(path.join(dir, e.name), e.name, dir);
-            }
-          },
-          { maxDepth: 4, skipDir: (n) => n.startsWith('.'), shouldStop: () => roms.length > MAX_ROMS },
-        );
-      }
+      });
     } catch (err) {
       errors.push((err as Error).message);
       failed.add(location);
@@ -154,7 +149,7 @@ export interface ScannedRomLocation {
 }
 
 /**
- * Jeux de ces emplacements d'une console : disques cités par une liste .m3u écartés, jaquettes, ordre alphabétique.
+ * Jeux de ces sources en ligne d'une console : disques cités par une liste .m3u écartés, jaquettes, ordre alphabétique.
  * `scanned` : ce que chaque emplacement accessible a donné.
  */
 export async function listIn(
@@ -178,6 +173,58 @@ export async function listIn(
   return { roms, errors, scanned };
 }
 
+const byName = (a: Rom, b: Rom) => a.displayName.localeCompare(b.displayName, 'fr', { numeric: true, sensitivity: 'base' });
+
+/**
+ * Jeux des dossiers locaux d'une console, lus par les sources des plugins : chaque dossier pris par un plugin actif
+ * est analysé de nouveau, puis ses jeux sont lus dans le catalogue. Un dossier introuvable ou qu'aucun plugin ne lit
+ * donne une erreur.
+ */
+export async function pluginRoms(
+  deps: RomFolderDeps | undefined,
+  emu: Emulator,
+  locations: string[],
+  platform: NodeJS.Platform = process.platform,
+): Promise<{ roms: Rom[]; errors: string[] }> {
+  const errors: string[] = [];
+  const keys: string[] = [];
+  for (const location of locations) {
+    const folder = romFolder(location, platform);
+    if (!folder) {
+      errors.push(locationError(location, {}));
+      continue;
+    }
+    const key = romLocationKey(emu.id, folder.path, platform);
+    if (!deps?.claimed(key)) {
+      errors.push(t('games.errors.romNoPlugin', { location }));
+      continue;
+    }
+    try {
+      await fsp.access(folder.path);
+    } catch {
+      errors.push(locationError(location, folder));
+      continue;
+    }
+    keys.push(key);
+  }
+  if (!deps || !keys.length) return { roms: [], errors };
+  await deps.rescan(keys);
+  const wanted = new Set(keys);
+  const seen = new Set<string>();
+  const roms: Rom[] = [];
+  for (const ref of deps.catalog.sources().filter((r) => wanted.has(r.instance))) {
+    for (const k of deps.catalog.keysOf(ref)) {
+      const el = deps.catalog.get(k);
+      if (!el || el.open.kind !== 'game' || el.open.console !== emu.id || isHttpUrl(el.open.path) || seen.has(el.open.path)) continue;
+      seen.add(el.open.path);
+      const file = el.open.path;
+      const name = path.basename(file, path.extname(file));
+      roms.push({ path: file, name, displayName: el.name || cleanRomName(name), dir: path.dirname(file), image: el.images?.poster ?? null, remote: false });
+    }
+  }
+  return { roms: roms.sort(byName), errors };
+}
+
 export async function listRoms(deps: ListDeps, consoleId: unknown, opts: ListOptions = {}): Promise<ListResult> {
   const emu = findConsole(deps.config.get(), consoleId);
   if (!emu) return { ok: false, error: t('games.errors.consoleGone') };
@@ -190,8 +237,13 @@ export async function listRoms(deps: ListDeps, consoleId: unknown, opts: ListOpt
     return { ok: false, error: t('games.errors.noRomFolder', { console: String(emu.name) }) };
   }
 
-  const { roms, errors, scanned } = await listIn(emu, locations, (u) => deps.downloads().fetchText(u));
+  const local = places.filter((p) => !p.remote).map((p) => p.location);
+  const remote = places.filter((p) => p.remote).map((p) => p.location);
+  const fromPlugins = await pluginRoms(deps.romFolders, emu, local, deps.platform);
+  const fromCore = remote.length ? await listIn(emu, remote, (u) => deps.downloads().fetchText(u)) : { roms: [], errors: [], scanned: [] };
+  const roms = [...fromPlugins.roms, ...fromCore.roms].sort(byName);
+  const errors = [...fromPlugins.errors, ...fromCore.errors];
   if (!roms.length && errors.length === locations.length) return { ok: false, error: errors.join(' ') };
-  deps.onScanned?.(emu, scanned);
+  deps.onScanned?.(emu, fromCore.scanned);
   return { ok: true, roms, errors };
 }

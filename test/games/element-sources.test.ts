@@ -1,6 +1,6 @@
-// Jeux → éléments (P2-03) : jeux de console (jeux sur disque compris), jeux ajoutés à la main, marque-pages de jeux ;
-// les listes de l'interface historique alimentent le catalogue sans changer de réponse. Jeux PC des dossiers (P5-13) :
-// trouvés par la source d'un plugin (factice ici), lus du catalogue par l'interface historique.
+// Jeux → éléments (P2-03) : jeux de console, jeux ajoutés à la main, marque-pages de jeux. Jeux PC des dossiers
+// (P5-13) et jeux des dossiers locaux d'une console (P5-14a) : trouvés par la source d'un plugin (factice ici), lus du
+// catalogue par l'interface historique ; plugin désactivé puis réactivé ; continuité des éléments rangés par le cœur.
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,9 +10,10 @@ import type { Config, Emulator, GameBookmark } from '@mire/shared';
 import { createCatalog } from '../../src/main/catalog/index.ts';
 import { gameBookmarkKey, pcGameKey, romKey } from '../../src/main/catalog/keys.ts';
 import { syncFeeds } from '../../src/main/catalog/sync.ts';
-import { gameBookmarkElement, gameConfigFeed, manualGameElement, romInstance, romSource } from '../../src/main/games/element-sources.ts';
+import { gameBookmarkElement, gameConfigFeed, manualGameElement, romInstance } from '../../src/main/games/element-sources.ts';
 import { createGames } from '../../src/main/games/index.ts';
 import { gameLocationKey } from '../../src/main/games/pc/locations.ts';
+import { romLocationKey } from '../../src/main/games/roms/locations.ts';
 import type { GamesDeps } from '../../src/main/games/types.ts';
 
 const P = process.platform;
@@ -82,6 +83,44 @@ function fakeFolders(catalog: ReturnType<typeof createCatalog>, active: { on: bo
   };
 }
 
+/** Source factice d'un plugin de consoles (`mire.games.roms.test`) : ce que rendrait `mire.games.roms` pour SNES. */
+const ROM_PLUGIN = 'mire.games.roms.test';
+function fakeRomFolders(catalog: ReturnType<typeof createCatalog>, active: { on: boolean }) {
+  const game = (rel: string, name: string, poster?: string) => ({
+    key: romKey('snes-1', at(rel), P),
+    name,
+    open: { kind: 'game' as const, console: 'snes-1', path: at(rel) },
+    tags: ['game'],
+    infos: { system: 'Nintendo - Super Nintendo Entertainment System' },
+    images: poster ? { poster } : {},
+  });
+  const byKey = new Map([
+    [
+      romLocationKey('snes-1', at('snes'), P),
+      [
+        game('snes/Zelda (France).sfc', 'Zelda', at('images', 'Zelda (France).png')),
+        game('snes/Mario Kart (Europe).sfc', 'Mario Kart'),
+        game('snes/Multi/Jeu.m3u', 'Jeu'),
+      ],
+    ],
+    [romLocationKey('snes-1', at('extra'), P), [game('extra/Metroid.sfc', 'Metroid')]],
+    [romLocationKey('snes-1', at('absent'), P), []],
+  ]);
+  const rescans: string[][] = [];
+  return {
+    rescans,
+    rescan: async (keys: string[]) => {
+      rescans.push(keys);
+      for (const k of keys) {
+        if (active.on) catalog.setSource({ plugin: ROM_PLUGIN, instance: k }, byKey.get(k) ?? []);
+        else catalog.removeSource({ plugin: ROM_PLUGIN, instance: k });
+      }
+    },
+    claimed: (k: string) => active.on && byKey.has(k),
+    catalog,
+  };
+}
+
 function setup(over: Partial<Config> = {}) {
   const catalog = createCatalog({ dir: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-games-cat-')), 'sources'), debounceMs: 0, onIgnored: () => {} });
   const cfg = { emulators: [SNES], gameSources: [{ id: 'g1', location: at('pc') }], games: [], gameBookmarks: [], ...over } as unknown as Config;
@@ -99,65 +138,71 @@ function setup(over: Partial<Config> = {}) {
     platform: P,
     catalog,
     pcFolders: undefined as unknown,
+    romFolders: undefined as unknown,
     onCatalogError: (err: Error) => errors.push(err),
   } as unknown as GamesDeps;
   const active = { on: true };
   const folders = fakeFolders(catalog, active);
   deps.pcFolders = folders;
-  return { catalog, cfg, games: createGames(deps), errors, active, folders };
+  const roms = fakeRomFolders(catalog, active);
+  deps.romFolders = roms;
+  return { catalog, cfg, games: createGames(deps), errors, active, folders, roms };
 }
 
 describe('jeux de console → éléments (`jeux-roms`)', () => {
-  it('une liste de jeux alimente le catalogue : un élément par jeu listé, disques cités écartés', async () => {
-    const { catalog, games, errors } = setup();
-    const r = await games.listRoms('snes-1', { online: true });
+  it('dossiers locaux : l\u2019interface historique lit les jeux que la source du plugin a rangés, dossier absent signalé', async () => {
+    const { catalog, games, errors, roms } = setup();
+    const r = await games.listRoms('snes-1');
     assert.ok(r.ok);
     assert.deepEqual(errors, []);
-    // L'interface reçoit la même liste qu'avant ; le catalogue a un élément par jeu listé.
-    assert.deepEqual(catalog.keys().sort(), r.roms.map((rom) => romKey('snes-1', rom.path, P)).sort());
-    assert.ok(!catalog.keys().some((k) => k.includes('Disc 1')), 'les disques cités par la liste .m3u ne sont pas des jeux');
-    const zelda = catalog.element(romKey('snes-1', at('snes', 'Zelda (France).sfc'), P))!;
+    // Seuls les dossiers présents sont analysés de nouveau ; le dossier absent donne une erreur, pas une panne.
+    assert.deepEqual(roms.rescans, [[romLocationKey('snes-1', at('snes'), P), romLocationKey('snes-1', at('extra'), P)]]);
+    assert.equal(r.errors.length, 1);
+    assert.match(r.errors[0], /absent/);
     assert.deepEqual(
-      { ...zelda, added: 0 },
-      {
-        key: romKey('snes-1', at('snes', 'Zelda (France).sfc'), P),
-        source: { plugin: 'jeux-roms', instance: romInstance('snes-1', at('snes'), P) },
-        name: 'Zelda',
-        open: { kind: 'game', console: 'snes-1', path: at('snes', 'Zelda (France).sfc') },
-        tags: ['game'],
-        infos: { system: 'Nintendo - Super Nintendo Entertainment System' },
-        images: { poster: at('images', 'Zelda (France).png') },
-        added: 0,
-      },
+      r.roms.map((rom) => [rom.displayName, rom.name, rom.path, rom.dir, rom.image, rom.remote]),
+      [
+        ['Jeu', 'Jeu', at('snes', 'Multi', 'Jeu.m3u'), at('snes', 'Multi'), null, false],
+        ['Mario Kart', 'Mario Kart (Europe)', at('snes', 'Mario Kart (Europe).sfc'), at('snes'), null, false],
+        ['Metroid', 'Metroid', at('extra', 'Metroid.sfc'), at('extra'), null, false],
+        ['Zelda', 'Zelda (France)', at('snes', 'Zelda (France).sfc'), at('snes'), at('images', 'Zelda (France).png'), false],
+      ],
     );
-    // Un emplacement par dossier : celui des sources en plus a le sien.
-    assert.equal(catalog.element(romKey('snes-1', at('extra', 'Metroid.sfc'), P))?.source.instance, romInstance('snes-1', at('extra'), P));
+    // Le cœur ne range plus rien sous `jeux-roms` pour un dossier local : les éléments sont ceux du plugin.
+    assert.ok(catalog.keys().every((k) => catalog.get(k)!.source.plugin !== 'jeux-roms'));
+    assert.equal(catalog.element(romKey('snes-1', at('snes', 'Zelda (France).sfc'), P))?.source.plugin, ROM_PLUGIN);
   });
 
-  it('`scan` d\u2019un emplacement rend les mêmes éléments ; un emplacement inaccessible lève une erreur', async () => {
-    const { catalog, games } = setup();
+  it('plugin désactivé : plus de jeux des dossiers, sans erreur, un message qui le dit ; ils reviennent à la réactivation', async () => {
+    const { catalog, games, active, errors } = setup();
     await games.listRoms('snes-1');
-    const src = romSource(async () => '', P);
-    const scanned = await src.scan({ console: SNES, location: at('snes') });
-    const ref = { plugin: 'jeux-roms', instance: src.instance({ console: SNES, location: at('snes') }) };
-    const inCatalog = catalog.keys().filter((k) => catalog.get(k)!.source.instance === ref.instance);
-    assert.deepEqual(scanned.map((e) => e.key).sort(), inCatalog.sort());
-    await assert.rejects(src.scan({ console: SNES, location: at('absent') }));
+    const before = catalog.keys().length;
+    active.on = false;
+    const off = await games.listRoms('snes-1');
+    assert.equal(off.ok, false);
+    assert.match((off as { error: string }).error, /Aucun plugin actif ne lit le dossier|No active plugin reads the folder/);
+    // Le pont retire les éléments d'un plugin désactivé (simulé ici) ; la liste ne plante pas.
+    catalog.removeSource({ plugin: ROM_PLUGIN, instance: romLocationKey('snes-1', at('snes'), P) });
+    catalog.removeSource({ plugin: ROM_PLUGIN, instance: romLocationKey('snes-1', at('extra'), P) });
+    assert.equal(catalog.keys().length, 0);
+    active.on = true;
+    const on = await games.listRoms('snes-1');
+    assert.ok(on.ok && on.roms.length === 4);
+    assert.equal(catalog.keys().length, before);
+    assert.deepEqual(errors, []);
   });
 
-  it('un emplacement devenu inaccessible garde ses jeux ; une console retirée de la configuration les retire', async () => {
-    const { catalog, games, cfg } = setup();
-    await games.listRoms('snes-1', { online: true });
-    const before = catalog.keys().length;
-    fs.renameSync(at('extra'), at('extra-off'));
-    try {
-      await games.listRoms('snes-1', { online: true });
-      assert.equal(catalog.keys().length, before);
-    } finally {
-      fs.renameSync(at('extra-off'), at('extra'));
-    }
+  it('continuité : les jeux rangés par le cœur pour un dossier local sont retirés, ceux d\u2019une source en ligne gardés', () => {
+    const url = 'https://jeux.exemple.org/snes/';
+    const { catalog, cfg } = setup({ emulators: [{ ...SNES, sources: [at('extra'), url] }] });
+    const old = (instance: string, key: string) =>
+      catalog.setSource({ plugin: 'jeux-roms', instance }, [
+        { key, name: 'Ancien', open: { kind: 'game', console: 'snes-1', path: at('snes', 'x.sfc') }, tags: ['game'], infos: {}, images: {} },
+      ]);
+    old(romInstance('snes-1', at('snes'), P), romKey('snes-1', at('snes', 'x.sfc'), P));
+    old(romInstance('snes-1', url, P), romKey('snes-1', `${url}y.sfc`, P));
     syncFeeds(catalog, [gameConfigFeed(cfg, P)]);
-    assert.equal(catalog.keys().length, before, 'console encore configurée : rien ne bouge');
+    assert.deepEqual(catalog.keys(), [romKey('snes-1', `${url}y.sfc`, P)]);
     syncFeeds(catalog, [gameConfigFeed({ ...cfg, emulators: [] }, P)]);
     assert.deepEqual(catalog.keys(), []);
   });

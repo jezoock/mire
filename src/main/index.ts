@@ -45,6 +45,7 @@ import { createDownloads, type PluginDownloader } from './downloads/index.ts';
 import { onDownloadFinished } from './games/download-finished.ts';
 import { createGames } from './games/index.ts';
 import { gameLocations } from './games/pc/locations.ts';
+import { romLocations } from './games/roms/locations.ts';
 import { gameConfigFeed } from './games/element-sources.ts';
 import { createLanguageService, useLanguage } from './i18n/index.ts';
 import { t } from './i18n/current.ts';
@@ -214,6 +215,12 @@ function start(pending: PendingFiles): Running {
     // Jeux PC des dossiers de jeux (P5-13) : trouvés par les sources des plugins (pont créé plus bas).
     pcFolders: {
       rescan: () => pluginBridges?.rescan() ?? Promise.resolve(),
+      claimed: (key) => pluginBridges?.claimed(key) ?? false,
+      catalog,
+    },
+    // Dossiers locaux des consoles (P5-14a) : lus par les sources des plugins, comme les dossiers de jeux PC.
+    romFolders: {
+      rescan: (keys) => pluginBridges?.rescanLocations(keys) ?? Promise.resolve(),
       claimed: (key) => pluginBridges?.claimed(key) ?? false,
       catalog,
     },
@@ -409,11 +416,13 @@ function start(pending: PendingFiles): Running {
   // un, la bibliothèque du cœur est analysée de nouveau pour retirer ou retrouver ses propres éléments.
   const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescanCore });
   pluginBridges = bridges;
-  // Dossiers de jeux PC (P5-13) : proposés aux sources des plugins de la même façon, avec le type `game`.
-  const syncLocations = (cfg: Config) => void bridges.setLocations([...libraryLocations(cfg.library.sources), ...gameLocations(cfg.gameSources)]);
+  // Dossiers de jeux PC (P5-13) et dossiers des consoles (P5-14a) : proposés aux sources des plugins de la même façon,
+  // avec le type `game` ou `rom`.
+  const syncLocations = (cfg: Config) =>
+    void bridges.setLocations([...libraryLocations(cfg.library.sources), ...gameLocations(cfg.gameSources), ...romLocations(cfg.emulators)]);
   syncLocations(config.get());
   config.onChange((next, prev) => {
-    const where = (c: Config) => JSON.stringify([c.library.sources, c.gameSources]);
+    const where = (c: Config) => JSON.stringify([c.library.sources, c.gameSources, romLocations(c.emulators)]);
     if (where(next) !== where(prev)) syncLocations(next);
   });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));

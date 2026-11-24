@@ -408,7 +408,9 @@ describe('ponts', () => {
     );
     assert.deepEqual(r.elements[0].tags, ['radio']);
     assert.equal(r.dropped, 3);
-    assert.equal(checkElements('org.exemple.r', 'privileged', [], raw).elements.length, 4);
+    assert.equal(checkElements('org.exemple.r', 'privileged', [], raw, process.platform, { launch: true }).elements.length, 4);
+    // Code sensible sans la permission `launch` : le programme est refusé.
+    assert.equal(checkElements('org.exemple.r', 'privileged', [], raw).elements.length, 3);
     assert.equal(checkFacts('p/m', { title: 'Film', image: 'file:///etc/passwd', source: 'tmdb' })?.image, null);
     assert.equal(checkFacts('p/m', { title: 'Film' })?.source, 'p/m');
     // Fiche choisie par l'utilisateur : la marque est gardée.

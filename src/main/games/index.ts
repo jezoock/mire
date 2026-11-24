@@ -1,5 +1,6 @@
 /**
- * Service des jeux : jeux PC (dossiers de jeux lus par un plugin, ajout manuel), jeux de console (liste, lancement, copie locale),
+ * Service des jeux : jeux PC (dossiers de jeux lus par un plugin, ajout manuel), jeux de console (dossiers lus par un
+ * plugin, sources en ligne ; liste, lancement, copie locale),
  * nettoyage, suppression et marque-pages de jeux. Les dépendances (configuration, lanceur, téléchargements…) sont
  * injectées : le service ne connaît ni Electron ni la fenêtre.
  */

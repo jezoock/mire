@@ -24,7 +24,7 @@ writeFileSync(path.join(jeux, 'Celeste', 'Celeste.exe'), 'jeu');
 const P = 'mire.games.test';
 
 /** Source factice de jeux PC : n'accepte que les dossiers de type `game`, rend un programme par dossier. */
-function fakeService(opts: { trusted?: boolean; folders?: boolean; level?: PluginLevel } = {}) {
+function fakeService(opts: { trusted?: boolean; folders?: boolean; launch?: boolean; level?: PluginLevel } = {}) {
   const listeners: Array<(k: string[]) => void> = [];
   const entry: ContributionEntry = { pluginId: P, kind: 'sources', id: 'dossiers', declaration: {} };
   let entries = [entry];
@@ -43,7 +43,7 @@ function fakeService(opts: { trusted?: boolean; folders?: boolean; level?: Plugi
     levelOf: (id) => (entries.some((e) => e.pluginId === id) ? (opts.level ?? 'privileged') : null),
     folders: () => [],
     hosts: () => [],
-    sourceRights: () => ({ trusted: opts.trusted ?? true, folders: opts.folders ?? true }),
+    sourceRights: () => ({ trusted: opts.trusted ?? true, folders: opts.folders ?? true, launch: opts.launch ?? true }),
   };
   const set = (list: ContributionEntry[]) => {
     entries = list;
@@ -114,6 +114,15 @@ describe('sources des plugins : dossiers de jeux PC', () => {
     const catalog = fakeCatalog();
     const b = createPluginBridges({ service, catalog, log: () => {} });
     await b.setLocations(locations);
+    assert.deepEqual(catalog.sources.get(`${P}|${key}`), []);
+  });
+
+  it('un plugin `privileged` qui ne déclare pas `launch` ne peut pas rendre de programme', async () => {
+    const { service } = fakeService({ launch: false });
+    const catalog = fakeCatalog();
+    const b = createPluginBridges({ service, catalog, log: () => {} });
+    await b.setLocations(locations);
+    assert.ok(b.claimed(key));
     assert.deepEqual(catalog.sources.get(`${P}|${key}`), []);
   });
 
