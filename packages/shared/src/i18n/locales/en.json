@@ -552,39 +552,6 @@
           "musicDancing": "Music / Dancing",
           "thinking": "Thinking",
           "adult": "Adult"
-        },
-        "music": {
-          "electronic": "Electronic",
-          "hipHop": "Hip hop",
-          "classical": "Classical",
-          "soundtrack": "Soundtrack",
-          "frenchHouse": "French house",
-          "house": "House",
-          "pop": "Pop",
-          "rock": "Rock",
-          "jazz": "Jazz",
-          "blues": "Blues",
-          "metal": "Metal",
-          "heavyMetal": "Heavy metal",
-          "folk": "Folk",
-          "chansonFrancaise": "Chanson française",
-          "chanson": "Chanson",
-          "reggae": "Reggae",
-          "soul": "Soul",
-          "funk": "Funk",
-          "rnb": "R&B",
-          "country": "Country",
-          "punk": "Punk",
-          "ambient": "Ambient",
-          "techno": "Techno",
-          "downtempo": "Downtempo",
-          "tripHop": "Trip hop",
-          "alternativeRock": "Alternative rock",
-          "indieRock": "Indie rock",
-          "indiePop": "Indie pop",
-          "world": "World",
-          "disco": "Disco",
-          "rap": "Rap"
         }
       },
       "errors": {
@@ -1484,9 +1451,7 @@
         "missing": "The chosen palette isn’t available: its plugin isn’t installed or is turned off. Mire uses “{name}” in the meantime."
       },
       "providers": {
-        "musicbrainz": "MusicBrainz (music)",
         "libretro": "libretro (console games)",
-        "steam": "Steam (PC games)",
         "plugin": "{name} (plugin)"
       },
       "plugin": {

@@ -1,13 +1,12 @@
-/** Les sources d'infos du cœur, dans l'ordre où la récupération groupée les traite (TMDB : plugin `mire.tmdb`, P5-15). */
+/**
+ * Les sources d'infos du cœur, dans l'ordre où la récupération groupée les traite. TMDB : plugin `mire.tmdb` (P5-15) ;
+ * MusicBrainz et Steam : plugins `mire.musicbrainz` et `mire.steam` (P5-16).
+ */
 import type { MetadataProvider } from '../types.ts';
 import { libretroProvider } from './libretro.ts';
-import { musicBrainzProvider, type MusicBrainzOptions } from './musicbrainz.ts';
-import { steamProvider } from './steam.ts';
 
 export { libretroProvider, bestMatch, romKey } from './libretro.ts';
-export { musicBrainzProvider } from './musicbrainz.ts';
-export { steamProvider } from './steam.ts';
 
-export function defaultProviders({ musicBrainz }: { musicBrainz?: MusicBrainzOptions } = {}): MetadataProvider[] {
-  return [musicBrainzProvider(musicBrainz), libretroProvider(), steamProvider()];
+export function defaultProviders(): MetadataProvider[] {
+  return [libretroProvider()];
 }

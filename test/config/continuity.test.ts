@@ -38,13 +38,17 @@ const INSTALL: ContinuityRule = {
 const RULES = [BUNDLED, INSTALL];
 
 test.describe('migration v10 (P5-01)', () => {
-  test('configuration v9 réelle : passe en v10, seule la clé TMDB change de place (règle P5-15)', () => {
+  test('configuration v9 réelle : passe en v10, la clé TMDB change de place (P5-15), la langue des fiches est copiée (P5-15, P5-16)', () => {
     const v9 = readFixture('config-v9.json');
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
     const { tmdbToken: _t, region: _r, ...search } = v9.search;
-    const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
+    const plugins = {
+      ...v9.plugins,
+      'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' },
+      'mire.steam': { language: 'en-US' },
+    };
     const catalog = { ...v9.catalog, metadataProviders: ['mire.tmdb/tmdb'] };
     assert.deepEqual(config, {
       ...v9,
@@ -231,16 +235,87 @@ test.describe('migration v10 (P5-01)', () => {
   });
 
   test('fournisseurs renommés (P5-15) : l’ordre choisi suit TMDB dans son plugin, même sans clé', () => {
-    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'tmdb', 'mire.tmdb/tmdb', 3] } };
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['libretro', 'tmdb', 'mire.tmdb/tmdb', 3] } };
     // Sans clé TMDB, la règle P5-15 ne s'applique pas (seules celles des manettes, P5-04) ; l'ordre est renommé quand même.
     assert.equal(applyContinuity(raw).includes('P5-15'), false);
-    assert.deepEqual(raw.catalog.metadataProviders, ['steam', 'mire.tmdb/tmdb', 3]);
-    assert.deepEqual(providerRenames(), { tmdb: 'mire.tmdb/tmdb' });
+    assert.deepEqual(raw.catalog.metadataProviders, ['libretro', 'mire.tmdb/tmdb', 3]);
+    assert.equal(providerRenames().tmdb, 'mire.tmdb/tmdb');
     // Une règle ne peut renommer un fournisseur que vers un des siens.
     assert.match(checkRules([{ ...INSTALL, providers: { tmdb: 'org.tiers/infos' } }])[0], /must be renamed/);
     const untouched: Any = { version: 9, catalog: { metadataProviders: 'tmdb' } };
     applyContinuity(untouched);
     assert.equal(untouched.catalog.metadataProviders, 'tmdb');
+  });
+
+  test('P5-16 : MusicBrainz installé s’il y a de la musique dans la bibliothèque, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-musicbrainz')!;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.musicbrainz', 'install', undefined]);
+    const music = { kind: 'audio', id: 'm', location: '/Musique' };
+    const raw: Any = { version: 9, library: { sources: [{ kind: 'video', id: 'v', location: '/Films' }, music] } };
+    assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-musicbrainz']);
+    assert.equal(raw.plugins, undefined);
+    for (const library of [{ sources: [{ kind: 'video', location: '/Films' }] }, { sources: [] }, { sources: 'x' }, undefined, [music]]) {
+      const none: Any = { version: 9, library };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-16 : Steam installé s’il y a des jeux PC ; la langue des fiches copiée dans son réglage', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-steam')!;
+    assert.deepEqual([rule.plugin, rule.mode], ['mire.steam', 'install']);
+    for (const config of [
+      { games: [{ name: 'Hades', path: 'C:/Hades.exe' }] },
+      { gameSources: [{ id: 's', location: 'D:/Jeux' }] },
+      {
+        gameBookmarks: [
+          { id: 'b', console: 'snes' },
+          { id: 'c', console: 'pc' },
+        ],
+      },
+    ]) {
+      const raw: Any = { version: 9, search: { language: ' nl-BE ' }, ...config };
+      assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-steam']);
+      assert.deepEqual(raw.plugins, { 'mire.steam': { language: 'nl-BE' } });
+      assert.deepEqual(raw.search, { language: ' nl-BE ' });
+    }
+    const auto: Any = { version: 9, search: { language: '' }, games: [{ name: 'Ys' }] };
+    applyContinuity(auto, [rule]);
+    assert.deepEqual(auto.plugins['mire.steam'], { language: 'auto' });
+    for (const config of [{}, { games: [] }, { gameSources: 'x' }, { gameBookmarks: [{ console: 'snes' }] }]) {
+      const none: Any = { version: 9, search: { language: 'fr-FR' }, ...config };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-15 puis P5-16 : TMDB et Steam reprennent chacun la langue des fiches', () => {
+    const raw: Any = { version: 9, search: { tmdbToken: 'k', language: 'en-GB' }, games: [{ name: 'Ys' }] };
+    const applied = applyContinuity(
+      raw,
+      CONTINUITY_RULES.filter((r) => r.id === 'P5-15' || r.id === 'P5-16-steam'),
+    );
+    assert.deepEqual(applied, ['P5-15', 'P5-16-steam']);
+    assert.equal(raw.plugins['mire.tmdb'].language, 'en-GB');
+    assert.deepEqual(raw.plugins['mire.steam'], { language: 'en-GB' });
+  });
+
+  test('fournisseurs renommés (P5-16) : ordre choisi gardé pour toute configuration, fiches reprises sous le nouveau nom', () => {
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'libretro', 'musicbrainz', 'tmdb'] } };
+    const applied = applyContinuity(raw);
+    assert.equal(
+      applied.some((id) => id.startsWith('P5-16')),
+      false,
+    );
+    assert.deepEqual(raw.catalog.metadataProviders, ['mire.steam/steam', 'libretro', 'mire.musicbrainz/musicbrainz', 'mire.tmdb/tmdb']);
+    assert.deepEqual(providerRenames(), {
+      tmdb: 'mire.tmdb/tmdb',
+      musicbrainz: 'mire.musicbrainz/musicbrainz',
+      steam: 'mire.steam/steam',
+    });
+    assert.deepEqual(checkRules(CONTINUITY_RULES), []);
   });
 
   test('convert et keep : valeur traduite, copiée ou laissée en place si elle ne se traduit pas', () => {

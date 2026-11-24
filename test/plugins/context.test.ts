@@ -14,6 +14,8 @@ import { createPluginStorage, pluginDataDir } from '../../src/main/plugins/plugi
 import { createPluginSettings, keepSecrets, withoutSecrets, type SecretBox } from '../../src/main/plugins/settings.ts';
 import { createPluginState } from '../../src/main/plugins/state.ts';
 import { normalizeConfig } from '../../src/main/config/normalize/index.ts';
+import { createDbFileStore, createScrapeEngine, REV } from '../../src/main/scrape/engine.ts';
+import type { RunOptions } from '../../src/main/scrape/types.ts';
 import { validateManifest } from '../../packages/plugin-sdk/src/validate.ts';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'mire-context-'));
@@ -438,7 +440,13 @@ describe('ponts', () => {
         calls.push(method);
         if (method === 'requires') return key ? null : { skipped: 'vidéos (clé absente)', error: 'Ajoutez la clé.' };
         if (fail) return { failure: 'Clé refusée.' };
-        if (method === 'candidates') return [{ id: 'movie:1', title: 'Dune', image: 'https://img.exemple.org/d.jpg' }, { id: 2 }];
+        if (method === 'candidates')
+          return [
+            { id: 'movie:1', title: 'Dune', image: 'https://img.exemple.org/d.jpg' },
+            { id: 2 },
+            { id: 'movie:3', title: 'Dune 2', image: null, fallback: 'https://img.exemple.org/v.jpg' },
+            { id: 'movie:4', title: 'Dune 3', image: null, fallback: 'javascript:alert(1)' },
+          ];
         return {
           title: `Dune ${(args?.[0] as { name?: string })?.name ?? ''}`.trim(),
           image: 'https://img.exemple.org/affiche.jpg',
@@ -483,6 +491,8 @@ describe('ponts', () => {
     assert.equal(factsKey('video', {}), null);
     assert.deepEqual(await provider.candidates({ query: 'Dune' } as never, {} as never), [
       { id: 'movie:1', title: 'Dune', year: '', sub: '', image: 'https://img.exemple.org/d.jpg' },
+      { id: 'movie:3', title: 'Dune 2', year: '', sub: '', image: null, fallback: 'https://img.exemple.org/v.jpg' },
+      { id: 'movie:4', title: 'Dune 3', year: '', sub: '', image: null },
     ]);
 
     fail = true;
@@ -491,6 +501,50 @@ describe('ponts', () => {
       (err: Error) => err.name === 'ScrapeRefusal' && err.message === 'Clé refusée.',
     );
     await assert.rejects(provider.candidates({ query: 'Dune' } as never, {} as never), { message: 'Clé refusée.' });
+  });
+
+  it('fournisseur devenu un plugin (P5-16) : les fiches déjà enregistrées (a:, g:) sont gardées, sans nouvelle récupération', async (t) => {
+    const scraped: unknown[] = [];
+    const entry = (id: string, kind: string) => ({ pluginId: `mire.${id}`, kind: 'metadata', id, declaration: { kinds: [kind] } });
+    const service: BridgeService = {
+      contributions: (kind) => (kind === 'metadata' ? [entry('musicbrainz', 'album'), entry('steam', 'pc')] : []) as never,
+      onContributionsChange: () => () => {},
+      call: async (pluginId, _k, _id, method, args) => {
+        if (method === 'requires') return null;
+        if (method === 'collect') return pluginId === 'mire.musicbrainz' ? (args?.[0] as RunOptions).albums : (args?.[0] as RunOptions).pcGames;
+        scraped.push(args?.[0]);
+        return { title: 'Nouvelle', image: null };
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: false }),
+    };
+    const bridges = createPluginBridges({ service, catalog: { setSource: () => {}, removeSource: () => {} }, log: () => {} });
+    const dataDir = mkdtempSync(path.join(os.tmpdir(), 'mire-continuite-infos-'));
+    t.after(() => rmSync(dataDir, { recursive: true, force: true }));
+    const old = (title: string, source: string) => ({ title, image: '/img/ancienne.jpg', source, rev: REV, at: 1 });
+    const store = createDbFileStore(path.join(dataDir, 'db.json'));
+    store.set('a:/m/Discovery', old('Discovery', 'MusicBrainz'));
+    store.set('g:hades', old('Hades', 'Steam'));
+    const engine = createScrapeEngine({
+      dataDir,
+      getConfig: () => ({ search: {}, games: [], emulators: [] }) as never,
+      listRoms: async () => ({ ok: true, roms: [] }),
+      onProgress: () => {},
+      providers: [],
+      extraProviders: bridges.metadataProviders,
+      store,
+    });
+    const r = await engine.run({ albums: [{ dir: '/m/Discovery' }, { dir: '/m/Nouveau' }], pcGames: [{ name: 'Hadès' }, { name: 'Ys' }] });
+    assert.equal(r.total, 2);
+    assert.deepEqual(scraped, [{ dir: '/m/Nouveau' }, { name: 'Ys' }]);
+    // Les anciennes fiches sont intactes ; les nouvelles portent le nom du fournisseur du plugin.
+    assert.equal(store.get('a:/m/Discovery')?.title, 'Discovery');
+    assert.equal(store.get('g:hades')?.source, 'Steam');
+    assert.equal(store.get('a:/m/Nouveau')?.source, 'mire.musicbrainz/musicbrainz');
+    assert.equal(store.get('g:ys')?.source, 'mire.steam/steam');
+    await store.flush();
   });
 
   it('requires absent ou en panne : la source est interrogée', async () => {

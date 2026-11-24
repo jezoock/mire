@@ -79,6 +79,17 @@ const hasSite =
   (c: Loose): boolean =>
     Array.isArray(c.web) && c.web.some((w) => isRecord(w) && w.id === id);
 
+/** Une liste non vide à `key` de la configuration. */
+const someIn = (c: Loose, key: string): boolean => Array.isArray(c[key]) && c[key].length > 0;
+
+/** Un dossier de musique dans la bibliothèque (`library.sources`) : ses albums étaient décrits par MusicBrainz (P5-16). */
+const hasMusic = (c: Loose): boolean =>
+  isRecord(c.library) && Array.isArray(c.library.sources) && c.library.sources.some((s: unknown) => isRecord(s) && s.kind === 'audio');
+
+/** Des jeux PC (ajoutés, dossiers de jeux ou marque-pages « PC ») : leurs fiches venaient de Steam (P5-16). */
+const hasPcGames = (c: Loose): boolean =>
+  someIn(c, 'games') || someIn(c, 'gameSources') || (Array.isArray(c.gameBookmarks) && c.gameBookmarks.some((b) => isRecord(b) && b.console === 'pc'));
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
@@ -120,6 +131,24 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
       { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
     ],
     providers: { tmdb: 'mire.tmdb/tmdb' },
+  },
+  // P5-16 : infos en ligne sans clé, un plugin à installer par service. Les fournisseurs sont renommés pour toute
+  // configuration (ordre choisi, fiches déjà enregistrées sous `a:` et `g:`, reprises sans nouvelle récupération).
+  {
+    id: 'P5-16-musicbrainz',
+    plugin: 'mire.musicbrainz',
+    mode: 'install',
+    applies: hasMusic,
+    providers: { musicbrainz: 'mire.musicbrainz/musicbrainz' },
+  },
+  {
+    id: 'P5-16-steam',
+    plugin: 'mire.steam',
+    mode: 'install',
+    applies: hasPcGames,
+    // La langue des fiches ne sert plus qu'à Steam : elle part dans son réglage (copiée : TMDB l'a peut-être déjà prise).
+    settings: [{ from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') }],
+    providers: { steam: 'mire.steam/steam' },
   },
   // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.
   // Le site reste dans `web` (même identifiant : sa connexion et ses réglages sont retrouvés), le plugin le reprend.

@@ -198,9 +198,12 @@ describe('fiche → infos et images d’origine metadata', () => {
 
 describe('ordre des fournisseurs', () => {
   it('ceux de la configuration d’abord, puis les autres ; un fournisseur inconnu est ignoré', () => {
-    // TMDB est devenu le plugin mire.tmdb (P5-15) : ses fiches déjà enregistrées restent connues sous son fournisseur.
-    assert.deepEqual(metadataOrder(undefined), ['musicbrainz', 'libretro', 'steam', 'mire.tmdb/tmdb']);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['steam', 'inconnu', 'libretro'] }), ['steam', 'libretro', 'musicbrainz', 'mire.tmdb/tmdb']);
+    // TMDB (P5-15), MusicBrainz et Steam (P5-16) sont devenus des plugins : leurs fiches déjà enregistrées restent
+    // connues sous leur fournisseur.
+    const MB = 'mire.musicbrainz/musicbrainz';
+    const STEAM = 'mire.steam/steam';
+    assert.deepEqual(metadataOrder(undefined), ['libretro', 'mire.tmdb/tmdb', MB, STEAM]);
+    assert.deepEqual(metadataOrder({ metadataProviders: [STEAM, 'inconnu', 'steam', 'libretro'] }), [STEAM, 'libretro', 'mire.tmdb/tmdb', MB]);
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: [' Steam ', 'steam', 3, ''] }), { metadataProviders: ['steam'] });
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: 'steam' }), { metadataProviders: [] });
     // Section absente : rien n'est ajouté.
@@ -208,16 +211,15 @@ describe('ordre des fournisseurs', () => {
   });
 
   it('fournisseurs des plugins actifs (P4-20) : après ceux du cœur, sauf ordre choisi ; ignorés une fois le plugin désactivé', () => {
-    const known = ['musicbrainz', 'libretro', 'steam', 'mire.tmdb/tmdb', 'org.films/infos'];
+    const known = ['libretro', 'mire.tmdb/tmdb', 'org.films/infos'];
     assert.deepEqual(metadataOrder(undefined, known), known);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }, known), [
-      'org.films/infos',
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }, known), ['org.films/infos', 'mire.tmdb/tmdb', 'libretro']);
+    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }), [
       'mire.tmdb/tmdb',
-      'musicbrainz',
       'libretro',
-      'steam',
+      'mire.musicbrainz/musicbrainz',
+      'mire.steam/steam',
     ]);
-    assert.deepEqual(metadataOrder({ metadataProviders: ['org.films/infos', 'mire.tmdb/tmdb'] }), ['mire.tmdb/tmdb', 'musicbrainz', 'libretro', 'steam']);
     assert.deepEqual(normalizeCatalogSettings({ metadataProviders: ['Org.Films/Infos'] }), { metadataProviders: ['org.films/infos'] });
   });
 
@@ -229,7 +231,8 @@ describe('ordre des fournisseurs', () => {
     metadata.scrapeStore.set('v:/films/Jeu.mkv', rec({ title: 'Par TMDB', overview: 'TMDB seul.' }));
     metadata.scrapeStore.set('b:x', rec({ title: 'Par Steam', source: 'Steam' }));
     const store = { forElement: (k: string) => (k === key ? new Map([...metadata.forElement(key)!, ...metadata.forElement('gamebm:x')!]) : undefined) };
-    engine.setContributors(metadataContributors(store, metadataOrder({ metadataProviders: ['steam'] })));
+    // Fiche Steam déjà enregistrée : montrée sous le plugin mire.steam (P5-16).
+    engine.setContributors(metadataContributors(store, metadataOrder({ metadataProviders: ['mire.steam/steam'] })));
     assert.equal(engine.element(key)!.infos.title, 'Par Steam');
     assert.equal(engine.element(key)!.infos.overview, 'TMDB seul.');
     engine.setContributors(metadataContributors(store, metadataOrder({ metadataProviders: ['mire.tmdb/tmdb'] })));

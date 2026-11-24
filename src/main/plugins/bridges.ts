@@ -495,6 +495,8 @@ export function createPluginBridges({
                 year: typeof c.year === 'string' ? c.year : '',
                 sub: typeof c.sub === 'string' ? c.sub : '',
                 image: isWebUrl(c.image) ? c.image : null,
+                // Vignette de secours si l'image manque (Steam), comme `image` : une adresse web montrée telle quelle.
+                ...(isWebUrl(c.fallback) ? { fallback: c.fallback } : {}),
               }))
           : [];
       },

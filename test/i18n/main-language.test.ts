@@ -1,4 +1,5 @@
-// P1-29 : textes du processus principal en français et en anglais, langue des fiches (Steam ; TMDB : plugin mire.tmdb, P5-15, testé dans mire-addons).
+// P1-29 : textes du processus principal en français et en anglais. Langue des fiches : réglage `language` des plugins
+// mire.tmdb (P5-15) et mire.steam (P5-16), testés dans mire-addons.
 import { afterEach, describe, it, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,11 +7,9 @@ import path from 'node:path';
 import type { Config } from '@mire/shared';
 import { BUILTIN_CATALOGS, flattenMessages } from '@mire/shared/i18n';
 import { DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
-import { builtinTranslator, createLanguageService, currentLanguage, metadataLanguage, steamLocale, t, useLanguage } from '../../src/main/i18n/index.ts';
+import { builtinTranslator, createLanguageService, currentLanguage, t, useLanguage } from '../../src/main/i18n/index.ts';
 import { locationError } from '../../src/main/library/location.ts';
 import { GAME_GENRES, libretroProvider } from '../../src/main/scrape/providers/libretro.ts';
-import { MUSIC_GENRES, musicBrainzProvider } from '../../src/main/scrape/providers/musicbrainz.ts';
-import { steamProvider } from '../../src/main/scrape/providers/steam.ts';
 import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 import { loadRoutes } from '../scrape/fake-fetch.ts';
@@ -46,7 +45,6 @@ describe('clés employées par le processus principal', () => {
   it('clés construites : genres, émulateurs, BIOS et jeux de la boutique', () => {
     const keys = [
       ...Object.values(GAME_GENRES).map((id) => `scrape.genres.games.${id}`),
-      ...Object.values(MUSIC_GENRES).map((id) => `scrape.genres.music.${id}`),
       ...EMULATORS.map((e) => `store.emulators.${e.id}`),
       ...[...BIOS_HINTS].map((id) => `store.bios.${id}`),
     ];
@@ -128,51 +126,6 @@ describe('genres', () => {
     english();
     assert.equal(await scrape(), 'Platform');
   });
-
-  it('MusicBrainz : traduit en français, étiquette d’origine en anglais', async (tc) => {
-    const album = { dir: '/m/Daft Punk - Discovery (2001)', folder: 'Daft Punk - Discovery (2001)' };
-    const scrape = async () => {
-      const { ctx } = providerContext(tc, loadRoutes('musicbrainz'));
-      return (await musicBrainzProvider({ intervalMs: 0 }).scrape(album, undefined, ctx('a:x')))?.genre;
-    };
-    assert.equal(await scrape(), 'Électronique');
-    english();
-    assert.equal(await scrape(), 'Electronic');
-  });
-});
-
-describe('langue des fiches', () => {
-  it('metadataLanguage : search.language s’il est fixé, sinon la langue de l’interface avec sa région', () => {
-    assert.equal(metadataLanguage('', 'fr'), 'fr-FR');
-    assert.equal(metadataLanguage(undefined, 'en'), 'en-US');
-    assert.equal(metadataLanguage('  ', 'en-GB'), 'en-GB');
-    assert.equal(metadataLanguage('nl-BE', 'en'), 'nl-BE');
-    assert.equal(metadataLanguage('fr-FR', 'en'), 'fr-FR');
-    assert.equal(metadataLanguage(''), 'fr-FR');
-    english();
-    assert.equal(metadataLanguage(''), 'en-US');
-  });
-
-  it('steamLocale : langue et pays du magasin', () => {
-    assert.deepEqual(steamLocale('fr-FR'), { l: 'french', cc: 'FR' });
-    assert.deepEqual(steamLocale('en-US'), { l: 'english', cc: 'US' });
-    assert.deepEqual(steamLocale('fr-CA'), { l: 'french', cc: 'CA' });
-    assert.deepEqual(steamLocale('de'), { l: 'german', cc: 'DE' });
-    assert.deepEqual(steamLocale('xx'), { l: 'english', cc: 'US' });
-  });
-
-  it('Steam : l=french&cc=FR en français (comme avant), l=english&cc=US en anglais', async (tc) => {
-    const urls = async () => {
-      const { ctx, fetch } = providerContext(tc, loadRoutes('steam'), { search: { language: '' } });
-      await steamProvider().scrape({ name: 'Hades', path: 'C:/Hades.exe' }, undefined, ctx('g:hades'));
-      return fetch.calls.filter((u) => u.includes('store.steampowered.com'));
-    };
-    const fr = await urls();
-    assert.ok(fr.length >= 2 && fr.every((u) => u.endsWith('&l=french&cc=FR')), fr.join('\n'));
-    english();
-    const en = await urls();
-    assert.ok(en.length >= 1 && en.every((u) => u.endsWith('&l=english&cc=US')), en.join('\n'));
-  });
 });
 
 describe('search.language : migration v8', () => {
@@ -190,9 +143,9 @@ describe('search.language : migration v8', () => {
     assert.equal(migrated({ version: 8, search: { language: 'fr-FR' } }), 'fr-FR');
   });
 
-  it('installation existante : ui.language passe à fr (v7), les fiches restent demandées en fr-FR', () => {
+  it('installation existante : ui.language passe à fr (v7), les fiches suivent l’interface (fr-FR)', () => {
     const config = normalizeConfig(migrate({ version: 6, search: { language: 'fr-FR' } }).config);
     assert.equal(config.ui.language, 'fr');
-    assert.equal(metadataLanguage(config.search.language, config.ui.language), 'fr-FR');
+    assert.equal(config.search.language, '');
   });
 });

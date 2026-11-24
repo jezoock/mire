@@ -26,7 +26,7 @@ import type {
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** Fournisseurs d'infos du cœur, dans l'ordre par défaut (`METADATA_PROVIDERS` du processus principal). */
-export const METADATA_PROVIDERS = ['musicbrainz', 'libretro', 'steam'] as const;
+export const METADATA_PROVIDERS = ['libretro'] as const;
 
 /** « Automatique » et palettes du cœur (P4-02) ; noms : `palettes.<id>`. Celles des plugins suivent (P5-02). */
 export const PALETTES = ['auto', 'ecran', 'contraste'] as const;

@@ -223,6 +223,9 @@
           "encrypted": true
         }
       },
+      "mire.steam": {
+        "language": "en-US"
+      },
       "mire.tmdb": {
         "token": {
           "$secret": "jeton-tmdb",
@@ -248,6 +251,8 @@
       "P5-07-libres",
       "P5-02-minuit",
       "P5-15",
+      "P5-16-musicbrainz",
+      "P5-16-steam",
       "P5-05-netflix"
     ]
   },

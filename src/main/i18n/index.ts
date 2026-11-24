@@ -122,4 +122,3 @@ export function createLanguageService({
 }
 
 export { builtinTranslator, currentLanguage, t, useLanguage, type Translator } from './current.ts';
-export { metadataLanguage, steamLocale } from './metadata.ts';

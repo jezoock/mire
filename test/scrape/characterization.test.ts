@@ -1,7 +1,8 @@
 // Caractérisation (P1-16) : le moteur produit les mêmes fiches, résultats et échecs que l'ancien scraper.
 // test/fixtures/scrape/golden.json a été produit par src/main/scraper.js (avant sa suppression) avec le même
 // scénario (scenario.ts) et les mêmes réponses enregistrées. Images : nom du fichier → adresse d'origine. Les fiches
-// TMDB (films et séries) en ont été retirées avec le fournisseur (P5-15).
+// TMDB (films et séries) en ont été retirées avec le fournisseur (P5-15), celles de MusicBrainz (albums) et de Steam
+// (jeux PC) avec les leurs (P5-16).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -13,10 +14,10 @@ import * as s from './scenario.ts';
 
 const golden = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '..', 'fixtures', 'scrape', 'golden.json'), 'utf8'));
 
-test('mêmes fiches qu’avant : film, épisodes, album, ROM, jeu PC, marque-pages, choix et recherches', async (t) => {
+test('mêmes fiches qu’avant : ROM, marque-page, choix et recherches', async (t) => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-scrape-carac-'));
   t.after(() => fs.rmSync(dataDir, { recursive: true, force: true }));
-  const fetch = fakeFetch(loadRoutes('musicbrainz', 'libretro', 'steam'));
+  const fetch = fakeFetch(loadRoutes('libretro'));
   const progress: unknown[] = [];
   const sc = createScraper({
     dataDir,
@@ -24,10 +25,9 @@ test('mêmes fiches qu’avant : film, épisodes, album, ROM, jeu PC, marque-pag
     listRoms: s.listRoms as never,
     onProgress: (p) => progress.push(p),
     fetch,
-    musicBrainz: { intervalMs: 0 },
   });
 
-  const run = await sc.run({ albums: s.albums });
+  const run = await sc.run({});
   const ones = [];
   for (const j of s.ones) ones.push(await sc.one(structuredClone(j) as never).catch((e: Error) => ({ rejected: e.message })));
   const searches = [];

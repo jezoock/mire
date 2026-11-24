@@ -26,7 +26,7 @@ import { targetsOf } from './targets.ts';
 export const METADATA_VERSION = 1;
 
 /** Fournisseurs d'infos du cœur, dans l'ordre par défaut (celui de la récupération groupée) ; TMDB : plugin `mire.tmdb`. */
-export const METADATA_PROVIDERS: readonly string[] = ['musicbrainz', 'libretro', 'steam'];
+export const METADATA_PROVIDERS: readonly string[] = ['libretro'];
 
 export interface MetadataFile {
   version: number;
