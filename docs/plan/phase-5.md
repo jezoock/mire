@@ -141,6 +141,11 @@ Règles communes à chaque extraction :
   lit plus aucun emplacement (`DEFAULT_PROVIDERS` vide) ; un emplacement qu'aucun plugin actif ne lit le dit dans son
   état (`note`, sans erreur) ; `crawlHttp` reste au cœur (`net/crawl.ts`) pour les sources en ligne d'une console
   (P5-14b, qui reprendra le même accord). `mire.source.local` 1.0.2 laisse les listes `.m3u` à `mire.source.m3u`.
+  Emplacement injoignable (décision de la session de pilotage : pas de changement du SDK, le cœur respecte le contrat
+  de `scan`) : l'exception levée par la source à l'analyse d'un emplacement ne désactive plus le plugin
+  (`keepOnPluginError` ; délai dépassé, hôte disparu ou réponse trop grosse restent des pannes), le catalogue garde
+  l'analyse précédente et l'état de la source montre « Emplacement inaccessible : <message du plugin> » (texte brut,
+  500 caractères) jusqu'à la prochaine analyse réussie ; vaut aussi pour `mire.source.local` et `mire.source.network`.
 - **P5-13** (découpée, décision de la session de pilotage, 24/11/2026) :
   - **P5-13a — Dossiers de jeux** (fait) : plugin inclus `mire.games.pc` (`privileged`, `folders` + `launch` : le pont
     des sources n'accepte un élément « programme » que de ce niveau). Socle : chaque dossier de `config.gameSources`
