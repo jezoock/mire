@@ -591,13 +591,15 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /**
      * Ce qu'un plugin actif peut recevoir des emplacements de la bibliothèque (P5-11a) : seulement s'il est inclus ou
-     * du dépôt officiel, et un dossier seulement s'il déclare `folders` (et que son niveau le permet).
+     * du dépôt officiel, et un dossier seulement s'il déclare `folders` ; ce qu'il peut rendre : un programme
+     * seulement s'il déclare `launch` (P5-14a). Chaque permission compte si son niveau la permet.
      */
-    sourceRights(id: string): { trusted: boolean; folders: boolean } {
+    sourceRights(id: string): { trusted: boolean; folders: boolean; launch: boolean } {
       const a = active.get(id);
       const k = known.get(id);
-      if (!a || !k) return { trusted: false, folders: false };
-      return { trusted: ['bundled', 'official'].includes(trustOf(k)), folders: grantedPermissions(a.plugin.manifest).folders };
+      if (!a || !k) return { trusted: false, folders: false, launch: false };
+      const granted = grantedPermissions(a.plugin.manifest);
+      return { trusted: ['bundled', 'official'].includes(trustOf(k)), folders: granted.folders, launch: granted.launch };
     },
 
     /** Niveau d'un plugin actif (`null` sinon) : les ponts appliquent ses règles aux résultats qu'il rend. */

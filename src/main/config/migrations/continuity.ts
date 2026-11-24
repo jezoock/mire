@@ -188,6 +188,12 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // jeux gardent leur clé (`pc:<chemin>`) : favoris, temps de jeu, listes et fiches sont retrouvés. Les jeux ajoutés à
   // la main (`games`) restent au cœur jusqu'à P5-13b.
   { id: 'P5-13', plugin: 'mire.games.pc', mode: 'bundled', applies: always },
+  // P5-14a : dossiers des consoles, plugin inclus ; toute installation existante (une console peut être ajoutée plus
+  // tard par la boutique). Les consoles et leurs dossiers restent dans `emulators`, accordés au plugin tant qu'ils y
+  // restent : rien à déplacer. Les jeux gardent leur clé (`rom:<console>|<chemin>`) : favoris, temps de jeu, émulateur
+  // choisi, listes et fiches sont retrouvés. Les sources en ligne restent au cœur (P5-14b), les marque-pages aussi
+  // (P5-14c).
+  { id: 'P5-14a', plugin: 'mire.games.roms', mode: 'bundled', applies: always },
   // P5-16 : infos en ligne sans clé, un plugin à installer par service. Les fournisseurs sont renommés pour toute
   // configuration (ordre choisi, fiches déjà enregistrées sous `a:` et `g:`, reprises sans nouvelle récupération).
   {

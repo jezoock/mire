@@ -300,6 +300,42 @@ describe('Hôte de plugins', () => {
     assert.equal((await page.evaluate(() => window.api.pluginsSetEnabled('mire.games.pc', true))).status, 'active');
     await until('jeu revenu', async () => ((await games()).games.length === 1 ? true : null));
   });
+
+  it('jeux de console (P5-14a) : le plugin inclus lit le dossier de la console ; jeux de démonstration inchangés ; désactivé puis réactivé', async () => {
+    const p = await until('plugin des jeux de console actif', async () => {
+      const all = await byId();
+      return all['mire.games.roms']?.status === 'active' ? all['mire.games.roms'] : null;
+    });
+    assert.equal(p.origin, 'bundled');
+    assert.equal(p.level, 'code');
+    const SNES = 'super-nintendo-631512';
+    const roms = () => page.evaluate((id) => window.api.listRoms(id), SNES);
+    const found = await until('jeux de la console', async () => {
+      const r = await roms();
+      return r.ok && r.roms.length ? r : null;
+    });
+    assert.deepEqual(
+      found.roms.map((r) => [r.displayName, path.basename(r.path), r.remote]),
+      [
+        ['Course de karts', 'Course de karts (Europe).sfc', false],
+        ['Jeu de plateforme', 'Jeu de plateforme (France).sfc', false],
+      ],
+    );
+    // Même clé qu'avant l'extraction (`rom:<console>|<chemin>`) : favoris, temps de jeu et fiches retrouvés.
+    const file = found.roms[0].path;
+    const key = `rom:${SNES}|${process.platform === 'win32' ? file.replace(/\\/g, '/').toLowerCase() : file}`;
+    const el = await page.evaluate((k) => window.api.catalogElement(k), key);
+    assert.deepEqual([el?.name, el?.open], ['Course de karts', { kind: 'game', console: SNES, path: file }]);
+    assert.equal((await page.evaluate(() => window.api.pluginsSetEnabled('mire.games.roms', false))).status, 'disabled');
+    const off = await roms();
+    assert.equal(off.ok, false);
+    assert.equal(await page.evaluate((k) => window.api.catalogElement(k), key), null);
+    assert.equal((await page.evaluate(() => window.api.pluginsSetEnabled('mire.games.roms', true))).status, 'active');
+    await until('jeux revenus', async () => {
+      const r = await roms();
+      return r.ok && r.roms.length === 2 ? true : null;
+    });
+  });
 });
 
 // Application empaquetée : le plugin d'exemple doit être dans process.resourcesPath/plugins (`extraResources`).

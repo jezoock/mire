@@ -17,10 +17,22 @@ export type ElementInput = Omit<Element, 'source' | 'added'> & { added?: number 
 
 /**
  * Type de fichiers cherchés dans un emplacement : vidéos, musique et images pour un emplacement de la bibliothèque ;
- * `game` pour un dossier de jeux PC (P5-13), proposé de la même façon. Une source ne prend que les emplacements dont
- * elle sait lire le type.
+ * `game` pour un dossier de jeux PC (P5-13), `rom` pour un dossier de jeux d'une console (P5-14), proposés de la même
+ * façon. Une source ne prend que les emplacements dont elle sait lire le type.
  */
-export type SourceMediaKind = 'video' | 'audio' | 'image' | 'game';
+export type SourceMediaKind = 'video' | 'audio' | 'image' | 'game' | 'rom';
+
+/** Console d'un dossier de jeux de console (`SourceLocation.console`), telle que configurée dans Mire. */
+export interface SourceConsole {
+  /** Identifiant de la console : celui d'un élément `open: { kind: 'game', console }`. */
+  id: string;
+  /** Système (cœur libretro) de la console, s'il est connu (info `system`). */
+  system?: string;
+  /** Extensions des fichiers de jeux, en minuscules et avec le point (`.cue`) ; vide : tous les fichiers. */
+  extensions: string[];
+  /** Dossier des jaquettes de la console (chemin absolu), accordé lui aussi tant qu'il reste configuré. */
+  images?: string;
+}
 
 /**
  * Emplacement de la bibliothèque ou dossier de jeux PC, tel que le cœur le passe à une source de plugin (`handles`,
@@ -39,6 +51,8 @@ export interface SourceLocation {
   network: boolean;
   /** Types de fichiers demandés à cet emplacement. */
   kinds: SourceMediaKind[];
+  /** Console d'un dossier de jeux de console (type `rom`). */
+  console?: SourceConsole;
 }
 
 /**
@@ -70,7 +84,9 @@ export interface ElementSource<Location = unknown> {
    * l'emplacement est inaccessible (le catalogue garde alors les éléments de l'analyse précédente).
    *
    * Un fichier local garde la clé que lui donne le cœur (`local:<chemin>`, chemin normalisé) si son `open.path` est
-   * ce même chemin, dans un dossier accordé ; ses images peuvent être des fichiers de ces dossiers.
+   * ce même chemin, dans un dossier accordé ; ses images peuvent être des fichiers de ces dossiers. De même, un jeu
+   * de console (`open: { kind: 'game' }`, fichier local d'un dossier accordé) garde la clé `rom:<console>|<chemin>`
+   * si elle vaut celle de son `open`.
    */
   scan(location: Location): Promise<ElementInput[]>;
 }

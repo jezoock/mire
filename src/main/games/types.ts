@@ -6,6 +6,7 @@ import type { CacheResult, DownloadContext } from '../downloads/types.ts';
 import type { Launcher } from '../platform/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { PcFolderDeps } from './pc/folders.ts';
+import type { RomFolderDeps } from './roms/list.ts';
 
 /** Jeu PC trouvé dans un dossier de jeux (par un plugin, P5-13). */
 export interface PcGame {
@@ -70,6 +71,8 @@ export interface GamesDeps {
   toUi: (channel: string, payload: unknown) => void;
   /** Jeux PC des dossiers de jeux, trouvés par les sources des plugins (P5-13). */
   pcFolders?: PcFolderDeps;
+  /** Dossiers locaux des consoles, lus par les sources des plugins (P5-14a). */
+  romFolders?: RomFolderDeps;
   platform?: NodeJS.Platform;
   /** Catalogue d'éléments que chaque liste de jeux alimente (`element-sources.ts`). */
   catalog?: { setSource(source: { plugin: string; instance: string }, elements: ElementInput[]): unknown };

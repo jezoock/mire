@@ -1,4 +1,4 @@
-// Jeux de console (P1-20) : liste locale et web (serveur HTTP local 127.0.0.1), disques d'un .m3u masqués (y compris
+// Jeux de console (P1-20) : liste web (serveur HTTP local 127.0.0.1), disques d'un .m3u masqués (y compris
 // un disque cité par son adresse complète dans un .m3u distant), jaquettes locales ; lancement avec un faux lanceur
 // et un faux gestionnaire de téléchargements (aucun programme réel n'est lancé, aucun accès hors de la machine).
 import { test } from 'node:test';
@@ -56,42 +56,8 @@ function makeDeps(emulators: unknown[], extra: Record<string, unknown> = {}) {
   return { config, downloads: () => ({ fetchText }), ...extra } as never;
 }
 
-test('listRoms : dossier local, extensions de la console, disques d’un .m3u masqués, jaquettes, tri', async () => {
-  write('local/Zelda (Europe).sfc');
-  write('local/Mario_World.sfc');
-  write('local/notes.txt');
-  write('local/.cache/Cache.sfc');
-  write('local/ps/Jeu.m3u', 'Jeu (Disque 1).cue\nDisques/Jeu (Disque 2).cue\n');
-  write('local/ps/Jeu (Disque 1).cue');
-  write('local/ps/Disques/Jeu (Disque 2).cue');
-  write('local/ps/Autre.cue');
-  write('local/1/2/3/4/Profond.sfc');
-  write('local/1/2/3/4/5/TropProfond.sfc');
-  const cover = write('images/Zelda (Europe).png');
-  const emu = {
-    id: 'snes',
-    name: 'SNES',
-    path: 'snes',
-    sources: [],
-    romsDir: path.join(root, 'local'),
-    extensions: ['sfc', '.CUE', 'm3u'],
-    imagesDir: path.join(root, 'images'),
-  };
-  const r = (await listRoms(makeDeps([emu]), 'snes')) as unknown as { ok: true; roms: Array<Record<string, unknown>>; errors: string[] };
-  assert.equal(r.ok, true);
-  assert.deepEqual(
-    r.roms.map((x) => [x.displayName, path.relative(root, x.path as string), x.remote]),
-    [
-      ['Autre', path.join('local', 'ps', 'Autre.cue'), false],
-      ['Jeu', path.join('local', 'ps', 'Jeu.m3u'), false],
-      ['Mario World', path.join('local', 'Mario_World.sfc'), false],
-      ['Profond', path.join('local', '1', '2', '3', '4', 'Profond.sfc'), false],
-      ['Zelda', path.join('local', 'Zelda (Europe).sfc'), false],
-    ],
-  );
-  assert.equal(r.roms.find((x) => x.displayName === 'Zelda')!.image, cover);
-  assert.deepEqual(r.errors, []);
-});
+// Dossiers locaux d'une console : lus par le plugin inclus `mire.games.roms` depuis P5-14a (ses tests, dans
+// `plugins/mire.games.roms/test/`, reprennent ceux du cœur) ; le cœur les lit du catalogue (`element-sources.test.ts`).
 
 test('listRoms : source web, disque cité par adresse complète dans un .m3u distant masqué', async () => {
   const emu = { id: 'ps1', name: 'PS1', path: 'ps1', sources: [`${base}/roms/`], extensions: ['sfc', 'cue', 'm3u'] };

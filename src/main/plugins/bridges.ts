@@ -24,18 +24,21 @@
  *   (vérifié aussi sur le chemin réel), ou une adresse `https:` d'un hôte qu'il déclare, sans redirection ; taille,
  *   nombre, libellé et langue bornés ; le texte rendu à l'interface n'est jamais interprété comme du HTML.
  *
- * Ce qu'un plugin rend est vérifié ici, d'après son niveau (jamais d'après ce que dit le résultat) : un plugin de code
- * limité ne peut pas fournir un élément qui lance un programme ou un jeu (permission « programmes », code sensible),
- * ni un fichier ou une image locale hors des dossiers qui lui sont accordés, vérifiés une seconde fois sur le chemin
- * réel (liens symboliques) ; ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un élément
- * du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) qui désigne exactement son
- * `open.path` vérifié : un fichier garde ainsi la clé qu'il avait quand le cœur le trouvait (listes, reprise, fiches).
+ * Ce qu'un plugin rend est vérifié ici, d'après son niveau et ses permissions (jamais d'après ce que dit le
+ * résultat) : un élément qui lance un programme demande le code sensible et la permission `launch` ; un plugin de code
+ * limité ne peut fournir ni un fichier ou une image locale hors des dossiers qui lui sont accordés, vérifiés une
+ * seconde fois sur le chemin réel (liens symboliques), ni un jeu de console (P5-14a) autre qu'un fichier local de ces
+ * dossiers, d'une console connue (celle d'un dossier de jeux proposé) : le cœur lance alors l'émulateur par la clé de
+ * l'élément, le plugin ne lance rien. Ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un
+ * élément du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) ou d'un jeu de console
+ * (`rom:<console>|<chemin>`) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
+ * qu'il avait quand le cœur le trouvait (listes, reprise, fiches, favoris).
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
 import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
-import { localFileKey } from '../catalog/keys.ts';
+import { localFileKey, romKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
@@ -72,8 +75,11 @@ export interface BridgeService {
   folders(id: string): string[];
   /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`). */
   hosts(id: string): string[];
-  /** Ce qu'un plugin actif peut recevoir : inclus ou du dépôt officiel (`trusted`), permission `folders` déclarée. */
-  sourceRights(id: string): { trusted: boolean; folders: boolean };
+  /**
+   * Ce qu'un plugin actif peut recevoir ou rendre : inclus ou du dépôt officiel (`trusted`), permissions `folders` et
+   * `launch` déclarées (et permises par son niveau).
+   */
+  sourceRights(id: string): { trusted: boolean; folders: boolean; launch?: boolean };
 }
 
 export interface BridgeCatalog {
@@ -131,8 +137,16 @@ function insideGranted(granted: readonly string[]): (p: string) => boolean {
   return test;
 }
 
+/** Ce qui, en plus du niveau et des dossiers accordés, décide de ce qu'un plugin peut rendre. */
+export interface ElementRights {
+  /** Permission `launch` déclarée (et permise par le niveau) : élément « programme ». */
+  launch?: boolean;
+  /** Consoles connues (celles des dossiers de jeux proposés) : élément « jeu » d'un plugin de code limité. */
+  consoles?: ReadonlySet<string>;
+}
+
 /** Comment ouvrir un élément d'un plugin, s'il en a le droit ; `null` sinon. */
-function openSpec(raw: unknown, level: PluginLevel, granted: readonly string[]): OpenSpec | null {
+function openSpec(raw: unknown, level: PluginLevel, granted: readonly string[], rights: ElementRights): OpenSpec | null {
   if (!isObject(raw)) return null;
   const sensitive = level === 'privileged';
   switch (raw.kind) {
@@ -151,10 +165,14 @@ function openSpec(raw: unknown, level: PluginLevel, granted: readonly string[]):
       if (isWebUrl(raw.path)) return { kind: 'file', path: raw.path };
       return localAllowed(raw.path, level, granted) ? { kind: 'file', path: raw.path } : null;
     case 'game':
+      // Jeu de console : le cœur lance l'émulateur de la console par la clé de l'élément. Un plugin de code limité ne
+      // désigne qu'un fichier local de ses dossiers accordés, d'une console connue ; une adresse lui reste refusée.
+      if (!text(raw.path) || !text(raw.console)) return null;
+      if (!sensitive && !(rights.consoles?.has(raw.console) && localAllowed(raw.path, level, granted))) return null;
+      return { kind: 'game', console: raw.console, path: raw.path };
     case 'program':
-      // Lancer un programme ou un émulateur : permission sensible, code sensible seulement.
-      if (!sensitive || !text(raw.path)) return null;
-      if (raw.kind === 'game') return text(raw.console) ? { kind: 'game', console: raw.console, path: raw.path } : null;
+      // Lancer un programme : permission sensible `launch`, code sensible seulement.
+      if (!sensitive || rights.launch !== true || !text(raw.path)) return null;
       return { kind: 'program', path: raw.path, ...(Array.isArray(raw.args) ? { args: raw.args.filter((a): a is string => typeof a === 'string') } : {}) };
     default:
       return null;
@@ -164,8 +182,15 @@ function openSpec(raw: unknown, level: PluginLevel, granted: readonly string[]):
 /** Image d'un élément : adresse web, ou fichier local que le plugin a le droit de désigner. */
 const elementImageAllowed = (v: unknown, level: PluginLevel, granted: readonly string[]): v is string => isWebUrl(v) || localAllowed(v, level, granted);
 
-/** Fichier local de l'élément (`open.path` d'un fichier qui n'est pas une adresse), s'il y en a un. */
-const localPathOf = (open: OpenSpec): string | null => (open.kind === 'file' && !isWebUrl(open.path) ? open.path : null);
+/** Fichier local de l'élément (`open.path` d'un fichier ou d'un jeu qui n'est pas une adresse), s'il y en a un. */
+const localPathOf = (open: OpenSpec): string | null => ((open.kind === 'file' || open.kind === 'game') && !isWebUrl(open.path) ? open.path : null);
+
+/** Clé que le cœur donnerait au fichier ou au jeu local de l'élément (`local:` ou `rom:`), s'il y en a un. */
+function coreKeyOf(open: OpenSpec, platform: NodeJS.Platform): string | null {
+  const local = localPathOf(open);
+  if (local === null) return null;
+  return open.kind === 'game' ? romKey(open.console, local, platform) : localFileKey(local, platform);
+}
 
 /**
  * Éléments rendus par la source d'un plugin, vérifiés ; ceux qui ne passent pas sont écartés. Vérification écrite
@@ -177,13 +202,14 @@ export function checkElements(
   granted: readonly string[],
   raw: unknown,
   platform: NodeJS.Platform = process.platform,
+  rights: ElementRights = {},
 ): { elements: ElementInput[]; dropped: number } {
   if (!Array.isArray(raw)) throw new Error('scan() must return an array of elements.');
   if (raw.length > BRIDGE_LIMITS.elements) throw new Error(`scan() returned more than ${BRIDGE_LIMITS.elements} elements.`);
   const prefix = level === 'privileged' ? '' : `plugin:${pluginId}|`;
   const elements: ElementInput[] = [];
   for (const e of raw) {
-    const open = isObject(e) ? openSpec(e.open, level, granted) : null;
+    const open = isObject(e) ? openSpec(e.open, level, granted, rights) : null;
     if (!isObject(e) || !text(e.key) || !text(e.name) || !open) continue;
     const infos: Record<string, InfoValue> = {};
     if (isObject(e.infos)) {
@@ -195,9 +221,8 @@ export function checkElements(
     const images: ElementInput['images'] = {};
     if (isObject(e.images))
       for (const k of ['poster', 'background', 'logo'] as const) if (elementImageAllowed(e.images[k], level, granted)) images[k] = e.images[k];
-    // Clé d'un fichier local, gardée telle quelle si elle désigne exactement le fichier vérifié.
-    const local = localPathOf(open);
-    const ownKey = local !== null && e.key === localFileKey(local, platform);
+    // Clé d'un fichier ou d'un jeu local, gardée telle quelle si elle désigne exactement le fichier vérifié.
+    const ownKey = e.key === coreKeyOf(open, platform);
     elements.push({
       key: ownKey ? e.key : `${prefix}${e.key}`,
       name: e.name,
@@ -603,10 +628,15 @@ export function createPluginBridges({
   const running = new Map<string, { print: string; done: Promise<void> }>();
   let queue: Promise<void> = Promise.resolve();
 
-  /** Dossiers d'un plugin : accordés par l'utilisateur (`ctx.files.requestFolder`), et ceux de la bibliothèque qu'il lit. */
+  /**
+   * Dossiers d'un plugin : accordés par l'utilisateur (`ctx.files.requestFolder`), et ceux de la bibliothèque ou des
+   * jeux qu'il lit (avec le dossier des jaquettes d'une console).
+   */
   const assignedFolders = (pluginId: string): string[] =>
-    [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId && a.location.path ? [a.location.path] : []));
+    [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId ? [a.location.path, a.location.console?.images].filter((d): d is string => !!d) : []));
   const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
+  /** Consoles des dossiers de jeux proposés : les seules qu'un jeu d'un plugin de code limité peut désigner. */
+  const knownConsoles = (): Set<string> => new Set(locations.flatMap((l) => (l.location.console ? [l.location.console.id] : [])));
 
   /** Dossiers prêtés le temps d'une recherche de sous-titres : plugin → un dossier par appel en cours. */
   const lent = new Map<string, string[]>();
@@ -708,7 +738,8 @@ export function createPluginBridges({
       // Désactivé ou emplacement retiré pendant l'analyse : rien n'est ajouté.
       if (!current(t)) return;
       const folders = granted(e.pluginId);
-      const written = checkElements(e.pluginId, level, folders, raw, platform);
+      const rights = { launch: service.sourceRights(e.pluginId).launch === true, consoles: knownConsoles() };
+      const written = checkElements(e.pluginId, level, folders, raw, platform, rights);
       const real = await keepReal(written.elements, level, folders, realpath);
       if (!current(t)) return;
       const dropped = written.dropped + real.dropped;
@@ -885,6 +916,15 @@ export function createPluginBridges({
 
     /** Analyse de nouveau les sources des plugins actifs. */
     rescan: (): Promise<void> => sync(true),
+    /**
+     * Analyse de nouveau ces emplacements seulement (clés), avec la source qui les a pris, après les synchronisations
+     * en cours (liste des jeux d'une console, P5-14a) ; un emplacement qu'aucune source n'a pris est ignoré.
+     */
+    async rescanLocations(keys: readonly string[]): Promise<void> {
+      await queue;
+      const set = new Set(keys);
+      await Promise.all([...wanted.values()].filter((t) => t.location && set.has(t.ref.instance)).map((t) => scan(t)));
+    },
 
     /** Emplacements de la bibliothèque (configuration) : redistribués aux sources ; seuls les nouveaux ou changés sont analysés. */
     setLocations(list: readonly KeyedLocation[]): Promise<void> {
@@ -895,7 +935,7 @@ export function createPluginBridges({
     claimed: (key: string): boolean => assigned.has(key),
     /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */
     assignedFolders,
-    /** Fin des synchronisations en cours (tests). */
+    /** Fin des synchronisations en cours (tests, et la liste des jeux d'une console au démarrage). */
     idle: (): Promise<void> => queue,
 
     stop: unsubscribe,

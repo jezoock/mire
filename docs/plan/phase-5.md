@@ -121,7 +121,9 @@ Règles communes à chaque extraction :
 | P5-12 | Serveur web, liste M3U | `src-http`, `src-m3u` | à installer | P5-11a | M | |
 | P5-13a | Jeux PC : dossiers de jeux (voir plus bas) | `jeux-pc` | inclus | P5-01, P5-11a | M | 🧑 |
 | P5-13b | Jeux PC : jeu ajouté à la main (voir plus bas) | `jeux-pc-manuel` | inclus | P5-13a | M | 🧑 |
-| P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | `jeux-roms`, `jeux-disque`, `jeux-marque` | inclus | P5-01 | M | |
+| P5-14a | Jeux de console : dossiers d'une console (voir plus bas) | `jeux-roms` | inclus | P5-01, P5-11a | M | |
+| P5-14b | Jeux de console : sources en ligne (voir plus bas) | `jeux-roms` | inclus | P5-14a, P5-12 | S | |
+| P5-14c | Marque-pages de jeux (voir plus bas) | `jeux-marque` | inclus | P5-14a, P5-18 | M | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | `info-tmdb`, `info-ouregarder` | à installer | P5-01, P2-06 | M | |
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | `info-mb`, `info-libretro`, `info-steam` | à installer | P5-01, P2-06 | M | |
 | P5-17 | Bloqueur de publicités, connexion Google | `web-adblock` (à installer), `web-google` (inclus) | voir colonne | P5-01 | M | 🧑 |
@@ -139,6 +141,21 @@ Règles communes à chaque extraction :
     programme choisi par l'utilisateur ni la liste `config.games` (nom, chemin, arguments, image, édités par les
     Réglages). Deux options : `ctx.files.requestProgram` + stockage du plugin + migration de `config.games` ; ou
     proposer les jeux ajoutés à la main comme emplacements (type à définir), la liste restant dans la configuration.
+- **P5-14** (découpée, décision de la session de pilotage, 24/11/2026) :
+  - **P5-14a — Dossiers d'une console** (fait) : plugin inclus `mire.games.roms` (`code`, `folders` : il liste des
+    fichiers, le cœur lance l'émulateur par la clé de l'élément, `gameLaunch`). Socle : chaque dossier local d'une
+    console est proposé aux sources des plugins avec le type `rom` (`SourceMediaKind`) et sa console
+    (`SourceLocation.console` : identifiant, système, extensions, dossier d'images, accordé lui aussi), sous l'instance
+    `rom:<console>|<chemin>`. Un plugin `code` peut rendre un élément `game` d'une console connue, sur un fichier local
+    de ses dossiers accordés (vérifié aussi sur le chemin réel) ; sa clé `rom:<console>|<chemin>` n'est gardée que si
+    elle vaut celle de son `open`. Le pont vérifie aussi la permission `launch` d'un élément `program`.
+  - **P5-14b — Sources en ligne d'une console** : les adresses saisies par l'utilisateur ne sont pas des hôtes du
+    manifeste ; demande un accord d'hôtes tiré de la configuration, décidé avec P5-12. D'ici là, le cœur les lit.
+  - **P5-14c — Marque-pages de jeux** : reportée jusqu'à une extension du SDK pour les téléchargements
+    (`ctx.downloads`, fin d'un téléchargement, action de l'interface vers un plugin), à décider avec P5-18.
+  - **Jeux sur disque** (`jeux-disque`) : reclassés « Cœur » (formats lus par les téléchargements, la copie locale et
+    le cache des jeux en ligne du cœur) ; le plugin des consoles garde sa copie de la lecture des listes `.m3u` et
+    `.cue` pour cacher les disques cités.
 - **P5-15** : la clé TMDB d'une installation existante devient le réglage `secret` du plugin.
 - **P5-17** : les dépendances `@ghostery/*` quittent l'application ; 🧑 YouTube sans publicité.
 - **P5-21** : le cœur ne contient plus que les éléments « Cœur » de l'inventaire (vérification dans la PR) ;

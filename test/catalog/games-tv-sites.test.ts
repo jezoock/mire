@@ -24,6 +24,7 @@ import { createGames } from '../../src/main/games/index.ts';
 import type { GamesDeps } from '../../src/main/games/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/index.ts';
 import { wireLocalPlugin } from '../library/plugin-folders.ts';
+import { wireRomsPlugin } from '../games/plugin-roms.ts';
 import { tvConfigFeed } from '../../src/main/tv/element-sources.ts';
 import { createTv } from '../../src/main/tv/index.ts';
 import { siteConfigFeed } from '../../src/main/web/element-sources.ts';
@@ -66,6 +67,8 @@ async function wire(dir: string, config: ReturnType<typeof createConfigService>)
     if (added.length) metadata.adopt(added.map((k) => catalog.get(k)).filter((e) => !!e));
   });
   syncFeeds(catalog, [gameConfigFeed(config.get(), P), tvConfigFeed(config.get()), siteConfigFeed(config.get())]);
+  // Dossiers des consoles : plugin inclus `mire.games.roms` (P5-14a).
+  const { romFolders } = await wireRomsPlugin({ config, catalog });
   const games = createGames({
     config,
     access: { isAllowed: () => true, isInside: () => true },
@@ -73,6 +76,7 @@ async function wire(dir: string, config: ReturnType<typeof createConfigService>)
     scraper: () => null,
     platform: P,
     catalog,
+    romFolders,
   } as unknown as GamesDeps);
   const tv = createTv({ config, toUi: () => {}, catalog });
   // Dossiers de la bibliothèque : plugin inclus `mire.source.local` (P5-11c).
@@ -95,7 +99,7 @@ describe('configuration de démonstration → catalogue', () => {
     const genres = new Set(w.catalog.keys().map(keyGenre));
     for (const g of ['local', 'rom', 'pc', 'tv', 'site'] as const) assert.ok(genres.has(g), g);
     const plugins = new Set(w.catalog.sources().map((s) => s.plugin));
-    for (const p of ['mire.source.local', 'jeux-roms', 'jeux-pc-manuel', 'tv-m3u', 'web-perso']) assert.ok(plugins.has(p), p);
+    for (const p of ['mire.source.local', 'mire.games.roms', 'jeux-pc-manuel', 'tv-m3u', 'web-perso']) assert.ok(plugins.has(p), p);
   });
 
   it('tags `game`, `tv`, `stream` ; info `system` des jeux de console une seule fois, celle de la console', async () => {

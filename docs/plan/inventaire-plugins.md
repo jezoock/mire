@@ -48,10 +48,10 @@ Ce qui remplit la section Jeux.
 | --- | --- | --- | --- | --- | --- | --- |
 | `jeux-pc` | Dossiers de jeux PC | Plugin inclus | Source | Fichiers, Lance des programmes ⚠ | plugin `mire.games.pc` (mire-addons ; copie incluse dans `plugins/`, P5-13) ; cœur : dossiers proposés (src/main/games/pc/locations.ts), lancement par la clé (src/main/games/pc/launch.ts) | Niveau `privileged` : seul niveau dont le pont accepte un élément « programme » |
 | `jeux-pc-manuel` | Jeu PC ajouté à la main | Plugin inclus | Fonction | Lance des programmes ⚠ | src/main/games/pc/launch.ts, src/main/games/element-sources.ts (encore au cœur) | Reporté à P5-13b : le SDK ne donne pas à un plugin un programme choisi par l'utilisateur |
-| `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | src/main/games/roms/ |  |
-| `jeux-disque` | Jeux sur disque | Plugin inclus | Fonction | Fichiers, Internet | src/main/games/disc/ |  |
+| `jeux-roms` | Dossiers de jeux d'une console | Plugin inclus | Source | Fichiers, Internet | plugin `mire.games.roms` (mire-addons ; copie incluse dans `plugins/`, P5-14a) pour les dossiers locaux ; cœur : dossiers proposés (src/main/games/roms/locations.ts), lancement par la clé ; sources en ligne encore au cœur (src/main/games/roms/list.ts, P5-14b) | Niveau `code` + `folders` : le plugin liste des fichiers, le cœur lance l'émulateur |
+| `jeux-disque` | Jeux sur disque | Cœur | Socle | Fichiers, Internet | src/main/games/disc/ | Reclassé (P5-14) : formats lus par les téléchargements, la copie locale et le cache des jeux en ligne du cœur |
 | `jeux-sites` | Sites de jeux par console | À installer | Pack de données | Données seules, Vue web ⚠ | plugin `mire.game-sites` (le cœur lit les packs `romSites`, P5-07) |  |
-| `jeux-marque` | Marque-pages de jeux à télécharger | Plugin inclus | Fonction | Internet, Fichiers | src/main/games/bookmarks.ts |  |
+| `jeux-marque` | Marque-pages de jeux à télécharger | Plugin inclus | Fonction | Internet, Fichiers | src/main/games/bookmarks.ts (encore au cœur) | Reporté à P5-14c : le SDK ne donne pas encore les téléchargements à un plugin (avec P5-18) |
 | `jeux-libres` | Jeux libres | À installer | Pack de données | Données seules, Internet | plugin `mire.free-games` (le cœur lit les packs `freeGames`, P5-07) |  |
 | `jeux-suppr` | Nettoyage et suppression de jeux | Cœur | Socle | Supprime des fichiers ⚠ | src/main/games/cleanup.ts, games/delete.ts |  |
 | `jeux-systemes` | Référentiel des systèmes de jeu | Cœur | Socle | Données seules | packages/shared (guessSystem) |  |

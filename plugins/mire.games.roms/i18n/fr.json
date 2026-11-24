@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Jeux de console",
+      "description": "Trouve les jeux posés dans les dossiers de chaque console, avec leurs jaquettes. Un jeu à plusieurs disques apparaît une seule fois."
+    }
+  }
+}
