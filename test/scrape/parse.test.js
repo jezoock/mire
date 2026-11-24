@@ -2,8 +2,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-// Analyse des noms de fichiers et fonctions de rapprochement du moteur de récupération (anciennement scraper.js).
-const { parseVideo, guessSystem, romKey, bestMatch } = require('../../src/main/scrape/index.ts');
+// Analyse des noms de fichiers du moteur de récupération (anciennement scraper.js). Rapprochement des jaquettes
+// (`romKey`, `bestMatch`) : plugin mire.libretro depuis P5-16, testé dans mire-addons.
+const { parseVideo, guessSystem } = require('../../src/main/scrape/index.ts');
 const { cleanTitle, rankByTitle } = require('@mire/shared');
 
 test('parseVideo : film avec année entre parenthèses', () => {
@@ -108,36 +109,6 @@ test('cleanTitle : cas limites (vide, parenthèses vides, tiret final)', () => {
   assert.equal(cleanTitle(''), '');
   assert.equal(cleanTitle('Titre ( )'), 'Titre');
   assert.equal(cleanTitle('Titre -'), 'Titre');
-});
-
-test('romKey : retire régions et marqueurs, normalise accents et « & »', () => {
-  assert.equal(romKey('Super Mario World (Europe) (En,Fr) [!]'), 'super mario world');
-  assert.equal(romKey('Pokémon Rouge & Bleu'), 'pokemon rouge and bleu');
-});
-
-test('romKey : nom fait uniquement d’étiquettes → clé vide', () => {
-  assert.equal(romKey('(USA) [!]'), '');
-  assert.equal(romKey(''), '');
-});
-
-test('bestMatch : correspondance exacte, la région préférée l’emporte', () => {
-  const list = ['Super Mario World (USA)', 'Super Mario World (Japan)', 'Super Mario World (Europe)', 'Zelda (France)'];
-  assert.equal(bestMatch(list, 'Super Mario World'), 'Super Mario World (Europe)');
-  assert.equal(bestMatch(list, 'Super Mario World (Japan) [!]'), 'Super Mario World (Europe)');
-  assert.equal(bestMatch(['Tetris (USA)', 'Tetris (France)'], 'Tetris'), 'Tetris (France)');
-});
-
-test('bestMatch : correspondance approchée au-dessus de 0,82', () => {
-  assert.equal(bestMatch(['Super Mario Worlds (USA)', 'Zelda (USA)'], 'Super Mario World'), 'Super Mario Worlds (USA)');
-});
-
-test('bestMatch : rejet en dessous de 0,82', () => {
-  assert.equal(bestMatch(['Super Mario Kart (USA)'], 'Super Mario World'), null);
-});
-
-test('bestMatch : liste vide ou nom sans clé', () => {
-  assert.equal(bestMatch([], 'Tetris'), null);
-  assert.equal(bestMatch(['Tetris (USA)'], '(Europe)'), null);
 });
 
 test('guessSystem : le système choisi par l’utilisateur l’emporte', () => {

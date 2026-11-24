@@ -125,14 +125,6 @@ export interface UiSettings {
   language: string;
 }
 
-export interface SearchSettings {
-  /**
-   * Langue des fiches (`fr-FR`, `en-US`) des sources d'infos du cœur ; vide = celle de l'interface. La clé TMDB et le
-   * pays des disponibilités sont devenus des réglages du plugin `mire.tmdb` (P5-15).
-   */
-  language: string;
-}
-
 /** Site où chercher des jeux à télécharger (search avec {q}). */
 export interface LinkSite {
   name: string;
@@ -229,7 +221,6 @@ export interface Config {
   browser: ExternalProgram;
   tv: TvSettings;
   ui: UiSettings;
-  search: SearchSettings;
   scrape: { auto: boolean };
   games: Game[];
   /** autoOnline : affiche d'emblée les jeux en ligne en ouvrant une console. */
@@ -276,7 +267,7 @@ export interface CatalogSettings {
    */
   fileTags?: Record<string, string[]>;
   /**
-   * Ordre de priorité des fournisseurs d'infos en ligne (`tmdb`, `musicbrainz`, `libretro`, `steam`) : pour une même
+   * Ordre de priorité des fournisseurs d'infos en ligne (`libretro`, ceux des plugins : `mire.tmdb/tmdb`…) : pour une même
    * info, le premier l'emporte. Ceux qui manquent suivent, dans l'ordre par défaut. Absent : l'ordre par défaut.
    */
   metadataProviders?: string[];

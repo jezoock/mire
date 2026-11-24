@@ -25,8 +25,8 @@ import type {
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
-/** Fournisseurs d'infos du cœur, dans l'ordre par défaut (`METADATA_PROVIDERS` du processus principal). */
-export const METADATA_PROVIDERS = ['musicbrainz', 'libretro', 'steam'] as const;
+/** Fournisseurs d'infos du cœur (`METADATA_PROVIDERS` du processus principal) : aucun depuis P5-16. */
+export const METADATA_PROVIDERS: readonly string[] = [];
 
 /** « Automatique » et palettes du cœur (P4-02) ; noms : `palettes.<id>`. Celles des plugins suivent (P5-02). */
 export const PALETTES = ['auto', 'ecran', 'contraste'] as const;
@@ -102,7 +102,6 @@ export function providerOrder(config: unknown, extra: readonly string[] = []): s
 /** Nom affiché d'un fournisseur : ceux du cœur ont le leur, ceux d'un plugin le nom du plugin. */
 function providerLabel(id: string, src: PanelSources): string {
   const { t } = src;
-  if ((METADATA_PROVIDERS as readonly string[]).includes(id)) return t(`settingsView.providers.${id}`);
   const p = src.providers?.find((x) => x.id === id);
   const same = (src.providers ?? []).filter((x) => x.plugin === p?.plugin).length > 1;
   return t('settingsView.providers.plugin', { name: p ? (same ? `${p.name} · ${id.split('/').pop()}` : p.name) : id });

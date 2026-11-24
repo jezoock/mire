@@ -83,9 +83,9 @@ describe('panneaux générés depuis le schéma', () => {
     assert.equal(player.kind, 'path');
     assert.equal(player.pick, 'program');
     assert.equal(player.placeholder, 'Détection automatique');
-    // Clé TMDB et pays de « Où regarder » : réglages du plugin mire.tmdb (P5-15), plus du cœur.
+    // Clé TMDB et pays de « Où regarder » (P5-15), langue des fiches (P5-16) : réglages des plugins, plus du cœur.
     assert.equal(
-      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.') && f.key !== 'search.language'),
+      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.')),
       false,
     );
   });
@@ -96,7 +96,6 @@ describe('panneaux générés depuis le schéma', () => {
       fieldOf(panels, 'ui.language').options?.map((o) => o.label),
       ['Automatique (langue du système)', 'English', 'Français'],
     );
-    assert.deepEqual(fieldOf(panels, 'search.language').options?.[0], { value: '', label: 'Comme l’interface' });
     const start = fieldOf(panels, 'ui.start').options!;
     assert.deepEqual(start.at(-1), { value: 'web:arte', label: 'Arte', group: 'Directement sur un service' });
   });
@@ -142,7 +141,7 @@ describe('panneaux générés depuis le schéma', () => {
     const providers = fieldOf(panels, 'scrape.providers');
     assert.deepEqual(
       providers.lists?.[0]?.items.map((x) => x.id),
-      ['musicbrainz', 'libretro', 'steam'],
+      [],
     );
     assert.equal(providers.lists?.[0]?.toggle, false);
     // Plus aucun bouton « Régler dans … » : chaque bloc propre aux pages est un champ de l'écran.
@@ -158,29 +157,30 @@ describe('panneaux générés depuis le schéma', () => {
       ['À gauche', 'À droite', 'En haut', 'En bas'],
     );
     // Le même affichage dans toutes les langues.
-    assert.equal(fieldOf(schemaPanels(sources({ t: en.t })), 'search.language').kind, 'segmented');
-    assert.equal(fieldOf(panels, 'search.language').kind, 'segmented');
+    assert.equal(fieldOf(schemaPanels(sources({ t: en.t })), 'ui.menu.position').kind, 'segmented');
     assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
     assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['steam', 'inconnu', 'libretro'] } }), ['steam', 'libretro', 'musicbrainz']);
-    // TMDB est un plugin (P5-15) : sans lui, son fournisseur n'est pas dans la liste.
-    assert.deepEqual(providerOrder({}), ['musicbrainz', 'libretro', 'steam']);
+    const plugins = ['mire.musicbrainz/musicbrainz', 'mire.libretro/libretro', 'mire.steam/steam'];
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['mire.steam/steam', 'inconnu', 'steam', 'mire.libretro/libretro'] } }, plugins), [
+      'mire.steam/steam',
+      'mire.libretro/libretro',
+      'mire.musicbrainz/musicbrainz',
+    ]);
+    // TMDB (P5-15), MusicBrainz, libretro et Steam (P5-16) sont des plugins : sans eux, la liste est vide.
+    assert.deepEqual(providerOrder({}), []);
   });
 
   it('les fournisseurs des plugins actifs rejoignent l’ordre, sous le nom de leur plugin', () => {
-    const extra = ['org.films/infos'];
-    assert.deepEqual(providerOrder({}, extra), ['musicbrainz', 'libretro', 'steam', 'org.films/infos']);
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }, extra), [
-      'org.films/infos',
-      'steam',
-      'musicbrainz',
-      'libretro',
-    ]);
+    const two = ['mire.libretro/libretro', 'org.films/infos'];
+    assert.deepEqual(providerOrder({}, two), two);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos'] } }, two), ['org.films/infos', 'mire.libretro/libretro']);
     // Un plugin désactivé : son fournisseur quitte la liste.
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'steam'] } }), ['steam', 'musicbrainz', 'libretro']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'mire.libretro/libretro'] } }, ['mire.libretro/libretro']), [
+      'mire.libretro/libretro',
+    ]);
     const providers = [{ id: 'org.films/infos', plugin: 'org.films', name: 'Films libres', kinds: ['video'] }];
     for (const [t, label] of [
       [fr.t, 'Films libres (plugin)'],
@@ -448,8 +448,8 @@ function context(answers: Record<string, unknown> = {}) {
 describe('contrôleur mire-settings (P4-20)', () => {
   it('un champ s’enregistre dès qu’il change, puis l’écran se relit', async () => {
     const { ctx, named } = context();
-    await new SettingsController(ctx).setValue({ key: 'search.language', value: 'en-US' });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.language', 'en-US']]);
+    await new SettingsController(ctx).setValue({ key: 'downloads.torrentClient', value: 'system' });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'downloads.torrentClient', 'system']]);
     assert.equal(named('ui.settings.refresh').length, 1);
   });
 
@@ -482,7 +482,7 @@ describe('contrôleur mire-settings (P4-20)', () => {
     const { ctx, named } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate({ home }) });
     const c = new SettingsController(ctx);
     await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'libretro'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['steam', 'libretro']]]);
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', []]]);
     let saved: Data | null = null;
     const { ctx: ctx2 } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate((saved = { home })) });
     await new SettingsController(ctx2).setOrder({ kind: 'rows', keys: ['bars', 'recent'] });
@@ -524,8 +524,8 @@ describe('contrôleur mire-settings (P4-20)', () => {
 
   it('nouvel ordre : les fournisseurs des plugins actifs sont gardés', async () => {
     const { ctx, named } = context({ 'api.pluginsMetadataProviders': [{ id: 'org.films/infos' }] });
-    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'steam'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'steam']]]);
+    await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'libretro'] });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos']]]);
   });
 
   it('sources : un dossier choisi par le processus principal, une adresse, un retrait ; nature vérifiée', async () => {

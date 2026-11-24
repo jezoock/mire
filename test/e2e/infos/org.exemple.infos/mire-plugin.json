@@ -1,0 +1,23 @@
+{
+  "id": "org.exemple.infos",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "metadata": [
+      {
+        "id": "albums",
+        "main": "albums.mjs",
+        "kinds": ["album"]
+      },
+      {
+        "id": "jeux",
+        "main": "jeux.mjs",
+        "kinds": ["pc"]
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

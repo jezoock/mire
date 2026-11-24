@@ -34,14 +34,14 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
-import { fold, type ElementSourceRef } from '@mire/shared';
+import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
 import { localFileKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
 import { request, type FetchLike } from '../net/http.ts';
 import { ScrapeRefusal } from '../scrape/refusal.ts';
-import type { JobContext, MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
+import type { JobContext, MetadataProvider, ProviderContext, RunOptions, ScrapeConfig, ScrapeGroup, ScrapeItem } from '../scrape/types.ts';
 import { hostDeclared, isLocalHost } from './permissions.ts';
 import type { ContributionEntry } from './registry.ts';
 
@@ -262,6 +262,53 @@ export function factsKey(kind: MetadataKind, item: unknown): string | null {
 }
 
 const GROUPS: Record<MetadataKind, ScrapeGroup> = { video: 'videos', album: 'music', rom: 'games', pc: 'games' };
+
+/**
+ * Jeux que le cœur rassemble lui-même pour un fournisseur d'infos (P5-16) : jeux PC de l'interface, sinon ceux de la
+ * configuration (un même nom une fois) ; jeux des consoles dont le système est reconnu, chacun avec sa console.
+ * `null` pour les autres natures (vidéos, albums : le plugin les rassemble d'après ce qu'envoie l'interface). Le cœur
+ * garde ces éléments complets (clés des fiches) ; le plugin n'en reçoit que `gameForPlugin`.
+ */
+export async function coreGames(kind: MetadataKind, opts: RunOptions, ctx: ProviderContext): Promise<ScrapeItem[] | null> {
+  if (kind === 'pc') {
+    const seen = new Set<string>();
+    return (opts.pcGames ?? ctx.getConfig().games).filter((g) => {
+      const k = factsKey('pc', g);
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+  if (kind !== 'rom') return null;
+  const items: ScrapeItem[] = [];
+  for (const emu of ctx.getConfig().emulators) {
+    if (!guessSystem(emu)) continue;
+    const r = await ctx.listRoms(emu.id);
+    if (!r?.ok) continue;
+    for (const rom of r.roms || []) items.push({ ...rom, emu: emu.id });
+  }
+  return items;
+}
+
+const STEAM_APP = /^steam:\/\/rungameid\/(\d+)/i;
+
+/**
+ * Ce qu'un plugin reçoit d'un jeu (P5-16) : son nom (sans dossier), sa console et le système libretro de celle-ci, ou
+ * l'identifiant Steam d'un jeu PC ; jamais son chemin (la clé de la fiche, qui le contient, est calculée par le cœur).
+ * Les vidéos et les albums passent tels quels.
+ */
+export function gameForPlugin(kind: MetadataKind, item: unknown, config: ScrapeConfig): unknown {
+  if (kind !== 'pc' && kind !== 'rom') return item;
+  const name = path.win32.basename(field(item, 'name')).slice(0, BRIDGE_LIMITS.text);
+  if (kind === 'pc') {
+    const appid = STEAM_APP.exec(field(item, 'path'))?.[1];
+    return { name, ...(appid ? { appid } : {}) };
+  }
+  const emu = field(item, 'emu');
+  const owner = config.emulators.find((e) => e.id === emu);
+  const displayName = field(item, 'displayName');
+  return { name, ...(displayName ? { displayName: path.win32.basename(displayName) } : {}), emu, system: owner ? guessSystem(owner) : '' };
+}
 
 /** Fiche rendue par un plugin : les champs connus, d'un type attendu ; `source` est celle du plugin. */
 export function checkFacts(source: string, raw: unknown): MetadataFacts | null | undefined {
@@ -641,6 +688,8 @@ export function createPluginBridges({
   function metadataProvider(e: ContributionEntry): MetadataProvider {
     const kinds = ((e.declaration.kinds as MetadataKind[] | undefined) ?? []).filter((k) => Object.hasOwn(GROUPS, k));
     const source = `${e.pluginId}/${e.id}`;
+    const kind = kinds[0] ?? 'video';
+    const forPlugin = (item: unknown, ctx: ProviderContext) => (kind === 'pc' || kind === 'rom' ? gameForPlugin(kind, item, ctx.getConfig()) : item);
     const call = (method: string, args: unknown[]) => service.call(e.pluginId, 'metadata', e.id, method, args, { timeout: BRIDGE_LIMITS.metadataTimeout });
     // Échec rendu par le plugin (clé refusée, service injoignable) : un message pour l'utilisateur.
     const ask = async (method: string, args: unknown[]): Promise<unknown> => {
@@ -660,14 +709,17 @@ export function createPluginBridges({
       // aucun élément, mais reste gardée).
       key: (item) =>
         factsKey(kinds[0] ?? 'video', item) ?? `plugin:${source}|${String((item as { key?: unknown })?.key ?? (item as { path?: unknown })?.path ?? '')}`,
-      collect: async (opts) => {
+      // Jeux : rassemblés par le cœur (`coreGames`) ; le reste, par le plugin.
+      collect: async (opts, ctx) => {
+        const games = await coreGames(kind, opts ?? {}, ctx);
+        if (games) return games.slice(0, BRIDGE_LIMITS.elements);
         const items = await call('collect', [opts ?? {}]);
         return Array.isArray(items) ? items.slice(0, BRIDGE_LIMITS.elements) : [];
       },
-      scrape: async (item, override, job) => withImages(e.pluginId, checkFacts(source, await ask('scrape', [item, override ?? null])), job),
-      byId: async (pick, item, job) => withImages(e.pluginId, checkFacts(source, await ask('byId', [pick, item])), job),
-      candidates: async (q) => {
-        const list = await ask('candidates', [q]);
+      scrape: async (item, override, job) => withImages(e.pluginId, checkFacts(source, await ask('scrape', [forPlugin(item, job), override ?? null])), job),
+      byId: async (pick, item, job) => withImages(e.pluginId, checkFacts(source, await ask('byId', [pick, forPlugin(item, job)])), job),
+      candidates: async (q, ctx) => {
+        const list = await ask('candidates', [q?.item === undefined ? q : { ...q, item: forPlugin(q.item, ctx) }]);
         return Array.isArray(list)
           ? list
               .filter((c) => isObject(c) && text(c.id) && text(c.title))
@@ -678,6 +730,8 @@ export function createPluginBridges({
                 year: typeof c.year === 'string' ? c.year : '',
                 sub: typeof c.sub === 'string' ? c.sub : '',
                 image: isWebUrl(c.image) ? c.image : null,
+                // Vignette de secours si l'image manque (Steam), comme `image` : une adresse web montrée telle quelle.
+                ...(isWebUrl(c.fallback) ? { fallback: c.fallback } : {}),
               }))
           : [];
       },
