@@ -50,7 +50,6 @@ import { createPluginTaggers } from './taggers.ts';
 export const pluginTextKey = (id: string): string => id.replaceAll('.', '_');
 export const pluginTextPrefix = (id: string): string => `pluginTexts.${pluginTextKey(id)}.`;
 
-/** Plugin de code démarré : son canal (attaché à son port) et de quoi l'arrêter. */
 /** Options d'un appel à un plugin. */
 export interface CallOptions {
   /** Délai de la requête (ms). */
@@ -62,6 +61,7 @@ export interface CallOptions {
   keepOnPluginError?: boolean;
 }
 
+/** Plugin de code démarré : son canal (attaché à son port) et de quoi l'arrêter. */
 export interface RunnerHandle {
   channel: Channel;
   stop(): void;

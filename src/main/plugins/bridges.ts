@@ -38,14 +38,14 @@
  * l'élément, le plugin ne lance rien. Ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un
  * élément du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) ou d'un jeu de console
  * (`rom:<console>|<chemin>`), d'un fichier en ligne sous l'adresse de l'emplacement analysé (`remote:<adresse>`) ou
- * d'une entrée de la liste analysée (`m3u:<liste>|<flux>`, P5-12) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
+ * d'une entrée de la liste analysée (`m3u:<liste>|<flux>`, ou un fichier local qu'elle cite, P5-12) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
  * qu'il avait quand le cœur le trouvait (listes, reprise, fiches, favoris).
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
 import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
-import { localFileKey, m3uEntryKey, remoteFileKey, romKey } from '../catalog/keys.ts';
+import { joinKey, localFileKey, m3uEntryKey, normalizeLocation, normalizePath, remoteFileKey, romKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
@@ -214,19 +214,39 @@ function underLocation(url: string, location: SourceLocation): boolean {
   }
 }
 
-/**
- * Clé que le cœur donnerait à l'élément, s'il en a une : fichier ou jeu local (`local:`, `rom:`) ; fichier en ligne
- * sous l'adresse de l'emplacement analysé (`remote:`) ; flux d'une liste, l'emplacement analysé étant la liste
- * (`m3u:<liste>|<flux>`, P5-12).
- */
-function coreKeyOf(open: OpenSpec, platform: NodeJS.Platform, location: SourceLocation | null | undefined): string | null {
-  const local = localPathOf(open);
-  if (local !== null) return open.kind === 'game' ? romKey(open.console, local, platform) : localFileKey(local, platform);
-  if (!location) return null;
-  if (open.kind === 'file' && underLocation(open.path, location)) return remoteFileKey(open.path);
+/** Emplacement analysé qui est une liste de lecture (`.m3u`, `.m3u8`), en ligne ou de cet ordinateur : son adresse ou son chemin. */
+function playlistOf(location: SourceLocation): string | null {
   const list = location.url ?? location.path;
-  if (open.kind === 'stream' && list) return m3uEntryKey(list, open.url, platform);
-  return null;
+  if (!list) return null;
+  let where = list;
+  try {
+    if (location.url) where = new URL(location.url).pathname;
+  } catch {
+    return null;
+  }
+  return /\.m3u8?$/i.test(where) ? list : null;
+}
+
+/**
+ * Clés que le cœur donnerait à l'élément : fichier ou jeu local (`local:`, `rom:`) ; fichier en ligne sous l'adresse
+ * de l'emplacement analysé (`remote:`) ; flux d'une liste, l'emplacement analysé étant la liste (`m3u:<liste>|<flux>`,
+ * P5-12) ; fichier local cité par la liste analysée (`m3u:<liste>|<chemin>`, celle de `m3uEntryKey`, ou le chemin
+ * normalisé comme un chemin : la même sous Linux et macOS).
+ */
+function coreKeysOf(open: OpenSpec, platform: NodeJS.Platform, location: SourceLocation | null | undefined): string[] {
+  const local = localPathOf(open);
+  const list = location ? playlistOf(location) : null;
+  if (local !== null) {
+    if (open.kind === 'game') return [romKey(open.console, local, platform)];
+    const keys = [localFileKey(local, platform)];
+    if (list) keys.push(m3uEntryKey(list, local, platform), joinKey('m3u', normalizeLocation(list, platform), normalizePath(local, platform)));
+    return keys;
+  }
+  if (!location) return [];
+  if (open.kind === 'file' && underLocation(open.path, location)) return [remoteFileKey(open.path)];
+  const where = location.url ?? location.path;
+  if (open.kind === 'stream' && where) return [m3uEntryKey(where, open.url, platform)];
+  return [];
 }
 
 /**
@@ -260,7 +280,7 @@ export function checkElements(
       for (const k of ['poster', 'background', 'logo'] as const) if (elementImageAllowed(e.images[k], level, granted)) images[k] = e.images[k];
     // Clé du cœur (fichier ou jeu local, fichier en ligne, entrée de liste), gardée telle quelle si elle désigne
     // exactement l'élément vérifié.
-    const ownKey = e.key === coreKeyOf(open, platform, rights.location);
+    const ownKey = coreKeysOf(open, platform, rights.location).includes(e.key);
     elements.push({
       key: ownKey ? e.key : `${prefix}${e.key}`,
       name: e.name,

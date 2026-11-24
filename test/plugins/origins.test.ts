@@ -278,3 +278,40 @@ describe('analyse sans emplacement : une exception du plugin reste une panne', (
     bridges.stop();
   });
 });
+
+describe('liste de cet ordinateur qui cite un fichier de son dossier : clé `m3u:` du cœur gardée', () => {
+  it('même clé que `m3uEntryKey` du cœur, sans préfixe de plugin', async () => {
+    const dir = path.join(root, 'Radios');
+    mkdirSync(path.join(dir, 'Musique'), { recursive: true });
+    const list = path.join(dir, 'radios.m3u');
+    const file = path.join(dir, 'Musique', 'Début.mp3');
+    writeFileSync(list, '#EXTM3U\nMusique/Début.mp3\n');
+    writeFileSync(file, '');
+    const own = m3uEntryKey(list, file, process.platform);
+    const elements = [
+      { key: own, name: 'Début', open: { kind: 'file', path: file }, tags: ['local'], infos: { playlist: 'radios' } },
+      // Clé d'une autre liste : préfixée.
+      { key: m3uEntryKey(path.join(dir, 'autre.m3u'), file, process.platform), name: 'Autre', open: { kind: 'file', path: file } },
+    ];
+    const entry = { pluginId: 'mire.source.m3u', kind: 'sources', id: 'src-m3u', declaration: { id: 'src-m3u' } } as unknown as ContributionEntry;
+    const service: BridgeService = {
+      contributions: (kind) => (kind === 'sources' ? [entry] : []),
+      onContributionsChange: () => () => {},
+      call: async (_p, _k, _i, method) => (method === 'handles' ? true : structuredClone(elements)),
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: true }),
+    };
+    const set: { key: string }[][] = [];
+    const bridges = createPluginBridges({ service, catalog: { setSource: (_ref, inputs) => void set.push([...inputs]), removeSource() {} }, log: () => {} });
+    await bridges.setLocations([{ key: list, location: { location: list, path: list, network: false, kinds: ['audio'] } }]);
+    assert.deepEqual(
+      set.at(-1)?.map((e) => e.key),
+      [own, `plugin:mire.source.m3u|${m3uEntryKey(path.join(dir, 'autre.m3u'), file, process.platform)}`],
+    );
+    // Forme de la clé (Linux, macOS) : celle que rend le plugin (`m3u:<liste>|<chemin>`).
+    if (process.platform !== 'win32') assert.equal(own, `m3u:${list}|${file}`);
+    bridges.stop();
+  });
+});
