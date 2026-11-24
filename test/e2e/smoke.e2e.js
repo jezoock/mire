@@ -2020,8 +2020,8 @@ describe('Test de fumée de Mire', () => {
         ['watch', []],
         ['sites', ['Arte', 'Radio France', 'Essai TV']],
       ]);
-      // Sans clé TMDB, « Où regarder » propose de l'ajouter.
-      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'Ajoutez une clé TMDB' }).waitFor();
+      // Sans plugin « Où regarder » (TMDB est un plugin à installer, P5-15), la Recherche propose d'en installer un.
+      await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'plugin « Où regarder »' }).waitFor();
       // Les chaînes entrent au catalogue quand leur liste est lue : la Recherche les trouve.
       await searchFor('chaîne', 'tv');
       assert.deepEqual((await shown())[0], ['tv', ['Chaîne Deux', 'Chaîne Trois', 'Chaîne Une']]);
@@ -3243,10 +3243,10 @@ describe('Test de fumée de Mire', () => {
       await page.locator(`${VIEW} ds-toggle#set-ui-home-clock`).click();
       await waitSaved('ui.home.clock', clock);
       // Liste de choix.
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('BE');
-      await waitSaved('search.region', 'BE');
-      await page.locator(`${VIEW} select#set-search-region`).selectOption('FR');
-      await waitSaved('search.region', 'FR');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('system');
+      await waitSaved('downloads.torrentClient', 'system');
+      await page.locator(`${VIEW} select#set-downloads-torrentClient`).selectOption('mire');
+      await waitSaved('downloads.torrentClient', 'mire');
       // Palette : l'aperçu porte ses propres jetons ; choisie, elle s'applique au document.
       assert.equal(await page.locator(`${VIEW} .mire-settings-view__palette[data-key="minuit"] [data-palette="minuit"]`).count(), 1);
       await palette('minuit').click();
@@ -3264,30 +3264,22 @@ describe('Test de fumée de Mire', () => {
 
     it('l’ordre d’une liste change au clavier (ds-sortable) : celui des fournisseurs d’infos', async () => {
       await openSettings();
-      assert.deepEqual(await providers(), ['tmdb', 'musicbrainz', 'libretro', 'steam']);
+      // TMDB est un plugin à installer (P5-15) : seuls les fournisseurs du cœur sans lui.
+      assert.deepEqual(await providers(), ['musicbrainz', 'libretro', 'steam']);
       const item = (key) => page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="${key}"]`);
-      await item('musicbrainz').scrollIntoViewIfNeeded();
-      await item('musicbrainz').focus();
+      await item('libretro').scrollIntoViewIfNeeded();
+      await item('libretro').focus();
       await page.keyboard.press('Space');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('Space');
-      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'tmdb', 'libretro', 'steam']);
-      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'musicbrainz', VIEW);
+      await waitSaved('catalog.metadataProviders', ['libretro', 'musicbrainz', 'steam']);
+      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'libretro', VIEW);
       await page.locator(`${VIEW} ds-sortable[data-list="providers"]`).scrollIntoViewIfNeeded();
       await settle();
       await page.locator(`${VIEW} [data-panel="scrape"]`).screenshot({ path: path.join(SHOTS, 'settings-order.png') });
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
-      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="tmdb"] button`).first().click();
-      await waitSaved('catalog.metadataProviders', ['tmdb', 'musicbrainz', 'libretro', 'steam']);
-      assert.deepEqual(errors, []);
-    });
-
-    it('« Ajouter la clé » de la Recherche mène au champ de la clé TMDB', async () => {
-      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
-      await page.locator('#view mire-search-view .mire-search-view__input').fill('démonstration');
-      const add = page.locator('#view mire-search-view ds-trigger[action="addKey"].hydrated');
-      await add.click();
-      await page.waitForFunction(() => document.body.dataset.section === 'settings' && document.activeElement?.id === 'set-search-tmdbToken');
+      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="musicbrainz"] button`).first().click();
+      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'libretro', 'steam']);
       assert.deepEqual(errors, []);
     });
 

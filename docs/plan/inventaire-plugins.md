@@ -129,11 +129,11 @@ Affiches, résumés, jaquettes, et « sur quel service regarder ».
 
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
-| `info-tmdb` | TMDB | À installer | Infos en ligne | Internet | src/main/scrape/providers/tmdb.ts, net/tmdb.ts |  |
+| `info-tmdb` | TMDB | À installer | Infos en ligne | Internet | plugin `mire.tmdb` (mire-addons, P5-15) |  |
 | `info-mb` | MusicBrainz et Cover Art Archive | À installer | Infos en ligne | Internet | src/main/scrape/providers/musicbrainz.ts |  |
 | `info-libretro` | libretro-thumbnails | À installer | Infos en ligne | Internet | src/main/scrape/providers/libretro.ts |  |
 | `info-steam` | Steam | À installer | Infos en ligne | Internet | src/main/scrape/providers/steam.ts |  |
-| `info-ouregarder` | Où regarder | À installer | Infos en ligne | Internet | src/main/search/streaming.ts |  |
+| `info-ouregarder` | Où regarder | À installer | Infos en ligne | Internet | plugin `mire.tmdb` (mire-addons, P5-15) ; cœur : `src/main/search/watch.ts` (rapprochement des sites) | Même plugin que TMDB (même clé, même hôte) |
 | `info-moteur` | Moteur de récupération | Cœur | Socle | Fichiers | src/main/scrape/engine.ts |  |
 | `info-tvmaze` | TVmaze | À installer | Infos en ligne | Internet | à créer |  |
 | `info-tvdb` | TheTVDB | À installer | Infos en ligne | Internet | à créer |  |

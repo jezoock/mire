@@ -548,8 +548,17 @@ export interface IpcMethods {
   adblockSetLists(lists: Record<string, unknown>): unknown;
   adblockUpdate(): Record<string, unknown>;
 
-  // Recherche dans les services de streaming
-  searchStreaming(query: string): { ok: boolean; results?: unknown[]; reason?: string; error?: string };
+  // « Où regarder » : recherche d'un plugin (P5-15), rapprochée des sites de streaming configurés. `reason: 'noprovider'` :
+  // aucun plugin ne répond ; `setup` : réglage du plugin `plugin` à remplir (une clé) ; `attribution` : texte du plugin.
+  searchStreaming(query: string): {
+    ok: boolean;
+    plugin?: string;
+    results?: unknown[];
+    attribution?: string;
+    reason?: string;
+    error?: string;
+    setup?: string;
+  };
 
   // Jeux
   scanGameSources(): { games: unknown[]; status: Record<string, unknown> };

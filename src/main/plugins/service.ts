@@ -39,6 +39,7 @@ import type { createContextHandler } from './context.ts';
 import { checkPresent, dependentsOf, type DependencyNode, type DependencyProblem } from './dependencies.ts';
 import type { PluginEndpoint } from './host.ts';
 import type { Journal } from './journal.ts';
+import { grantedPermissions } from './permissions.ts';
 import { contributionEntries, createContributionRegistry, declaredTagsAndInfos, RESTART_KINDS, type ContributionEntry } from './registry.ts';
 import type { RuntimePlugin } from './runtime.ts';
 import type { PluginSettingsStore } from './settings.ts';
@@ -635,6 +636,12 @@ export function createPluginService(opts: PluginServiceOptions) {
         name: nameOf(e.pluginId),
         kinds: Array.isArray(e.declaration.kinds) ? e.declaration.kinds.filter((k): k is string => typeof k === 'string') : [],
       }));
+    },
+
+    /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`) : les ponts n'en copient des images que d'eux. */
+    hosts: (id: string): string[] => {
+      const m = active.get(id)?.plugin.manifest;
+      return m ? [...grantedPermissions(m).hosts] : [];
     },
 
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */

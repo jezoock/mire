@@ -151,7 +151,7 @@ export interface LegacyUi {
   getQueries(): string[];
   rememberQuery(query: string): void;
   /** Écran de la Recherche (`src/renderer/search/`). */
-  search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult' | 'resetWatch'>;
+  search: Pick<Search, 'query' | 'setQuery' | 'refresh' | 'pageOf' | 'watchResult' | 'resetWatch' | 'watchSetup'>;
   // Explorateur (P4-08)
   /** Écran de l'explorateur (`src/renderer/explorer/`). */
   explorer: Pick<Explorer, 'open' | 'show' | 'more' | 'pick' | 'focusedRowKey' | 'picked' | 'clearPicks' | 'fileOf'>;

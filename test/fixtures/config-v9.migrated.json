@@ -114,8 +114,6 @@
       "language": "en"
     },
     "search": {
-      "tmdbToken": "jeton-tmdb",
-      "region": "BE",
       "language": "en-US"
     },
     "scrape": {
@@ -214,7 +212,7 @@
       "fileTags": {
         ".mkv": ["video", "anime"]
       },
-      "metadataProviders": ["tmdb"]
+      "metadataProviders": ["mire.tmdb/tmdb"]
     },
     "plugins": {
       "org.exemple.films": {
@@ -224,6 +222,14 @@
           "$secret": "Y2hpZmZyw6k=",
           "encrypted": true
         }
+      },
+      "mire.tmdb": {
+        "token": {
+          "$secret": "jeton-tmdb",
+          "encrypted": false
+        },
+        "region": "be",
+        "language": "en-US"
       }
     },
     "continuity": [
@@ -241,6 +247,7 @@
       "P5-07-sites",
       "P5-07-libres",
       "P5-02-minuit",
+      "P5-15",
       "P5-05-netflix"
     ]
   },

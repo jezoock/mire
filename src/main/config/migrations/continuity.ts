@@ -16,7 +16,8 @@
  * 4. `applies(config)` : vrai si la configuration (d'avant la v10, non normalisée : tout peut y manquer ou y être mal
  *    formé) se sert de la fonction ; faux sinon (rien n'est alors activé, installé ni déplacé) ;
  * 5. `settings` (facultatif) : réglages à déplacer, chemin dans la configuration (`search.tmdbToken`) → clé du réglage
- *    déclaré par le manifeste du plugin (`token`), `secret: true` pour un réglage `secret` ;
+ *    déclaré par le manifeste du plugin (`token`), `secret: true` pour un réglage `secret`, `convert` pour une valeur
+ *    à traduire (option d'un `choice`), `keep: true` pour un réglage que le cœur lit encore (copié, pas déplacé) ;
  * 6. un test dans `test/config/continuity.test.ts` (une configuration qui s'en sert, une qui ne s'en sert pas).
  * Exemple :
  *   { id: 'P5-15', plugin: 'mire.tmdb', mode: 'install',
@@ -31,8 +32,12 @@ export interface SettingMove {
   from: string;
   /** Clé du réglage dans `plugins.<id>` (déclarée par le manifeste du plugin). */
   to: string;
-  /** Réglage `secret` du manifeste : rangé comme un secret (chiffré au prochain changement, voir plus bas). */
+  /** Réglage `secret` du manifeste : rangé comme un secret (chiffré dès que le plugin est installé, voir plus bas). */
   secret?: boolean;
+  /** Valeur du plugin d'après l'ancienne (`'FR'` → `'fr'`) ; `undefined` : rien n'est déplacé. */
+  convert?(value: unknown): unknown;
+  /** Le cœur se sert encore du réglage : il est copié, et reste à sa place. */
+  keep?: boolean;
 }
 
 export interface ContinuityRule {
@@ -45,10 +50,18 @@ export interface ContinuityRule {
   /** La configuration se sert-elle de la fonction ? */
   applies(config: Loose): boolean;
   settings?: readonly SettingMove[];
+  /**
+   * Fournisseurs d'infos en ligne repris par le plugin : ancien identifiant (`tmdb`) → celui du plugin
+   * (`<plugin>/<contribution>`). Appliqué à toute configuration (ordre `catalog.metadataProviders`) et aux fiches déjà
+   * enregistrées (`providerRenames`), même quand la règle ne s'applique pas : ce ne sont que des noms.
+   */
+  providers?: Readonly<Record<string, string>>;
 }
 
 /** Toute installation existante : la fonction faisait partie de Mire pour tout le monde. */
 const always = (): boolean => true;
+
+const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
 
 /** Une console sans liste de sites à elle : elle prenait ceux que Mire proposait pour son système. */
 const usesDefaultRomSites = (config: Loose): boolean =>
@@ -72,6 +85,7 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-04-xbox', plugin: 'mire.gamepad.xbox', mode: 'bundled', applies: always },
   { id: 'P5-04-playstation', plugin: 'mire.gamepad.playstation', mode: 'bundled', applies: always },
   { id: 'P5-04-nintendo', plugin: 'mire.gamepad.nintendo', mode: 'bundled', applies: always },
+
   // P5-03 : les sept pages prêtes à l'emploi, plugins inclus ; tout le monde les avait. Les pages modifiées ou supprimées
   // par l'utilisateur restent dans `userData/catalog/pages.json`, que le moteur des pages relit tel quel.
   { id: 'P5-03-movies', plugin: 'mire.page.movies', mode: 'bundled', applies: always },
@@ -93,6 +107,20 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-02-jour', plugin: 'mire.palette.jour', mode: 'install', applies: paletteIn('jour', 'auto') },
   { id: 'P5-02-minuit', plugin: 'mire.palette.minuit', mode: 'install', applies: paletteIn('minuit') },
   { id: 'P5-02-velours', plugin: 'mire.palette.velours', mode: 'install', applies: paletteIn('velours') },
+  // Infos en ligne TMDB et « Où regarder » : ne servaient qu'avec une clé TMDB.
+  {
+    id: 'P5-15',
+    plugin: 'mire.tmdb',
+    mode: 'install',
+    applies: (c) => nonEmpty(c.search?.tmdbToken),
+    settings: [
+      { from: 'search.tmdbToken', to: 'token', secret: true, convert: (v) => String(v).trim() },
+      { from: 'search.region', to: 'region', convert: (v) => (nonEmpty(v) ? String(v).trim().toLowerCase() : undefined) },
+      // La langue des fiches sert aussi à Steam (cœur jusqu'à P5-16).
+      { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
+    ],
+    providers: { tmdb: 'mire.tmdb/tmdb' },
+  },
   // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.
   // Le site reste dans `web` (même identifiant : sa connexion et ses réglages sont retrouvés), le plugin le reprend.
   { id: 'P5-05-netflix', plugin: 'mire.web.netflix', mode: 'install', applies: hasSite('netflix') },
@@ -126,6 +154,18 @@ export const CONTINUITY_NOTES: readonly ContinuityNote[] = [
   { id: 'P5-05-voir-anime', key: 'voir-anime', applies: hasSite('voir-anime') },
 ];
 
+/** Fournisseurs d'infos renommés par les règles : ancien identifiant → celui du plugin qui le reprend. */
+export function providerRenames(rules: readonly ContinuityRule[] = CONTINUITY_RULES): Record<string, string> {
+  return Object.assign({}, ...rules.map((r) => r.providers ?? {}));
+}
+
+/** Ordre des fournisseurs (`catalog.metadataProviders`) avec les nouveaux identifiants, sans doublon. */
+function renameProviders(raw: Loose, renames: Record<string, string>): void {
+  const list = isRecord(raw.catalog) ? raw.catalog.metadataProviders : undefined;
+  if (!Array.isArray(list) || !list.some((x) => typeof x === 'string' && Object.hasOwn(renames, x))) return;
+  raw.catalog.metadataProviders = [...new Set(list.map((x) => (typeof x === 'string' && Object.hasOwn(renames, x) ? renames[x] : x)))];
+}
+
 export const RULE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/;
 
 /** Problèmes d'une table de règles, en anglais pour le développeur (vide : elle convient). Vérifiée par les tests et au démarrage du service. */
@@ -140,6 +180,8 @@ export function checkRules(rules: readonly ContinuityRule[]): string[] {
       problems.push(`${r.id}: ${r.plugin} is not a plugin of the official repository.`);
     if (r.mode !== 'bundled' && r.mode !== 'install') problems.push(`${r.id}: unknown mode.`);
     for (const s of r.settings ?? []) if (!s.from || !s.to) problems.push(`${r.id}: incomplete setting move.`);
+    for (const [from, to] of Object.entries(r.providers ?? {}))
+      if (!from || !to.startsWith(`${r.plugin}/`)) problems.push(`${r.id}: provider ${from} must be renamed to one of ${r.plugin}.`);
   }
   return problems;
 }
@@ -160,16 +202,23 @@ function moveSetting(raw: Loose, plugin: string, move: SettingMove): void {
   let parent: unknown = raw;
   for (const k of keys) parent = isRecord(parent) ? parent[k] : undefined;
   if (!isRecord(parent) || !Object.hasOwn(parent, last) || !isSettingValue(parent[last])) return;
-  const value = parent[last];
+  let value: unknown = parent[last];
+  try {
+    value = move.convert ? move.convert(value) : value;
+  } catch {
+    value = undefined;
+  }
+  if (value === undefined || !isSettingValue(value)) return;
   if (!isRecord(raw.plugins)) raw.plugins = {};
   if (!isRecord(raw.plugins[plugin])) raw.plugins[plugin] = {};
   const target: Loose = raw.plugins[plugin];
   // Un réglage déjà là (fichier modifié à la main, import) l'emporte sur l'ancien emplacement.
   if (!Object.hasOwn(target, move.to)) {
-    // Pas de `safeStorage` pendant la migration : le secret est rangé en clair, comme quand le système ne chiffre pas.
+    // Pas de `safeStorage` pendant la migration : le secret est rangé en clair, comme quand le système ne chiffre pas,
+    // puis chiffré par le service de continuité dès que le plugin est installé (`seal`).
     target[move.to] = move.secret ? { $secret: String(value), encrypted: false } : structuredClone(value);
   }
-  delete parent[last];
+  if (!move.keep) delete parent[last];
 }
 
 /** Applique les règles à une configuration lue (modifiée sur place) ; rend les identifiants des règles appliquées. */
@@ -178,6 +227,7 @@ export function applyContinuity(
   rules: readonly ContinuityRule[] = CONTINUITY_RULES,
   notes: readonly ContinuityNote[] = CONTINUITY_NOTES,
 ): string[] {
+  renameProviders(raw, providerRenames(rules));
   const applied: string[] = [];
   for (const note of notes) {
     try {

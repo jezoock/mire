@@ -1,4 +1,5 @@
 import { isSiteAvailable } from '@mire/shared';
+import { pluginFieldKey } from '@mire/ui/utils';
 import { searchUrlFor } from '../domain/index.ts';
 import { siteName, watchTargets } from '../search/model.ts';
 import { Controller } from './base.ts';
@@ -71,10 +72,12 @@ export class SearchController extends Controller {
       );
   }
 
-  /** Ouvre les réglages où se saisit la clé du catalogue de « Où regarder ». */
+  /** Ouvre les réglages du plugin « Où regarder », sur le réglage qui manque (sa clé). */
   async addKey(): Promise<void> {
+    const missing = this.ctx.ui.search.watchSetup();
+    if (!missing) return;
     this.ctx.ui.go('settings', { focus: 'content' });
-    await this.ctx.ui.settings.focus('search.tmdbToken');
+    await this.ctx.ui.settings.focus(pluginFieldKey(missing.plugin, missing.setup));
   }
 
   /** Cherche la recherche en cours sur un site de streaming. */
