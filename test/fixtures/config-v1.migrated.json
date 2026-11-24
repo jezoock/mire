@@ -93,7 +93,6 @@
       "active": "freebox",
       "detected": true
     },
-    "version": 10,
     "continuity": [
       "P5-04-xbox",
       "P5-04-playstation",
@@ -106,8 +105,11 @@
       "P5-03-tv",
       "P5-03-games",
       "P5-20",
-      "P5-07-libres"
-    ]
+      "P5-07-libres",
+      "P5-05-netflix",
+      "P5-05-spotify"
+    ],
+    "version": 10
   },
   "changed": true
 }
