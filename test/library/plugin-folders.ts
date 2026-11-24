@@ -38,9 +38,14 @@ export interface WireOptions {
   log?: (m: string) => void;
   /** Plugin branché : `mire.source.local` (par défaut) ou `mire.source.network`. */
   plugin?: 'local' | 'network';
+  /**
+   * Dossiers présentés au pont comme des partages réseau (`network: true`) : sous Linux, un dossier temporaire ne
+   * peut pas s'écrire comme un partage dans la configuration.
+   */
+  asShares?: boolean;
 }
 
-export async function wireLocalPlugin({ config, catalog, log = () => {}, plugin = 'local' }: WireOptions) {
+export async function wireLocalPlugin({ config, catalog, log = () => {}, plugin = 'local', asShares = false }: WireOptions) {
   const manifest = manifestOf(PLUGIN_DIRS[plugin]);
   const createSource = await loadSource(plugin);
   let enabled = true;
@@ -86,7 +91,10 @@ export async function wireLocalPlugin({ config, catalog, log = () => {}, plugin 
     pluginScans: () => b.rescan(),
   });
   /** Emplacements de la configuration redonnés au pont, comme à chaque changement de configuration dans Mire. */
-  const syncLocations = () => b.setLocations(libraryLocations(config.get().library.sources));
+  const syncLocations = () =>
+    b.setLocations(
+      libraryLocations(config.get().library.sources).map((l) => (asShares && l.location.path ? { ...l, location: { ...l.location, network: true } } : l)),
+    );
   await syncLocations();
   return {
     library,

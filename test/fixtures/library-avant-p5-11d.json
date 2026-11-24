@@ -1,0 +1,549 @@
+{
+  "arborescence": {
+    "items": [
+      {
+        "path": "<racine>/Films/Amélie (2001).mkv",
+        "name": "Amélie (2001)",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Films",
+        "dir": "<racine>/Films",
+        "native": true,
+        "cover": "<racine>/Films/Amélie (2001).jpg",
+        "fanart": "<racine>/Films/Amélie (2001)-fanart.jpg"
+      },
+      {
+        "path": "<racine>/Films/Photo de tournage.png",
+        "name": "Photo de tournage",
+        "ext": ".png",
+        "kind": "image",
+        "folder": "Films",
+        "dir": "<racine>/Films",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<racine>/Films/Sans affiche (1999).mp4",
+        "name": "Sans affiche (1999)",
+        "ext": ".mp4",
+        "kind": "video",
+        "folder": "Films",
+        "dir": "<racine>/Films",
+        "native": true,
+        "cover": "<racine>/Films/poster.jpg",
+        "fanart": "<racine>/Films/fanart.jpg"
+      },
+      {
+        "path": "<racine>/Images/Vacances/Plage-thumb.png",
+        "name": "Plage-thumb",
+        "ext": ".png",
+        "kind": "image",
+        "folder": "Vacances",
+        "dir": "<racine>/Images/Vacances",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<racine>/Images/Vacances/Plage.png",
+        "name": "Plage",
+        "ext": ".png",
+        "kind": "image",
+        "folder": "Vacances",
+        "dir": "<racine>/Images/Vacances",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<racine>/Musique/Album/01 - Début.mp3",
+        "name": "01 - Début",
+        "ext": ".mp3",
+        "kind": "audio",
+        "folder": "Album",
+        "dir": "<racine>/Musique/Album",
+        "native": true,
+        "cover": "<racine>/Musique/Album/cover.jpg",
+        "fanart": null
+      },
+      {
+        "path": "<racine>/Profond/n1/n2/n3/n4/n5/n6/n7/n8/n9/n10/n11/n12/n13/n14/n15/n16/Niveau 16.mkv",
+        "name": "Niveau 16",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "n16",
+        "dir": "<racine>/Profond/n1/n2/n3/n4/n5/n6/n7/n8/n9/n10/n11/n12/n13/n14/n15/n16",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<racine>/Séries/Ma Série/Saison 1/Ma Série S01E02.mkv",
+        "name": "Ma Série S01E02",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Saison 1",
+        "dir": "<racine>/Séries/Ma Série/Saison 1",
+        "native": true,
+        "cover": null,
+        "fanart": null,
+        "seriesTitle": "Ma Série",
+        "season": 1,
+        "episode": 2
+      }
+    ],
+    "status": {
+      "films": {
+        "ok": true,
+        "error": null,
+        "count": 2
+      },
+      "photos": {
+        "ok": true,
+        "error": null,
+        "count": 1
+      },
+      "series": {
+        "ok": true,
+        "error": null,
+        "count": 1
+      },
+      "musique": {
+        "ok": true,
+        "error": null,
+        "count": 1
+      },
+      "images": {
+        "ok": true,
+        "error": null,
+        "count": 2
+      },
+      "profond": {
+        "ok": true,
+        "error": null,
+        "count": 1
+      },
+      "absent": {
+        "ok": false,
+        "error": "Dossier introuvable : <racine>/Absent",
+        "count": 0
+      }
+    },
+    "sources": [
+      {
+        "instance": "<racine>/Films",
+        "elements": [
+          {
+            "key": "local:<racine>/Films/Amélie (2001).mkv",
+            "name": "Amélie (2001)",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Films/Amélie (2001).mkv"
+            },
+            "infos": {
+              "folder": "Films",
+              "subtitles": [
+                "<racine>/Films/Amélie (2001).en.vtt",
+                "<racine>/Films/Amélie (2001).fr.srt"
+              ]
+            },
+            "images": {
+              "poster": "<racine>/Films/Amélie (2001).jpg",
+              "background": "<racine>/Films/Amélie (2001)-fanart.jpg"
+            },
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<racine>/Films/Photo de tournage.png",
+            "name": "Photo de tournage",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Films/Photo de tournage.png"
+            },
+            "infos": {
+              "folder": "Films"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<racine>/Films/Sans affiche (1999).mp4",
+            "name": "Sans affiche (1999)",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Films/Sans affiche (1999).mp4"
+            },
+            "infos": {
+              "folder": "Films"
+            },
+            "images": {
+              "poster": "<racine>/Films/poster.jpg",
+              "background": "<racine>/Films/fanart.jpg"
+            },
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<racine>/Séries",
+        "elements": [
+          {
+            "key": "local:<racine>/Séries/Ma Série/Saison 1/Ma Série S01E02.mkv",
+            "name": "Ma Série S01E02",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Séries/Ma Série/Saison 1/Ma Série S01E02.mkv"
+            },
+            "infos": {
+              "folder": "Saison 1"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<racine>/Musique",
+        "elements": [
+          {
+            "key": "local:<racine>/Musique/Album/01 - Début.mp3",
+            "name": "01 - Début",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Musique/Album/01 - Début.mp3"
+            },
+            "infos": {
+              "folder": "Album"
+            },
+            "images": {
+              "poster": "<racine>/Musique/Album/cover.jpg"
+            },
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<racine>/Images",
+        "elements": [
+          {
+            "key": "local:<racine>/Images/Vacances/Plage-thumb.png",
+            "name": "Plage-thumb",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Images/Vacances/Plage-thumb.png"
+            },
+            "infos": {
+              "folder": "Vacances"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<racine>/Images/Vacances/Plage.png",
+            "name": "Plage",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Images/Vacances/Plage.png"
+            },
+            "infos": {
+              "folder": "Vacances"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<racine>/Profond",
+        "elements": [
+          {
+            "key": "local:<racine>/Profond/n1/n2/n3/n4/n5/n6/n7/n8/n9/n10/n11/n12/n13/n14/n15/n16/Niveau 16.mkv",
+            "name": "Niveau 16",
+            "open": {
+              "kind": "file",
+              "path": "<racine>/Profond/n1/n2/n3/n4/n5/n6/n7/n8/n9/n10/n11/n12/n13/n14/n15/n16/Niveau 16.mkv"
+            },
+            "infos": {
+              "folder": "n16"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<racine>/Absent",
+        "elements": []
+      }
+    ]
+  },
+  "demonstration": {
+    "items": [
+      {
+        "path": "<demonstration>/Images/Vacances/Montagne.png",
+        "name": "Montagne",
+        "ext": ".png",
+        "kind": "image",
+        "folder": "Vacances",
+        "dir": "<demonstration>/Images/Vacances",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Images/Vacances/Plage.png",
+        "name": "Plage",
+        "ext": ".png",
+        "kind": "image",
+        "folder": "Vacances",
+        "dir": "<demonstration>/Images/Vacances",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Musique/Orchestre de démonstration/Premier album/01 - Ouverture.mp3",
+        "name": "01 - Ouverture",
+        "ext": ".mp3",
+        "kind": "audio",
+        "folder": "Premier album",
+        "dir": "<demonstration>/Musique/Orchestre de démonstration/Premier album",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Musique/Orchestre de démonstration/Premier album/02 - Final.mp3",
+        "name": "02 - Final",
+        "ext": ".mp3",
+        "kind": "audio",
+        "folder": "Premier album",
+        "dir": "<demonstration>/Musique/Orchestre de démonstration/Premier album",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Vidéos/Le Fabuleux Destin d'Amélie Poulain (2001).mkv",
+        "name": "Le Fabuleux Destin d'Amélie Poulain (2001)",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Vidéos",
+        "dir": "<demonstration>/Vidéos",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Vidéos/Le Voyage dans la Lune (1902).mkv",
+        "name": "Le Voyage dans la Lune (1902)",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Vidéos",
+        "dir": "<demonstration>/Vidéos",
+        "native": true,
+        "cover": null,
+        "fanart": null
+      },
+      {
+        "path": "<demonstration>/Vidéos/Série/Saison 1/S01E01.mkv",
+        "name": "S01E01",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Saison 1",
+        "dir": "<demonstration>/Vidéos/Série/Saison 1",
+        "native": true,
+        "cover": null,
+        "fanart": null,
+        "seriesTitle": "Série",
+        "season": 1,
+        "episode": 1
+      },
+      {
+        "path": "<demonstration>/Vidéos/Série/Saison 1/S01E02.mkv",
+        "name": "S01E02",
+        "ext": ".mkv",
+        "kind": "video",
+        "folder": "Saison 1",
+        "dir": "<demonstration>/Vidéos/Série/Saison 1",
+        "native": true,
+        "cover": null,
+        "fanart": null,
+        "seriesTitle": "Série",
+        "season": 1,
+        "episode": 2
+      }
+    ],
+    "status": {
+      "v": {
+        "ok": true,
+        "error": null,
+        "count": 4
+      },
+      "a": {
+        "ok": true,
+        "error": null,
+        "count": 2
+      },
+      "i": {
+        "ok": true,
+        "error": null,
+        "count": 2
+      }
+    },
+    "sources": [
+      {
+        "instance": "<demonstration>/Vidéos",
+        "elements": [
+          {
+            "key": "local:<demonstration>/Vidéos/Le Fabuleux Destin d'Amélie Poulain (2001).mkv",
+            "name": "Le Fabuleux Destin d'Amélie Poulain (2001)",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Vidéos/Le Fabuleux Destin d'Amélie Poulain (2001).mkv"
+            },
+            "infos": {
+              "folder": "Vidéos"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<demonstration>/Vidéos/Le Voyage dans la Lune (1902).mkv",
+            "name": "Le Voyage dans la Lune (1902)",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Vidéos/Le Voyage dans la Lune (1902).mkv"
+            },
+            "infos": {
+              "folder": "Vidéos"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<demonstration>/Vidéos/Série/Saison 1/S01E01.mkv",
+            "name": "S01E01",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Vidéos/Série/Saison 1/S01E01.mkv"
+            },
+            "infos": {
+              "folder": "Saison 1"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<demonstration>/Vidéos/Série/Saison 1/S01E02.mkv",
+            "name": "S01E02",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Vidéos/Série/Saison 1/S01E02.mkv"
+            },
+            "infos": {
+              "folder": "Saison 1"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<demonstration>/Musique",
+        "elements": [
+          {
+            "key": "local:<demonstration>/Musique/Orchestre de démonstration/Premier album/01 - Ouverture.mp3",
+            "name": "01 - Ouverture",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Musique/Orchestre de démonstration/Premier album/01 - Ouverture.mp3"
+            },
+            "infos": {
+              "folder": "Premier album"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<demonstration>/Musique/Orchestre de démonstration/Premier album/02 - Final.mp3",
+            "name": "02 - Final",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Musique/Orchestre de démonstration/Premier album/02 - Final.mp3"
+            },
+            "infos": {
+              "folder": "Premier album"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      },
+      {
+        "instance": "<demonstration>/Images",
+        "elements": [
+          {
+            "key": "local:<demonstration>/Images/Vacances/Montagne.png",
+            "name": "Montagne",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Images/Vacances/Montagne.png"
+            },
+            "infos": {
+              "folder": "Vacances"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          },
+          {
+            "key": "local:<demonstration>/Images/Vacances/Plage.png",
+            "name": "Plage",
+            "open": {
+              "kind": "file",
+              "path": "<demonstration>/Images/Vacances/Plage.png"
+            },
+            "infos": {
+              "folder": "Vacances"
+            },
+            "images": {},
+            "tags": [
+              "network"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

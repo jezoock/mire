@@ -6,10 +6,11 @@
 import type { Config, ElementSourceRef, MediaKind } from '@mire/shared';
 import type { Catalog } from '../catalog/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
-import { isLibrarySource, librarySources, locationInstance } from './element-sources.ts';
+import { isLibrarySource, librarySources, locationInstance, type LibraryElementSource } from './element-sources.ts';
+import { resolveLocation } from './location.ts';
 import { itemFromElement } from './from-element.ts';
 import { itemFromPath } from './item-from-path.ts';
-import { scanLibrary, type ScanOptions } from './scan.ts';
+import { scanLibrary, unreachable, type ScanOptions } from './scan.ts';
 import { findSubtitles, type Subtitle } from './subtitles.ts';
 import type { LibraryItem, RemoteSubtitles, ScannedLocation, ScanResult, SourceTarget } from './types.ts';
 
@@ -34,13 +35,16 @@ export interface LibraryServiceDeps {
   pluginSubtitles?: (videoPath: string) => Promise<Subtitle[]>;
   /** Un emplacement n'a pas pu alimenter le catalogue (journal par défaut) ; l'analyse continue. */
   onCatalogError?: (err: Error) => void;
+  /** Sources d'éléments du cœur (tests : une source factice) ; par défaut `librarySources()`. */
+  sources?: LibraryElementSource[];
 }
 
 const refId = (ref: ElementSourceRef) => JSON.stringify([ref.plugin, ref.instance]);
 
 export function createLibraryService(deps: LibraryServiceDeps) {
   const { config, access, catalog, scan = scanLibrary } = deps;
-  const elementSources = librarySources();
+  const elementSources = deps.sources ?? librarySources();
+  const ownSource = (plugin: string) => isLibrarySource(plugin) || elementSources.some((s) => s.id === plugin);
   const onCatalogError = deps.onCatalogError ?? ((err: Error) => console.error('Catalogue (bibliothèque) :', err.message));
   let remote: RemoteSubtitles = new Map();
 
@@ -59,14 +63,14 @@ export function createLibraryService(deps: LibraryServiceDeps) {
 
   /** Emplacements de la bibliothèque qui ne sont plus dans la configuration : leurs éléments quittent le catalogue. */
   function prune(cat: NonNullable<LibraryServiceDeps['catalog']>, seen: Set<string>): void {
-    for (const ref of cat.sources()) if (isLibrarySource(ref.plugin) && !seen.has(refId(ref))) cat.removeSource(ref);
+    for (const ref of cat.sources()) if (ownSource(ref.plugin) && !seen.has(refId(ref))) cat.removeSource(ref);
   }
 
   /** Fichiers qu'un plugin a mis au catalogue pour l'emplacement qu'il lit ; `null` si aucun plugin ne le lit. */
   function pluginItems(cat: NonNullable<LibraryServiceDeps['catalog']>, target: SourceTarget, kinds: ReadonlySet<MediaKind>): LibraryItem[] | null {
     const instance = locationInstance(target);
     if (!deps.claimed?.(instance)) return null;
-    const ref = cat.sources().find((r) => r.instance === instance && !isLibrarySource(r.plugin));
+    const ref = cat.sources().find((r) => r.instance === instance && !ownSource(r.plugin));
     if (!ref) return [];
     return cat.keysOf(ref).flatMap((key) => {
       const e = cat.get(key);
@@ -90,6 +94,13 @@ export function createLibraryService(deps: LibraryServiceDeps) {
      * sans attendre de nouvelles analyses des plugins (le catalogue du cœur seulement suit la configuration).
      */
     async scan({ plugins = true }: { plugins?: boolean } = {}) {
+      // État des dossiers et des partages vérifié pendant les analyses des plugins, pas après : un partage réseau
+      // absent ne fait attendre qu'une fois (le plugin et le cœur le découvrent en même temps).
+      const checks = new Map<string, Promise<string | null>>();
+      for (const src of catalog ? config.get().library.sources : []) {
+        const resolved = resolveLocation(src.location);
+        if (resolved.type === 'path' && !checks.has(resolved.path)) checks.set(resolved.path, unreachable({ location: src.location, resolved }));
+      }
       // Une source de plugin en panne ne bloque pas la bibliothèque : elle garde sa dernière analyse.
       if (plugins) await deps.pluginScans?.().catch((err: Error) => onCatalogError(err));
       const cfg = config.get();
@@ -98,6 +109,7 @@ export function createLibraryService(deps: LibraryServiceDeps) {
       if (catalog) {
         opts.onScanned = (scanned) => guarded(() => feed(catalog, scanned, seen));
         opts.pluginItems = (target, kinds) => pluginItems(catalog, target, kinds);
+        opts.unreachable = (target) => (target.resolved.type === 'path' && checks.get(target.resolved.path)) || unreachable(target);
       }
       const { items, status, subtitles } = await scan(opts);
       if (catalog) guarded(() => prune(catalog, seen));
