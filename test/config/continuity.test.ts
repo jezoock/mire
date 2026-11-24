@@ -38,13 +38,17 @@ const INSTALL: ContinuityRule = {
 const RULES = [BUNDLED, INSTALL];
 
 test.describe('migration v10 (P5-01)', () => {
-  test('configuration v9 réelle : passe en v10, seule la clé TMDB change de place (règle P5-15)', () => {
+  test('configuration v9 réelle : passe en v10, la clé TMDB change de place (P5-15), la langue des fiches part dans les plugins (P5-15, P5-16)', () => {
     const v9 = readFixture('config-v9.json');
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
-    const { tmdbToken: _t, region: _r, ...search } = v9.search;
-    const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
+    const { tmdbToken: _t, region: _r, language: _l, ...search } = v9.search;
+    const plugins = {
+      ...v9.plugins,
+      'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' },
+      'mire.steam': { language: 'en-US' },
+    };
     const catalog = { ...v9.catalog, metadataProviders: ['mire.tmdb/tmdb'] };
     assert.deepEqual(config, {
       ...v9,
@@ -117,6 +121,15 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
+  test('P5-11b : les sous-titres posés à côté des vidéos, plugin inclus, pour toute installation existante', () => {
+    for (const raw of [readFixture('config-v9.json'), {}, { library: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      assert.ok((config as Any).continuity.includes('P5-11b'));
+    }
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-11b');
+    assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.subtitles', 'bundled', []]);
+  });
+
   test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
     const queue = (ui: unknown) => {
       const { config } = migrate({ version: 9, ui });
@@ -138,6 +151,20 @@ test.describe('migration v10 (P5-01)', () => {
         ['P5-02-minuit', 'mire.palette.minuit', 'install', []],
         ['P5-02-velours', 'mire.palette.velours', 'install', []],
       ],
+    );
+  });
+
+  test('P5-09 : les cinq tags automatiques, plugins inclus, pour toute installation existante ; aucun réglage', () => {
+    const kinds = ['series', 'movies', 'music', 'consoles', 'photos'];
+    for (const raw of [readFixture('config-v9.json'), {}, { catalog: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const k of kinds) assert.ok((config as Any).continuity.includes(`P5-09-${k}`), k);
+      assert.equal((config as Any).plugins?.['mire.tags.series'], undefined);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-09-'));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      kinds.map((k) => [`mire.tags.${k}`, 'bundled', []]),
     );
   });
 
@@ -169,7 +196,7 @@ test.describe('migration v10 (P5-01)', () => {
     const c = normalizeConfig(raw);
     assert.deepEqual(c.continuity, applied);
     assert.deepEqual(c.plugins?.['mire.essai.infos'], { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'BE' });
-    assert.equal('tmdbToken' in c.search, false);
+    assert.equal('tmdbToken' in (c as Any).search, false);
   });
 
   test('règle qui ne s’applique pas : rien ne bouge', () => {
@@ -231,16 +258,109 @@ test.describe('migration v10 (P5-01)', () => {
   });
 
   test('fournisseurs renommés (P5-15) : l’ordre choisi suit TMDB dans son plugin, même sans clé', () => {
-    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'tmdb', 'mire.tmdb/tmdb', 3] } };
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['libretro', 'tmdb', 'mire.tmdb/tmdb', 3] } };
     // Sans clé TMDB, la règle P5-15 ne s'applique pas (seules celles des manettes, P5-04) ; l'ordre est renommé quand même.
     assert.equal(applyContinuity(raw).includes('P5-15'), false);
-    assert.deepEqual(raw.catalog.metadataProviders, ['steam', 'mire.tmdb/tmdb', 3]);
-    assert.deepEqual(providerRenames(), { tmdb: 'mire.tmdb/tmdb' });
+    assert.deepEqual(raw.catalog.metadataProviders, ['mire.libretro/libretro', 'mire.tmdb/tmdb', 3]);
+    assert.equal(providerRenames().tmdb, 'mire.tmdb/tmdb');
     // Une règle ne peut renommer un fournisseur que vers un des siens.
     assert.match(checkRules([{ ...INSTALL, providers: { tmdb: 'org.tiers/infos' } }])[0], /must be renamed/);
     const untouched: Any = { version: 9, catalog: { metadataProviders: 'tmdb' } };
     applyContinuity(untouched);
     assert.equal(untouched.catalog.metadataProviders, 'tmdb');
+  });
+
+  test('P5-16 : MusicBrainz installé s’il y a de la musique dans la bibliothèque, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-musicbrainz')!;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.musicbrainz', 'install', undefined]);
+    const music = { kind: 'audio', id: 'm', location: '/Musique' };
+    const raw: Any = { version: 9, library: { sources: [{ kind: 'video', id: 'v', location: '/Films' }, music] } };
+    assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-musicbrainz']);
+    assert.equal(raw.plugins, undefined);
+    for (const library of [{ sources: [{ kind: 'video', location: '/Films' }] }, { sources: [] }, { sources: 'x' }, undefined, [music]]) {
+      const none: Any = { version: 9, library };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-16 : libretro installé s’il y a une console dont le système est reconnu, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-libretro')!;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.libretro', 'install', undefined]);
+    for (const emu of [
+      { id: 'snes', name: 'Snes9x', path: 'C:/Emu/snes9x.exe', extensions: ['.sfc'] },
+      { id: 'x', name: 'Ma console', path: 'truc.exe', system: 'Nintendo - Game Boy' },
+      { id: 'y', name: 'Ma console', path: 'truc.exe', extensions: ['.GBA'] },
+    ]) {
+      const raw: Any = { version: 9, emulators: [{ id: 'z', name: 'Inconnue', path: 'z.exe', extensions: ['.xyz'] }, emu] };
+      assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-libretro'], emu.id);
+      assert.equal(raw.plugins, undefined);
+    }
+    for (const emulators of [[], [{ id: 'z', name: 'Inconnue', path: 'z.exe', extensions: ['.xyz'] }], 'x', [3, null], undefined]) {
+      const none: Any = { version: 9, emulators };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-16 : Steam installé s’il y a des jeux PC ; la langue des fiches part dans son réglage', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-steam')!;
+    assert.deepEqual([rule.plugin, rule.mode], ['mire.steam', 'install']);
+    for (const config of [
+      { games: [{ name: 'Hades', path: 'C:/Hades.exe' }] },
+      { gameSources: [{ id: 's', location: 'D:/Jeux' }] },
+      {
+        gameBookmarks: [
+          { id: 'b', console: 'snes' },
+          { id: 'c', console: 'pc' },
+        ],
+      },
+    ]) {
+      const raw: Any = { version: 9, search: { language: ' nl-BE ' }, ...config };
+      assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-steam']);
+      assert.deepEqual(raw.plugins, { 'mire.steam': { language: 'nl-BE' } });
+      // Le réglage quitte le cœur.
+      assert.deepEqual(raw.search, {});
+    }
+    const auto: Any = { version: 9, search: { language: '' }, games: [{ name: 'Ys' }] };
+    applyContinuity(auto, [rule]);
+    assert.deepEqual(auto.plugins['mire.steam'], { language: 'auto' });
+    for (const config of [{}, { games: [] }, { gameSources: 'x' }, { gameBookmarks: [{ console: 'snes' }] }]) {
+      const none: Any = { version: 9, search: { language: 'fr-FR' }, ...config };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-15 puis P5-16 : TMDB et Steam reprennent chacun la langue des fiches', () => {
+    const raw: Any = { version: 9, search: { tmdbToken: 'k', language: 'en-GB' }, games: [{ name: 'Ys' }] };
+    const applied = applyContinuity(
+      raw,
+      CONTINUITY_RULES.filter((r) => r.id === 'P5-15' || r.id === 'P5-16-steam'),
+    );
+    assert.deepEqual(applied, ['P5-15', 'P5-16-steam']);
+    assert.equal(raw.plugins['mire.tmdb'].language, 'en-GB');
+    assert.deepEqual(raw.plugins['mire.steam'], { language: 'en-GB' });
+  });
+
+  test('fournisseurs renommés (P5-16) : ordre choisi gardé pour toute configuration, fiches reprises sous le nouveau nom', () => {
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'libretro', 'musicbrainz', 'tmdb'] } };
+    const applied = applyContinuity(raw);
+    assert.equal(
+      applied.some((id) => id.startsWith('P5-16')),
+      false,
+    );
+    assert.deepEqual(raw.catalog.metadataProviders, ['mire.steam/steam', 'mire.libretro/libretro', 'mire.musicbrainz/musicbrainz', 'mire.tmdb/tmdb']);
+    assert.deepEqual(providerRenames(), {
+      tmdb: 'mire.tmdb/tmdb',
+      musicbrainz: 'mire.musicbrainz/musicbrainz',
+      libretro: 'mire.libretro/libretro',
+      steam: 'mire.steam/steam',
+    });
+    assert.deepEqual(checkRules(CONTINUITY_RULES), []);
   });
 
   test('convert et keep : valeur traduite, copiée ou laissée en place si elle ne se traduit pas', () => {

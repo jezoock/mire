@@ -477,10 +477,11 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
    `scrape/img/`. L'interface les affiche par `media://` ;
 5. annonce la progression (événement `scrape-progress`) ; « Arrêter » appelle `scrapeCancel`.
 
-Les fournisseurs du cœur, dans l'ordre : MusicBrainz et Cover Art Archive (albums), libretro-thumbnails (jeux de
-console), Steam (jeux PC) ; puis ceux des plugins (films et séries : `mire.tmdb`, à installer, P5-15). Ils passent par `ctx.io` (client HTTP avec les délais et
-messages habituels, copie d'images). La langue des fiches suit celle de l'interface, sauf si `search.language` est
-fixé (`i18n/metadata.ts`).
+Les sources d'infos en ligne sont toutes des plugins à installer (films et séries : `mire.tmdb`, P5-15 ; albums :
+`mire.musicbrainz`, jeux de console : `mire.libretro`, jeux PC : `mire.steam`, P5-16), branchés par les ponts des
+plugins (`plugins/bridges.ts`). Les jeux sont rassemblés par le cœur (`coreGames`) ; un plugin n'en reçoit que le nom,
+la console et son système, ou l'identifiant Steam, jamais le chemin (`gameForPlugin`). La langue des fiches est un
+réglage de chaque plugin (`language`, `auto` : celle de l'interface).
 
 ### Télécharger un jeu, puis l'annoncer
 
@@ -533,8 +534,8 @@ fixé (`i18n/metadata.ts`).
 4. Quand la configuration change de langue, le service prévient ses abonnés ; la racine de composition envoie
    alors `i18n:changed` (`onLanguageChange`) à l'interface, avec les catalogues à consulter. L'interface peut aussi
    les demander par `i18nGet`. Elle n'utilise encore ni l'un ni l'autre (phase 2).
-5. Les fiches Steam sont demandées dans la langue de l'interface, sauf si `search.language` est fixé (TMDB : réglage
-   `language` du plugin `mire.tmdb`).
+5. Les fiches sont demandées dans la langue de l'interface, sauf si le réglage `language` du plugin qui les fournit est
+   fixé (`mire.tmdb`, `mire.steam`).
 
 ## Interfaces d'extension
 
@@ -868,31 +869,33 @@ les règles par extension de la configuration.
   | --- | --- | --- |
   | Type de fichier (`tags/file-rules.ts`) | `video`, `audio`, `image` d'après l'extension du fichier ou de l'adresse (formats de `EXT`) ; sans extension reconnue, l'info `mediaType` posée par la source (entrée M3U) | `extension` (`mkv`) |
   | Source | tags de la source (`local`, `network`, `remote`, `game`, `tv`, `stream`) | `folder`, `server`, `playlist`, `subtitles`, `mediaType`, `system`, `category`, `season`, `episode`, images trouvées à côté, jaquette, logo |
-  | Tags automatiques (`tags/taggers.ts`) | `series`, `movie` | `series`, `season`, `episode`, `title`, `year`, `artist`, `album`, `track`, `system`, `folder` (détail ci-dessous) |
+  | Tags automatiques (plugins `taggers`, `plugins/taggers.ts`) | `series`, `movie` (plugins inclus `mire.tags.*`) | `series`, `season`, `episode`, `title`, `year`, `artist`, `album`, `track`, `system`, `folder` (détail ci-dessous) |
   | Infos en ligne (`catalog/metadata.ts`) | | `title`, `year`, `genres`, `overview`, `artist` ; images `poster`, `background` (un `Contributor` d'origine `metadata` par fournisseur) |
   | À la main (`overrides.json`) | ajout (`true`) ou **retrait** (`false`) | toute info, images |
 
   Tags : réunion des origines automatiques, puis les ajouts et les retraits faits à la main, qui l'emportent même
   après une nouvelle analyse. Infos et images : à la main, puis infos en ligne (le premier fournisseur l'emporte),
   puis tags automatiques, puis source, puis type de fichier.
-- **Tags automatiques** (`tags/taggers.ts`) : interface `Tagger` (reçoit l'élément avec les tags du type de fichier et
-  de la source, rend des tags et des infos ; rapide, sans réseau), branchée sur le moteur par `taggerContributor`. Les
-  cinq tags internes (plugins inclus en phase 5) ne regardent que les fichiers :
+- **Tags automatiques** : interface `Tagger` du SDK (reçoit l'élément avec les tags du type de fichier et de la source,
+  rend des tags et des infos ; rapide, sans réseau). Depuis P5-09, le cœur n'en a plus : ce sont des plugins (niveau
+  `code`, hôte isolé), branchés sur le moteur par le pont `src/main/plugins/taggers.ts` (calcul par lots, résultat
+  ramené à ce que la contribution déclare ; plugin désactivé : ses tags et infos disparaissent, ce qui a été saisi à la
+  main reste). Les cinq plugins inclus (`plugins/mire.tags.*`) ne regardent que les noms des fichiers :
 
-  | Tag automatique | Éléments | Pose |
+  | Plugin | Éléments | Pose |
   | --- | --- | --- |
-  | Séries | `video` | tag `series`, infos `series`, `season`, `episode` (`parseVideo`, « Friends S01E03 ») |
-  | Films | `video` qui n'est pas un épisode | tag `movie`, infos `title`, `year` (`parseVideo`) |
-  | Musique | `audio` | `artist` et `album` (dossier « Artiste - Album », sinon `album` : le dossier, ou son parent pour un « CD 2 »), `track` (numéro en tête du nom), `title` (nom sans ce numéro) |
-  | Consoles | jeux (`open.kind` `game`) | `system` (`guessSystem` sur la console de la configuration, sinon l'extension du jeu) ; recalculé quand les consoles changent |
-  | Photos | `image` | `folder` : groupe de dossier de l'interface (« Mariage, Partie 2 » pour un dossier générique) |
+  | `mire.tags.series` | `video` | tag `series`, infos `series`, `season`, `episode` (`parseVideo`, « Friends S01E03 ») |
+  | `mire.tags.movies` | `video` qui n'est pas un épisode | tag `movie`, infos `title`, `year` (`parseVideo`) |
+  | `mire.tags.music` | `audio` | `artist` et `album` (dossier « Artiste - Album », sinon `album` : le dossier, ou son parent pour un « CD 2 »), `track` (numéro en tête du nom), `title` (nom sans ce numéro) |
+  | `mire.tags.consoles` | jeux (`open.kind` `game`) sans `system` | `system` d'après l'extension du jeu (celui de la console est posé par la source des jeux) |
+  | `mire.tags.photos` | `image` | `folder` : groupe de dossier de l'interface (« Mariage, Partie 2 » pour un dossier générique) |
 
   Coût sur 20 000 éléments factices : ~5 µs par élément (+100 à 150 ms par analyse complète).
 - **Règles par extension** : celles des formats reconnus ; seules les extensions changées sont gardées dans la
   configuration (`catalog.fileTags` : `{ ".ts": ["audio"], ".mkv": [] }`). La section est absente tant que rien n'y a
   été changé : la version de la configuration ne change pas.
-- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, `series`,
-  `movie` des tags automatiques, `game`, `tv`, `stream` des sources de P2-03) et infos
+- **Registre** (`tags/registry.ts`) : tags du cœur (`video`, `audio`, `image`, `local`, `network`, `remote`, `game`,
+  `tv`, `stream` des sources de P2-03 ; `series` et `movie` sont déclarés par leurs plugins depuis P5-09) et infos
   du cœur (`InfoDeclaration` : leur type `text`, `number`, `boolean`, `list`, et `searchable`, vrai par défaut pour
   un texte ou une liste ; faux pour `extension`, `mediaType`, `server` et `subtitles`, qui n'ont pas de sens dans une
   recherche ; un plugin le déclarera pour ses infos, P3-01) ; noms affichés dans les catalogues de textes

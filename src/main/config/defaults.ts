@@ -39,7 +39,6 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
     language: 'auto',
   },
   // Langue des fiches (TMDB, Steam) : vide = celle de l'interface (src/main/i18n/metadata.ts, migrations/v8.ts).
-  search: { language: '' },
   scrape: { auto: true },
   // Jeux : autoOnline affiche d'emblée les jeux en ligne en ouvrant une console.
   games: [],
@@ -63,6 +62,6 @@ export const DEFAULT_CONFIG: Readonly<Config> = {
 };
 
 // Sections objets : complétées clé par clé par les valeurs par défaut.
-export const NESTED = ['library', 'externalPlayer', 'browser', 'tv', 'ui', 'search', 'scrape', 'gamesOpts', 'store', 'adblock', 'downloads'] as const;
+export const NESTED = ['library', 'externalPlayer', 'browser', 'tv', 'ui', 'scrape', 'gamesOpts', 'store', 'adblock', 'downloads'] as const;
 // Sections listes : remplacées par la valeur par défaut si ce n'est pas une liste.
 export const LISTS = ['web', 'games', 'emulators', 'gameSources'] as const;

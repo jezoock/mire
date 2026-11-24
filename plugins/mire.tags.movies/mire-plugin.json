@@ -1,0 +1,27 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.tags.movies",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "movie",
+        "main": "src/tagger.mjs",
+        "tags": ["movie"],
+        "infos": {
+          "title": {
+            "type": "text"
+          },
+          "year": {
+            "type": "number"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

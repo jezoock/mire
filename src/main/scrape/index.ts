@@ -1,25 +1,23 @@
 /**
- * Récupération d'infos de base et d'une image pour les listes de Mire.
+ * Récupération d'infos de base et d'une image pour les listes de Mire. Les sources sont des plugins à installer,
+ * branchés par les ponts des plugins (`plugins/bridges.ts`) ; le cœur n'en a plus aucune à lui :
  *
- *   Films et séries : plugin à installer (TMDB : `mire.tmdb`, P5-15), branché par les ponts des plugins
- *   Albums          : MusicBrainz + Cover Art Archive (sans clé)
- *   Jeux de console : libretro-thumbnails, les jaquettes utilisées par RetroArch (sans clé)
- *   Jeux PC         : recherche du magasin Steam (sans clé)
+ *   Films et séries : TMDB (`mire.tmdb`, P5-15)
+ *   Albums          : MusicBrainz et Cover Art Archive (`mire.musicbrainz`, P5-16)
+ *   Jeux de console : libretro-thumbnails et libretro-database (`mire.libretro`, P5-16)
+ *   Jeux PC         : magasin Steam (`mire.steam`, P5-16)
  */
 import { createScrapeEngine, type ScrapeEngineDeps } from './engine.ts';
-import { defaultProviders } from './providers/index.ts';
-import type { MusicBrainzOptions } from './providers/musicbrainz.ts';
 
 export { createScrapeEngine, MISS_RETRY_MS, REV, type ScrapeEngine, type ScrapeEngineDeps, type OneJob, type CandidatesJob } from './engine.ts';
-export { defaultProviders, musicBrainzProvider, libretroProvider, steamProvider, bestMatch, romKey } from './providers/index.ts';
 export { parseVideo, type ParsedVideo } from './parse.ts';
 export { ScrapeRefusal } from './refusal.ts';
 export { guessSystem } from '@mire/shared';
 export type * from './types.ts';
 
-export type ScraperDeps = Omit<ScrapeEngineDeps, 'providers'> & { musicBrainz?: MusicBrainzOptions };
+export type ScraperDeps = Omit<ScrapeEngineDeps, 'providers'>;
 
-/** Moteur avec les sources du cœur ; celles des plugins arrivent par `extraProviders`. */
+/** Moteur sans source à lui : celles des plugins arrivent par `extraProviders`. */
 export function createScraper(deps: ScraperDeps) {
-  return createScrapeEngine({ ...deps, providers: defaultProviders({ musicBrainz: deps.musicBrainz }) });
+  return createScrapeEngine({ ...deps, providers: [] });
 }

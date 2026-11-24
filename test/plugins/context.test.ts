@@ -7,13 +7,25 @@ import os from 'node:os';
 import path from 'node:path';
 import type { PluginSetting } from '@mire/plugin-sdk';
 import type { PluginSettingsSection } from '@mire/shared';
-import { checkElements, checkFacts, checkMissing, createPluginBridges, factsKey, imageAllowed, type BridgeService } from '../../src/main/plugins/bridges.ts';
+import {
+  checkElements,
+  checkFacts,
+  checkMissing,
+  coreGames,
+  createPluginBridges,
+  factsKey,
+  gameForPlugin,
+  imageAllowed,
+  type BridgeService,
+} from '../../src/main/plugins/bridges.ts';
 import { createContextHandler, LIMITS, type ContextDeps } from '../../src/main/plugins/context.ts';
 import { grantedPermissions, hostDeclared, isLocalHost } from '../../src/main/plugins/permissions.ts';
 import { createPluginStorage, pluginDataDir } from '../../src/main/plugins/plugin-storage.ts';
 import { createPluginSettings, keepSecrets, withoutSecrets, type SecretBox } from '../../src/main/plugins/settings.ts';
 import { createPluginState } from '../../src/main/plugins/state.ts';
 import { normalizeConfig } from '../../src/main/config/normalize/index.ts';
+import { createDbFileStore, createScrapeEngine, REV } from '../../src/main/scrape/engine.ts';
+import type { RunOptions } from '../../src/main/scrape/types.ts';
 import { validateManifest } from '../../packages/plugin-sdk/src/validate.ts';
 
 const root = mkdtempSync(path.join(os.tmpdir(), 'mire-context-'));
@@ -457,7 +469,13 @@ describe('ponts', () => {
         calls.push(method);
         if (method === 'requires') return key ? null : { skipped: 'vidéos (clé absente)', error: 'Ajoutez la clé.' };
         if (fail) return { failure: 'Clé refusée.' };
-        if (method === 'candidates') return [{ id: 'movie:1', title: 'Dune', image: 'https://img.exemple.org/d.jpg' }, { id: 2 }];
+        if (method === 'candidates')
+          return [
+            { id: 'movie:1', title: 'Dune', image: 'https://img.exemple.org/d.jpg' },
+            { id: 2 },
+            { id: 'movie:3', title: 'Dune 2', image: null, fallback: 'https://img.exemple.org/v.jpg' },
+            { id: 'movie:4', title: 'Dune 3', image: null, fallback: 'javascript:alert(1)' },
+          ];
         return {
           title: `Dune ${(args?.[0] as { name?: string })?.name ?? ''}`.trim(),
           image: 'https://img.exemple.org/affiche.jpg',
@@ -502,6 +520,8 @@ describe('ponts', () => {
     assert.equal(factsKey('video', {}), null);
     assert.deepEqual(await provider.candidates({ query: 'Dune' } as never, {} as never), [
       { id: 'movie:1', title: 'Dune', year: '', sub: '', image: 'https://img.exemple.org/d.jpg' },
+      { id: 'movie:3', title: 'Dune 2', year: '', sub: '', image: null, fallback: 'https://img.exemple.org/v.jpg' },
+      { id: 'movie:4', title: 'Dune 3', year: '', sub: '', image: null },
     ]);
 
     fail = true;
@@ -510,6 +530,137 @@ describe('ponts', () => {
       (err: Error) => err.name === 'ScrapeRefusal' && err.message === 'Clé refusée.',
     );
     await assert.rejects(provider.candidates({ query: 'Dune' } as never, {} as never), { message: 'Clé refusée.' });
+  });
+
+  it('fournisseur devenu un plugin (P5-16) : les fiches déjà enregistrées (a:, r:, g:) sont gardées, sans nouvelle récupération', async (t) => {
+    const scraped: unknown[] = [];
+    const entry = (id: string, kind: string) => ({ pluginId: `mire.${id}`, kind: 'metadata', id, declaration: { kinds: [kind] } });
+    const service: BridgeService = {
+      contributions: (kind) => (kind === 'metadata' ? [entry('musicbrainz', 'album'), entry('libretro', 'rom'), entry('steam', 'pc')] : []) as never,
+      onContributionsChange: () => () => {},
+      call: async (pluginId, _k, _id, method, args) => {
+        if (method === 'requires') return null;
+        // Seul MusicBrainz rassemble lui-même : les jeux le sont par le cœur.
+        if (method === 'collect') return pluginId === 'mire.musicbrainz' ? (args?.[0] as RunOptions).albums : [];
+        scraped.push(args?.[0]);
+        return { title: 'Nouvelle', image: null };
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: false }),
+    };
+    const bridges = createPluginBridges({ service, catalog: { setSource: () => {}, removeSource: () => {} }, log: () => {} });
+    const dataDir = mkdtempSync(path.join(os.tmpdir(), 'mire-continuite-infos-'));
+    t.after(() => rmSync(dataDir, { recursive: true, force: true }));
+    const old = (title: string, source: string) => ({ title, image: '/img/ancienne.jpg', source, rev: REV, at: 1 });
+    const store = createDbFileStore(path.join(dataDir, 'db.json'));
+    store.set('a:/m/Discovery', old('Discovery', 'MusicBrainz'));
+    store.set('g:hades', old('Hades', 'Steam'));
+    store.set('r:/r/Zelda.sfc', old('Zelda', 'libretro'));
+    const engine = createScrapeEngine({
+      dataDir,
+      getConfig: () => ({ games: [], emulators: [{ id: 'snes', name: 'Snes9x', path: 'snes9x.exe', extensions: ['.sfc'] }] }) as never,
+      listRoms: async () => ({
+        ok: true,
+        roms: [
+          { path: '/r/Zelda.sfc', name: 'Zelda' },
+          { path: '/r/Mario.sfc', name: 'Mario' },
+        ],
+      }),
+      onProgress: () => {},
+      providers: [],
+      extraProviders: bridges.metadataProviders,
+      store,
+    });
+    const r = await engine.run({ albums: [{ dir: '/m/Discovery' }, { dir: '/m/Nouveau' }], pcGames: [{ name: 'Hadès' }, { name: 'Ys' }] });
+    assert.equal(r.total, 3);
+    assert.deepEqual(scraped, [
+      { dir: '/m/Nouveau' },
+      { name: 'Mario', emu: 'snes', system: 'Nintendo - Super Nintendo Entertainment System' },
+      { name: 'Ys' },
+    ]);
+    // Les anciennes fiches sont intactes ; les nouvelles portent le nom du fournisseur du plugin.
+    assert.equal(store.get('a:/m/Discovery')?.title, 'Discovery');
+    assert.equal(store.get('g:hades')?.source, 'Steam');
+    assert.equal(store.get('a:/m/Nouveau')?.source, 'mire.musicbrainz/musicbrainz');
+    assert.equal(store.get('g:ys')?.source, 'mire.steam/steam');
+    assert.equal(store.get('r:/r/Zelda.sfc')?.title, 'Zelda');
+    assert.equal(store.get('r:/r/Mario.sfc')?.source, 'mire.libretro/libretro');
+    await store.flush();
+  });
+
+  it('jeux (P5-16) : rassemblés par le cœur, le plugin ne reçoit ni chemin ni clé', async () => {
+    const config = {
+      games: [
+        { name: 'Hades', path: 'C:/Jeux/Hades/Hades.exe' },
+        { name: 'HADES', path: 'D:/Autre/Hades.exe' },
+        { name: 'Portal 2', path: 'steam://rungameid/620' },
+      ],
+      emulators: [
+        { id: 'snes', name: 'Snes9x', path: 'C:/Emu/snes9x.exe', extensions: ['.sfc'], sources: [] },
+        { id: 'inconnue', name: 'Ma console', path: 'C:/Emu/truc.exe', extensions: ['.xyz'], sources: [] },
+      ],
+    } as never;
+    const rom = { path: '/r/Super Mario World (Europe).sfc', name: 'Super Mario World (Europe)', displayName: 'Super Mario World', dir: '/r' };
+    const listed: string[] = [];
+    const ctx = {
+      getConfig: () => config,
+      listRoms: async (id: string) => (listed.push(id), id === 'snes' ? { ok: true, roms: [rom] } : { ok: false }),
+    } as never;
+    // Jeux PC : ceux de l'interface, sinon ceux de la configuration ; un même nom une fois.
+    assert.deepEqual(
+      (await coreGames('pc', {}, ctx))?.map((g) => g.path),
+      ['C:/Jeux/Hades/Hades.exe', 'steam://rungameid/620'],
+    );
+    assert.deepEqual(await coreGames('pc', { pcGames: [{ name: 'Ys' }] }, ctx), [{ name: 'Ys' }]);
+    // Jeux de console : seulement les consoles dont le système est reconnu.
+    assert.deepEqual(await coreGames('rom', {}, ctx), [{ ...rom, emu: 'snes' }]);
+    assert.deepEqual(listed, ['snes']);
+    assert.equal(await coreGames('album', { albums: [] }, ctx), null);
+
+    const cfg = config as { emulators: unknown[] } as never;
+    assert.deepEqual(gameForPlugin('pc', { name: 'Hades', path: 'C:/Jeux/Hades/Hades.exe' }, cfg), { name: 'Hades' });
+    assert.deepEqual(gameForPlugin('pc', { name: 'Portal 2', path: 'steam://rungameid/620' }, cfg), { name: 'Portal 2', appid: '620' });
+    assert.deepEqual(gameForPlugin('rom', { ...rom, emu: 'snes' }, cfg), {
+      name: 'Super Mario World (Europe)',
+      displayName: 'Super Mario World',
+      emu: 'snes',
+      system: 'Nintendo - Super Nintendo Entertainment System',
+    });
+    // Un nom qui contiendrait un chemin n'en garde que la fin ; console inconnue : système vide.
+    assert.deepEqual(gameForPlugin('rom', { name: 'C:\\Jeux\\x', path: 'C:/Jeux/x.xyz', emu: 'inconnue' }, cfg), { name: 'x', emu: 'inconnue', system: '' });
+    // Vidéos et albums : tels quels.
+    assert.deepEqual(gameForPlugin('album', { dir: '/m/A', folder: 'A' }, cfg), { dir: '/m/A', folder: 'A' });
+
+    // Par le pont : le plugin n'est pas appelé pour rassembler, et ne reçoit que ces données.
+    const calls: [string, unknown[]][] = [];
+    const service: BridgeService = {
+      contributions: (kind) =>
+        (kind === 'metadata' ? [{ pluginId: 'org.exemple.j', kind: 'metadata', id: 'jeux', declaration: { kinds: ['rom'] } }] : []) as never,
+      onContributionsChange: () => () => {},
+      call: async (_p, _k, _id, method, args) => {
+        calls.push([method, args ?? []]);
+        return method === 'candidates' ? [] : null;
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: false }),
+    };
+    const [provider] = createPluginBridges({ service, catalog: { setSource: () => {}, removeSource: () => {} }, log: () => {} }).metadataProviders();
+    const items = await provider.collect({}, ctx);
+    assert.equal(provider.key(items[0]), `r:${rom.path}`);
+    await provider.scrape(items[0], undefined, { ...(ctx as object), key: 'k' } as never);
+    await provider.candidates({ item: { emu: 'snes' }, query: 'mario' }, ctx);
+    assert.deepEqual(calls, [
+      [
+        'scrape',
+        [{ name: 'Super Mario World (Europe)', displayName: 'Super Mario World', emu: 'snes', system: 'Nintendo - Super Nintendo Entertainment System' }, null],
+      ],
+      ['candidates', [{ item: { name: '', emu: 'snes', system: 'Nintendo - Super Nintendo Entertainment System' }, query: 'mario' }]],
+    ]);
+    assert.ok(!JSON.stringify(calls).includes('/r/'));
   });
 
   it('requires absent ou en panne : la source est interrogée', async () => {

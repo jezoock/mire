@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Automatic tags: photos",
+      "description": "Groups photos by folder (“Holidays”; “Wedding, Part 2” when the folder name alone says nothing)."
+    },
+    "infos": {
+      "folder": "Folder"
+    }
+  }
+}

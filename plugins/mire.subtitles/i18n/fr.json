@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Sous-titres à côté des vidéos",
+      "description": "Trouve les sous-titres .srt et .vtt rangés dans le dossier d’une vidéo, quand leur nom commence par celui de la vidéo (Film.fr.srt pour Film.mkv)."
+    }
+  }
+}

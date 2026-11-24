@@ -77,7 +77,6 @@ export const SETTINGS_SCHEMA: SettingsSchema = keyed([
     fields: [
       // Puis les langues disponibles (catalogues de Mire et packs de langue), sous leur propre nom.
       { id: 'interface', type: 'choice', path: 'ui.language', default: 'auto', options: ['auto'], optionsFrom: 'languages' },
-      { id: 'metadata', type: 'choice', path: 'search.language', default: '', help: true, buttons: true, options: ['', 'fr-FR', 'en-US'] },
     ],
   },
   {

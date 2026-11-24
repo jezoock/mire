@@ -17,6 +17,12 @@
  *   que l'utilisateur voit comme l'erreur d'une recherche de fiches.
  * - `search` → `search(query)` : interroge les fournisseurs actifs en parallèle (l'écran Recherche, P4-12, les
  *   affichera).
+ * - `subtitles` → `subtitles(videoPath)` (P5-11b) : à l'ouverture d'une vidéo locale que la politique d'accès de
+ *   l'interface autorise déjà (`library/subtitles.ts`), chaque fournisseur actif d'un plugin inclus ou du dépôt
+ *   officiel reçoit son chemin ; le dossier de la vidéo lui est prêté pendant l'appel s'il déclare `folders`
+ *   (`lentFolders`), rien de plus. Le cœur lit lui-même ce qu'il rend : un `.srt` ou `.vtt` sous ses dossiers accordés
+ *   (vérifié aussi sur le chemin réel), ou une adresse `https:` d'un hôte qu'il déclare, sans redirection ; taille,
+ *   nombre, libellé et langue bornés ; le texte rendu à l'interface n'est jamais interprété comme du HTML.
  *
  * Ce qu'un plugin rend est vérifié ici, d'après son niveau (jamais d'après ce que dit le résultat) : un plugin de code
  * limité ne peut pas fournir un élément qui lance un programme ou un jeu (permission « programmes », code sensible),
@@ -28,13 +34,15 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
-import { fold, type ElementSourceRef } from '@mire/shared';
+import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
 import { localFileKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
+import { decodeText, srtToVtt } from '../lib/text.ts';
+import { request, type FetchLike } from '../net/http.ts';
 import { ScrapeRefusal } from '../scrape/refusal.ts';
-import type { JobContext, MetadataProvider, ScrapeGroup } from '../scrape/types.ts';
-import { hostDeclared } from './permissions.ts';
+import type { JobContext, MetadataProvider, ProviderContext, RunOptions, ScrapeConfig, ScrapeGroup, ScrapeItem } from '../scrape/types.ts';
+import { hostDeclared, isLocalHost } from './permissions.ts';
 import type { ContributionEntry } from './registry.ts';
 
 /** Bornes des résultats rendus par un plugin. */
@@ -255,6 +263,53 @@ export function factsKey(kind: MetadataKind, item: unknown): string | null {
 
 const GROUPS: Record<MetadataKind, ScrapeGroup> = { video: 'videos', album: 'music', rom: 'games', pc: 'games' };
 
+/**
+ * Jeux que le cœur rassemble lui-même pour un fournisseur d'infos (P5-16) : jeux PC de l'interface, sinon ceux de la
+ * configuration (un même nom une fois) ; jeux des consoles dont le système est reconnu, chacun avec sa console.
+ * `null` pour les autres natures (vidéos, albums : le plugin les rassemble d'après ce qu'envoie l'interface). Le cœur
+ * garde ces éléments complets (clés des fiches) ; le plugin n'en reçoit que `gameForPlugin`.
+ */
+export async function coreGames(kind: MetadataKind, opts: RunOptions, ctx: ProviderContext): Promise<ScrapeItem[] | null> {
+  if (kind === 'pc') {
+    const seen = new Set<string>();
+    return (opts.pcGames ?? ctx.getConfig().games).filter((g) => {
+      const k = factsKey('pc', g);
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+  if (kind !== 'rom') return null;
+  const items: ScrapeItem[] = [];
+  for (const emu of ctx.getConfig().emulators) {
+    if (!guessSystem(emu)) continue;
+    const r = await ctx.listRoms(emu.id);
+    if (!r?.ok) continue;
+    for (const rom of r.roms || []) items.push({ ...rom, emu: emu.id });
+  }
+  return items;
+}
+
+const STEAM_APP = /^steam:\/\/rungameid\/(\d+)/i;
+
+/**
+ * Ce qu'un plugin reçoit d'un jeu (P5-16) : son nom (sans dossier), sa console et le système libretro de celle-ci, ou
+ * l'identifiant Steam d'un jeu PC ; jamais son chemin (la clé de la fiche, qui le contient, est calculée par le cœur).
+ * Les vidéos et les albums passent tels quels.
+ */
+export function gameForPlugin(kind: MetadataKind, item: unknown, config: ScrapeConfig): unknown {
+  if (kind !== 'pc' && kind !== 'rom') return item;
+  const name = path.win32.basename(field(item, 'name')).slice(0, BRIDGE_LIMITS.text);
+  if (kind === 'pc') {
+    const appid = STEAM_APP.exec(field(item, 'path'))?.[1];
+    return { name, ...(appid ? { appid } : {}) };
+  }
+  const emu = field(item, 'emu');
+  const owner = config.emulators.find((e) => e.id === emu);
+  const displayName = field(item, 'displayName');
+  return { name, ...(displayName ? { displayName: path.win32.basename(displayName) } : {}), emu, system: owner ? guessSystem(owner) : '' };
+}
+
 /** Fiche rendue par un plugin : les champs connus, d'un type attendu ; `source` est celle du plugin. */
 export function checkFacts(source: string, raw: unknown): MetadataFacts | null | undefined {
   if (raw === null) return null;
@@ -266,6 +321,148 @@ export function checkFacts(source: string, raw: unknown): MetadataFacts | null |
   if (typeof raw.series === 'boolean') out.series = raw.series;
   if (raw.picked === true) out.picked = true;
   return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Sous-titres (`subtitles`, P5-11b)
+
+/** Bornes des sous-titres rendus par un plugin. */
+export const SUBTITLE_LIMITS = Object.freeze({
+  /** Sous-titres gardés par fournisseur. */
+  results: 32,
+  /** Libellé montré dans le choix des sous-titres. */
+  label: 200,
+  /** Taille d'un fichier de sous-titres, lu sur le disque ou téléchargé. */
+  bytes: 4 * 1024 * 1024,
+  /** Délais (ms) : recherche par le plugin, téléchargement d'une adresse. */
+  findTimeout: 10000,
+  downloadTimeout: 15000,
+});
+
+/** Sous-titre lu par le cœur : texte WebVTT, libellé (vide : « Sous-titres », écrit par la bibliothèque) et langue. */
+export interface SubtitleText {
+  label: string;
+  lang: string;
+  vtt: string;
+}
+
+/** Sous-titre rendu par un plugin, vérifié dans sa forme : un fichier local ou une adresse, jamais les deux. */
+export type CheckedSubtitle = ({ path: string } | { url: string }) & { lang: string; label: string };
+
+const SUBTITLE_EXTS = new Set(['.srt', '.vtt']);
+const LANG_RE = /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i;
+
+/** Libellé : une ligne de texte simple, sans caractères de contrôle, bornée. */
+const plainLabel = (v: unknown): string =>
+  typeof v === 'string'
+    ? v
+        .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+        .trim()
+        .slice(0, SUBTITLE_LIMITS.label)
+    : '';
+
+/** Adresse de sous-titres qu'un plugin peut faire télécharger : `https:`, hôte déclaré, jamais le réseau local. */
+export function subtitleUrlAllowed(url: unknown, hosts: readonly string[]): url is string {
+  if (!text(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && !u.username && !u.password && !isLocalHost(u.hostname) && hostDeclared(hosts, u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sous-titres rendus par un plugin, vérifiés dans leur forme : fichier `.srt` ou `.vtt` (chemin absolu) sous l'un des
+ * dossiers `roots`, ou adresse permise (`subtitleUrlAllowed`) ; les autres sont écartés. Le chemin réel est vérifié
+ * ensuite, à la lecture (`readSubtitle`).
+ */
+export function checkSubtitles(raw: unknown, roots: readonly string[], hosts: readonly string[]): CheckedSubtitle[] {
+  if (!Array.isArray(raw)) throw new Error('find() must return an array of subtitles.');
+  const out: CheckedSubtitle[] = [];
+  const seen = new Set<string>();
+  for (const s of raw) {
+    if (out.length >= SUBTITLE_LIMITS.results) break;
+    if (!isObject(s) || (s.path !== undefined && s.url !== undefined)) continue;
+    const lang = typeof s.lang === 'string' && s.lang.length <= 35 && LANG_RE.test(s.lang) ? s.lang : '';
+    const label = plainLabel(s.label);
+    if (s.path !== undefined) {
+      if (!text(s.path) || !path.isAbsolute(s.path) || !SUBTITLE_EXTS.has(path.extname(s.path).toLowerCase())) continue;
+      const file = path.resolve(s.path);
+      if (!roots.some((r) => isInside(file, [r])) || seen.has(file)) continue;
+      seen.add(file);
+      out.push({ path: file, lang, label });
+    } else if (subtitleUrlAllowed(s.url, hosts) && !seen.has(s.url)) {
+      seen.add(s.url);
+      out.push({ url: s.url, lang, label });
+    }
+  }
+  return out;
+}
+
+/** Texte WebVTT d'un fichier de sous-titres : `.vtt` tel quel, `.srt` converti ; sans extension connue, d'après son début. */
+function toVtt(raw: Buffer, name: string): string {
+  const text = decodeText(raw);
+  const ext = path.extname(name).toLowerCase();
+  if (ext === '.vtt' || (ext !== '.srt' && /^\uFEFF?WEBVTT/.test(text))) return text;
+  return srtToVtt(text);
+}
+
+/** Corps d'une réponse, borné. */
+async function readBody(res: Response, max: number): Promise<Buffer> {
+  if (Number(res.headers.get('content-length')) > max || !res.body) {
+    await res.body?.cancel().catch(() => {});
+    throw new Error('subtitle file too large or empty');
+  }
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => {});
+      throw new Error('subtitle file too large');
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Lit un sous-titre vérifié : le fichier doit rester sous les dossiers `roots` une fois les liens résolus ; une adresse
+ * est téléchargée sans suivre de redirection (elle pourrait mener à un hôte non déclaré). `null` s'il est illisible.
+ */
+export async function readSubtitle(
+  s: CheckedSubtitle,
+  roots: readonly string[],
+  { realpath = (p: string) => fsp.realpath(p), fetch }: { realpath?: Realpath; fetch?: FetchLike } = {},
+): Promise<SubtitleText | null> {
+  try {
+    let raw: Buffer;
+    let name: string;
+    if ('path' in s) {
+      const real = await realpath(s.path);
+      const realRoots = (await Promise.all(roots.map((r) => realpath(r).catch(() => null)))).filter((r): r is string => !!r);
+      if (!realRoots.some((r) => isInside(real, [r]))) return null;
+      const st = await fsp.stat(real);
+      if (!st.isFile() || st.size > SUBTITLE_LIMITS.bytes) return null;
+      raw = await fsp.readFile(real);
+      name = real;
+    } else {
+      const res = await request(s.url, { timeout: SUBTITLE_LIMITS.downloadTimeout, redirect: 'error', fetch });
+      if (!res.ok) {
+        await res.body?.cancel().catch(() => {});
+        return null;
+      }
+      raw = await readBody(res, SUBTITLE_LIMITS.bytes);
+      name = new URL(s.url).pathname;
+    }
+    return { label: s.label, lang: s.lang, vtt: toVtt(raw, name) };
+  } catch {
+    return null;
+  }
 }
 
 /** Une analyse voulue : source, emplacement (`null` : sans emplacement) et référence au catalogue. */
@@ -285,6 +482,7 @@ export function createPluginBridges({
   log = (m) => console.error(m),
   platform = process.platform,
   realpath,
+  fetch,
   onClaimsChange,
 }: {
   service: BridgeService;
@@ -292,6 +490,8 @@ export function createPluginBridges({
   log?: (m: string) => void;
   platform?: NodeJS.Platform;
   realpath?: Realpath;
+  /** fetch des sous-titres téléchargés (tests) ; par défaut le fetch global. */
+  fetch?: FetchLike;
   /** Les emplacements de la bibliothèque pris par un plugin ont changé (la bibliothèque du cœur les laisse). */
   onClaimsChange?: () => void;
 }) {
@@ -310,6 +510,36 @@ export function createPluginBridges({
   const assignedFolders = (pluginId: string): string[] =>
     [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId && a.location.path ? [a.location.path] : []));
   const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
+
+  /** Dossiers prêtés le temps d'une recherche de sous-titres : plugin → un dossier par appel en cours. */
+  const lent = new Map<string, string[]>();
+  const lentFolders = (pluginId: string): string[] => [...new Set(lent.get(pluginId) ?? [])];
+  function lend(pluginId: string, dir: string): () => void {
+    lent.set(pluginId, [...(lent.get(pluginId) ?? []), dir]);
+    return () => {
+      const list = lent.get(pluginId) ?? [];
+      list.splice(list.indexOf(dir), 1);
+      if (!list.length) lent.delete(pluginId);
+    };
+  }
+
+  /** Sous-titres d'un fournisseur pour une vidéo autorisée ; son dossier est prêté pendant l'appel (`folders`). */
+  async function subtitlesOf(e: ContributionEntry, videoPath: string): Promise<SubtitleText[]> {
+    const rights = service.sourceRights(e.pluginId);
+    const dir = path.dirname(videoPath);
+    const release = rights.folders ? lend(e.pluginId, dir) : () => {};
+    let found: CheckedSubtitle[];
+    let roots: string[] = [];
+    try {
+      const raw = await service.call(e.pluginId, 'subtitles', e.id, 'find', [videoPath], { timeout: SUBTITLE_LIMITS.findTimeout });
+      roots = rights.folders ? [...new Set([...granted(e.pluginId), dir])] : [];
+      found = checkSubtitles(raw, roots, service.hosts(e.pluginId));
+    } finally {
+      release();
+    }
+    const read = await Promise.all(found.map((s) => readSubtitle(s, roots, { realpath, fetch })));
+    return read.filter((s): s is SubtitleText => s !== null);
+  }
 
   /** Un dossier ne va qu'à un plugin de confiance qui déclare `folders` ; une adresse, à un plugin de confiance. */
   function mayReceive(e: ContributionEntry, location: SourceLocation): boolean {
@@ -462,6 +692,8 @@ export function createPluginBridges({
   function metadataProvider(e: ContributionEntry): MetadataProvider {
     const kinds = ((e.declaration.kinds as MetadataKind[] | undefined) ?? []).filter((k) => Object.hasOwn(GROUPS, k));
     const source = `${e.pluginId}/${e.id}`;
+    const kind = kinds[0] ?? 'video';
+    const forPlugin = (item: unknown, ctx: ProviderContext) => (kind === 'pc' || kind === 'rom' ? gameForPlugin(kind, item, ctx.getConfig()) : item);
     const call = (method: string, args: unknown[]) => service.call(e.pluginId, 'metadata', e.id, method, args, { timeout: BRIDGE_LIMITS.metadataTimeout });
     // Échec rendu par le plugin (clé refusée, service injoignable) : un message pour l'utilisateur.
     const ask = async (method: string, args: unknown[]): Promise<unknown> => {
@@ -481,14 +713,17 @@ export function createPluginBridges({
       // aucun élément, mais reste gardée).
       key: (item) =>
         factsKey(kinds[0] ?? 'video', item) ?? `plugin:${source}|${String((item as { key?: unknown })?.key ?? (item as { path?: unknown })?.path ?? '')}`,
-      collect: async (opts) => {
+      // Jeux : rassemblés par le cœur (`coreGames`) ; le reste, par le plugin.
+      collect: async (opts, ctx) => {
+        const games = await coreGames(kind, opts ?? {}, ctx);
+        if (games) return games.slice(0, BRIDGE_LIMITS.elements);
         const items = await call('collect', [opts ?? {}]);
         return Array.isArray(items) ? items.slice(0, BRIDGE_LIMITS.elements) : [];
       },
-      scrape: async (item, override, job) => withImages(e.pluginId, checkFacts(source, await ask('scrape', [item, override ?? null])), job),
-      byId: async (pick, item, job) => withImages(e.pluginId, checkFacts(source, await ask('byId', [pick, item])), job),
-      candidates: async (q) => {
-        const list = await ask('candidates', [q]);
+      scrape: async (item, override, job) => withImages(e.pluginId, checkFacts(source, await ask('scrape', [forPlugin(item, job), override ?? null])), job),
+      byId: async (pick, item, job) => withImages(e.pluginId, checkFacts(source, await ask('byId', [pick, forPlugin(item, job)])), job),
+      candidates: async (q, ctx) => {
+        const list = await ask('candidates', [q?.item === undefined ? q : { ...q, item: forPlugin(q.item, ctx) }]);
         return Array.isArray(list)
           ? list
               .filter((c) => isObject(c) && text(c.id) && text(c.title))
@@ -499,6 +734,8 @@ export function createPluginBridges({
                 year: typeof c.year === 'string' ? c.year : '',
                 sub: typeof c.sub === 'string' ? c.sub : '',
                 image: isWebUrl(c.image) ? c.image : null,
+                // Vignette de secours si l'image manque (Steam), comme `image` : une adresse web montrée telle quelle.
+                ...(isWebUrl(c.fallback) ? { fallback: c.fallback } : {}),
               }))
           : [];
       },
@@ -528,6 +765,26 @@ export function createPluginBridges({
       const settled = await Promise.allSettled(runs);
       return settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
     },
+
+    /**
+     * Sous-titres d'une vidéo locale, que l'appelant a déjà vérifiée avec la politique d'accès de l'interface (chemin
+     * absolu) : ceux des fournisseurs actifs des plugins inclus ou du dépôt officiel ; un fournisseur en échec est omis.
+     */
+    async subtitles(videoPath: string): Promise<SubtitleText[]> {
+      if (!text(videoPath) || !path.isAbsolute(videoPath)) return [];
+      const runs = service
+        .contributions('subtitles')
+        .filter((e) => service.sourceRights(e.pluginId).trusted)
+        .map((e) =>
+          subtitlesOf(e, videoPath).catch((err) => {
+            log(`Plugins : sous-titres de ${e.pluginId} (subtitles/${e.id}) impossibles : ${(err as Error)?.message ?? err}`);
+            return [];
+          }),
+        );
+      return (await Promise.all(runs)).flat();
+    },
+    /** Dossiers prêtés à ce plugin le temps d'une recherche de sous-titres. */
+    lentFolders,
 
     /** Analyse de nouveau les sources des plugins actifs. */
     rescan: (): Promise<void> => sync(true),

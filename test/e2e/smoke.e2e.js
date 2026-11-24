@@ -22,6 +22,8 @@ const CORE_PALETTES = ['ecran', 'contraste'];
 const PALETTE_PLUGIN = path.join(__dirname, 'palettes', 'org.exemple.palettes');
 // Service de streaming d'un plugin factice (P5-05), installé à la main comme le plugin de palettes.
 const SERVICE_PLUGIN = path.join(__dirname, 'webapps', 'org.exemple.service');
+// Fournisseur d'infos d'un plugin factice (P5-16), sans réseau : les fournisseurs d'infos sont tous des plugins.
+const INFOS_PLUGIN = path.join(__dirname, 'infos', 'org.exemple.infos');
 // Fond d'une palette : palette.json pour celles du cœur, jeton `bg` du plugin factice pour les autres.
 const paletteBackground = (id) =>
   CORE_PALETTES.includes(id)
@@ -94,6 +96,7 @@ function prepareData() {
   // Plugin de palettes factice, installé à la main : userData/plugins/<id>/<version>/ (P5-02).
   fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
   fs.cpSync(SERVICE_PLUGIN, path.join(data, 'plugins', 'org.exemple.service', '1.0.0'), { recursive: true });
+  fs.cpSync(INFOS_PLUGIN, path.join(data, 'plugins', 'org.exemple.infos', '1.0.0'), { recursive: true });
   return data;
 }
 
@@ -187,7 +190,8 @@ describe('Test de fumée de Mire', () => {
     page = await app.firstWindow();
     // Taille fixe, quel que soit l'écran : les captures restent comparables d'une machine à l'autre.
     await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
+      // Fenêtre de Mire : pas celle, cachée, de l'hôte isolé des plugins de code (`mire-plugin://host`, P5-09).
+      const win = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:'));
       win.setFullScreen(false);
       win.setContentSize(1600, 900);
     });
@@ -1679,7 +1683,14 @@ describe('Test de fumée de Mire', () => {
         return a?.dataset.tab ?? (a?.classList.contains('mire-centre-view__add-link') ? 'addLink' : (a?.localName ?? null));
       });
     // Téléchargement envoyé par le processus principal, comme le gestionnaire de téléchargements (canal `download`).
-    const sendDownload = (item) => app.evaluate(({ BrowserWindow }, d) => BrowserWindow.getAllWindows()[0].webContents.send('download', d), item);
+    const sendDownload = (item) =>
+      app.evaluate(
+        ({ BrowserWindow }, d) =>
+          BrowserWindow.getAllWindows()
+            .find((w) => !w.webContents.getURL().startsWith('mire-plugin:'))
+            .webContents.send('download', d),
+        item,
+      );
     const STOPPED = {
       id: 'demo-interrompu',
       kind: 'http',
@@ -3104,7 +3115,7 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(bar, { kind: 'tv', name: 'Portail de démonstration', brand: '#E23B3B' });
       // La vue native est posée sur la place réservée par mire-web-slot.
       const placed = await app.evaluate(({ BrowserWindow }) => {
-        const [view] = BrowserWindow.getAllWindows()[0].contentView.children;
+        const [view] = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:')).contentView.children;
         return view ? view.getBounds() : null;
       });
       const slot = await page.evaluate(() => {
@@ -3152,7 +3163,11 @@ describe('Test de fumée de Mire', () => {
       await padPress('b');
       await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Télévision');
       // La vue native est cachée hors de la section web.
-      const visible = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.some((v) => v.getVisible()));
+      const visible = await app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => !w.webContents.getURL().startsWith('mire-plugin:'))
+          .contentView.children.some((v) => v.getVisible()),
+      );
       assert.equal(visible, false);
       assert.deepEqual(errors, []);
     });
@@ -3278,22 +3293,29 @@ describe('Test de fumée de Mire', () => {
 
     it('l’ordre d’une liste change au clavier (ds-sortable) : celui des fournisseurs d’infos', async () => {
       await openSettings();
-      // TMDB est un plugin à installer (P5-15) : seuls les fournisseurs du cœur sans lui.
-      assert.deepEqual(await providers(), ['musicbrainz', 'libretro', 'steam']);
+      // Les fournisseurs d'infos sont tous des plugins (TMDB : P5-15 ; MusicBrainz, libretro, Steam : P5-16) : ceux du
+      // plugin factice, actif, forment la liste.
+      const ALBUMS = 'org.exemple.infos/albums';
+      const JEUX = 'org.exemple.infos/jeux';
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} ds-sortable[data-list="providers"] [data-key]`).length === 2, VIEW);
+      assert.deepEqual(await providers(), [ALBUMS, JEUX]);
       const item = (key) => page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="${key}"]`);
-      await item('libretro').scrollIntoViewIfNeeded();
-      await item('libretro').focus();
+      await item(JEUX).scrollIntoViewIfNeeded();
+      await item(JEUX).focus();
       await page.keyboard.press('Space');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('Space');
-      await waitSaved('catalog.metadataProviders', ['libretro', 'musicbrainz', 'steam']);
-      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'libretro', VIEW);
+      await waitSaved('catalog.metadataProviders', [JEUX, ALBUMS]);
+      await page.waitForFunction(
+        ([sel, key]) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === key,
+        [VIEW, JEUX],
+      );
       await page.locator(`${VIEW} ds-sortable[data-list="providers"]`).scrollIntoViewIfNeeded();
       await settle();
       await page.locator(`${VIEW} [data-panel="scrape"]`).screenshot({ path: path.join(SHOTS, 'settings-order.png') });
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
-      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="musicbrainz"] button`).first().click();
-      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'libretro', 'steam']);
+      await item(ALBUMS).locator('button').first().click();
+      await waitSaved('catalog.metadataProviders', [ALBUMS, JEUX]);
       assert.deepEqual(errors, []);
     });
 
@@ -3524,7 +3546,7 @@ describe('Test de fumée de Mire', () => {
       // Touche envoyée par la fenêtre (comme le clavier), et non injectée dans la page : elle passe par
       // `before-input-event` du processus principal, qui la lit avant la page.
       await app.evaluate(({ BrowserWindow }) => {
-        const wc = BrowserWindow.getAllWindows()[0].webContents;
+        const wc = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:')).webContents;
         for (const type of ['keyDown', 'keyUp']) wc.sendInputEvent({ type, keyCode: 'E', modifiers: ['control', 'shift'] });
       });
       await rescueShown('Explorateur ouvert par le raccourci du mode secours.');
@@ -4488,6 +4510,70 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
+    });
+  });
+
+  // Tags automatiques (P5-09) : cinq plugins inclus de niveau code, actifs dès le premier lancement ; un épisode de la
+  // bibliothèque porte le tag `series` et ses infos ; plugin désactivé, ses tags disparaissent, un tag saisi à la main
+  // reste ; réactivé, ils reviennent.
+  describe('tags automatiques, plugins inclus (P5-09)', () => {
+    const seriesKeys = () => page.evaluate(() => window.api.catalogPage('tag:series', [], null).then((l) => (l.elements ?? []).map((e) => e.key)));
+    const waitSeries = (some) => until(async () => (await seriesKeys()).length > 0 === some, { timeout: 15000 });
+
+    it('les cinq plugins inclus sont actifs ; un épisode porte `series`, sa saison et son épisode', async () => {
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const k of ['series', 'movies', 'music', 'consoles', 'photos']) {
+        const p = list.find((x) => x.id === `mire.tags.${k}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], k);
+      }
+      // Les lots se calculent dans l'hôte isolé : le tag arrive peu après le démarrage.
+      await waitSeries(true);
+      const keys = await seriesKeys();
+      const episodes = await Promise.all(keys.map((k) => page.evaluate((key) => window.api.catalogElement(key), k)));
+      const e = episodes.find((x) => x.name === 'S01E01');
+      assert.ok(e, episodes.map((x) => x.name).join());
+      assert.ok(e.tags.includes('video') && e.tags.includes('series'), e.tags.join());
+      assert.deepEqual([e.infos.season, e.infos.episode], [1, 1]);
+      const tag = (await page.evaluate(() => window.api.tagsList())).find((t) => t.id === 'series');
+      assert.deepEqual([tag?.origin, tag?.name], ['plugin', 'Séries']);
+    });
+
+    it('plugin désactivé : ses tags disparaissent, un tag saisi à la main reste ; réactivé, ils reviennent', async () => {
+      const [key] = await seriesKeys();
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'Gardé e2e': true }), key);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', false));
+      await waitSeries(false);
+      const off = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.equal(off.tags.includes('series'), false);
+      assert.ok(off.tags.includes('garde-e2e'), off.tags.join());
+      assert.equal(off.infos.season, undefined);
+      assert.equal(
+        (await page.evaluate(() => window.api.tagsList())).some((t) => t.id === 'series'),
+        false,
+      );
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', true));
+      await waitSeries(true);
+      const on = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.ok(on.tags.includes('series') && on.tags.includes('garde-e2e'), on.tags.join());
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'garde-e2e': null }), key);
+    });
+  });
+
+  describe('sous-titres (P5-11b)', () => {
+    it('le plugin inclus mire.subtitles est actif ; désactivé, la vidéo de démonstration n’a plus de sous-titres, réactivé ils reviennent', async () => {
+      const file = path.join(tmp, 'fixtures', 'media', 'Démonstration.webm');
+      const plugin = () => page.evaluate(() => window.api.pluginsList().then((l) => l.find((p) => p.id === 'mire.subtitles')));
+      assert.deepEqual(await plugin().then((p) => p && [p.origin, p.enabled, p.status]), ['bundled', true, 'active']);
+      // Fichier ouvert : autorisé par la politique d'accès, comme à l'ouverture depuis le système.
+      await page.evaluate((f) => window.api.fromPaths([f]), file);
+      const langs = () => page.evaluate((f) => window.api.subtitles(f).then((l) => l.map((s) => s.lang).sort()), file);
+      assert.deepEqual(await langs(), ['en', 'fr']);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', false));
+      await until(async () => (await plugin())?.status === 'disabled', { timeout: 10000 });
+      assert.deepEqual(await langs(), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', true));
+      await until(async () => (await plugin())?.status === 'active', { timeout: 10000 });
+      assert.deepEqual(await langs(), ['en', 'fr']);
     });
   });
 });

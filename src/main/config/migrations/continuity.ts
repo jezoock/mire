@@ -25,6 +25,7 @@
  *     settings: [{ from: 'search.tmdbToken', to: 'token', secret: true }] },
  */
 import { OFFICIAL_PREFIX, PLUGIN_ID_RE } from '../../../../packages/plugin-sdk/src/validate.ts';
+import { guessSystem } from '@mire/shared';
 import { isObjectLike, type Loose } from '../normalize/common.ts';
 
 export interface SettingMove {
@@ -79,6 +80,30 @@ const hasSite =
   (c: Loose): boolean =>
     Array.isArray(c.web) && c.web.some((w) => isRecord(w) && w.id === id);
 
+/** Une liste non vide à `key` de la configuration. */
+const someIn = (c: Loose, key: string): boolean => Array.isArray(c[key]) && c[key].length > 0;
+
+/** Un dossier de musique dans la bibliothèque (`library.sources`) : ses albums étaient décrits par MusicBrainz (P5-16). */
+const hasMusic = (c: Loose): boolean =>
+  isRecord(c.library) && Array.isArray(c.library.sources) && c.library.sources.some((s: unknown) => isRecord(s) && s.kind === 'audio');
+
+/** Une console dont le système libretro est reconnu : ses jeux avaient jaquettes et genres de libretro (P5-16). */
+const hasKnownConsole = (c: Loose): boolean =>
+  Array.isArray(c.emulators) &&
+  c.emulators.some((e: unknown) => {
+    if (!isRecord(e)) return false;
+    const hint = {
+      system: typeof e.system === 'string' ? e.system : '',
+      name: String(e.name ?? ''),
+      path: String(e.path ?? ''),
+      extensions: Array.isArray(e.extensions) ? e.extensions : [],
+    };
+    return guessSystem(hint) !== '';
+  });
+
+/** Des jeux PC (ajoutés, dossiers de jeux ou marque-pages « PC ») : leurs fiches venaient de Steam (P5-16). */
+const hasPcGames = (c: Loose): boolean =>
+  someIn(c, 'games') || someIn(c, 'gameSources') || (Array.isArray(c.gameBookmarks) && c.gameBookmarks.some((b) => isRecord(b) && b.console === 'pc'));
 /** Emplacement de la bibliothèque qui est un dossier de cet ordinateur : ni adresse, ni partage réseau (P5-11c). */
 const isLocalFolder = (loc: unknown): boolean => {
   const s = typeof loc === 'string' ? loc.trim() : '';
@@ -87,7 +112,9 @@ const isLocalFolder = (loc: unknown): boolean => {
 
 /** La bibliothèque lit au moins un dossier de cet ordinateur (P5-11c). */
 const hasLocalFolder = (c: Loose): boolean =>
-  isObjectLike(c.library) && Array.isArray((c.library as Loose).sources) && ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && isLocalFolder(s.location));
+  isObjectLike(c.library) &&
+  Array.isArray((c.library as Loose).sources) &&
+  ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && isLocalFolder(s.location));
 
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
@@ -108,6 +135,9 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-20 : lecteurs externes mpv et VLC, plugin inclus ; tout le monde pouvait s'en servir (formats non lus,
   // télévision). Le programme choisi (`externalPlayer`) reste un réglage du cœur : rien à déplacer.
   { id: 'P5-20', plugin: 'mire.players.external', mode: 'bundled', applies: always },
+  // P5-11b : sous-titres posés à côté des vidéos, plugin inclus ; tout le monde les avait à l'ouverture d'une vidéo,
+  // aucun réglage à déplacer.
+  { id: 'P5-11b', plugin: 'mire.subtitles', mode: 'bundled', applies: always },
   // P5-11c : dossiers de cet ordinateur dans la bibliothèque, plugin inclus. Les emplacements restent dans
   // `library.sources` (le plugin les reçoit du cœur, P5-11a) et ses fichiers gardent leurs clés `local:<chemin>` :
   // listes, reprise de lecture, fiches et tags sont retrouvés. Rien à déplacer.
@@ -130,10 +160,35 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     settings: [
       { from: 'search.tmdbToken', to: 'token', secret: true, convert: (v) => String(v).trim() },
       { from: 'search.region', to: 'region', convert: (v) => (nonEmpty(v) ? String(v).trim().toLowerCase() : undefined) },
-      // La langue des fiches sert aussi à Steam (cœur jusqu'à P5-16).
+      // La langue des fiches est copiée : la règle P5-16-steam la reprend aussi (et la retire du cœur).
       { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
     ],
     providers: { tmdb: 'mire.tmdb/tmdb' },
+  },
+  // P5-16 : infos en ligne sans clé, un plugin à installer par service. Les fournisseurs sont renommés pour toute
+  // configuration (ordre choisi, fiches déjà enregistrées sous `a:` et `g:`, reprises sans nouvelle récupération).
+  {
+    id: 'P5-16-musicbrainz',
+    plugin: 'mire.musicbrainz',
+    mode: 'install',
+    applies: hasMusic,
+    providers: { musicbrainz: 'mire.musicbrainz/musicbrainz' },
+  },
+  {
+    id: 'P5-16-libretro',
+    plugin: 'mire.libretro',
+    mode: 'install',
+    applies: hasKnownConsole,
+    providers: { libretro: 'mire.libretro/libretro' },
+  },
+  {
+    id: 'P5-16-steam',
+    plugin: 'mire.steam',
+    mode: 'install',
+    applies: hasPcGames,
+    // Le réglage « Langue des fiches » quitte le cœur : sa valeur part dans celui du plugin (P5-15 l'a déjà copiée pour TMDB).
+    settings: [{ from: 'search.language', to: 'language', convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') }],
+    providers: { steam: 'mire.steam/steam' },
   },
   // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.
   // Le site reste dans `web` (même identifiant : sa connexion et ses réglages sont retrouvés), le plugin le reprend.
@@ -150,6 +205,13 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-05-amazon-music', plugin: 'mire.web.amazon-music', mode: 'install', applies: hasSite('amazon-music') },
   { id: 'P5-05-spotify', plugin: 'mire.web.spotify', mode: 'install', applies: hasSite('spotify') },
   { id: 'P5-05-deezer', plugin: 'mire.web.deezer', mode: 'install', applies: hasSite('deezer') },
+  // P5-09 : tags automatiques (séries, films, musique, consoles, photos), plugins inclus ; tout le monde les avait.
+  // Aucun réglage : les tags et infos saisis à la main restent dans `userData/catalog/overrides.json`.
+  { id: 'P5-09-series', plugin: 'mire.tags.series', mode: 'bundled', applies: always },
+  { id: 'P5-09-movies', plugin: 'mire.tags.movies', mode: 'bundled', applies: always },
+  { id: 'P5-09-music', plugin: 'mire.tags.music', mode: 'bundled', applies: always },
+  { id: 'P5-09-consoles', plugin: 'mire.tags.consoles', mode: 'bundled', applies: always },
+  { id: 'P5-09-photos', plugin: 'mire.tags.photos', mode: 'bundled', applies: always },
 ];
 
 /**

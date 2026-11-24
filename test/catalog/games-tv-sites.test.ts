@@ -1,6 +1,6 @@
 // Jeux, télévision et sites dans le catalogue (P2-03), avec le vrai moteur de tags :
 // - la configuration de démonstration (test de fumée) donne toutes les sortes d'éléments ;
-// - tags `game`, `tv`, `stream`, info `system` posée par la source et par le tag automatique « Consoles » sans doublon ;
+// - tags `game`, `tv`, `stream`, info `system` posée par la source (le tag automatique « Consoles » ne la double pas) ;
 // - les fiches gardées sous une ancienne clé (`r:`, `g:`, `b:`, `v:` d'un marque-page) rejoignent leur élément.
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +16,7 @@ import { syncFeeds } from '../../src/main/catalog/sync.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import { createTargetFinder } from '../../src/main/catalog/targets.ts';
 import { createConfigService } from '../../src/main/config/index.ts';
 import { gameConfigFeed } from '../../src/main/games/element-sources.ts';
@@ -59,7 +59,7 @@ async function wire(dir: string, config: ReturnType<typeof createConfigService>)
     overrides,
     registry: createRegistry(builtinTranslator('fr').t),
     rules: () => fileTagRules(undefined),
-    contributors: [...builtinTaggers(() => config.get().emulators).map(taggerContributor), ...metadataContributors(metadata, metadataOrder(undefined))],
+    contributors: [...bundledTaggers(), ...metadataContributors(metadata, metadataOrder(undefined))],
   });
   metadata.onChange((keys) => engine.refresh(keys));
   catalog.onChange(({ added }) => {
@@ -98,7 +98,7 @@ describe('configuration de démonstration → catalogue', () => {
     for (const p of ['mire.source.local', 'jeux-roms', 'jeux-pc-manuel', 'tv-m3u', 'web-perso']) assert.ok(plugins.has(p), p);
   });
 
-  it('tags `game`, `tv`, `stream` ; info `system` des jeux de console une seule fois, celle du tag automatique', async () => {
+  it('tags `game`, `tv`, `stream` ; info `system` des jeux de console une seule fois, celle de la console', async () => {
     const { dir, config } = demo();
     const w = await wire(dir, config);
     await startUi(w, config.get());
@@ -121,9 +121,10 @@ describe('configuration de démonstration → catalogue', () => {
         { value: 'pc', count: pcs },
       ],
     );
-    // Le tag automatique l'emporte sur la source (priorité des origines) : une console changée change `system`.
+    // Une console changée change `system` quand ses jeux sont relus : la source le pose d'après la console, et le tag
+    // automatique « Consoles » (plugin inclus, P5-09) ne touche pas un jeu qui en a déjà un.
     config.update((c) => ({ ...c, emulators: c.emulators.map((x) => ({ ...x, system: 'Sega - Mega Drive - Genesis' })) }));
-    w.engine.setContributors(builtinTaggers(() => config.get().emulators).map(taggerContributor));
+    await w.games.listRoms(snes.id);
     assert.equal(w.engine.element(rom)?.infos.system, 'Sega - Mega Drive - Genesis');
     const tags = Object.fromEntries(w.engine.tagsList().map((t) => [t.id, t]));
     assert.deepEqual([tags.game.origin, tags.game.name, tags.tv.name, tags.stream.name], ['core', 'Jeux', 'Télévision', 'Streaming']);

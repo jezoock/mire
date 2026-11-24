@@ -1,5 +1,11 @@
-/** Sous-titres .srt / .vtt à côté d'une vidéo : sur le disque, ou trouvés par l'analyse d'une page d'index. */
-import fsp from 'node:fs/promises';
+/**
+ * Sous-titres d'une vidéo, demandés par le lecteur à l'ouverture.
+ *
+ * - Vidéo locale : les sous-titres viennent des plugins (nature `subtitles`, P5-11b ; `mire.subtitles` cherche les
+ *   `.srt` et `.vtt` posés à côté). Le cœur ne leur passe qu'une vidéo que sa politique d'accès autorise, et vérifie
+ *   ce qu'ils rendent (`plugins/bridges.ts`).
+ * - Vidéo en ligne : sous-titres trouvés par l'analyse d'une page d'index (serveur web de la bibliothèque).
+ */
 import path from 'node:path';
 import { isHttpUrl } from '@mire/shared';
 import * as http from '../net/http.ts';
@@ -18,7 +24,12 @@ export interface SubtitleOptions {
   remote: RemoteSubtitles;
   /** Politique d'accès : une vidéo locale hors des dossiers autorisés n'a pas de sous-titres. */
   isAllowed: (file: string) => boolean;
+  /** Sous-titres trouvés par les plugins pour une vidéo locale autorisée (libellé vide : « Sous-titres »). */
+  plugins?: (videoPath: string) => Promise<Subtitle[]>;
 }
+
+/** Longueur maximale d'un chemin ou d'une adresse reçus de l'interface. */
+const MAX_PATH = 4096;
 
 // Libellé et langue d'après ce qui suit le nom de la vidéo (film.fr.srt → « fr »).
 function describe(rest: string, vtt: string): Subtitle {
@@ -44,35 +55,19 @@ async function remoteSubtitles(videoUrl: string, remote: RemoteSubtitles): Promi
   return out;
 }
 
-async function localSubtitles(videoPath: string): Promise<Subtitle[]> {
-  const dir = path.dirname(videoPath);
-  const base = path.basename(videoPath, path.extname(videoPath)).toLowerCase();
-  let names: string[];
+async function pluginSubtitles(videoPath: string, opts: SubtitleOptions): Promise<Subtitle[]> {
+  if (!opts.plugins) return [];
   try {
-    names = await fsp.readdir(dir);
+    const found = await opts.plugins(videoPath);
+    return found.map((s) => ({ ...s, label: s.label || t('library.subtitles') }));
   } catch {
     return [];
   }
-  const subs: Subtitle[] = [];
-  for (const n of names) {
-    const ext = path.extname(n).toLowerCase();
-    if (ext !== '.srt' && ext !== '.vtt') continue;
-    const b = path.basename(n, path.extname(n));
-    if (!b.toLowerCase().startsWith(base)) continue;
-    const rest = b.slice(base.length).replace(/^[._\-\s]+/, '');
-    try {
-      let text = decodeText(await fsp.readFile(path.join(dir, n)));
-      if (ext === '.srt') text = srtToVtt(text);
-      subs.push(describe(rest, text));
-    } catch {
-      /* fichier illisible */
-    }
-  }
-  return subs;
 }
 
-export async function findSubtitles(videoPath: string, opts: SubtitleOptions): Promise<Subtitle[]> {
+export async function findSubtitles(videoPath: unknown, opts: SubtitleOptions): Promise<Subtitle[]> {
+  if (typeof videoPath !== 'string' || !videoPath || videoPath.length > MAX_PATH) return [];
   if (isHttpUrl(videoPath)) return remoteSubtitles(videoPath, opts.remote);
-  if (!opts.isAllowed(videoPath)) return [];
-  return localSubtitles(videoPath);
+  if (!path.isAbsolute(videoPath) || !opts.isAllowed(videoPath)) return [];
+  return pluginSubtitles(path.resolve(videoPath), opts);
 }

@@ -1,0 +1,12 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "fr",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Infos d’essai"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Tags automatiques : séries",
+      "description": "Reconnaît les épisodes d’après le nom des fichiers (« Friends S01E03 », « Saison 1/S01E03 ») : tag « Séries », avec la série, la saison et l’épisode."
+    },
+    "tags": {
+      "series": "Séries"
+    },
+    "infos": {
+      "series": "Série",
+      "season": "Saison",
+      "episode": "Épisode"
+    }
+  }
+}

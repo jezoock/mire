@@ -1,4 +1,5 @@
-// P1-29 : textes du processus principal en français et en anglais, langue des fiches (Steam ; TMDB : plugin mire.tmdb, P5-15, testé dans mire-addons).
+// P1-29 : textes du processus principal en français et en anglais. Langue des fiches : réglage `language` des plugins
+// mire.tmdb (P5-15) et mire.steam (P5-16), testés dans mire-addons.
 import { afterEach, describe, it, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,16 +7,10 @@ import path from 'node:path';
 import type { Config } from '@mire/shared';
 import { BUILTIN_CATALOGS, flattenMessages } from '@mire/shared/i18n';
 import { DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
-import { builtinTranslator, createLanguageService, currentLanguage, metadataLanguage, steamLocale, t, useLanguage } from '../../src/main/i18n/index.ts';
+import { builtinTranslator, createLanguageService, currentLanguage, t, useLanguage } from '../../src/main/i18n/index.ts';
 import { locationError } from '../../src/main/library/location.ts';
-import { GAME_GENRES, libretroProvider } from '../../src/main/scrape/providers/libretro.ts';
-import { MUSIC_GENRES, musicBrainzProvider } from '../../src/main/scrape/providers/musicbrainz.ts';
-import { steamProvider } from '../../src/main/scrape/providers/steam.ts';
 import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
-import { loadRoutes } from '../scrape/fake-fetch.ts';
-import { providerContext } from '../scrape/helpers.ts';
-import { roms } from '../scrape/scenario.ts';
 
 const ROOT = path.join(import.meta.dirname, '..', '..');
 const english = () => useLanguage(builtinTranslator('en'));
@@ -43,13 +38,8 @@ describe('clés employées par le processus principal', () => {
     for (const key of used) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
 
-  it('clés construites : genres, émulateurs, BIOS et jeux de la boutique', () => {
-    const keys = [
-      ...Object.values(GAME_GENRES).map((id) => `scrape.genres.games.${id}`),
-      ...Object.values(MUSIC_GENRES).map((id) => `scrape.genres.music.${id}`),
-      ...EMULATORS.map((e) => `store.emulators.${e.id}`),
-      ...[...BIOS_HINTS].map((id) => `store.bios.${id}`),
-    ];
+  it('clés construites : émulateurs, BIOS et jeux de la boutique (genres : plugins des infos en ligne, P5-16)', () => {
+    const keys = [...EMULATORS.map((e) => `store.emulators.${e.id}`), ...[...BIOS_HINTS].map((id) => `store.bios.${id}`)];
     for (const key of keys) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
 });
@@ -118,81 +108,33 @@ describe('langue des textes', () => {
   });
 });
 
-describe('genres', () => {
-  it('libretro : traduit en français, valeur de libretro en anglais', async (tc) => {
-    const scrape = async () => {
-      const { ctx } = providerContext(tc, loadRoutes('libretro'));
-      return (await libretroProvider().scrape({ ...roms[0], emu: 'snes' }, undefined, ctx('r:smw')))?.genre;
-    };
-    assert.equal(await scrape(), 'Plateformes');
-    english();
-    assert.equal(await scrape(), 'Platform');
-  });
-
-  it('MusicBrainz : traduit en français, étiquette d’origine en anglais', async (tc) => {
-    const album = { dir: '/m/Daft Punk - Discovery (2001)', folder: 'Daft Punk - Discovery (2001)' };
-    const scrape = async () => {
-      const { ctx } = providerContext(tc, loadRoutes('musicbrainz'));
-      return (await musicBrainzProvider({ intervalMs: 0 }).scrape(album, undefined, ctx('a:x')))?.genre;
-    };
-    assert.equal(await scrape(), 'Électronique');
-    english();
-    assert.equal(await scrape(), 'Electronic');
-  });
-});
-
-describe('langue des fiches', () => {
-  it('metadataLanguage : search.language s’il est fixé, sinon la langue de l’interface avec sa région', () => {
-    assert.equal(metadataLanguage('', 'fr'), 'fr-FR');
-    assert.equal(metadataLanguage(undefined, 'en'), 'en-US');
-    assert.equal(metadataLanguage('  ', 'en-GB'), 'en-GB');
-    assert.equal(metadataLanguage('nl-BE', 'en'), 'nl-BE');
-    assert.equal(metadataLanguage('fr-FR', 'en'), 'fr-FR');
-    assert.equal(metadataLanguage(''), 'fr-FR');
-    english();
-    assert.equal(metadataLanguage(''), 'en-US');
-  });
-
-  it('steamLocale : langue et pays du magasin', () => {
-    assert.deepEqual(steamLocale('fr-FR'), { l: 'french', cc: 'FR' });
-    assert.deepEqual(steamLocale('en-US'), { l: 'english', cc: 'US' });
-    assert.deepEqual(steamLocale('fr-CA'), { l: 'french', cc: 'CA' });
-    assert.deepEqual(steamLocale('de'), { l: 'german', cc: 'DE' });
-    assert.deepEqual(steamLocale('xx'), { l: 'english', cc: 'US' });
-  });
-
-  it('Steam : l=french&cc=FR en français (comme avant), l=english&cc=US en anglais', async (tc) => {
-    const urls = async () => {
-      const { ctx, fetch } = providerContext(tc, loadRoutes('steam'), { search: { language: '' } });
-      await steamProvider().scrape({ name: 'Hades', path: 'C:/Hades.exe' }, undefined, ctx('g:hades'));
-      return fetch.calls.filter((u) => u.includes('store.steampowered.com'));
-    };
-    const fr = await urls();
-    assert.ok(fr.length >= 2 && fr.every((u) => u.endsWith('&l=french&cc=FR')), fr.join('\n'));
-    english();
-    const en = await urls();
-    assert.ok(en.length >= 1 && en.every((u) => u.endsWith('&l=english&cc=US')), en.join('\n'));
-  });
-});
-
-describe('search.language : migration v8', () => {
-  const migrated = (raw: Record<string, unknown>) => normalizeConfig(migrate(raw).config).search.language;
+describe('search.language : migration v8, puis réglage du plugin mire.steam (P5-16)', () => {
+  // Le cœur ne lit plus ce réglage : il reste tel quel dans le fichier tant qu'aucun plugin ne l'a repris.
+  const migrated = (raw: Record<string, unknown>): Record<string, any> => migrate(raw).config as Record<string, any>;
+  const language = (raw: Record<string, unknown>) => migrated(raw).search?.language;
 
   it('fr-FR (l’ancienne valeur par défaut) devient vide : les fiches suivent l’interface', () => {
-    assert.equal(DEFAULT_CONFIG.search.language, '');
-    assert.equal(migrated({ version: 7, search: { language: 'fr-FR' } }), '');
-    assert.equal(migrated({ version: 3, search: { tmdbToken: 'x', language: 'fr-FR' } }), '');
-    assert.equal(migrated({ version: 7 }), '');
+    assert.equal('search' in DEFAULT_CONFIG, false);
+    assert.equal(language({ version: 7, search: { language: 'fr-FR' } }), '');
+    assert.equal(language({ version: 3, search: { tmdbToken: 'x', language: 'fr-FR' } }), '');
+    assert.equal(language({ version: 7 }), undefined);
   });
 
-  it('une autre langue, écrite à la main, est conservée ; une configuration v8 n’est pas migrée', () => {
-    assert.equal(migrated({ version: 7, search: { language: 'nl-BE' } }), 'nl-BE');
-    assert.equal(migrated({ version: 8, search: { language: 'fr-FR' } }), 'fr-FR');
+  it('une autre langue, écrite à la main, est conservée ; une configuration v8 n’est pas migrée par la v8', () => {
+    assert.equal(language({ version: 7, search: { language: 'nl-BE' } }), 'nl-BE');
+    assert.equal(language({ version: 8, search: { language: 'fr-FR' } }), 'fr-FR');
   });
 
-  it('installation existante : ui.language passe à fr (v7), les fiches restent demandées en fr-FR', () => {
+  it('avec des jeux PC : la langue part dans le réglage du plugin Steam', () => {
+    const c = migrated({ version: 7, search: { language: 'nl-BE' }, games: [{ name: 'Ys', path: 'C:/ys.exe' }] });
+    assert.deepEqual(c.plugins['mire.steam'], { language: 'nl-BE' });
+    assert.deepEqual(c.search, {});
+    assert.equal('search' in normalizeConfig(migrate({ version: 7, games: [{ name: 'Ys', path: 'C:/ys.exe' }] }).config), false);
+  });
+
+  it('installation existante : ui.language passe à fr (v7), les fiches suivent l’interface', () => {
     const config = normalizeConfig(migrate({ version: 6, search: { language: 'fr-FR' } }).config);
     assert.equal(config.ui.language, 'fr');
-    assert.equal(metadataLanguage(config.search.language, config.ui.language), 'fr-FR');
+    assert.equal(language({ version: 6, search: { language: 'fr-FR' } }), '');
   });
 });
