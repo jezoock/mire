@@ -263,8 +263,13 @@ export function createContextHandler(deps: ContextDeps) {
       } catch {
         return null;
       }
-      const realRoots = await Promise.all(roots.map((r) => fsp.realpath(r).catch(() => r)));
-      if (!under(real, realRoots)) throw refused('This path leads outside the granted folders.');
+      // D'abord les dossiers accordés qui contiennent le chemin, puis les autres seulement s'il le faut : un partage
+      // réseau absent, parmi les dossiers du plugin, ne fait pas attendre la lecture des autres.
+      const realOf = (list: string[]) => Promise.all(list.map((r) => fsp.realpath(r).catch(() => r)));
+      const mine = roots.filter((r) => under(file, [r]));
+      if (under(real, await realOf(mine))) return real;
+      const others = await realOf(roots.filter((r) => !mine.includes(r)));
+      if (!under(real, others)) throw refused('This path leads outside the granted folders.');
       return real;
     }
 

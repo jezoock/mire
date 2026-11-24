@@ -103,6 +103,9 @@ function localAllowed(p: unknown, level: PluginLevel, granted: readonly string[]
  * `..`, casse ignorée sous Windows), avec les dossiers résolus une fois par liste : une analyse vérifie des dizaines
  * de milliers de chemins contre la même liste.
  */
+/** Segment `..` dans un chemin (sans découper le chemin : des dizaines de milliers par analyse). */
+const POSIX_DOTS = /(^|\/)\.\.(\/|$)/;
+const WIN_DOTS = /(^|[\\/])\.\.([\\/]|$)/;
 const grantedTests = new WeakMap<readonly string[], (p: string) => boolean>();
 function insideGranted(granted: readonly string[]): (p: string) => boolean {
   let test = grantedTests.get(granted);
@@ -115,7 +118,7 @@ function insideGranted(granted: readonly string[]): (p: string) => boolean {
   test = (p: string) => {
     const exact = path.resolve(p);
     const t = win ? exact.toLowerCase() : exact;
-    const dots = p.split(win ? /[\\/]+/ : /\/+/).includes('..');
+    const dots = (win ? WIN_DOTS : POSIX_DOTS).test(p);
     return roots.some((r) => exact === r.exact || (!dots && t.startsWith(r.prefix)));
   };
   grantedTests.set(granted, test);
@@ -210,33 +213,48 @@ export type Readdir = (dir: string) => Promise<{ name: string; isSymbolicLink():
 /** Vérifications de fichiers en même temps. */
 const REAL_CONCURRENCY = 64;
 
+/** Fait `fn` pour chaque valeur, `REAL_CONCURRENCY` à la fois. */
+async function eachLimited<T>(values: readonly T[], fn: (v: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < values.length) await fn(values[next++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(REAL_CONCURRENCY, values.length) }, worker));
+}
+
 /**
- * Chemin réel d'un fichier, `null` s'il n'existe pas. Chaque dossier n'est lu qu'une fois pour tous ses fichiers (une
- * bibliothèque compte des dizaines de milliers de fichiers pour quelques milliers de dossiers) : son chemin réel, et
- * le type de ses entrées. Un fichier qui n'est pas un lien a pour chemin réel celui de son dossier suivi de son nom ;
- * un lien est résolu en entier.
+ * Chemins réels d'une liste de fichiers (`null` : n'existe pas). Chaque dossier n'est lu qu'une fois pour tous ses
+ * fichiers (une bibliothèque compte des dizaines de milliers de fichiers pour quelques milliers de dossiers) : son
+ * chemin réel, et le type de ses entrées. Un fichier qui n'est pas un lien a pour chemin réel celui de son dossier
+ * suivi de son nom ; un lien est résolu en entier. Les dossiers sont lus d'abord, tous ensemble : les fichiers se
+ * vérifient ensuite sans attente, sauf les liens.
  */
-function realPaths(realpath: Realpath, readdir: Readdir) {
-  const dirs = new Map<string, Promise<{ real: string; entries: Map<string, boolean> } | null>>();
-  const dirOf = (dir: string) => {
-    let d = dirs.get(dir);
-    if (!d) {
-      d = Promise.all([realpath(dir), readdir(dir)]).then(
-        ([real, list]) => ({ real, entries: new Map(list.map((e) => [e.name, e.isSymbolicLink()])) }),
-        () => null,
-      );
-      dirs.set(dir, d);
+async function realPaths(files: readonly string[], realpath: Realpath, readdir: Readdir): Promise<Map<string, string | null>> {
+  const dirs = new Map<string, { real: string; entries: Map<string, boolean> } | null>();
+  for (const f of files) dirs.set(path.dirname(f), null);
+  await eachLimited([...dirs.keys()], async (dir) => {
+    try {
+      const [real, list] = await Promise.all([realpath(dir), readdir(dir)]);
+      dirs.set(dir, { real, entries: new Map(list.map((e) => [e.name, e.isSymbolicLink()])) });
+    } catch {
+      // Dossier introuvable ou illisible : ses fichiers n'existent pas.
     }
-    return d;
-  };
-  return async (p: string): Promise<string | null> => {
-    const name = path.basename(p);
-    const d = await dirOf(path.dirname(p));
+  });
+  const out = new Map<string, string | null>();
+  const links: string[] = [];
+  for (const f of files) {
+    const name = path.basename(f);
+    const d = dirs.get(path.dirname(f));
     const link = d?.entries.get(name);
-    if (!d || link === undefined) return null;
-    if (link) return realpath(p).catch(() => null);
-    return path.join(d.real, name);
-  };
+    if (!d || link === undefined) out.set(f, null);
+    else if (link) links.push(f);
+    // Nom d'une entrée du dossier : ni séparateur, ni `.`, ni `..` ; seule la racine finit déjà par un séparateur.
+    else out.set(f, d.real.endsWith(path.sep) ? d.real + name : d.real + path.sep + name);
+  }
+  await eachLimited(links, async (f) => {
+    out.set(f, await realpath(f).catch(() => null));
+  });
+  return out;
 }
 
 /**
@@ -252,37 +270,45 @@ export async function keepReal(
   readdir: Readdir = (dir) => fsp.readdir(dir, { withFileTypes: true }),
 ): Promise<{ elements: ElementInput[]; dropped: number }> {
   if (level === 'privileged') return { elements, dropped: 0 };
-  const roots = (await Promise.all(granted.map((g) => realpath(g).catch(() => null)))).filter((r): r is string => !!r);
-  const realOf = realPaths(realpath, readdir);
-  const inRoots = insideGranted(roots);
+  const IMAGES = ['poster', 'background', 'logo'] as const;
   // Une même image (affiche d'un dossier) sert à plusieurs éléments : vérifiée une fois.
-  const checked = new Map<string, Promise<boolean>>();
-  const ok = (p: string): Promise<boolean> => {
-    let r = checked.get(p);
-    if (!r) {
-      r = realOf(p).then((real) => !!real && inRoots(real));
-      checked.set(p, r);
-    }
-    return r;
-  };
-  const kept: (ElementInput | null)[] = new Array(elements.length).fill(null);
-  let next = 0;
-  async function worker(): Promise<void> {
-    while (next < elements.length) {
-      const i = next++;
-      const e = elements[i];
-      const local = localPathOf(e.open);
-      if (local !== null && !(await ok(local))) continue;
-      const images = { ...e.images };
-      for (const k of ['poster', 'background', 'logo'] as const) {
-        const v = images[k];
-        if (v && !isWebUrl(v) && !(await ok(v))) delete images[k];
-      }
-      kept[i] = { ...e, images };
+  const files = new Set<string>();
+  for (const e of elements) {
+    const local = localPathOf(e.open);
+    if (local !== null) files.add(local);
+    for (const k of IMAGES) {
+      const v = e.images[k];
+      if (v && !isWebUrl(v)) files.add(v);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(REAL_CONCURRENCY, elements.length) }, worker));
-  const out = kept.filter((e): e is ElementInput => e !== null);
+  const real = await realPaths([...files], realpath, readdir);
+  // Dossiers accordés : d'abord ceux qui contiennent les fichiers, puis tous seulement si un fichier mène ailleurs (un
+  // partage réseau absent, parmi les dossiers du plugin, ne fait pas attendre l'analyse des autres).
+  const realRoots = async (list: readonly string[]) => (await Promise.all(list.map((g) => realpath(g).catch(() => null)))).filter((r): r is string => !!r);
+  const dirs = new Set([...files].map((f) => path.dirname(f)));
+  const holds = (g: string) => {
+    const inside = insideGranted([g]);
+    for (const d of dirs) if (inside(d)) return true;
+    return false;
+  };
+  const checked = new Map<string, boolean>();
+  const check = (inRoots: (p: string) => boolean) => {
+    for (const [f, to] of real) if (!checked.get(f)) checked.set(f, !!to && inRoots(to));
+  };
+  check(insideGranted(await realRoots(granted.filter(holds))));
+  if ([...checked.values()].includes(false)) check(insideGranted(await realRoots(granted)));
+  const ok = (p: string): boolean => checked.get(p) === true;
+  const out: ElementInput[] = [];
+  for (const e of elements) {
+    const local = localPathOf(e.open);
+    if (local !== null && !ok(local)) continue;
+    const images = { ...e.images };
+    for (const k of IMAGES) {
+      const v = images[k];
+      if (v && !isWebUrl(v) && !ok(v)) delete images[k];
+    }
+    out.push({ ...e, images });
+  }
   return { elements: out, dropped: elements.length - out.length };
 }
 

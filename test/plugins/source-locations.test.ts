@@ -102,6 +102,25 @@ describe('checkElements et keepReal : fichiers locaux d’un plugin de code', ()
     assert.equal(real.dropped, 2);
     assert.equal((await keepReal(written.elements, 'privileged', [])).elements.length, 3);
   });
+
+  it('dossier accordé sans rapport (partage absent) : pas lu, sauf si un fichier mène hors des dossiers qui le contiennent', async () => {
+    const other = path.join(root, 'Autre');
+    mkdirSync(other, { recursive: true });
+    writeFileSync(path.join(other, 'b.mkv'), 'b');
+    symlinkSync(path.join(other, 'b.mkv'), path.join(films, 'vers-autre.mkv'));
+    const absent = path.join(root, 'Partage absent');
+    const asked: string[] = [];
+    const realpath = async (p: string) => (asked.push(p), (await import('node:fs/promises')).realpath(p));
+    const granted = [films, absent, other];
+    const alien = checkElements(P, 'code', granted, [fileOf(path.join(films, 'Alien.mkv'))]).elements;
+    assert.equal((await keepReal(alien, 'code', granted, realpath)).elements.length, 1);
+    assert.ok(!asked.includes(absent) && !asked.includes(other), asked.join(', '));
+    // Un lien vers un autre dossier accordé reste permis : les autres dossiers sont alors lus.
+    const linked = checkElements(P, 'code', granted, [fileOf(path.join(films, 'vers-autre.mkv'))]).elements;
+    assert.equal((await keepReal(linked, 'code', granted, realpath)).elements.length, 1);
+    assert.ok(asked.includes(absent) && asked.includes(other));
+    rmSync(path.join(films, 'vers-autre.mkv'));
+  });
 });
 
 /** Service de plugins factice : une source de dossiers (`mire.source.test`) et ce qu'elle a reçu. */
