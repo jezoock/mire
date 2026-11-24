@@ -13,7 +13,7 @@ function setup(extra = {}, options = {}) {
 
 test('jeu cherché par son nom : meilleur titre, détails du magasin, description sans balises, images par adresse', async () => {
   const { provider, calls } = setup();
-  const r = await provider.scrape({ name: 'Hades', path: 'C:/Hades.exe' }, null);
+  const r = await provider.scrape({ name: 'Hades' }, null);
   assert.equal(r.title, 'Hades');
   assert.equal(r.genre, 'Action, Aventure');
   assert.equal(r.year, '2020');
@@ -25,9 +25,9 @@ test('jeu cherché par son nom : meilleur titre, détails du magasin, descriptio
   assert.ok(calls.filter((c) => c.url.includes('steamstatic')).every((c) => c.method === 'HEAD'));
 });
 
-test('raccourci steam:// : pas de recherche ; détails indisponibles → fiche réduite, image de secours', async () => {
+test('identifiant Steam (raccourci steam://) : pas de recherche ; détails indisponibles → fiche réduite, image de secours', async () => {
   const { provider, calls } = setup();
-  assert.deepEqual(await provider.scrape({ name: 'Portal 2', path: 'steam://rungameid/620' }), {
+  assert.deepEqual(await provider.scrape({ name: 'Portal 2', appid: '620' }), {
     title: 'Portal 2',
     image: 'https://cdn.akamai.steamstatic.com/steam/apps/620/header.jpg',
     backdrop: null,
@@ -42,7 +42,7 @@ test('raccourci steam:// : pas de recherche ; détails indisponibles → fiche r
 test('introuvable ou sans image : null', async () => {
   const { provider } = setup({ 'https://store.steampowered.com/api/storesearch/?term=Rien&l=french&cc=FR': { json: { items: [] } } });
   assert.equal(await provider.scrape({ name: 'Rien' }), null);
-  assert.equal(await provider.scrape({ name: 'X', path: 'steam://rungameid/1' }), null);
+  assert.equal(await provider.scrape({ name: 'X', appid: '1' }), null);
 });
 
 test('fiche choisie : l’identifiant du candidat', async () => {

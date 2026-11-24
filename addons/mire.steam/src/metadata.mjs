@@ -63,7 +63,8 @@ export default function createMetadata(ctx) {
   }
 
   async function scrapePcGame(game, override) {
-    let appId = (/^steam:\/\/rungameid\/(\d+)/i.exec(String(game?.path || '')) || [])[1] || null;
+    // Mire envoie l'identifiant Steam d'un raccourci `steam://rungameid/<id>` (`appid`), jamais le chemin du jeu.
+    let appId = /^\d+$/.test(String(game?.appid ?? '')) ? String(game.appid) : null;
     let title = String(game?.name ?? '');
     if (override?.pick) {
       appId = String(override.pick.id ?? '');
@@ -134,7 +135,7 @@ export default function createMetadata(ctx) {
     group: 'games',
     concurrency: 2,
     key,
-    // Jeux PC envoyés par Mire ; un même nom n'est récupéré qu'une fois.
+    // Mire rassemble lui-même les jeux PC (P5-16) ; gardé pour un hôte qui demanderait au plugin.
     collect(opts) {
       const seen = new Set();
       return list(opts?.pcGames).filter((g) => {
