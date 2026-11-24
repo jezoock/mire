@@ -38,6 +38,7 @@ it('dataPaths : chemins historiques du dossier de données', () => {
     plugins: at('plugins'),
     pluginState: at('plugins', 'state.json'),
     pluginContinuity: at('plugins', 'continuity.json'),
+    assistant: at('assistant.json'),
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),

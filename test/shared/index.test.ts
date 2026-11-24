@@ -69,6 +69,7 @@ describe('@mire/shared', () => {
       'isRescueHeldKey',
       'isRescueReason',
       'isRescueShortcut',
+      'isSiteAvailable',
       'isTagName',
       'isTarget',
       'isThemeId',

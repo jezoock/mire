@@ -51,6 +51,8 @@ export interface DataPaths {
   pluginState: string;
   /** Continuité (P5-01) : plugins activés, installés, en attente ou impossibles pour une installation existante. */
   pluginContinuity: string;
+  /** Assistant du premier lancement à faire (P4-23). */
+  assistant: string;
   pluginLogs: string;
   /** Données des plugins (`ctx.storage`, P3-04) : un dossier par plugin. */
   pluginData: string;
@@ -92,6 +94,7 @@ export function dataPaths(root: string): DataPaths {
     plugins: at('plugins'),
     pluginState: at('plugins', 'state.json'),
     pluginContinuity: at('plugins', 'continuity.json'),
+    assistant: at('assistant.json'),
     pluginLogs: at('plugins', 'logs'),
     pluginData: at('plugin-data'),
     repoCache: at('repos'),

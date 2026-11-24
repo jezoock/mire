@@ -63,6 +63,7 @@ const offer = (over: Partial<AvailablePlugin> = {}): AvailablePlugin => ({
   permissions: { launch: true, hosts: ['api.exemple.org'] },
   dependencies: { 'mire.exemple.inclus': '^1.0.0' },
   contributes: ['downloaders'],
+  categories: [],
   size: 2048,
   installed: null,
   update: null,

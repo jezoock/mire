@@ -19,6 +19,11 @@ export interface LibraryServiceDeps {
   catalog?: Pick<Catalog, 'setSource' | 'removeSource' | 'sources'>;
   /** Analyse (tests). */
   scan?: (opts: ScanOptions) => Promise<ScanResult>;
+  /**
+   * Vrai si un plugin lit cet emplacement (instance : chemin ou adresse normalisés, P5-11a) : ses éléments viennent
+   * alors du plugin, et ceux du cœur quittent le catalogue.
+   */
+  claimed?: (instance: string) => boolean;
   /** Un emplacement n'a pas pu alimenter le catalogue (journal par défaut) ; l'analyse continue. */
   onCatalogError?: (err: Error) => void;
 }
@@ -39,6 +44,7 @@ export function createLibraryService(deps: LibraryServiceDeps) {
     const source = elementSources.find((s) => s.handles(scanned));
     if (!source) return;
     const ref = { plugin: source.id, instance: source.instance(scanned) };
+    if (deps.claimed?.(ref.instance)) return;
     seen.add(refId(ref));
     if (scanned.complete) cat.setSource(ref, source.elementsOf(scanned));
   }

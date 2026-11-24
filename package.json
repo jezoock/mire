@@ -27,7 +27,7 @@
     "check:actions": "node scripts/check-actions.mjs",
     "typecheck": "tsc -p tsconfig.json && tsc -p packages/shared/tsconfig.json && tsc -p packages/plugin-sdk/tsconfig.json && tsc -p packages/ui/tsconfig.json",
     "test": "node --test \"test/**/*.test.js\" \"test/**/*.test.ts\" \"plugins/*/test/**/*.test.mjs\"",
-    "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/smoke.e2e.js test/e2e/plugins.e2e.js",
+    "test:e2e": "node scripts/build.mjs && node --test --test-concurrency=1 test/e2e/smoke.e2e.js test/e2e/plugins.e2e.js test/e2e/assistant.e2e.js",
     "dist": "node -e \"require('electron')\" && node scripts/build.mjs && npx --yes electron-builder@26.17.0 --publish never"
   },
   "dependencies": {

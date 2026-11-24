@@ -21,11 +21,12 @@ import {
   webContents,
 } from 'electron';
 import { path7za } from '7zip-bin';
-import { MIME, type SystemHint } from '@mire/shared';
+import { MIME, isSiteAvailable, type SystemHint } from '@mire/shared';
 import { BUILTIN_CATALOGS } from '@mire/shared/i18n';
 import { createArchive } from './archive/index.ts';
 import { runApp, setApplicationMenu, type PendingFiles, type Running } from './app/lifecycle.ts';
 import { createRescue } from './app/rescue.ts';
+import { createAssistant } from './app/assistant.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
 import { createMetadataStore, defaultKnown, metadataContributors, metadataOrder } from './catalog/metadata.ts';
@@ -49,6 +50,8 @@ import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
 import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
+import { libraryLocations } from './library/locations.ts';
+import type { PluginBridges } from './plugins/bridges.ts';
 import { catalogFollow } from './files/follow.ts';
 import { managedRoots } from './files/roots.ts';
 import { createFolders } from './catalog/folders.ts';
@@ -71,6 +74,7 @@ import {
 import { createInstaller } from './repos/installer.ts';
 import { createRepoClient } from './repos/client.ts';
 import { createContinuity } from './plugins/continuity.ts';
+import { withWebApps } from './plugins/web-apps.ts';
 import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
@@ -113,6 +117,8 @@ function start(pending: PendingFiles): Running {
   const dist = (...parts: string[]) => path.join(__dirname, '..', ...parts);
 
   // Configuration et données d'usage (« Reprendre », positions, volume, recherches récentes).
+  // Premier lancement (P4-23) : la configuration n'existe pas encore ; à lire avant que le service ne la crée.
+  const fresh = !fs.existsSync(files.config);
   const config = createConfigService({ file: files.config });
   const usage = createUsageService({ file: files.usage });
   // Catalogue d'éléments : alimenté par les analyses de la bibliothèque ; l'interface historique ne s'en sert pas.
@@ -142,8 +148,10 @@ function start(pending: PendingFiles): Running {
   const window = createMainWindow({ BrowserWindow, shell, nativeTheme, config, files: pages, web: () => web, onClosed, rescue });
   const { toUi } = window;
 
-  // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments.
-  const library = createLibraryService({ config, access, catalog });
+  // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments ; un emplacement lu par un plugin
+  // (P5-11a, sources des plugins plus bas) est laissé à ce plugin.
+  let pluginBridges: PluginBridges | undefined;
+  const library = createLibraryService({ config, access, catalog, claimed: (k) => pluginBridges?.claimed(k) ?? false });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
   const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
@@ -287,7 +295,12 @@ function start(pending: PendingFiles): Running {
     languages: Object.keys(BUILTIN_CATALOGS),
     state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
-    context: createContextHandler({ pickFolder, folders: { list: pluginState.folders, add: pluginState.addFolder }, storage: storages.of }),
+    // Dossiers d'un plugin : ceux que l'utilisateur lui a accordés, et ceux de la bibliothèque qu'il lit (P5-11a).
+    context: createContextHandler({
+      pickFolder,
+      folders: { list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? [])])], add: pluginState.addFolder },
+      storage: storages.of,
+    }),
     settings: pluginSettings,
     flush: storages.flush,
     dropData: storages.drop,
@@ -344,12 +357,32 @@ function start(pending: PendingFiles): Running {
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
     // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
     if (kinds.includes('pages')) catalogPages.setBuiltin(plugins.pageDefinitions());
+    // Services de streaming (P5-05) : les sites de la configuration suivent les plugins actifs.
+    if (kinds.includes('webApps')) syncWebApps();
     // Lecteurs externes (P5-20) : l'interface montre ou cache son bouton.
     if (kinds.includes('apps')) toUi('player:externalChanged');
   });
   catalogPages.setBuiltin(plugins.pageDefinitions());
+  // Services de streaming des plugins (P5-05) : ajoutés, mis à jour ou masqués dans `config.web` ; sans changement,
+  // rien n'est écrit (donc pas de boucle avec l'abonnement à la configuration).
+  // Seulement une fois les plugins démarrés : avant, le registre est vide et tous les services paraîtraient absents.
+  let pluginsStarted = false;
+  function syncWebApps(): void {
+    if (!pluginsStarted) return;
+    const next = withWebApps(config.get(), plugins.webApps());
+    if (next !== config.get()) config.update(() => next);
+  }
+  config.onChange(() => setImmediate(syncWebApps));
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
-  const pluginBridges = createPluginBridges({ service: plugins, catalog });
+  // Emplacements de la bibliothèque (P5-11a) : proposés aux sources des plugins ; quand un plugin en prend ou en rend
+  // un, la bibliothèque du cœur est analysée de nouveau pour retirer ou retrouver ses propres éléments.
+  const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescan });
+  pluginBridges = bridges;
+  const syncLocations = (cfg: Config) => void bridges.setLocations(libraryLocations(cfg.library.sources));
+  syncLocations(config.get());
+  config.onChange((next, prev) => {
+    if (JSON.stringify(next.library.sources) !== JSON.stringify(prev.library.sources)) syncLocations(next);
+  });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
@@ -376,7 +409,7 @@ function start(pending: PendingFiles): Running {
     listRoms: games.listRoms,
     onProgress: (p) => toUi('scrape-progress', p),
     store: metadata.scrapeStore,
-    extraProviders: pluginBridges.metadataProviders,
+    extraProviders: bridges.metadataProviders,
   });
   // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
   access.invalidate();
@@ -438,8 +471,13 @@ function start(pending: PendingFiles): Running {
     adblock,
   };
   // « Où regarder » : recherche d'un plugin (P5-15), rapprochée des sites configurés.
-  const searchStreaming = createWatchSearch({ search: pluginBridges.search, sites: () => config.get().web });
-  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
+  const searchStreaming = createWatchSearch({
+    search: pluginBridges.search, // Un service dont le plugin est désactivé ou absent n'est plus proposé (P5-05).
+    sites: () => config.get().web.filter(isSiteAvailable),
+  });
+  // Assistant du premier lancement (P4-23) : ouvert au démarrage d'une nouvelle installation, jusqu'à la fin ou « Passer ».
+  const assistant = createAssistant({ file: files.assistant, fresh, systemLanguages: () => app.getPreferredSystemLanguages() });
+  registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue, assistant }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
   // Code sensible des plugins inclus (P3-05) : extensions des vues web et moteurs de téléchargement, branchés une fois,
@@ -454,7 +492,11 @@ function start(pending: PendingFiles): Running {
     })
     .catch((err: Error) => console.error('Plugins :', err.message))
     // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
-    .finally(palettesChanged);
+    .finally(() => {
+      pluginsStarted = true;
+      syncWebApps();
+      palettesChanged();
+    });
 
   return {
     async onSecondInstance(paths) {

@@ -14,7 +14,7 @@ import type { FilesService } from '../files/service.ts';
 import type { ConfigService } from '../config/service.ts';
 import type { Games } from '../games/index.ts';
 import type { RescueRequest } from '@mire/shared';
-import type { ExternalPlayerInfo } from '@mire/shared/ipc';
+import type { AssistantState, ExternalPlayerInfo } from '@mire/shared/ipc';
 import type { LanguageService } from '../i18n/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
 import type { UsageService } from '../usage/index.ts';
@@ -129,4 +129,6 @@ export interface MainContext {
   readonly games: Games;
   /** Mode secours (P4-10) : premier écran demandé, thème affiché sans souci. */
   readonly rescue: { takeStart(): RescueRequest | null; themeOk(): void };
+  /** Assistant du premier lancement (P4-23). */
+  readonly assistant: { state(): AssistantState; finish(): boolean };
 }

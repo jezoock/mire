@@ -80,21 +80,21 @@ Les sites proposés dans Streaming : adresse, couleur, recherche, alias pour « 
 
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
-| `svc-netflix` | Netflix | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-prime` | Prime Video | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-disney` | Disney+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-canal` | Canal+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-hbomax` | HBO Max | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-appletv` | Apple TV | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-paramount` | Paramount+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-crunchyroll` | Crunchyroll | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-youtube` | YouTube | À installer | App (site) | Données seules, Vue web ⚠ | src/main/config/catalogs/web.ts | plugin à faire évoluer. Il faudrait pouvoir downloader les vidéos youtube pour pouvoir les auvegarder et les regarder offline. |
-| `svc-francetv` | france.tv | À installer | App (site) | Données seules, Vue web ⚠ | src/main/config/catalogs/web.ts |  |
-| `svc-amazonmusic` | Amazon Music | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-spotify` | Spotify | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-deezer` | Deezer | À installer | App (site) | Données seules, Vue web ⚠, Widevine | src/main/config/catalogs/web.ts |  |
-| `svc-juststream` | JustStream | Hors dépôt officiel | App (site) | Données seules, Vue web ⚠ | src/main/config/catalogs/web.ts | à écarter du repo officiel mais prévoir un backup sur un autre repo — Ni dans le dépôt officiel, ni dans le catalogue intégré. |
-| `svc-voiranime` | Voir-Anime | Hors dépôt officiel | App (site) | Données seules, Vue web ⚠ | src/main/config/catalogs/web.ts | à écarter du repo officiel mais prévoir un backup sur un autre repo — Ni dans le dépôt officiel, ni dans le catalogue intégré. |
+| `svc-netflix` | Netflix | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.netflix` (P5-05) |  |
+| `svc-prime` | Prime Video | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.prime` (P5-05) |  |
+| `svc-disney` | Disney+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.disney` (P5-05) |  |
+| `svc-canal` | Canal+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.canal` (P5-05) |  |
+| `svc-hbomax` | HBO Max | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.hbomax` (P5-05) |  |
+| `svc-appletv` | Apple TV | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.appletv` (P5-05) |  |
+| `svc-paramount` | Paramount+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.paramount` (P5-05) |  |
+| `svc-crunchyroll` | Crunchyroll | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.crunchyroll` (P5-05) |  |
+| `svc-youtube` | YouTube | À installer | App (site) | Données seules, Vue web ⚠ | plugin `mire.web.youtube` (P5-05) | plugin à faire évoluer. Il faudrait pouvoir downloader les vidéos youtube pour pouvoir les auvegarder et les regarder offline. |
+| `svc-francetv` | france.tv | À installer | App (site) | Données seules, Vue web ⚠ | plugin `mire.web.francetv` (P5-05) |  |
+| `svc-amazonmusic` | Amazon Music | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.amazon-music` (P5-05) |  |
+| `svc-spotify` | Spotify | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.spotify` (P5-05) |  |
+| `svc-deezer` | Deezer | À installer | App (site) | Données seules, Vue web ⚠, Widevine | plugin `mire.web.deezer` (P5-05) |  |
+| `svc-juststream` | JustStream | Hors dépôt officiel | App (site) | Données seules, Vue web ⚠ | aucun : retiré du catalogue (P5-05) ; gardé comme site ajouté à la main | à écarter du repo officiel mais prévoir un backup sur un autre repo — Ni dans le dépôt officiel, ni dans le catalogue intégré. |
+| `svc-voiranime` | Voir-Anime | Hors dépôt officiel | App (site) | Données seules, Vue web ⚠ | aucun : retiré du catalogue (P5-05) ; gardé comme site ajouté à la main | à écarter du repo officiel mais prévoir un backup sur un autre repo — Ni dans le dépôt officiel, ni dans le catalogue intégré. |
 | `svc-arte` | ARTE | À installer | App (site) | Données seules, Vue web ⚠ | à créer |  |
 | `svc-tf1` | TF1+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | à créer |  |
 | `svc-m6` | M6+ | À installer | App (site) | Données seules, Vue web ⚠, Widevine | à créer |  |

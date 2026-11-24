@@ -24,6 +24,7 @@ import type { Drm, WebManager } from '../web/index.ts';
 import type { Dialogs } from '../window/dialogs.ts';
 import type { MainWindow } from '../window/main-window.ts';
 import type { Rescue } from '../app/rescue.ts';
+import type { Assistant } from '../app/assistant.ts';
 import type { ElectronApis, MainContext } from './context.ts';
 
 type Fn = (...args: any[]) => any;
@@ -61,6 +62,7 @@ export interface MainServices {
   searchStreaming: Fn;
   games: Games;
   rescue: Pick<Rescue, 'takeStart' | 'themeOk'>;
+  assistant: Pick<Assistant, 'state' | 'finish'>;
 }
 
 export function mainContext(s: MainServices): MainContext {
@@ -119,5 +121,6 @@ export function mainContext(s: MainServices): MainContext {
     searchStreaming: s.searchStreaming,
     games: s.games,
     rescue: s.rescue,
+    assistant: s.assistant,
   };
 }

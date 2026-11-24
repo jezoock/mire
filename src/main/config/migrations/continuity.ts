@@ -73,6 +73,12 @@ const paletteIn =
   (c: Loose): boolean =>
     isObjectLike(c.ui) && ids.includes((c.ui as Loose).theme);
 
+/** Le site de streaming `id` est dans la liste des sites (`web`) de la configuration (P5-05). */
+const hasSite =
+  (id: string) =>
+  (c: Loose): boolean =>
+    Array.isArray(c.web) && c.web.some((w) => isRecord(w) && w.id === id);
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
@@ -115,6 +121,21 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     ],
     providers: { tmdb: 'mire.tmdb/tmdb' },
   },
+  // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.
+  // Le site reste dans `web` (même identifiant : sa connexion et ses réglages sont retrouvés), le plugin le reprend.
+  { id: 'P5-05-netflix', plugin: 'mire.web.netflix', mode: 'install', applies: hasSite('netflix') },
+  { id: 'P5-05-prime', plugin: 'mire.web.prime', mode: 'install', applies: hasSite('prime') },
+  { id: 'P5-05-disney', plugin: 'mire.web.disney', mode: 'install', applies: hasSite('disney') },
+  { id: 'P5-05-canal', plugin: 'mire.web.canal', mode: 'install', applies: hasSite('canal') },
+  { id: 'P5-05-hbomax', plugin: 'mire.web.hbomax', mode: 'install', applies: hasSite('hbomax') },
+  { id: 'P5-05-appletv', plugin: 'mire.web.appletv', mode: 'install', applies: hasSite('appletv') },
+  { id: 'P5-05-paramount', plugin: 'mire.web.paramount', mode: 'install', applies: hasSite('paramount') },
+  { id: 'P5-05-crunchyroll', plugin: 'mire.web.crunchyroll', mode: 'install', applies: hasSite('crunchyroll') },
+  { id: 'P5-05-youtube', plugin: 'mire.web.youtube', mode: 'install', applies: hasSite('youtube') },
+  { id: 'P5-05-francetv', plugin: 'mire.web.francetv', mode: 'install', applies: hasSite('francetv') },
+  { id: 'P5-05-amazon-music', plugin: 'mire.web.amazon-music', mode: 'install', applies: hasSite('amazon-music') },
+  { id: 'P5-05-spotify', plugin: 'mire.web.spotify', mode: 'install', applies: hasSite('spotify') },
+  { id: 'P5-05-deezer', plugin: 'mire.web.deezer', mode: 'install', applies: hasSite('deezer') },
   // P5-09 : tags automatiques (séries, films, musique, consoles, photos), plugins inclus ; tout le monde les avait.
   // Aucun réglage : les tags et infos saisis à la main restent dans `userData/catalog/overrides.json`.
   { id: 'P5-09-series', plugin: 'mire.tags.series', mode: 'bundled', applies: always },
@@ -122,6 +143,22 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-09-music', plugin: 'mire.tags.music', mode: 'bundled', applies: always },
   { id: 'P5-09-consoles', plugin: 'mire.tags.consoles', mode: 'bundled', applies: always },
   { id: 'P5-09-photos', plugin: 'mire.tags.photos', mode: 'bundled', applies: always },
+];
+
+/**
+ * Messages à l'utilisateur sans plugin à la clé : une fonction qui disparaît du catalogue de Mire mais que la
+ * configuration garde (P5-05 : JustStream et Voir-Anime, restés comme sites ajoutés à la main, D-21). La note entre
+ * dans la même file `continuity` ; le service de continuité la montre une fois (`key` : texte de `continuity.notes`).
+ */
+export interface ContinuityNote {
+  id: string;
+  key: string;
+  applies(config: Loose): boolean;
+}
+
+export const CONTINUITY_NOTES: readonly ContinuityNote[] = [
+  { id: 'P5-05-juststream', key: 'juststream', applies: hasSite('juststream') },
+  { id: 'P5-05-voir-anime', key: 'voir-anime', applies: hasSite('voir-anime') },
 ];
 
 /** Fournisseurs d'infos renommés par les règles : ancien identifiant → celui du plugin qui le reprend. */
@@ -192,9 +229,20 @@ function moveSetting(raw: Loose, plugin: string, move: SettingMove): void {
 }
 
 /** Applique les règles à une configuration lue (modifiée sur place) ; rend les identifiants des règles appliquées. */
-export function applyContinuity(raw: Loose, rules: readonly ContinuityRule[] = CONTINUITY_RULES): string[] {
+export function applyContinuity(
+  raw: Loose,
+  rules: readonly ContinuityRule[] = CONTINUITY_RULES,
+  notes: readonly ContinuityNote[] = CONTINUITY_NOTES,
+): string[] {
   renameProviders(raw, providerRenames(rules));
   const applied: string[] = [];
+  for (const note of notes) {
+    try {
+      if (note.applies(raw) === true) applied.push(note.id);
+    } catch {
+      // Configuration mal formée : pas de message.
+    }
+  }
   for (const rule of rules) {
     let applies = false;
     try {

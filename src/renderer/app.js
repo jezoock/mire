@@ -8,7 +8,7 @@ import { toast } from './ui/toast.ts';
 import * as dialogs from './ui/dialogs.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
-import { DEFAULT_PALETTE, fold, splitAlbumFolder } from '@mire/shared';
+import { DEFAULT_PALETTE, fold, isSiteAvailable, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
@@ -37,6 +37,7 @@ import { createExplorer } from './explorer/index.ts';
 import { adblockStatusText, createSettings, drmStatusText } from './settings/index.ts';
 import { cardKeyOf, groupRefOf, initEditors } from './editors/index.ts';
 import { consoleCards, isGameBookmarkKey, isGameKey } from './games/model.ts';
+import { STEP_FOCUS, createAssistant } from './assistant/index.ts';
 import { applyDownload, createCentre, downloadAddedNotice, romAddedNotice, romProgressNotice } from './centre/index.ts';
 import { pluralLabel } from '@mire/ui/utils';
 import { BUILTIN_THEMES } from './themes/index.ts';
@@ -110,7 +111,7 @@ const home = createHome({
   element: (key) => api.catalogElement(key),
   // « Reprendre » : la copie locale de la liste, que le contrôleur `mire-home` relit pour reprendre une lecture.
   recent: () => (S.recent = getRecent()),
-  sites: () => S.config?.web ?? [],
+  sites: () => (S.config?.web ?? []).filter(isSiteAvailable),
   openSites: () => new Set(S.webSessions.map((x) => x.id)),
   color: safeColor,
   ink: onColor,
@@ -148,6 +149,29 @@ const centre = createCentre({
   },
 });
 
+// Assistant du premier lancement (P4-23) : section sans cible du routeur, ouverte au démarrage d'une nouvelle
+// installation ou depuis les Réglages ; il installe par les dépôts, comme le Centre.
+const ASSISTANT_VIEW = 'assistant';
+const assistant = createAssistant({
+  t,
+  language: () => i18n.language,
+  show: () => go(ASSISTANT_VIEW, { focus: 'content' }),
+  leave(to) {
+    if (to === 'centre') {
+      centre.showTab('plugins');
+      shell.open('screen:center', { focus: 'content' });
+    } else go(HOME_VIEW, { focus: 'content' });
+  },
+  onLanguageChange: (listener) => i18n.onChange(listener),
+  // Étape changée : le focus va au premier choix (ou au bouton principal) ; s'il s'est perdu, au contenu.
+  onRendered: () => {
+    if (S.section !== ASSISTANT_VIEW) return;
+    if (assistant.takeFocus()) return restoreFocus({ el: null, sel: `#view mire-assistant ${STEP_FOCUS}` });
+    const a = document.activeElement;
+    if (!a || a === document.body || !a.isConnected) focusFirst();
+  },
+});
+
 // Recherche (P4-13) : le catalogue groupé par page, « Où regarder » et les sites, rédigés par les catalogues.
 const search = createSearch({
   t,
@@ -155,7 +179,7 @@ const search = createSearch({
   catalog: (q) => api.catalogSearch(q),
   watch: (q) => api.searchStreaming(q),
   pages: () => shell.pages(),
-  sites: () => S.config?.web ?? [],
+  sites: () => (S.config?.web ?? []).filter(isSiteAvailable),
   color: safeColor,
   ink: onColor,
   recent: () => getQueries(),
@@ -207,7 +231,7 @@ const settings = createSettings({
   sources: () => ({
     config: S.config,
     languages: i18n.available,
-    sites: S.config?.web ?? [],
+    sites: (S.config?.web ?? []).filter(isSiteAvailable),
     pageThemes: pages.engine.list().map((th) => ({ id: th.id, name: themeText(th.name), description: th.description ? themeText(th.description) : '' })),
     currentPageTheme: pages.engine.current().id,
     homeLists: ['rows', 'bars', 'sites'].map((kind) => ({ kind, label: t(`home.settings.${kind}`), items: homeOptions(S.config.ui.home, kind, { t, pages: shell.pages(), lists: home.lists(), sites: S.config.web, color: safeColor }) })),
@@ -528,7 +552,7 @@ function render({ resetScroll = false } = {}) {
   // La vue de page garde son contenu (composants, tranches chargées) : son hôte est replacé, jamais réécrit.
   // De même pour l'accueil (P4-12), dont les rangées sont relues à chaque affichage, la Recherche (P4-13), le Centre
   // (P4-18), l'explorateur (P4-08) et les Réglages (P4-20).
-  const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : null;
+  const hosted = sec === 'web' ? web.host : sec === PAGE_VIEW ? pages.host : sec === HOME_VIEW ? home.host : sec === SEARCH_VIEW ? search.host : sec === CENTRE_VIEW ? centre.host : sec === EXPLORER_VIEW ? explorer.host : sec === SETTINGS_VIEW ? settings.host : sec === ASSISTANT_VIEW ? assistant.host : null;
   // L'explorateur a au-dessus de lui le bandeau du mode secours (P4-10), vide hors du mode secours.
   const hostedAll = sec === EXPLORER_VIEW ? [rescue.host, hosted] : [hosted];
   if (hosted) { if (viewEl.childElementCount !== hostedAll.length || hostedAll.some((el, i) => viewEl.children[i] !== el)) viewEl.replaceChildren(...hostedAll); }
@@ -2422,6 +2446,7 @@ api.onPluginsProgress((p) => {
   if (p.phase === 'done' || p.phase === 'error') delete S.pluginProgress[p.id];
   else S.pluginProgress[p.id] = p;
   if (S.section === CENTRE_VIEW) centre.refresh();
+  assistant.progress(p);
 });
 
 async function afterStoreChange(r, okMessage) {
@@ -2473,6 +2498,7 @@ const legacyUi = {
   openWeb, openTvWeb, openBookmark, bookmarkCurrentPage, bookmarkCurrentGame, learnSearch, syncWeb, refreshWebBar,
   getQueries, rememberQuery, search, explorer, settings,
   rescue: { themes: pageThemes, refresh: () => rescue.refresh() },
+  assistant: { session: () => assistant.session(), refresh: (focus) => assistant.refresh(focus), open: () => assistant.open(), close: (to) => assistant.close(to) },
   loadDownloads, updateDlBadge, loadCatalog, afterStoreChange,
   showCentreTab: (tab) => { centre.showTab(tab); if (S.section === CENTRE_VIEW) render(); }, afterAdblockChange, setCfg, saveUi, applyMenu,
   loadPlugins,
@@ -2677,13 +2703,10 @@ function tick() {
   await i18nReady;
   const list = await pages;
   shell.setPages(Array.isArray(list) ? list : null);
-  // Pages des plugins activés après ce premier écran (démarrage des plugins plus long que celui de l'interface) ou
-  // retirées avec leur plugin : le menu suit. Redessiné seulement si la liste a changé (`pages:changed` arrive aussi
-  // à chaque calcul des tags automatiques).
-  api.onPagesChange(async () => {
-    const next = await api.pagesList().catch(() => null);
-    if (Array.isArray(next) && JSON.stringify(next) !== JSON.stringify(shell.pages())) shell.setPages(next);
-  });
+  // Les pages prêtes à l'emploi arrivent avec leurs plugins, démarrés après la fenêtre (P5-03) : le menu suit
+  // `pages:changed`, et relit la liste une fois abonné, au cas où elle aurait changé depuis la première lecture.
+  api.onPagesChange(() => void legacyUi.reloadPages());
+  void legacyUi.reloadPages();
   S.scrape = (await api.scrapeData()) || {};
   S.meta = (await api.metaAll()) || {};
   S.adblock = await api.adblockStatus();
@@ -2730,4 +2753,7 @@ function tick() {
     if (start.startsWith('web:')) openWeb(start.slice(4));
     else if (start !== 'home' && targetOfLegacyView(start)) shell.open(targetOfLegacyView(start), { focus: 'content' });
   }
+  // Assistant du premier lancement (P4-23) : pas par-dessus le mode secours ni des fichiers ouverts avec Mire.
+  const firstRun = await api.assistantState().catch(() => null);
+  if (firstRun?.open && !pending?.length && !rescue.current()) assistant.open();
 })();

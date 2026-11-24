@@ -822,6 +822,10 @@
       },
       "reasons": {
         "missing": "“{name}” does not come with this version of Mire."
+      },
+      "notes": {
+        "juststream": "JustStream is no longer offered by Mire. It stays in your sites, as a site you added yourself: you can still open or remove it.",
+        "voir-anime": "Voir-Anime is no longer offered by Mire. It stays in your sites, as a site you added yourself: you can still open or remove it."
       }
     },
     "shell": {
@@ -838,7 +842,8 @@
         "games": "Games",
         "downloads": "Centre",
         "settings": "Settings",
-        "explorer": "Explorer"
+        "explorer": "Explorer",
+        "assistant": "Getting started"
       },
       "menu": {
         "label": "Main menu",
@@ -1516,6 +1521,11 @@
         "notList": "“{key}” must be a list between brackets [ ].",
         "saved": "Sites, games and consoles saved"
       },
+      "assistant": {
+        "title": "Setup assistant",
+        "help": "Go through the first-launch questions again: language, what you want to do, your TV box and services. Nothing is removed; only the plugins you choose are added.",
+        "run": "Run the assistant again"
+      },
       "config": {
         "title": "Configuration",
         "help": "Your whole setup (streaming sites, consoles, PC games, sources, download sites) fits in one file. Export it to back it up or to use it on another computer. When importing, “replace” overwrites the current configuration, “complete” adds what is missing without removing anything.",
@@ -2063,6 +2073,107 @@
       "themes": "Choose another theme",
       "home": "Go to Home",
       "chosen": "“{theme}” theme chosen."
+    },
+    "assistant": {
+      "progress": "Step {step} of {count}",
+      "buttons": {
+        "start": "Start",
+        "back": "Back",
+        "next": "Continue",
+        "skip": "Skip",
+        "install": "Install",
+        "nothing": "Install nothing",
+        "finish": "Finish",
+        "openCentre": "Open the Centre"
+      },
+      "welcome": {
+        "title": "Welcome to Mire",
+        "help": "A few questions to set Mire up for what you like to watch, listen to and play. It takes a minute.",
+        "network": "Mire will read the list of plugins on the Internet. Nothing is installed without your consent.",
+        "loading": "Reading the list of plugins…"
+      },
+      "language": {
+        "title": "Language",
+        "current": "Mire is shown in {language}.",
+        "system": "Your computer is set to {language}.",
+        "pack": "The “{name}” language pack will be installed with the rest.",
+        "packInstalled": "The “{name}” language pack is already installed.",
+        "builtin": "Mire is already shown in this language.",
+        "missing": "Mire is not translated into this language yet: it is shown in {language}."
+      },
+      "uses": {
+        "title": "What you want to do",
+        "help": "Choose everything you are interested in. You can change your mind later.",
+        "none": "No plugins are offered for now. You can add some later in the Centre.",
+        "offline": "The list of plugins could not be read (no connection?). You can add plugins later in the Centre.",
+        "families": {
+          "movies": {
+            "label": "Movies and series",
+            "help": "Your videos, with posters and summaries"
+          },
+          "music": {
+            "label": "Music",
+            "help": "Your songs, by artist and album"
+          },
+          "photos": {
+            "label": "Photos",
+            "help": "Your pictures and slideshows"
+          },
+          "games": {
+            "label": "Games",
+            "help": "Your games and consoles"
+          },
+          "tv": {
+            "label": "Television",
+            "help": "The channels of your TV box"
+          },
+          "streaming": {
+            "label": "Streaming",
+            "help": "Your online video and music services"
+          }
+        }
+      },
+      "box": {
+        "title": "Your TV box",
+        "help": "Choose your TV box to watch its channels in Mire.",
+        "none": "I don’t have a TV box"
+      },
+      "services": {
+        "title": "Your streaming services",
+        "help": "Choose the services you use."
+      },
+      "summary": {
+        "title": "Plugins to install",
+        "help": "Here is what will be installed, with what each plugin asks for. Nothing is installed until you choose “Install”.",
+        "empty": "There is nothing to install for these choices.",
+        "later": "Everything can be changed later in the Centre, Plugins tab. The assistant can be run again from Settings.",
+        "requiredBy": "Needed by {names}",
+        "consentNeeded": "Consent required",
+        "reasons": {
+          "language": "Language",
+          "box": "Your TV box",
+          "service": "Streaming service"
+        }
+      },
+      "install": {
+        "title": "Installing",
+        "help": "The plugins are being installed. You can follow their progress here.",
+        "busy": "Installing…",
+        "states": {
+          "waiting": "Waiting",
+          "running": "Installing…",
+          "installed": "Installed",
+          "failed": "Not installed",
+          "declined": "Not installed (no consent given)"
+        }
+      },
+      "done": {
+        "title": "All set",
+        "help": "Everything is installed. Enjoy!",
+        "someFailed": "Some plugins could not be installed. Mire can still be used: you can try again in the Centre."
+      },
+      "skipped": "You can set everything up later in the Centre.",
+      "failed": "The assistant could not read the list of plugins."
     }
   }
 }

@@ -20,6 +20,8 @@ const THEMES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'];
 // le dossier de données comme un plugin installé.
 const CORE_PALETTES = ['ecran', 'contraste'];
 const PALETTE_PLUGIN = path.join(__dirname, 'palettes', 'org.exemple.palettes');
+// Service de streaming d'un plugin factice (P5-05), installé à la main comme le plugin de palettes.
+const SERVICE_PLUGIN = path.join(__dirname, 'webapps', 'org.exemple.service');
 // Fond d'une palette : palette.json pour celles du cœur, jeton `bg` du plugin factice pour les autres.
 const paletteBackground = (id) =>
   CORE_PALETTES.includes(id)
@@ -91,6 +93,7 @@ function prepareData() {
   }
   // Plugin de palettes factice, installé à la main : userData/plugins/<id>/<version>/ (P5-02).
   fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
+  fs.cpSync(SERVICE_PLUGIN, path.join(data, 'plugins', 'org.exemple.service', '1.0.0'), { recursive: true });
   return data;
 }
 
@@ -99,6 +102,18 @@ const hexToRgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 
 
 async function shot(name) {
   await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
+}
+
+// Attend qu'une vérification (fonction de Node, qui peut lire la page) soit vraie. waitForFunction ne convient pas
+// quand la condition passe par window.api : il ne résout pas la promesse renvoyée, toujours « vraie ».
+async function until(check, { timeout = 30000 } = {}) {
+  const end = Date.now() + timeout;
+  for (;;) {
+    const value = await check();
+    if (value) return value;
+    if (Date.now() > end) throw new Error(`Attente dépassée (${timeout} ms) : ${check.toString().slice(0, 160)}`);
+    await new Promise((r) => setTimeout(r, 50));
+  }
 }
 
 async function settle() {
@@ -181,7 +196,9 @@ describe('Test de fumée de Mire', () => {
     // L'horloge est rendue par mire-header : elle peut manquer aux premières images (?. : l'attente continue).
     await page.waitForFunction(() => document.getElementById('clock')?.textContent === '20:45', null, { timeout: 10000 });
     // Plugins démarrés, palettes du plugin factice connues de l'interface (P5-02).
-    await page.waitForFunction(() => window.api.palettesList().then((p) => p.ready && p.palettes.length === 3), null, { timeout: 20000 });
+    await until(() => page.evaluate(() => window.api.palettesList().then((p) => p.ready && p.palettes.length === 3)), { timeout: 20000 });
+    // Pages prêtes à l'emploi des plugins (P5-03) : le menu les montre, quel que soit le moment où elles sont arrivées.
+    await page.locator('#rail .rail-item[data-key="movies"]').waitFor();
   });
 
   after(async () => {
@@ -2015,7 +2032,7 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await shown(), [
         ['games', ['Aventure de démonstration', 'Puzzle de démonstration']],
         ['watch', []],
-        ['sites', ['Arte', 'Radio France']],
+        ['sites', ['Arte', 'Radio France', 'Essai TV']],
       ]);
       // Sans plugin « Où regarder » (TMDB est un plugin à installer, P5-15), la Recherche propose d'en installer un.
       await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'plugin « Où regarder »' }).waitFor();
@@ -2945,7 +2962,7 @@ describe('Test de fumée de Mire', () => {
       await field('Émulateur').locator('select').selectOption(made.id);
       await button('Enregistrer').click();
       await formClosed();
-      await page.waitForFunction(async (id) => (await window.api.getConfig()).config.emulators[0].emulator === id, made.id);
+      await until(() => page.evaluate(async (id) => (await window.api.getConfig()).config.emulators[0].emulator === id, made.id));
       await demoCard.getByText('celui de la console Super Nintendo (bis)').waitFor();
       // Pour un jeu : la boîte du jeu (clic droit sur sa carte) garde un autre choix, enregistré par sa clé.
       const key = await findRom();
@@ -2989,7 +3006,7 @@ describe('Test de fumée de Mire', () => {
       assert.equal(await formOpen(), 'Retirer la console Super Nintendo (bis) ?');
       await button('Retirer').click();
       await formClosed();
-      await page.waitForFunction(async () => (await window.api.getConfig()).config.emulators.length === 1);
+      await until(() => page.evaluate(async () => (await window.api.getConfig()).config.emulators.length === 1));
       assert.equal((await consoles())[0].emulator, undefined);
       assert.deepEqual(errors, []);
     });
@@ -3214,10 +3231,10 @@ describe('Test de fumée de Mire', () => {
     // Valeur enregistrée dans la configuration (processus principal), au chemin donné.
     const saved = (p) => page.evaluate(async (q) => q.split('.').reduce((o, k) => o?.[k], (await window.api.getConfig()).config), p);
     const waitSaved = (p, v) =>
-      page.waitForFunction(
-        async ([q, w]) => JSON.stringify(q.split('.').reduce((o, k) => o?.[k], (await window.api.getConfig()).config)) === JSON.stringify(w),
-        [p, v],
-      );
+      until(async () => {
+        const config = await page.evaluate(async () => (await window.api.getConfig()).config);
+        return JSON.stringify(p.split('.').reduce((o, k) => o?.[k], config)) === JSON.stringify(v);
+      });
     const palette = (id) => page.locator(`${VIEW} .mire-settings-view__palette[data-key="${id}"]`);
     const providers = () => page.$$eval(`${VIEW} ds-sortable[data-list="providers"] [data-key]`, (els) => els.map((e) => e.dataset.key));
 
@@ -3362,8 +3379,7 @@ describe('Test de fumée de Mire', () => {
         VIEW,
       );
     const config = () => page.evaluate(async () => (await window.api.getConfig()).config);
-    const waitConfig = (fn, arg) =>
-      page.waitForFunction(async ([f, a]) => new Function('c', 'a', `return (${f})(c, a)`)((await window.api.getConfig()).config, a), [fn.toString(), arg]);
+    const waitConfig = (fn, arg) => until(async () => fn(await config(), arg));
     const group = (key) => page.locator(`${VIEW} .mire-settings-view__group[data-list="${key}"]`);
     // Message bref masqué avant une capture : il dépend du minutage.
     const hideToast = async () => {
@@ -3495,7 +3511,7 @@ describe('Test de fumée de Mire', () => {
       await page.locator(VIEW).screenshot({ path: path.join(SHOTS, 'rescue-banner.png') });
       // Choix d'un autre thème depuis l'explorateur : enregistré, puis l'accueil.
       await page.locator(`${VIEW} .mire-rescue-view__theme.hydrated[data-key="mire"]`).click();
-      await page.waitForFunction(async () => (await window.api.getConfig()).config.ui.pageTheme === 'mire');
+      await until(() => page.evaluate(async () => (await window.api.getConfig()).config.ui.pageTheme === 'mire'));
       await page.locator(`${VIEW} .mire-rescue-view__home.hydrated`).click();
       await page.waitForFunction(() => document.body.dataset.section === 'home');
       assert.equal(await page.evaluate(() => document.querySelector('#view mire-rescue')), null);
@@ -4013,12 +4029,12 @@ describe('Test de fumée de Mire', () => {
       await page.locator('#set-fileTags-ext').fill('XYZ');
       await page.locator('#set-fileTags-tags').fill('Vidéo, Films');
       await group('fileTags').locator('ds-trigger[action^="addEntry"]').click();
-      await page.waitForFunction(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{".xyz":["video","movie"]}');
+      await until(() => page.evaluate(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{".xyz":["video","movie"]}'));
       await row('fileTags', '.xyz').waitFor();
       assert.equal(await row('fileTags', '.xyz').locator('.mire-settings-view__detail').textContent(), 'Vidéo, Films');
       await hydrated();
       await row('fileTags', '.xyz').locator('ds-trigger[action^="removeEntry"]').click();
-      await page.waitForFunction(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{}');
+      await until(() => page.evaluate(async () => JSON.stringify((await window.api.getConfig()).config.catalog?.fileTags) === '{}'));
       await row('fileTags', '.xyz').waitFor({ state: 'detached' });
       assert.deepEqual(errors, []);
     });
@@ -4050,13 +4066,10 @@ describe('Test de fumée de Mire', () => {
       await page.keyboard.press('Space');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('Space');
-      await page.waitForFunction(
-        async ([a, b]) => {
-          const order = (await window.api.listsList()).map((l) => l.id);
-          return order.indexOf(a) === order.indexOf(b) - 1;
-        },
-        [later, tonight],
-      );
+      await until(async () => {
+        const order = await page.evaluate(async () => (await window.api.listsList()).map((l) => l.id));
+        return order.indexOf(later) === order.indexOf(tonight) - 1;
+      });
       // Supprimées, après confirmation : on revient aux listes du départ.
       for (const id of [tonight, later]) {
         await hydrated();
@@ -4437,6 +4450,42 @@ describe('Test de fumée de Mire', () => {
       await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
       await page.locator('#rail [data-go="home"]').click();
       await page.waitForFunction(() => document.body.dataset.section === 'home');
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  // Services de streaming des plugins (P5-05) : le service d'un plugin factice rejoint Streaming ; plugin désactivé,
+  // il en sort sans erreur (réglages gardés) ; réactivé, il revient.
+  describe('services de streaming des plugins (P5-05)', () => {
+    const service = () => page.evaluate(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv') ?? null));
+    const element = () => page.evaluate(() => window.api.catalogElement('web:essai-tv'));
+
+    it('le service d’un plugin factice est un site de Streaming ; désactivé : il disparaît sans erreur ; réactivé : il revient', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.some((w) => w.id === 'essai-tv')), null, { timeout: 20000 });
+      const site = await service();
+      assert.deepEqual(
+        [site.url, site.color, site.group, site.app, site.search, site.providers, site.inactive],
+        ['https://essai-tv.example/', '#3366CC', 'video', 'org.exemple.service', 'https://essai-tv.example/recherche?q={q}', ['essai tv'], undefined],
+      );
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
+      assert.equal((await element()).infos.category, 'video');
+
+      assert.ok(await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.service', false)));
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv')?.inactive === true), null, {
+        timeout: 10000,
+      });
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !e), null, { timeout: 10000 });
+      assert.equal((await service()).url, 'https://essai-tv.example/');
+
+      await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.service', true));
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv')?.inactive === undefined), null, {
+        timeout: 10000,
+      });
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
     });

@@ -243,8 +243,8 @@ test.describe('migration v9 (P2-11)', () => {
     delete out.ui.home.rows;
     // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15).
     assert.deepEqual(out.plugins, { 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } });
-    // File de la continuité (v10, P5-01) : celle des fixtures, avec TMDB (P5-15).
-    assert.ok(out.continuity.includes('P5-15'));
+    // File de la continuité (v10, P5-01) : celle des fixtures, TMDB (P5-15) et les services de streaming (P5-05) compris.
+    assert.ok(out.continuity.includes('P5-15') && out.continuity.includes('P5-05-netflix'));
     assert.deepEqual(out.continuity, readFixture('config-v8.migrated.json').raw.continuity);
     delete out.plugins;
     delete out.continuity;

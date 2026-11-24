@@ -11,6 +11,7 @@ import type { FormOptions } from '../ui/dialogs.ts';
 import type { Search } from '../search/index.ts';
 import type { Explorer } from '../explorer/index.ts';
 import type { Settings } from '../settings/index.ts';
+import type { Session } from '../assistant/model.ts';
 
 /** Lecteur vidéo (`src/renderer/players/video.ts`, P4-14) : ce que ses commandes font. */
 export interface VideoUi {
@@ -174,6 +175,20 @@ export interface LegacyUi {
   applyMenu(): void;
   /** Mode secours (P4-10) : thèmes proposés, bandeau redessiné. */
   rescue: { themes(): { id: string; name: string }[]; refresh(): void };
+  /** Assistant du premier lancement (P4-23, `src/renderer/assistant/`). */
+  assistant: AssistantUi;
+}
+
+/** Assistant du premier lancement (P4-23) : son passage en cours, l'écran, sa fermeture. */
+export interface AssistantUi {
+  /** Passage en cours (changé par le contrôleur `mire-assistant`). */
+  session(): Session;
+  /** Redessine ; `focus` : l'élément de l'étape (`--focus`) reçoit le focus après le rendu. */
+  refresh(focus?: boolean): void;
+  /** Ouvre l'assistant sur un nouveau passage (premier lancement, ou relancé depuis les Réglages). */
+  open(): void;
+  /** Quitte l'assistant vers l'accueil, ou vers l'onglet Plugins du Centre. */
+  close(to: 'home' | 'centre'): void;
 }
 
 export interface ControllerContext {
