@@ -1,0 +1,8 @@
+{
+  "name": "Essai TV",
+  "url": "https://essai-tv.example/",
+  "color": "#3366CC",
+  "search": "https://essai-tv.example/recherche?q={query}",
+  "providers": ["essai tv"],
+  "category": "video"
+}

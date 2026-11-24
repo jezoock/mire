@@ -181,7 +181,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | faite | |
 | P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | faite | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | faite | |
-| P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
+| P5-05 | Services de streaming | M | P5-01 | 🧑 | faite | |
 | P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |
 | P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | faite | |
 | P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |

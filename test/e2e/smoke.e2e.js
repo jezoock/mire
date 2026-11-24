@@ -20,6 +20,8 @@ const THEMES = ['ecran', 'jour', 'minuit', 'velours', 'contraste'];
 // le dossier de données comme un plugin installé.
 const CORE_PALETTES = ['ecran', 'contraste'];
 const PALETTE_PLUGIN = path.join(__dirname, 'palettes', 'org.exemple.palettes');
+// Service de streaming d'un plugin factice (P5-05), installé à la main comme le plugin de palettes.
+const SERVICE_PLUGIN = path.join(__dirname, 'webapps', 'org.exemple.service');
 // Fond d'une palette : palette.json pour celles du cœur, jeton `bg` du plugin factice pour les autres.
 const paletteBackground = (id) =>
   CORE_PALETTES.includes(id)
@@ -91,6 +93,7 @@ function prepareData() {
   }
   // Plugin de palettes factice, installé à la main : userData/plugins/<id>/<version>/ (P5-02).
   fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
+  fs.cpSync(SERVICE_PLUGIN, path.join(data, 'plugins', 'org.exemple.service', '1.0.0'), { recursive: true });
   return data;
 }
 
@@ -2015,7 +2018,7 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await shown(), [
         ['games', ['Aventure de démonstration', 'Puzzle de démonstration']],
         ['watch', []],
-        ['sites', ['Arte', 'Radio France']],
+        ['sites', ['Arte', 'Radio France', 'Essai TV']],
       ]);
       // Sans clé TMDB, « Où regarder » propose de l'ajouter.
       await page.locator(`${VIEW} [data-group="watch"] .mire-search-view__note`, { hasText: 'Ajoutez une clé TMDB' }).waitFor();
@@ -4445,6 +4448,42 @@ describe('Test de fumée de Mire', () => {
       await page.evaluate(() => document.getElementById('toast')?.classList.remove('show'));
       await page.locator('#rail [data-go="home"]').click();
       await page.waitForFunction(() => document.body.dataset.section === 'home');
+      page.off('pageerror', onError);
+      assert.deepEqual(errors, []);
+    });
+  });
+
+  // Services de streaming des plugins (P5-05) : le service d'un plugin factice rejoint Streaming ; plugin désactivé,
+  // il en sort sans erreur (réglages gardés) ; réactivé, il revient.
+  describe('services de streaming des plugins (P5-05)', () => {
+    const service = () => page.evaluate(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv') ?? null));
+    const element = () => page.evaluate(() => window.api.catalogElement('web:essai-tv'));
+
+    it('le service d’un plugin factice est un site de Streaming ; désactivé : il disparaît sans erreur ; réactivé : il revient', async () => {
+      const errors = [];
+      const onError = (e) => errors.push(e.message);
+      page.on('pageerror', onError);
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.some((w) => w.id === 'essai-tv')), null, { timeout: 20000 });
+      const site = await service();
+      assert.deepEqual(
+        [site.url, site.color, site.group, site.app, site.search, site.providers, site.inactive],
+        ['https://essai-tv.example/', '#3366CC', 'video', 'org.exemple.service', 'https://essai-tv.example/recherche?q={q}', ['essai tv'], undefined],
+      );
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
+      assert.equal((await element()).infos.category, 'video');
+
+      assert.ok(await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.service', false)));
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv')?.inactive === true), null, {
+        timeout: 10000,
+      });
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !e), null, { timeout: 10000 });
+      assert.equal((await service()).url, 'https://essai-tv.example/');
+
+      await page.evaluate(() => window.api.pluginsSetEnabled('org.exemple.service', true));
+      await page.waitForFunction(() => window.api.getConfig().then((r) => r.config.web.find((w) => w.id === 'essai-tv')?.inactive === undefined), null, {
+        timeout: 10000,
+      });
+      await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
     });
