@@ -1,0 +1,16 @@
+{
+  "name": "mire.tags.music",
+  "private": true,
+  "description": "Artiste, album et piste d’après les noms des dossiers et des fichiers",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}

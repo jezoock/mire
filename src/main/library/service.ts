@@ -9,7 +9,7 @@ import type { AccessPolicy } from '../security/access-policy.ts';
 import { isLibrarySource, librarySources } from './element-sources.ts';
 import { itemFromPath } from './item-from-path.ts';
 import { scanLibrary, type ScanOptions } from './scan.ts';
-import { findSubtitles } from './subtitles.ts';
+import { findSubtitles, type Subtitle } from './subtitles.ts';
 import type { RemoteSubtitles, ScannedLocation, ScanResult } from './types.ts';
 
 export interface LibraryServiceDeps {
@@ -24,6 +24,8 @@ export interface LibraryServiceDeps {
    * alors du plugin, et ceux du cœur quittent le catalogue.
    */
   claimed?: (instance: string) => boolean;
+  /** Sous-titres trouvés par les plugins pour une vidéo locale déjà autorisée (P5-11b). */
+  pluginSubtitles?: (videoPath: string) => Promise<Subtitle[]>;
   /** Un emplacement n'a pas pu alimenter le catalogue (journal par défaut) ; l'analyse continue. */
   onCatalogError?: (err: Error) => void;
 }
@@ -76,7 +78,7 @@ export function createLibraryService(deps: LibraryServiceDeps) {
       return { items, status };
     },
     itemFromPath: (p: unknown) => itemFromPath(p, { allowFile: access.allowFile }),
-    findSubtitles: (videoPath: string) => findSubtitles(videoPath, { remote, isAllowed: access.isAllowed }),
+    findSubtitles: (videoPath: unknown) => findSubtitles(videoPath, { remote, isAllowed: access.isAllowed, plugins: deps.pluginSubtitles }),
   };
 }
 

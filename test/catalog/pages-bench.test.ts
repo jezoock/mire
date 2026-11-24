@@ -13,7 +13,7 @@ import { createPages } from '../../src/main/catalog/pages/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import { fakeCatalog } from './fake-catalog.ts';
 import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
 
@@ -39,7 +39,7 @@ describe('mesures des pages sur 20 000 éléments factices', () => {
       overrides,
       registry: createRegistry((k) => k),
       rules: () => fileTagRules(undefined),
-      contributors: builtinTaggers(() => []).map(taggerContributor),
+      contributors: bundledTaggers(),
     });
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
     const fresh = () => {

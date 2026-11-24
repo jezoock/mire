@@ -1,14 +1,14 @@
 // Bibliothèque (P1-14) sur dossiers temporaires : affiches, fanart, épisodes, images d'illustration ignorées,
-// profondeur, dossiers cachés ; regroupement des sources, marque-pages, sous-titres locaux, fichiers ouverts.
+// profondeur, dossiers cachés ; regroupement des sources, marque-pages, fichiers ouverts.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { scanLibrary, findSubtitles, itemFromPath, MAX_ITEMS } from '../../src/main/library/index.ts';
+import { scanLibrary, itemFromPath, MAX_ITEMS } from '../../src/main/library/index.ts';
 import type { LibraryItem } from '../../src/main/library/index.ts';
 import type { Bookmark, LibrarySource } from '@mire/shared';
 import { libraryTree } from './fixtures.ts';
 
-const { root, touch, remove } = libraryTree();
+const { root, remove } = libraryTree();
 test.after(remove);
 
 const src = (id: string, kind: LibrarySource['kind'], rel: string): LibrarySource => ({ id, kind, location: path.join(root, rel) });
@@ -96,20 +96,8 @@ test('marque-pages de streaming ajoutés comme des vidéos', async () => {
   assert.equal(items[1].season, null);
 });
 
-test('sous-titres locaux : langue, conversion SRT, vidéo hors des dossiers autorisés', async () => {
-  const video = path.join(root, 'Sous-titres/Film.mkv');
-  touch('Sous-titres/Film.mkv');
-  touch('Sous-titres/Film.fr.srt', '1\n00:00:01,000 --> 00:00:02,000\nBonjour\n');
-  touch('Sous-titres/Film.vtt', 'WEBVTT\n');
-  touch('Sous-titres/Autre.srt', '');
-  const subs = await findSubtitles(video, { remote: new Map(), isAllowed: () => true });
-  const fr = subs.find((s) => s.lang === 'fr');
-  assert.equal(subs.length, 2);
-  assert.equal(fr?.label, 'fr');
-  assert.match(fr?.vtt as string, /^WEBVTT[\s\S]*00:00:01\.000 --> 00:00:02\.000/);
-  assert.equal(subs.find((s) => !s.lang)?.label, 'Sous-titres');
-  assert.deepEqual(await findSubtitles(video, { remote: new Map(), isAllowed: () => false }), []);
-});
+// Sous-titres posés à côté d'une vidéo : plugin inclus mire.subtitles (P5-11b), testé dans
+// plugins/mire.subtitles/test/ et test/plugins/subtitles.test.ts.
 
 test('fichier ouvert : élément, pochette autorisée avec lui', async () => {
   const allowed: string[] = [];

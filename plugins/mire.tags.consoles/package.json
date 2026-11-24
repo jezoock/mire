@@ -1,0 +1,16 @@
+{
+  "name": "mire.tags.consoles",
+  "private": true,
+  "description": "Console d’un jeu d’après l’extension de son fichier",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}

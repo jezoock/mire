@@ -16,7 +16,7 @@ npm install --save-dev https://github.com/jezoock/mire/releases/download/<versio
 
 | Import | Contenu |
 | --- | --- |
-| `@mire/plugin-sdk` | Types : `Element`, `OpenSpec`, `InfoValue`… ; contributions de code (`ElementSource`, `Tagger`, `InfoDeclaration`, `MetadataProvider`, `SearchProvider`, `WebExtension`, `Downloader`) ; contexte d'un plugin (`PluginContext` : `http`, `files`, `storage`, `settings`, `log`, `events`) ; manifeste (`PluginManifest`). Fonctions : cibles (`parseTarget`, `formatTarget`, `CORE_SCREENS`), `validateManifest`. |
+| `@mire/plugin-sdk` | Types : `Element`, `OpenSpec`, `InfoValue`… ; contributions de code (`ElementSource`, `Tagger`, `InfoDeclaration`, `MetadataProvider`, `SearchProvider`, `SubtitleProvider`, `WebExtension`, `Downloader`) ; contexte d'un plugin (`PluginContext` : `http`, `files`, `storage`, `settings`, `log`, `events`) ; manifeste (`PluginManifest`). Fonctions : cibles (`parseTarget`, `formatTarget`, `CORE_SCREENS`), `validateManifest`. |
 | `@mire/plugin-sdk/validate` | `validatePluginDir(dossier, { official })` (Node). |
 | `@mire/plugin-sdk/mire-plugin.schema.json` | Schéma JSON du manifeste, pour les éditeurs (`"$schema"`). |
 

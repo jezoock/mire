@@ -14,7 +14,7 @@ import { createPages, PAGE_SIZE } from '../../src/main/catalog/pages/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
@@ -39,7 +39,7 @@ function setup(dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-lists-'))) {
     overrides,
     registry: createRegistry(t),
     rules: () => fileTagRules(undefined),
-    contributors: builtinTaggers(() => []).map(taggerContributor),
+    contributors: bundledTaggers(),
   });
   const ignored: string[] = [];
   const listsFile = path.join(dir, 'lists.json');

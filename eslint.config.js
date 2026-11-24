@@ -36,9 +36,14 @@ module.exports = [
     languageOptions: { ecmaVersion: 'latest', globals: { ...globals.node, ...globals.browser, ...globals.worker } },
   },
   {
-    // Plugins à installer écrits ici pour la session mire-addons (P5-16) ; retiré avec le dossier addons/.
-    files: ['addons/**/*.mjs'],
-    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.node },
+    // Plugins inclus (copie de mire-addons) : leur code tourne dans l'hôte isolé (Worker, sans Node) ; leurs tests
+    // tournent sous Node.
+    files: ['plugins/**/*.mjs', 'addons/**/*.mjs'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.worker },
+  },
+  {
+    files: ['plugins/*/test/**/*.mjs', 'addons/*/test/**/*.mjs'],
+    languageOptions: { globals: globals.node },
   },
   {
     // Tests de bout en bout : les fonctions passées à page.evaluate s'exécutent dans la page.

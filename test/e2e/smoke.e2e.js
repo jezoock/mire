@@ -187,7 +187,8 @@ describe('Test de fumée de Mire', () => {
     page = await app.firstWindow();
     // Taille fixe, quel que soit l'écran : les captures restent comparables d'une machine à l'autre.
     await app.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
+      // Fenêtre de Mire : pas celle, cachée, de l'hôte isolé des plugins de code (`mire-plugin://host`, P5-09).
+      const win = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:'));
       win.setFullScreen(false);
       win.setContentSize(1600, 900);
     });
@@ -1679,7 +1680,14 @@ describe('Test de fumée de Mire', () => {
         return a?.dataset.tab ?? (a?.classList.contains('mire-centre-view__add-link') ? 'addLink' : (a?.localName ?? null));
       });
     // Téléchargement envoyé par le processus principal, comme le gestionnaire de téléchargements (canal `download`).
-    const sendDownload = (item) => app.evaluate(({ BrowserWindow }, d) => BrowserWindow.getAllWindows()[0].webContents.send('download', d), item);
+    const sendDownload = (item) =>
+      app.evaluate(
+        ({ BrowserWindow }, d) =>
+          BrowserWindow.getAllWindows()
+            .find((w) => !w.webContents.getURL().startsWith('mire-plugin:'))
+            .webContents.send('download', d),
+        item,
+      );
     const STOPPED = {
       id: 'demo-interrompu',
       kind: 'http',
@@ -3104,7 +3112,7 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(bar, { kind: 'tv', name: 'Portail de démonstration', brand: '#E23B3B' });
       // La vue native est posée sur la place réservée par mire-web-slot.
       const placed = await app.evaluate(({ BrowserWindow }) => {
-        const [view] = BrowserWindow.getAllWindows()[0].contentView.children;
+        const [view] = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:')).contentView.children;
         return view ? view.getBounds() : null;
       });
       const slot = await page.evaluate(() => {
@@ -3152,7 +3160,11 @@ describe('Test de fumée de Mire', () => {
       await padPress('b');
       await page.waitForFunction(() => document.body.dataset.section === 'page' && document.getElementById('title')?.textContent === 'Télévision');
       // La vue native est cachée hors de la section web.
-      const visible = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.some((v) => v.getVisible()));
+      const visible = await app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => !w.webContents.getURL().startsWith('mire-plugin:'))
+          .contentView.children.some((v) => v.getVisible()),
+      );
       assert.equal(visible, false);
       assert.deepEqual(errors, []);
     });
@@ -3524,7 +3536,7 @@ describe('Test de fumée de Mire', () => {
       // Touche envoyée par la fenêtre (comme le clavier), et non injectée dans la page : elle passe par
       // `before-input-event` du processus principal, qui la lit avant la page.
       await app.evaluate(({ BrowserWindow }) => {
-        const wc = BrowserWindow.getAllWindows()[0].webContents;
+        const wc = BrowserWindow.getAllWindows().find((w) => !w.webContents.getURL().startsWith('mire-plugin:')).webContents;
         for (const type of ['keyDown', 'keyUp']) wc.sendInputEvent({ type, keyCode: 'E', modifiers: ['control', 'shift'] });
       });
       await rescueShown('Explorateur ouvert par le raccourci du mode secours.');
@@ -4488,6 +4500,70 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => window.api.catalogElement('web:essai-tv').then((e) => !!e), null, { timeout: 10000 });
       page.off('pageerror', onError);
       assert.deepEqual(errors, []);
+    });
+  });
+
+  // Tags automatiques (P5-09) : cinq plugins inclus de niveau code, actifs dès le premier lancement ; un épisode de la
+  // bibliothèque porte le tag `series` et ses infos ; plugin désactivé, ses tags disparaissent, un tag saisi à la main
+  // reste ; réactivé, ils reviennent.
+  describe('tags automatiques, plugins inclus (P5-09)', () => {
+    const seriesKeys = () => page.evaluate(() => window.api.catalogPage('tag:series', [], null).then((l) => (l.elements ?? []).map((e) => e.key)));
+    const waitSeries = (some) => until(async () => (await seriesKeys()).length > 0 === some, { timeout: 15000 });
+
+    it('les cinq plugins inclus sont actifs ; un épisode porte `series`, sa saison et son épisode', async () => {
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const k of ['series', 'movies', 'music', 'consoles', 'photos']) {
+        const p = list.find((x) => x.id === `mire.tags.${k}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], k);
+      }
+      // Les lots se calculent dans l'hôte isolé : le tag arrive peu après le démarrage.
+      await waitSeries(true);
+      const keys = await seriesKeys();
+      const episodes = await Promise.all(keys.map((k) => page.evaluate((key) => window.api.catalogElement(key), k)));
+      const e = episodes.find((x) => x.name === 'S01E01');
+      assert.ok(e, episodes.map((x) => x.name).join());
+      assert.ok(e.tags.includes('video') && e.tags.includes('series'), e.tags.join());
+      assert.deepEqual([e.infos.season, e.infos.episode], [1, 1]);
+      const tag = (await page.evaluate(() => window.api.tagsList())).find((t) => t.id === 'series');
+      assert.deepEqual([tag?.origin, tag?.name], ['plugin', 'Séries']);
+    });
+
+    it('plugin désactivé : ses tags disparaissent, un tag saisi à la main reste ; réactivé, ils reviennent', async () => {
+      const [key] = await seriesKeys();
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'Gardé e2e': true }), key);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', false));
+      await waitSeries(false);
+      const off = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.equal(off.tags.includes('series'), false);
+      assert.ok(off.tags.includes('garde-e2e'), off.tags.join());
+      assert.equal(off.infos.season, undefined);
+      assert.equal(
+        (await page.evaluate(() => window.api.tagsList())).some((t) => t.id === 'series'),
+        false,
+      );
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', true));
+      await waitSeries(true);
+      const on = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.ok(on.tags.includes('series') && on.tags.includes('garde-e2e'), on.tags.join());
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'garde-e2e': null }), key);
+    });
+  });
+
+  describe('sous-titres (P5-11b)', () => {
+    it('le plugin inclus mire.subtitles est actif ; désactivé, la vidéo de démonstration n’a plus de sous-titres, réactivé ils reviennent', async () => {
+      const file = path.join(tmp, 'fixtures', 'media', 'Démonstration.webm');
+      const plugin = () => page.evaluate(() => window.api.pluginsList().then((l) => l.find((p) => p.id === 'mire.subtitles')));
+      assert.deepEqual(await plugin().then((p) => p && [p.origin, p.enabled, p.status]), ['bundled', true, 'active']);
+      // Fichier ouvert : autorisé par la politique d'accès, comme à l'ouverture depuis le système.
+      await page.evaluate((f) => window.api.fromPaths([f]), file);
+      const langs = () => page.evaluate((f) => window.api.subtitles(f).then((l) => l.map((s) => s.lang).sort()), file);
+      assert.deepEqual(await langs(), ['en', 'fr']);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', false));
+      await until(async () => (await plugin())?.status === 'disabled', { timeout: 10000 });
+      assert.deepEqual(await langs(), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.subtitles', true));
+      await until(async () => (await plugin())?.status === 'active', { timeout: 10000 });
+      assert.deepEqual(await langs(), ['en', 'fr']);
     });
   });
 });

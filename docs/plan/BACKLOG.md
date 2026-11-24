@@ -185,10 +185,10 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-06 | Télévision : liste M3U, portail web, packs des box | M | P5-01, P3-05 | 🧑 | à faire | |
 | P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | faite | |
 | P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |
-| P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | à faire | |
+| P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | faite | [#108](https://github.com/jezoock/mire/pull/108) |
 | P5-10 | Thème Mire | S | P4-11, P4-24 |  | à faire | |
 | P5-11a | Socle des sources de fichiers | M | P5-01, P3-04 |  | faite | [#107](https://github.com/jezoock/mire/pull/107) |
-| P5-11b | Sous-titres | S | P5-11a |  | à faire | |
+| P5-11b | Sous-titres | S | P5-11a |  | faite | |
 | P5-11c | Dossier local | M | P5-11a |  | à faire | |
 | P5-11d | Partage réseau | S | P5-11a, P5-11c | 🧑 | à faire | |
 | P5-12 | Serveur web, liste M3U | M | P5-11a |  | à faire | |

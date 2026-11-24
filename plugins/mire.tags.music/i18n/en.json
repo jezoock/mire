@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Automatic tags: music",
+      "description": "Finds the artist, album, track number and title from folder and file names (“Daft Punk - Discovery/01 - One More Time”)."
+    },
+    "infos": {
+      "title": "Title",
+      "artist": "Artist",
+      "album": "Album",
+      "track": "Track"
+    }
+  }
+}
