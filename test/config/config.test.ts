@@ -78,11 +78,16 @@ test.describe('normalizeConfig', () => {
     assert.equal(c.tv.detected, true);
   });
 
-  test('thème et position de menu inconnus : valeurs par défaut', () => {
-    const c = normalizeConfig({ ui: { theme: 'fluo', start: 3, menu: { position: 'milieu', autohide: 'oui' } } });
+  test('palette invalide et position de menu inconnue : valeurs par défaut', () => {
+    const c = normalizeConfig({ ui: { theme: '../fluo', start: 3, menu: { position: 'milieu', autohide: 'oui' } } });
     assert.equal(c.ui.theme, 'ecran');
     assert.equal(c.ui.start, 'home');
     assert.deepEqual(c.ui.menu, { position: 'left', autohide: false });
+  });
+
+  test('palette (P5-02) : « auto » ou un identifiant, même inconnu (palette d’un plugin absent, gardée)', () => {
+    for (const v of ['auto', 'ecran', 'contraste', 'jour', 'fluo-2']) assert.equal(normalizeConfig({ ui: { theme: v } }).ui.theme, v);
+    for (const v of ['Jour', 'a b', '', 3, null, '../x']) assert.equal(normalizeConfig({ ui: { theme: v } }).ui.theme, 'ecran', String(v));
   });
 
   test('thème des pages (P4-11) : un identifiant, sinon le thème Mire', () => {
@@ -228,7 +233,7 @@ test.describe('migration v9 (P2-11)', () => {
   const v8 = () => readFixture('config-v8.json');
   const migrated = () => migrate(v8()).config as Any;
 
-  test('aucune donnée perdue : seuls la version et les rangées de l’accueil changent', () => {
+  test('aucune donnée perdue : seuls la version, les rangées de l’accueil et la clé TMDB (P5-15) changent', () => {
     const out = migrated();
     assert.deepEqual(out.ui.home.rows, [
       { kind: 'bars', targets: ['games', 'movies', 'series', 'screen:search', 'tv'] },
@@ -236,9 +241,18 @@ test.describe('migration v9 (P2-11)', () => {
       { kind: 'recent' },
     ]);
     delete out.ui.home.rows;
-    // File de la continuité (v10, P5-01) : des identifiants de règles ajoutés, aucun réglage touché.
+    // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15).
+    assert.deepEqual(out.plugins, { 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } });
+    // File de la continuité (v10, P5-01) : celle des fixtures, avec TMDB (P5-15).
+    assert.ok(out.continuity.includes('P5-15'));
+    assert.deepEqual(out.continuity, readFixture('config-v8.migrated.json').raw.continuity);
+    delete out.plugins;
     delete out.continuity;
-    assert.deepEqual(out, { ...v8(), version: CONFIG_VERSION });
+    const { tmdbToken: _token, region: _region, ...search } = v8().search;
+    // L'ordre choisi des fournisseurs suit TMDB dans son plugin.
+    assert.deepEqual(out.catalog.metadataProviders, ['mire.tmdb/tmdb']);
+    const catalog = { ...v8().catalog, metadataProviders: ['mire.tmdb/tmdb'] };
+    assert.deepEqual(out, { ...v8(), search, catalog, version: CONFIG_VERSION });
   });
 
   test('l’interface historique retrouve ses réglages (accueil, menu, page de démarrage)', () => {

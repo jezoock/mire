@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Element, PageDefinition, SearchResult, WebSite } from '@mire/shared';
 import { keepGroups } from '@mire/ui/utils';
-import { MAX_RECENT, pageOfResult, searchGroups, siteViews, watchTargets, watchView, withRecent } from '../../src/renderer/search/index.ts';
+import { MAX_RECENT, pageOfResult, searchGroups, siteViews, watchState, watchTargets, watchView, withRecent } from '../../src/renderer/search/index.ts';
 import type { WatchResult, WatchState } from '../../src/renderer/search/index.ts';
 import { SearchController } from '../../src/renderer/controllers/search.ts';
 import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
@@ -108,8 +108,33 @@ describe('Recherche : « Où regarder » (fournisseurs search) et sites', () => 
   };
   const done: WatchState = { q: 'amélie', status: 'done', results: [result] };
 
-  it('états : sans clé, en cours, erreur, aucun titre', () => {
-    assert.equal(watchView({ q: '', status: 'nokey', results: [] }, 'amélie', SITES, colors, tFr).status, 'nokey');
+  it('réponse du processus principal → état : titres et attribution, sans plugin, réglage à remplir, erreur', () => {
+    assert.deepEqual(watchState('a', { ok: true, plugin: 'mire.tmdb', results: [result], attribution: 'Catalogue : TMDB.' }), {
+      q: 'a',
+      status: 'done',
+      results: [result],
+      attribution: 'Catalogue : TMDB.',
+    });
+    assert.deepEqual(watchState('a', { ok: false, reason: 'noprovider' }), { q: 'a', status: 'noprovider', results: [] });
+    assert.deepEqual(watchState('a', { ok: false, plugin: 'mire.tmdb', error: 'Ajoutez une clé.', setup: 'token' }), {
+      q: 'a',
+      status: 'nokey',
+      results: [],
+      error: 'Ajoutez une clé.',
+      plugin: 'mire.tmdb',
+      setup: 'token',
+    });
+    assert.deepEqual(watchState('a', { ok: false, plugin: 'mire.tmdb', error: 'Panne.' }), { q: 'a', status: 'error', results: [], error: 'Panne.' });
+  });
+
+  it('états : sans clé (message du plugin), sans plugin, en cours, erreur, aucun titre ; attribution du plugin', () => {
+    assert.deepEqual(watchView({ q: '', status: 'nokey', results: [], error: 'Ajoutez une clé TMDB.' }, 'amélie', SITES, colors, tFr), {
+      status: 'nokey',
+      message: 'Ajoutez une clé TMDB.',
+      cards: [],
+    });
+    assert.match(watchView({ q: 'amélie', status: 'noprovider', results: [] }, 'amélie', SITES, colors, tFr).message, /plugin « Où regarder »/);
+    assert.equal(watchView({ ...done, attribution: 'Catalogue : TMDB.' }, 'amélie', SITES, colors, tFr).attribution, 'Catalogue : TMDB.');
     assert.equal(watchView({ q: 'amé', status: 'done', results: [result] }, 'amélie', SITES, colors, tFr).status, 'loading');
     assert.deepEqual(watchView({ q: 'amélie', status: 'error', results: [], error: 'Clé refusée' }, 'amélie', SITES, colors, tFr), {
       status: 'error',

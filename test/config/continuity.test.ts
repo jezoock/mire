@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG_VERSION, mergeConfig, migrate, normalizeConfig } from '../../src/main/config/index.ts';
-import { applyContinuity, checkRules, CONTINUITY_RULES, type ContinuityRule } from '../../src/main/config/migrations/continuity.ts';
+import { applyContinuity, checkRules, CONTINUITY_RULES, providerRenames, type ContinuityRule } from '../../src/main/config/migrations/continuity.ts';
 
 // Valeurs volontairement mal formées : le typage strict ne s'applique pas ici.
 type Any = any;
@@ -38,18 +38,26 @@ const INSTALL: ContinuityRule = {
 const RULES = [BUNDLED, INSTALL];
 
 test.describe('migration v10 (P5-01)', () => {
-  test('configuration v9 réelle : passe en v10 sans perte (table livrée)', () => {
+  test('configuration v9 réelle : passe en v10, seule la clé TMDB change de place (règle P5-15)', () => {
     const v9 = readFixture('config-v9.json');
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
-    // Seule la file `continuity` s'ajoute (règles de la table livrée qui s'appliquent) : aucun réglage perdu.
-    const { continuity, ...rest } = config as Any;
-    assert.deepEqual(rest, { ...v9, version: CONFIG_VERSION });
-    const { continuity: _queue, ...normalized } = normalizeConfig(config) as Any;
-    // Normalisée, elle reste celle de la v9 (réglages des plugins compris, secret gardé).
-    assert.deepEqual(normalized, { ...normalizeConfig(v9), version: CONFIG_VERSION });
-    assert.ok(Array.isArray(continuity));
+    const { tmdbToken: _t, region: _r, ...search } = v9.search;
+    const plugins = { ...v9.plugins, 'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' } };
+    const catalog = { ...v9.catalog, metadataProviders: ['mire.tmdb/tmdb'] };
+    assert.deepEqual(config, {
+      ...v9,
+      search,
+      plugins,
+      catalog,
+      continuity: readFixture('config-v9.migrated.json').raw.continuity,
+      version: CONFIG_VERSION,
+    });
+    // Normalisée : réglages des autres plugins gardés, secret compris.
+    const c = normalizeConfig(config);
+    assert.deepEqual(c.plugins?.['org.exemple.films'], normalizeConfig(v9).plugins?.['org.exemple.films']);
+    assert.deepEqual(c.continuity, readFixture('config-v9.migrated.json').raw.continuity);
   });
 
   test('P5-04 : les trois profils de manettes, plugins inclus, pour toute installation existante', () => {
@@ -109,6 +117,30 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.players.external', 'bundled', []]);
   });
 
+  test('P5-02 : la palette choisie (Plein jour, Minuit, Velours) installe son plugin, réglage gardé', () => {
+    const queue = (ui: unknown) => {
+      const { config } = migrate({ version: 9, ui });
+      return ((config as Any).continuity ?? []).filter((id: string) => id.startsWith('P5-02'));
+    };
+    assert.deepEqual(queue({ theme: 'jour' }), ['P5-02-jour']);
+    // « Automatique » prenait Plein jour en mode clair.
+    assert.deepEqual(queue({ theme: 'auto' }), ['P5-02-jour']);
+    assert.deepEqual(queue({ theme: 'minuit' }), ['P5-02-minuit']);
+    assert.deepEqual(queue({ theme: 'velours' }), ['P5-02-velours']);
+    for (const ui of [{ theme: 'ecran' }, { theme: 'contraste' }, {}, 'mal formé', null, { theme: 3 }]) assert.deepEqual(queue(ui), [], JSON.stringify(ui));
+    // Le réglage reste en place : la palette revient quand le plugin est installé.
+    assert.equal((migrate({ version: 9, ui: { theme: 'minuit' } }).config as Any).ui.theme, 'minuit');
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-02'));
+    assert.deepEqual(
+      rules.map((r) => [r.id, r.plugin, r.mode, r.settings ?? []]),
+      [
+        ['P5-02-jour', 'mire.palette.jour', 'install', []],
+        ['P5-02-minuit', 'mire.palette.minuit', 'install', []],
+        ['P5-02-velours', 'mire.palette.velours', 'install', []],
+      ],
+    );
+  });
+
   test('P5-09 : les cinq tags automatiques, plugins inclus, pour toute installation existante ; aucun réglage', () => {
     const kinds = ['series', 'movies', 'music', 'consoles', 'photos'];
     for (const raw of [readFixture('config-v9.json'), {}, { catalog: 'mal formé' }]) {
@@ -151,7 +183,7 @@ test.describe('migration v10 (P5-01)', () => {
     const c = normalizeConfig(raw);
     assert.deepEqual(c.continuity, applied);
     assert.deepEqual(c.plugins?.['mire.essai.infos'], { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'BE' });
-    assert.equal(c.search.tmdbToken, '');
+    assert.equal('tmdbToken' in c.search, false);
   });
 
   test('règle qui ne s’applique pas : rien ne bouge', () => {
@@ -186,6 +218,58 @@ test.describe('migration v10 (P5-01)', () => {
     // Une configuration déjà en v10 n'est pas migrée de nouveau.
     const again = migrate(structuredClone({ ...once, version: CONFIG_VERSION }));
     assert.equal(again.changed, false);
+  });
+
+  test('P5-15 : clé TMDB → secret du plugin mire.tmdb (à installer), pays et langue des fiches repris', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-15')!;
+    assert.equal(rule.plugin, 'mire.tmdb');
+    assert.equal(rule.mode, 'install');
+    const raw: Any = { version: 9, search: { tmdbToken: '  cle-courte  ', region: 'CH', language: '' } };
+    assert.deepEqual(applyContinuity(raw, [rule]), ['P5-15']);
+    assert.deepEqual(raw.plugins['mire.tmdb'], { token: { $secret: 'cle-courte', encrypted: false }, region: 'ch', language: 'auto' });
+    // La langue des fiches sert encore au cœur (Steam) : copiée, pas déplacée.
+    assert.deepEqual(raw.search, { language: '' });
+    assert.deepEqual(raw.continuity, ['P5-15']);
+    // Normalisée, la clé reste un secret (jamais rendu à l'interface).
+    assert.deepEqual(normalizeConfig(raw).plugins?.['mire.tmdb']?.token, { $secret: 'cle-courte', encrypted: false });
+  });
+
+  test('P5-15 : sans clé TMDB (vide, absente, mal formée), rien n’est installé ni déplacé', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-15')!;
+    for (const search of [{ tmdbToken: '', region: 'BE' }, { tmdbToken: '   ' }, { region: 'FR' }, { tmdbToken: 42 }, 'x', undefined]) {
+      const raw: Any = { version: 9, search };
+      const before = structuredClone(raw);
+      assert.deepEqual(applyContinuity(raw, [rule]), []);
+      assert.deepEqual(raw, before);
+    }
+  });
+
+  test('fournisseurs renommés (P5-15) : l’ordre choisi suit TMDB dans son plugin, même sans clé', () => {
+    const raw: Any = { version: 9, catalog: { metadataProviders: ['steam', 'tmdb', 'mire.tmdb/tmdb', 3] } };
+    // Sans clé TMDB, la règle P5-15 ne s'applique pas (seules celles des manettes, P5-04) ; l'ordre est renommé quand même.
+    assert.equal(applyContinuity(raw).includes('P5-15'), false);
+    assert.deepEqual(raw.catalog.metadataProviders, ['steam', 'mire.tmdb/tmdb', 3]);
+    assert.deepEqual(providerRenames(), { tmdb: 'mire.tmdb/tmdb' });
+    // Une règle ne peut renommer un fournisseur que vers un des siens.
+    assert.match(checkRules([{ ...INSTALL, providers: { tmdb: 'org.tiers/infos' } }])[0], /must be renamed/);
+    const untouched: Any = { version: 9, catalog: { metadataProviders: 'tmdb' } };
+    applyContinuity(untouched);
+    assert.equal(untouched.catalog.metadataProviders, 'tmdb');
+  });
+
+  test('convert et keep : valeur traduite, copiée ou laissée en place si elle ne se traduit pas', () => {
+    const rule: ContinuityRule = {
+      ...INSTALL,
+      settings: [
+        { from: 'search.tmdbToken', to: 'token', secret: true },
+        { from: 'search.region', to: 'region', convert: () => undefined },
+        { from: 'search.language', to: 'language', keep: true, convert: (v) => `${v}!` },
+      ],
+    };
+    const raw: Any = { version: 9, search: { tmdbToken: 'k', region: 'FR', language: 'fr-FR' } };
+    applyContinuity(raw, [rule]);
+    assert.deepEqual(raw.search, { region: 'FR', language: 'fr-FR' });
+    assert.deepEqual(raw.plugins['mire.essai.infos'], { token: { $secret: 'k', encrypted: false }, language: 'fr-FR!' });
   });
 
   test('file normalisée : identifiants de règles seulement, absente quand elle est vide', () => {

@@ -28,7 +28,7 @@ import { runApp, setApplicationMenu, type PendingFiles, type Running } from './a
 import { createRescue } from './app/rescue.ts';
 import type { Config } from '@mire/shared';
 import { createCatalog } from './catalog/index.ts';
-import { METADATA_PROVIDERS, createMetadataStore, metadataContributors, metadataOrder } from './catalog/metadata.ts';
+import { createMetadataStore, defaultKnown, metadataContributors, metadataOrder } from './catalog/metadata.ts';
 import type { Contributor } from './catalog/tags/engine.ts';
 import { createOverrides } from './catalog/overrides.ts';
 import { createTagEngine } from './catalog/tags/engine.ts';
@@ -75,10 +75,9 @@ import { OFFICIAL_REPOSITORY } from './repos/official.ts';
 import { createRepositories } from './repos/repositories.ts';
 import { createTrustStore, toConfig } from './repos/trust.ts';
 import * as http from './net/http.ts';
-import { createTmdbClient } from './net/tmdb.ts';
 import { createLauncher, createPlayers, type ExternalPlayerSpec } from './platform/index.ts';
 import { createScraper, guessSystem } from './scrape/index.ts';
-import { streamingSearchProvider } from './search/streaming.ts';
+import { createWatchSearch } from './search/watch.ts';
 import { createAccessPolicy } from './security/access-policy.ts';
 import { allowedFiles, allowedRoots } from './security/allowed.ts';
 import { flushWithin } from './storage/json-store.ts';
@@ -122,6 +121,7 @@ function start(pending: PendingFiles): Running {
   const find = createTargetFinder(catalog);
   const overrides = createOverrides({ file: files.catalogOverrides, legacyFile: files.meta, find });
   // Infos en ligne (fiches des fournisseurs), qui reprennent l'ancien scrape/db.json.
+  // Fiches d'un fournisseur devenu un plugin (TMDB, P5-15) : montrées sous le fournisseur du plugin (`providerRenames`).
   const metadata = createMetadataStore({ file: files.catalogMetadata, legacyFile: files.scrapeDb, find });
 
   // L'interface ne peut lire que les dossiers de la bibliothèque, les dossiers de ROMs
@@ -181,7 +181,6 @@ function start(pending: PendingFiles): Running {
   });
   const { web, drm } = webLayer;
 
-  const streaming = streamingSearchProvider(createTmdbClient({ key: () => config.get().search.tmdbToken }));
   const games = createGames({
     config,
     access,
@@ -218,7 +217,7 @@ function start(pending: PendingFiles): Running {
   let pluginProviders: () => string[] = () => [];
   const contributors = () => [
     ...pluginTaggers(),
-    ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...METADATA_PROVIDERS, ...pluginProviders()])),
+    ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...new Set([...defaultKnown(), ...pluginProviders()])])),
   ];
   const registry = createRegistry(t);
   const tags = createTagEngine({
@@ -274,6 +273,11 @@ function start(pending: PendingFiles): Running {
   }));
   // Dépôts tiers et accords pour leurs plugins de code sensible (P3-08), hors de la configuration.
   const trust = createTrustStore({ file: files.repoTrust });
+  const pluginSettings = createPluginSettings({
+    read: () => config.get().plugins,
+    write: (id, values) => config.update((d) => void (d.plugins = { ...(d.plugins ?? {}), [id]: values })),
+    box: safeStorageBox(safeStorage),
+  });
   const plugins = createPluginService({
     roots: {
       bundled: app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(__dirname, '..', '..', 'resources', 'plugins'),
@@ -284,11 +288,7 @@ function start(pending: PendingFiles): Running {
     state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
     context: createContextHandler({ pickFolder, folders: { list: pluginState.folders, add: pluginState.addFolder }, storage: storages.of }),
-    settings: createPluginSettings({
-      read: () => config.get().plugins,
-      write: (id, values) => config.update((d) => void (d.plugins = { ...(d.plugins ?? {}), [id]: values })),
-      box: safeStorageBox(safeStorage),
-    }),
+    settings: pluginSettings,
     flush: storages.flush,
     dropData: storages.drop,
     tagRegistry: registry,
@@ -326,13 +326,20 @@ function start(pending: PendingFiles): Running {
     plugins,
     repos,
     translate: t,
+    secrets: pluginSettings,
     onChange: (summary) => toUi('plugins:continuity-changed', summary),
   });
   pluginTaggers = plugins.taggerContributors;
   pluginPlayers = plugins.externalPlayers;
   pluginProviders = () => plugins.metadataProviders().map((p) => p.id);
+  // Palettes des plugins (P5-02) : fond de la fenêtre, et l'interface les redemande.
+  const palettesChanged = () => {
+    window.setPalettes((id) => plugins.palettes().palettes.find((p) => p.id === id) ?? null);
+    toUi('palettes:changed');
+  };
   plugins.onContributionsChange((kinds) => {
     if (kinds.includes('metadata')) tags.setContributors(contributors());
+    if (kinds.includes('palettes')) palettesChanged();
     // Profils de manettes (P5-04) : l'interface les redemande.
     if (kinds.includes('gamepads')) toUi('gamepads:changed');
     // Pages prêtes à l'emploi (P5-03) : celles des plugins actifs ; le menu et l'Accueil se rafraîchissent par `pages:changed`.
@@ -430,7 +437,8 @@ function start(pending: PendingFiles): Running {
     downloads,
     adblock,
   };
-  const searchStreaming = (query: string) => streaming.search(query, { getConfig: () => config.get() });
+  // « Où regarder » : recherche d'un plugin (P5-15), rapprochée des sites configurés.
+  const searchStreaming = createWatchSearch({ search: pluginBridges.search, sites: () => config.get().web });
   registerIpc(ipcMain, mainContext({ ...services, electron: { app, dialog, shell }, players, tv, drm, games, searchStreaming, rescue }));
   window.open();
   // Après la fenêtre : la découverte et le démarrage des plugins ne retardent pas l'affichage.
@@ -444,7 +452,9 @@ function start(pending: PendingFiles): Running {
       // Sans attendre : les installations en attente dépendent du réseau.
       void continuity.start();
     })
-    .catch((err: Error) => console.error('Plugins :', err.message));
+    .catch((err: Error) => console.error('Plugins :', err.message))
+    // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
+    .finally(palettesChanged);
 
   return {
     async onSecondInstance(paths) {

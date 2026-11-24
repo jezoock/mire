@@ -12,7 +12,11 @@ export type MediaKind = 'video' | 'audio' | 'image';
 /** Barres de la mire proposées sur l'accueil. */
 export type HomeBar = 'search' | 'videos' | 'music' | 'images' | 'streaming' | 'tv' | 'games';
 
-export type Theme = 'auto' | 'ecran' | 'jour' | 'minuit' | 'velours' | 'contraste';
+/**
+ * Réglage de la palette : « Automatique », une palette du cœur ou celle d'un plugin (identifiant de palette, voir
+ * `isPaletteId`).
+ */
+export type Theme = 'auto' | 'ecran' | 'contraste' | (string & {});
 
 export type MenuPosition = 'left' | 'right' | 'top' | 'bottom';
 
@@ -118,10 +122,10 @@ export interface UiSettings {
 }
 
 export interface SearchSettings {
-  tmdbToken: string;
-  /** Pays des disponibilités (« où regarder »). */
-  region: string;
-  /** Langue des fiches TMDB et Steam (`fr-FR`, `en-US`) ; vide = celle de l'interface. */
+  /**
+   * Langue des fiches (`fr-FR`, `en-US`) des sources d'infos du cœur ; vide = celle de l'interface. La clé TMDB et le
+   * pays des disponibilités sont devenus des réglages du plugin `mire.tmdb` (P5-15).
+   */
   language: string;
 }
 

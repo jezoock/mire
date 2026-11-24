@@ -129,11 +129,11 @@ Affiches, résumés, jaquettes, et « sur quel service regarder ».
 
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
-| `info-tmdb` | TMDB | À installer | Infos en ligne | Internet | src/main/scrape/providers/tmdb.ts, net/tmdb.ts |  |
+| `info-tmdb` | TMDB | À installer | Infos en ligne | Internet | plugin `mire.tmdb` (mire-addons, P5-15) |  |
 | `info-mb` | MusicBrainz et Cover Art Archive | À installer | Infos en ligne | Internet | src/main/scrape/providers/musicbrainz.ts |  |
 | `info-libretro` | libretro-thumbnails | À installer | Infos en ligne | Internet | src/main/scrape/providers/libretro.ts |  |
 | `info-steam` | Steam | À installer | Infos en ligne | Internet | src/main/scrape/providers/steam.ts |  |
-| `info-ouregarder` | Où regarder | À installer | Infos en ligne | Internet | src/main/search/streaming.ts |  |
+| `info-ouregarder` | Où regarder | À installer | Infos en ligne | Internet | plugin `mire.tmdb` (mire-addons, P5-15) ; cœur : `src/main/search/watch.ts` (rapprochement des sites) | Même plugin que TMDB (même clé, même hôte) |
 | `info-moteur` | Moteur de récupération | Cœur | Socle | Fichiers | src/main/scrape/engine.ts |  |
 | `info-tvmaze` | TVmaze | À installer | Infos en ligne | Internet | à créer |  |
 | `info-tvdb` | TheTVDB | À installer | Infos en ligne | Internet | à créer |  |
@@ -296,9 +296,9 @@ Des données seules, sans code. Les anciens thèmes deviennent des palettes de c
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
 | `th-ecran` | Palette Écran éteint | Cœur | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-jour` | Palette Plein jour | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-minuit` | Palette Minuit | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
-| `th-velours` | Palette Velours | À installer | Palette de couleurs | Données seules | src/renderer/styles.css |  |
+| `th-jour` | Palette Plein jour | À installer | Palette de couleurs | Données seules | plugin `mire.palette.jour` (mire-addons) |  |
+| `th-minuit` | Palette Minuit | À installer | Palette de couleurs | Données seules | plugin `mire.palette.minuit` (mire-addons) |  |
+| `th-velours` | Palette Velours | À installer | Palette de couleurs | Données seules | plugin `mire.palette.velours` (mire-addons) |  |
 | `th-contraste` | Palette Contraste élevé | Cœur | Palette de couleurs | Données seules | src/renderer/styles.css |  |
 | `lang-fr` | Français | À installer | Langue | Données seules | packages/shared/src/i18n/locales/fr.json |  |
 | `lang-en` | Anglais | Cœur | Langue | Données seules | packages/shared/src/i18n/locales/en.json |  |

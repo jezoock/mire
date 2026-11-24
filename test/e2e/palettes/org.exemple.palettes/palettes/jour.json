@@ -1,0 +1,24 @@
+{
+  "scheme": "light",
+  "tokens": {
+    "bg": "#f1efe8",
+    "bg-rail": "#e7e4db",
+    "surface": "#e3e0d6",
+    "surface-2": "#d8d4c8",
+    "line": "#ccc7ba",
+    "line-strong": "#9e998c",
+    "text": "#1c1f1d",
+    "muted": "#5b605b",
+    "ink": "#1c1f1d",
+    "bar-white": "#ffffff",
+    "bar-yellow": "#ebc427",
+    "bar-cyan": "#2cc1c5",
+    "bar-green": "#4dbf4b",
+    "bar-magenta": "#cf4ecf",
+    "bar-red": "#e5504b",
+    "bar-blue": "#5876f2",
+    "ring-mix": "58%",
+    "mire-edge": "1px",
+    "mono-mix": "62%"
+  }
+}

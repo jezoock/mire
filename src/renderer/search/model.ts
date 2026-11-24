@@ -50,7 +50,7 @@ export interface WatchOffer {
   webId: string | null;
 }
 
-/** Film ou série trouvé par le fournisseur `search` du cœur (TMDB et JustWatch, `src/main/search/streaming.ts`). */
+/** Film ou série trouvé par un plugin « Où regarder » (`src/main/search/watch.ts`), comme `mire.tmdb`. */
 export interface WatchResult {
   key: string;
   title: string;
@@ -60,12 +60,38 @@ export interface WatchResult {
   providers: WatchOffer[];
 }
 
-/** Recherche « Où regarder » en cours ou terminée, pour la recherche `q`. */
+/**
+ * Recherche « Où regarder » en cours ou terminée, pour la recherche `q`. `nokey` : il manque un réglage du plugin
+ * (`plugin`, `setup`), son message dans `error` ; `noprovider` : aucun plugin « Où regarder ».
+ */
 export interface WatchState {
   q: string;
-  status: 'idle' | 'loading' | 'done' | 'error' | 'nokey';
+  status: 'idle' | 'loading' | 'done' | 'error' | 'nokey' | 'noprovider';
   results: WatchResult[];
   error?: string;
+  plugin?: string;
+  setup?: string;
+  /** Source des données, texte du plugin. */
+  attribution?: string;
+}
+
+/** Réponse de `searchStreaming` (processus principal). */
+export interface WatchAnswer {
+  ok: boolean;
+  plugin?: string;
+  results?: unknown[];
+  attribution?: string;
+  reason?: string;
+  error?: string;
+  setup?: string;
+}
+
+/** État de « Où regarder » d'après la réponse du processus principal. */
+export function watchState(q: string, r: WatchAnswer): WatchState {
+  if (r.ok) return { q, status: 'done', results: (r.results ?? []) as WatchResult[], attribution: r.attribution || '' };
+  if (r.reason === 'noprovider') return { q, status: 'noprovider', results: [] };
+  if (r.setup && r.plugin) return { q, status: 'nokey', results: [], error: r.error || '', plugin: r.plugin, setup: r.setup };
+  return { q, status: 'error', results: [], error: r.error || '' };
 }
 
 /** Couleurs filtrées d'un site, et couleur du texte posé dessus. */
@@ -96,11 +122,12 @@ function watchCard(r: WatchResult, sites: readonly WebSite[], colors: SiteColors
 /** Partie « Où regarder » pour la recherche `query`. */
 export function watchView(state: WatchState, query: string, sites: readonly WebSite[], colors: SiteColors, t: Translate): WatchView {
   const none = (status: WatchView['status'], message: string): WatchView => ({ status, message, cards: [] });
-  if (state.status === 'nokey') return none('nokey', t('search.watch.noKey'));
+  if (state.status === 'nokey') return none('nokey', state.error || t('search.watch.failed'));
+  if (state.status === 'noprovider') return none('empty', t('search.watch.noPlugin'));
   if (state.q !== query || state.status === 'loading' || state.status === 'idle') return none('loading', t('search.watch.loading'));
   if (state.status === 'error') return none('error', state.error || t('search.watch.failed'));
   if (!state.results.length) return none('empty', t('search.watch.empty'));
-  return { status: 'done', message: '', cards: state.results.map((r) => watchCard(r, sites, colors, t)) };
+  return { status: 'done', message: '', attribution: state.attribution || '', cards: state.results.map((r) => watchCard(r, sites, colors, t)) };
 }
 
 /** Sites où chercher la recherche : ceux dont l'adresse de recherche est connue, et les autres (à mémoriser). */
