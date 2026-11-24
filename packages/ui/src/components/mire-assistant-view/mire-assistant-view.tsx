@@ -103,7 +103,7 @@ export class MireAssistantView {
     const focusPrimary = !v.choices.length;
     const primary = (name: string) => ({ 'mire-assistant-view__primary': true, [`--${name}`]: true, '--focus': focusPrimary });
     return (
-      <div class="mire-assistant-view__buttons">
+      <div class="mire-assistant-view__buttons" key="buttons">
         {b.back ? (
           <ds-trigger type="button" mods="stl-3" class="mire-assistant-view__back" target="mire-assistant" action="back">
             {b.back}
@@ -154,12 +154,12 @@ export class MireAssistantView {
           <p class="mire-assistant-view__help">{p}</p>
         ))}
         {v.choices.length ? (
-          <div class={{ 'mire-assistant-view__choices': true, [`--${v.choiceMode}`]: true }} role="group" aria-label={v.choicesLabel}>
+          <div key={`choices-${v.step}`} class={{ 'mire-assistant-view__choices': true, [`--${v.choiceMode}`]: true }} role="group" aria-label={v.choicesLabel}>
             {v.choices.map((c, i) => choiceTrigger(c, i === 0 ? 'mire-assistant-view__choice --focus' : 'mire-assistant-view__choice'))}
           </div>
         ) : null}
         {v.items.length ? (
-          <ul class="mire-assistant-view__items" aria-label={v.itemsLabel}>
+          <ul key="items" class="mire-assistant-view__items" aria-label={v.itemsLabel}>
             {v.items.map(item)}
           </ul>
         ) : null}
