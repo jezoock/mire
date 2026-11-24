@@ -694,8 +694,6 @@
         "local": "On this computer",
         "network": "On the network",
         "remote": "Online",
-        "series": "TV shows",
-        "movie": "Movies",
         "game": "Games",
         "tv": "TV",
         "stream": "Streaming"

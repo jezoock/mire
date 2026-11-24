@@ -14,7 +14,7 @@ import { createSearch } from '../../src/main/catalog/search/index.ts';
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { fakeCatalog } from './fake-catalog.ts';
 import { BUILTIN_PAGES } from '../fixtures/builtin-pages.ts';
@@ -43,7 +43,7 @@ describe('mesures de la recherche sur 20 000 éléments factices', () => {
       overrides,
       registry,
       rules: () => fileTagRules(undefined),
-      contributors: builtinTaggers(() => []).map(taggerContributor),
+      contributors: bundledTaggers(),
     });
     for (const { source, elements } of fakeCatalog(N)) catalog.setSource(source, elements);
     const pages = createPages({ builtin: BUILTIN_PAGES, file: path.join(dir, 'pages.json'), engine, catalog, translate });

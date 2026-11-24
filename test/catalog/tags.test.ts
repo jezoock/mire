@@ -263,10 +263,10 @@ describe('index', () => {
       { id: 'mes-favoris', name: 'Mes favoris', origin: 'user', count: 1 },
       { id: 'anime', name: 'anime', origin: 'other', count: 1 },
     ]);
-    // Tags automatiques internes (P2-05) : déclarés, avec leur nom.
-    assert.deepEqual(
-      list.find((t) => t.id === 'series'),
-      { id: 'series', name: 'TV shows', origin: 'core', count: 0 },
+    // Les tags automatiques (`series`, `movie`) sont ceux des plugins qui les déclarent (P5-09) : sans eux, absents.
+    assert.equal(
+      list.some((t) => t.id === 'series' || t.id === 'movie'),
+      false,
     );
     assert.equal(setup().engine.tagsList()[0].name, 'Vidéo');
   });
@@ -411,8 +411,12 @@ describe('administration des tags (P4-21)', () => {
     assert.equal(engine.mergeTags('vus-en-2024', 'inconnu'), null);
     assert.equal(engine.mergeTags(null, 'video'), null);
     // Vers un tag du cœur : permis.
-    assert.equal(engine.mergeTags('vus-en-2024', 'movie'), 1);
-    assert.deepEqual(engine.query(['movie']), [amelie]);
+    assert.equal(engine.mergeTags('vus-en-2024', 'local'), 1);
+    assert.deepEqual(engine.query(['local']).includes(amelie), true);
+    assert.equal(
+      engine.tagsList().some((t) => t.id === 'vus-en-2024'),
+      false,
+    );
   });
 
   it('supprimer un tag de l’utilisateur : il quitte chaque élément ; un tag du cœur ne se supprime pas', () => {
@@ -453,7 +457,7 @@ describe('administration des tags (P4-21)', () => {
     catalog.setSource(FILMS, films());
     engine.setTags(amelie, { A: true, B: true });
     const h = catalogHandlers({ tags: engine } as unknown as MainContext);
-    assert.equal(h.tagsOverview().length >= 13, true);
+    assert.equal(h.tagsOverview().length >= 11, true);
     assert.equal(h.tagsRename('a', 'Aa'), true);
     assert.equal(h.tagsSetLook('a', { color: 'green' }), true);
     assert.equal(h.tagsMerge('a', 'b'), 1);

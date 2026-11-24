@@ -1,0 +1,23 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.tags.consoles",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "taggers": [
+      {
+        "id": "consoles",
+        "main": "src/tagger.mjs",
+        "infos": {
+          "system": {
+            "type": "text"
+          }
+        }
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}

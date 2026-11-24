@@ -15,7 +15,7 @@ import { createSearch, infoTexts, quickFold, searchWords, SEARCH_LIMIT } from '.
 import { createTagEngine } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { CORE_INFOS, createRegistry, searchedAs } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/current.ts';
 import { catalogHandlers } from '../../src/main/ipc/handlers/catalog.ts';
@@ -40,7 +40,7 @@ function setup(elements: ElementInput[], language = 'fr') {
     overrides,
     registry,
     rules: () => fileTagRules(undefined),
-    contributors: builtinTaggers(() => []).map(taggerContributor),
+    contributors: bundledTaggers(),
   });
   const pages = createPages({ builtin: BUILTIN_PAGES, file: path.join(dir, 'pages.json'), engine, catalog, translate: t, onIgnored: () => {} });
   pages.load();
@@ -126,11 +126,11 @@ describe('catalog/search : infos texte et noms des tags', () => {
   it('les noms des tags, dans la langue de l’interface ; les tags de l’utilisateur aussi', () => {
     const elements = [file('/bib/Intouchables.mkv'), file('/bib/notes.txt')];
     const fr = setup(elements);
-    assert.deepEqual(found(fr.search.search('films')), ['Intouchables']);
-    assert.deepEqual(found(fr.search.search('ordinateur notes')), ['notes'], 'tag `local` : « Sur cet ordinateur »');
+    assert.deepEqual(found(fr.search.search('ordinateur intouchables')), ['Intouchables'], 'tag `local` : « Sur cet ordinateur »');
+    assert.deepEqual(found(fr.search.search('ordinateur notes')), ['notes']);
     const en = setup(elements, 'en');
-    assert.deepEqual(found(en.search.search('movies')), ['Intouchables']);
-    assert.deepEqual(found(en.search.search('films')), []);
+    assert.deepEqual(found(en.search.search('computer intouchables')), ['Intouchables']);
+    assert.deepEqual(found(en.search.search('ordinateur intouchables')), []);
     fr.engine.setTags(localFileKey('/bib/notes.txt', 'linux'), { 'Vus en 2024': true });
     assert.deepEqual(found(fr.search.search('vus 2024')), ['notes']);
   });

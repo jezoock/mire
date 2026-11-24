@@ -141,6 +141,20 @@ test.describe('migration v10 (P5-01)', () => {
     );
   });
 
+  test('P5-09 : les cinq tags automatiques, plugins inclus, pour toute installation existante ; aucun réglage', () => {
+    const kinds = ['series', 'movies', 'music', 'consoles', 'photos'];
+    for (const raw of [readFixture('config-v9.json'), {}, { catalog: 'mal formé' }]) {
+      const { config } = migrate(structuredClone({ ...raw, version: 9 }));
+      for (const k of kinds) assert.ok((config as Any).continuity.includes(`P5-09-${k}`), k);
+      assert.equal((config as Any).plugins?.['mire.tags.series'], undefined);
+    }
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-09-'));
+    assert.deepEqual(
+      rules.map((r) => [r.plugin, r.mode, r.settings ?? []]),
+      kinds.map((k) => [`mire.tags.${k}`, 'bundled', []]),
+    );
+  });
+
   test('table livrée : chaque règle désigne un plugin du dépôt officiel', () => {
     assert.deepEqual(checkRules(CONTINUITY_RULES), []);
     assert.deepEqual(checkRules(RULES), []);

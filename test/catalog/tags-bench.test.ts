@@ -12,7 +12,7 @@ import { createOverrides } from '../../src/main/catalog/overrides.ts';
 import { createTagEngine, type Contributor } from '../../src/main/catalog/tags/engine.ts';
 import { fileTagRules } from '../../src/main/catalog/tags/file-rules.ts';
 import { createRegistry } from '../../src/main/catalog/tags/registry.ts';
-import { builtinTaggers, taggerContributor } from '../../src/main/catalog/tags/taggers.ts';
+import { bundledTaggers } from './bundled-taggers.ts';
 import type { ElementInput } from '../../src/main/catalog/types.ts';
 import { fakeCatalog } from './fake-catalog.ts';
 
@@ -53,7 +53,7 @@ function measure(contributors: Contributor[]) {
 describe('mesures sur 20 000 éléments factices', () => {
   it('coût des cinq tags automatiques ; « video » et « series » en moins de 50 ms', (t) => {
     const bare = measure([]);
-    const full = measure(builtinTaggers(() => []).map(taggerContributor));
+    const full = measure(bundledTaggers());
     const { catalog, engine, sources } = full;
     assert.equal(catalog.size(), N);
 
