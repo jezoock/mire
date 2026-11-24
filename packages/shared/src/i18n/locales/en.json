@@ -156,15 +156,6 @@
           "options": {
             "auto": "Automatic (system language)"
           }
-        },
-        "metadata": {
-          "label": "Language of the details",
-          "help": "Language of the summaries and titles found online.",
-          "options": {
-            "empty": "Same as the interface",
-            "fr-FR": "French",
-            "en-US": "English"
-          }
         }
       },
       "home": {

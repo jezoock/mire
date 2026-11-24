@@ -101,7 +101,7 @@ export interface ScrapeProgress {
   cancelled?: boolean;
 }
 
-export type ScrapeConfig = Pick<Config, 'search' | 'games' | 'emulators'>;
+export type ScrapeConfig = Pick<Config, 'games' | 'emulators'>;
 
 /** Liste des jeux d'une console (service des jeux). */
 export type ListRoms = (consoleId: string) => Promise<{ ok: boolean; roms?: ScrapeItem[] } | null | undefined>;

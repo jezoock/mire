@@ -38,12 +38,12 @@ const INSTALL: ContinuityRule = {
 const RULES = [BUNDLED, INSTALL];
 
 test.describe('migration v10 (P5-01)', () => {
-  test('configuration v9 réelle : passe en v10, la clé TMDB change de place (P5-15), la langue des fiches est copiée (P5-15, P5-16)', () => {
+  test('configuration v9 réelle : passe en v10, la clé TMDB change de place (P5-15), la langue des fiches part dans les plugins (P5-15, P5-16)', () => {
     const v9 = readFixture('config-v9.json');
     const { config, from, changed } = migrate(structuredClone(v9));
     assert.equal(from, 9);
     assert.equal(changed, true);
-    const { tmdbToken: _t, region: _r, ...search } = v9.search;
+    const { tmdbToken: _t, region: _r, language: _l, ...search } = v9.search;
     const plugins = {
       ...v9.plugins,
       'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' },
@@ -196,7 +196,7 @@ test.describe('migration v10 (P5-01)', () => {
     const c = normalizeConfig(raw);
     assert.deepEqual(c.continuity, applied);
     assert.deepEqual(c.plugins?.['mire.essai.infos'], { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'BE' });
-    assert.equal('tmdbToken' in c.search, false);
+    assert.equal('tmdbToken' in (c as Any).search, false);
   });
 
   test('règle qui ne s’applique pas : rien ne bouge', () => {
@@ -285,7 +285,7 @@ test.describe('migration v10 (P5-01)', () => {
     }
   });
 
-  test('P5-16 : Steam installé s’il y a des jeux PC ; la langue des fiches copiée dans son réglage', () => {
+  test('P5-16 : Steam installé s’il y a des jeux PC ; la langue des fiches part dans son réglage', () => {
     const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-steam')!;
     assert.deepEqual([rule.plugin, rule.mode], ['mire.steam', 'install']);
     for (const config of [
@@ -301,7 +301,8 @@ test.describe('migration v10 (P5-01)', () => {
       const raw: Any = { version: 9, search: { language: ' nl-BE ' }, ...config };
       assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-steam']);
       assert.deepEqual(raw.plugins, { 'mire.steam': { language: 'nl-BE' } });
-      assert.deepEqual(raw.search, { language: ' nl-BE ' });
+      // Le réglage quitte le cœur.
+      assert.deepEqual(raw.search, {});
     }
     const auto: Any = { version: 9, search: { language: '' }, games: [{ name: 'Ys' }] };
     applyContinuity(auto, [rule]);

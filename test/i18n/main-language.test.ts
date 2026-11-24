@@ -128,24 +128,33 @@ describe('genres', () => {
   });
 });
 
-describe('search.language : migration v8', () => {
-  const migrated = (raw: Record<string, unknown>) => normalizeConfig(migrate(raw).config).search.language;
+describe('search.language : migration v8, puis réglage du plugin mire.steam (P5-16)', () => {
+  // Le cœur ne lit plus ce réglage : il reste tel quel dans le fichier tant qu'aucun plugin ne l'a repris.
+  const migrated = (raw: Record<string, unknown>): Record<string, any> => migrate(raw).config as Record<string, any>;
+  const language = (raw: Record<string, unknown>) => migrated(raw).search?.language;
 
   it('fr-FR (l’ancienne valeur par défaut) devient vide : les fiches suivent l’interface', () => {
-    assert.equal(DEFAULT_CONFIG.search.language, '');
-    assert.equal(migrated({ version: 7, search: { language: 'fr-FR' } }), '');
-    assert.equal(migrated({ version: 3, search: { tmdbToken: 'x', language: 'fr-FR' } }), '');
-    assert.equal(migrated({ version: 7 }), '');
+    assert.equal('search' in DEFAULT_CONFIG, false);
+    assert.equal(language({ version: 7, search: { language: 'fr-FR' } }), '');
+    assert.equal(language({ version: 3, search: { tmdbToken: 'x', language: 'fr-FR' } }), '');
+    assert.equal(language({ version: 7 }), undefined);
   });
 
-  it('une autre langue, écrite à la main, est conservée ; une configuration v8 n’est pas migrée', () => {
-    assert.equal(migrated({ version: 7, search: { language: 'nl-BE' } }), 'nl-BE');
-    assert.equal(migrated({ version: 8, search: { language: 'fr-FR' } }), 'fr-FR');
+  it('une autre langue, écrite à la main, est conservée ; une configuration v8 n’est pas migrée par la v8', () => {
+    assert.equal(language({ version: 7, search: { language: 'nl-BE' } }), 'nl-BE');
+    assert.equal(language({ version: 8, search: { language: 'fr-FR' } }), 'fr-FR');
   });
 
-  it('installation existante : ui.language passe à fr (v7), les fiches suivent l’interface (fr-FR)', () => {
+  it('avec des jeux PC : la langue part dans le réglage du plugin Steam', () => {
+    const c = migrated({ version: 7, search: { language: 'nl-BE' }, games: [{ name: 'Ys', path: 'C:/ys.exe' }] });
+    assert.deepEqual(c.plugins['mire.steam'], { language: 'nl-BE' });
+    assert.deepEqual(c.search, {});
+    assert.equal('search' in normalizeConfig(migrate({ version: 7, games: [{ name: 'Ys', path: 'C:/ys.exe' }] }).config), false);
+  });
+
+  it('installation existante : ui.language passe à fr (v7), les fiches suivent l’interface', () => {
     const config = normalizeConfig(migrate({ version: 6, search: { language: 'fr-FR' } }).config);
     assert.equal(config.ui.language, 'fr');
-    assert.equal(config.search.language, '');
+    assert.equal(language({ version: 6, search: { language: 'fr-FR' } }), '');
   });
 });

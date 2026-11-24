@@ -33,7 +33,7 @@ describe('SETTINGS_SCHEMA', () => {
   it('chaque texte est une clé tirée des identifiants, présente en français et en anglais', () => {
     const keys = settingsTextKeys();
     assert.ok(keys.includes('settings.home.clock.label'));
-    assert.ok(keys.includes('settings.language.metadata.options.empty'));
+    assert.ok(keys.includes('settings.language.interface.options.auto'));
     for (const key of keys) {
       for (const catalog of [fr, en]) {
         const text = valueAtPath(catalog.messages, key);
@@ -42,16 +42,18 @@ describe('SETTINGS_SCHEMA', () => {
     }
   });
 
-  it('réglages de langue : interface (Automatique, puis les langues) et fiches (vide = comme l’interface)', () => {
+  it('réglages de langue : interface (Automatique, puis les langues) ; la langue des fiches est un réglage des plugins (P5-16)', () => {
     const fields = SETTINGS_SCHEMA.find((b) => b.id === 'language')!.fields;
     const ui = fields.find((f) => f.id === 'interface')!;
-    const meta = fields.find((f) => f.id === 'metadata')!;
     assert.ok(ui.type === 'choice' && ui.path === 'ui.language' && ui.optionsFrom === 'languages');
     assert.deepEqual(
       ui.options.map((o) => o.value),
       ['auto'],
     );
-    assert.ok(meta.type === 'choice' && meta.path === 'search.language' && meta.default === '');
+    assert.deepEqual(
+      fields.map((f) => f.id),
+      ['interface'],
+    );
   });
 
   it('chaque valeur par défaut est celle de DEFAULT_CONFIG', () => {
@@ -71,7 +73,7 @@ describe('SETTINGS_SCHEMA', () => {
 
   it('couvre les réglages repérés en double dans le rendu actuel', () => {
     const paths = settingsPaths();
-    for (const p of ['adblock.enabled', 'ui.start', 'ui.home.clock', 'externalPlayer.path', 'ui.language', 'search.language']) {
+    for (const p of ['adblock.enabled', 'ui.start', 'ui.home.clock', 'externalPlayer.path', 'ui.language']) {
       assert.equal(paths.filter((x) => x === p).length, 1, p);
     }
   });

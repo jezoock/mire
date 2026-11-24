@@ -233,7 +233,7 @@ test.describe('migration v9 (P2-11)', () => {
   const v8 = () => readFixture('config-v8.json');
   const migrated = () => migrate(v8()).config as Any;
 
-  test('aucune donnée perdue : seuls la version, les rangées de l’accueil, la clé TMDB (P5-15) et la langue des fiches copiée (P5-15, P5-16) changent', () => {
+  test('aucune donnée perdue : seuls la version, les rangées de l’accueil, la clé TMDB (P5-15) et la langue des fiches (plugins TMDB et Steam) changent', () => {
     const out = migrated();
     assert.deepEqual(out.ui.home.rows, [
       { kind: 'bars', targets: ['games', 'movies', 'series', 'screen:search', 'tv'] },
@@ -242,7 +242,7 @@ test.describe('migration v9 (P2-11)', () => {
     ]);
     delete out.ui.home.rows;
     // Clé TMDB et pays : réglages du plugin mire.tmdb (règle de continuité P5-15) ; langue des fiches copiée aussi
-    // dans le réglage de mire.steam (des jeux PC, P5-16).
+    // dans le réglage de mire.steam (des jeux PC, P5-16), qui la retire du cœur.
     assert.deepEqual(out.plugins, {
       'mire.tmdb': { token: { $secret: 'jeton-tmdb', encrypted: false }, region: 'be', language: 'en-US' },
       'mire.steam': { language: 'en-US' },
@@ -252,7 +252,7 @@ test.describe('migration v9 (P2-11)', () => {
     assert.deepEqual(out.continuity, readFixture('config-v8.migrated.json').raw.continuity);
     delete out.plugins;
     delete out.continuity;
-    const { tmdbToken: _token, region: _region, ...search } = v8().search;
+    const { tmdbToken: _token, region: _region, language: _language, ...search } = v8().search;
     // L'ordre choisi des fournisseurs suit TMDB dans son plugin.
     assert.deepEqual(out.catalog.metadataProviders, ['mire.tmdb/tmdb']);
     const catalog = { ...v8().catalog, metadataProviders: ['mire.tmdb/tmdb'] };

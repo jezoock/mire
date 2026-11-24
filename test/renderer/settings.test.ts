@@ -83,9 +83,9 @@ describe('panneaux générés depuis le schéma', () => {
     assert.equal(player.kind, 'path');
     assert.equal(player.pick, 'program');
     assert.equal(player.placeholder, 'Détection automatique');
-    // Clé TMDB et pays de « Où regarder » : réglages du plugin mire.tmdb (P5-15), plus du cœur.
+    // Clé TMDB et pays de « Où regarder » (P5-15), langue des fiches (P5-16) : réglages des plugins, plus du cœur.
     assert.equal(
-      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.') && f.key !== 'search.language'),
+      panels.flatMap((p) => p.fields ?? []).some((f) => String(f.key).startsWith('search.')),
       false,
     );
   });
@@ -96,7 +96,6 @@ describe('panneaux générés depuis le schéma', () => {
       fieldOf(panels, 'ui.language').options?.map((o) => o.label),
       ['Automatique (langue du système)', 'English', 'Français'],
     );
-    assert.deepEqual(fieldOf(panels, 'search.language').options?.[0], { value: '', label: 'Comme l’interface' });
     const start = fieldOf(panels, 'ui.start').options!;
     assert.deepEqual(start.at(-1), { value: 'web:arte', label: 'Arte', group: 'Directement sur un service' });
   });
@@ -158,8 +157,7 @@ describe('panneaux générés depuis le schéma', () => {
       ['À gauche', 'À droite', 'En haut', 'En bas'],
     );
     // Le même affichage dans toutes les langues.
-    assert.equal(fieldOf(schemaPanels(sources({ t: en.t })), 'search.language').kind, 'segmented');
-    assert.equal(fieldOf(panels, 'search.language').kind, 'segmented');
+    assert.equal(fieldOf(schemaPanels(sources({ t: en.t })), 'ui.menu.position').kind, 'segmented');
     assert.equal(fieldOf(panels, 'downloads.torrentClient').kind, 'choice');
     assert.equal(fieldOf(panels, 'ui.language').kind, 'choice');
   });
@@ -448,8 +446,8 @@ function context(answers: Record<string, unknown> = {}) {
 describe('contrôleur mire-settings (P4-20)', () => {
   it('un champ s’enregistre dès qu’il change, puis l’écran se relit', async () => {
     const { ctx, named } = context();
-    await new SettingsController(ctx).setValue({ key: 'search.language', value: 'en-US' });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'search.language', 'en-US']]);
+    await new SettingsController(ctx).setValue({ key: 'downloads.torrentClient', value: 'system' });
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'downloads.torrentClient', 'system']]);
     assert.equal(named('ui.settings.refresh').length, 1);
   });
 

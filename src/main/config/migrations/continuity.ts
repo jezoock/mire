@@ -130,7 +130,7 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     settings: [
       { from: 'search.tmdbToken', to: 'token', secret: true, convert: (v) => String(v).trim() },
       { from: 'search.region', to: 'region', convert: (v) => (nonEmpty(v) ? String(v).trim().toLowerCase() : undefined) },
-      // La langue des fiches sert aussi à Steam (cœur jusqu'à P5-16).
+      // La langue des fiches est copiée : la règle P5-16-steam la reprend aussi (et la retire du cœur).
       { from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') },
     ],
     providers: { tmdb: 'mire.tmdb/tmdb' },
@@ -149,8 +149,8 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     plugin: 'mire.steam',
     mode: 'install',
     applies: hasPcGames,
-    // La langue des fiches ne sert plus qu'à Steam : elle part dans son réglage (copiée : TMDB l'a peut-être déjà prise).
-    settings: [{ from: 'search.language', to: 'language', keep: true, convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') }],
+    // Le réglage « Langue des fiches » quitte le cœur : sa valeur part dans celui du plugin (P5-15 l'a déjà copiée pour TMDB).
+    settings: [{ from: 'search.language', to: 'language', convert: (v) => (nonEmpty(v) ? String(v).trim() : 'auto') }],
     providers: { steam: 'mire.steam/steam' },
   },
   // P5-05 : services de streaming, un plugin à installer par service ; la configuration dit lesquels étaient en place.

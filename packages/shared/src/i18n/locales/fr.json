@@ -156,15 +156,6 @@
           "options": {
             "auto": "Automatique (langue du système)"
           }
-        },
-        "metadata": {
-          "label": "Langue des fiches",
-          "help": "Langue des résumés et des titres récupérés en ligne.",
-          "options": {
-            "empty": "Comme l’interface",
-            "fr-FR": "Français",
-            "en-US": "Anglais"
-          }
         }
       },
       "home": {

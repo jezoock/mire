@@ -113,9 +113,7 @@
       },
       "language": "en"
     },
-    "search": {
-      "language": "en-US"
-    },
+    "search": {},
     "scrape": {
       "auto": false
     },
