@@ -42,6 +42,8 @@ export const LIMITS = Object.freeze({
   /** Fichiers rendus par `walk` : 10 000 par défaut, 150 000 au plus (le nombre maximal d'éléments de la bibliothèque). */
   walkDefault: 10000,
   walkMax: 150000,
+  /** Fichiers d'un dossier lus en même temps par `walk` (taille, date). */
+  walkStats: 64,
   /** Texte du motif d'une demande de dossier. */
   purpose: 200,
 });
@@ -297,16 +299,22 @@ export function createContextHandler(deps: ContextDeps) {
         } catch {
           continue;
         }
+        const files: string[] = [];
         for (const d of entries) {
-          if (out.length >= max) break;
           const full = path.join(dir, d.name);
           // Les liens ne sont pas suivis : ils pourraient mener hors des dossiers accordés.
           if (d.isDirectory()) {
             if (level < depth && !(hidden && (d.name.startsWith('.') || d.name.startsWith('$')))) stack.push({ dir: full, level: level + 1 });
           } else if (d.isFile() && !(hidden && d.name.startsWith('.')) && (!exts || exts.has(path.extname(d.name).toLowerCase()))) {
-            const st = await fsp.stat(full).catch(() => null);
-            if (st) out.push({ path: full, size: st.size, modified: st.mtimeMs });
+            files.push(full);
           }
+        }
+        // Taille et date des fichiers du dossier, par lots lus en même temps (un à un, une grande bibliothèque attend
+        // chaque lecture du disque).
+        for (let i = 0; i < files.length && out.length < max; i += LIMITS.walkStats) {
+          const batch = files.slice(i, Math.min(i + LIMITS.walkStats, i + max - out.length));
+          const stats = await Promise.all(batch.map((f) => fsp.stat(f).catch(() => null)));
+          stats.forEach((st, j) => st && out.push({ path: batch[j], size: st.size, modified: st.mtimeMs }));
         }
       }
       return out;

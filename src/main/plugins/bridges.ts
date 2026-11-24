@@ -95,7 +95,31 @@ function infoValue(v: unknown): InfoValue | undefined {
 /** Fichier local qu'un plugin a le droit de désigner : n'importe lequel en code sensible, sinon sous ses dossiers accordés. */
 function localAllowed(p: unknown, level: PluginLevel, granted: readonly string[]): p is string {
   if (!text(p) || !path.isAbsolute(p)) return false;
-  return level === 'privileged' || granted.some((g) => path.resolve(p) === path.resolve(g) || isInside(p, [g]));
+  return level === 'privileged' || insideGranted(granted)(p);
+}
+
+/**
+ * Test « dans un dossier accordé ou ce dossier lui-même » (même règle que `isInside`, chemin résolu, aucun segment
+ * `..`, casse ignorée sous Windows), avec les dossiers résolus une fois par liste : une analyse vérifie des dizaines
+ * de milliers de chemins contre la même liste.
+ */
+const grantedTests = new WeakMap<readonly string[], (p: string) => boolean>();
+function insideGranted(granted: readonly string[]): (p: string) => boolean {
+  let test = grantedTests.get(granted);
+  if (test) return test;
+  const win = process.platform === 'win32';
+  const key = (x: string) => (win ? path.resolve(x).toLowerCase() : path.resolve(x));
+  const roots = granted
+    .filter((g) => typeof g === 'string' && path.isAbsolute(g))
+    .map((g) => ({ exact: path.resolve(g), prefix: key(g).endsWith(path.sep) ? key(g) : key(g) + path.sep }));
+  test = (p: string) => {
+    const exact = path.resolve(p);
+    const t = win ? exact.toLowerCase() : exact;
+    const dots = p.split(win ? /[\\/]+/ : /\/+/).includes('..');
+    return roots.some((r) => exact === r.exact || (!dots && t.startsWith(r.prefix)));
+  };
+  grantedTests.set(granted, test);
+  return test;
 }
 
 /** Comment ouvrir un élément d'un plugin, s'il en a le droit ; `null` sinon. */
@@ -180,8 +204,40 @@ export function checkElements(
 /** Lecture du chemin réel (tests). */
 export type Realpath = (p: string) => Promise<string>;
 
-/** Appels de `realpath` en même temps. */
-const REAL_CONCURRENCY = 32;
+/** Lecture d'un dossier, avec le type de chaque entrée (tests). */
+export type Readdir = (dir: string) => Promise<{ name: string; isSymbolicLink(): boolean }[]>;
+
+/** Vérifications de fichiers en même temps. */
+const REAL_CONCURRENCY = 64;
+
+/**
+ * Chemin réel d'un fichier, `null` s'il n'existe pas. Chaque dossier n'est lu qu'une fois pour tous ses fichiers (une
+ * bibliothèque compte des dizaines de milliers de fichiers pour quelques milliers de dossiers) : son chemin réel, et
+ * le type de ses entrées. Un fichier qui n'est pas un lien a pour chemin réel celui de son dossier suivi de son nom ;
+ * un lien est résolu en entier.
+ */
+function realPaths(realpath: Realpath, readdir: Readdir) {
+  const dirs = new Map<string, Promise<{ real: string; entries: Map<string, boolean> } | null>>();
+  const dirOf = (dir: string) => {
+    let d = dirs.get(dir);
+    if (!d) {
+      d = Promise.all([realpath(dir), readdir(dir)]).then(
+        ([real, list]) => ({ real, entries: new Map(list.map((e) => [e.name, e.isSymbolicLink()])) }),
+        () => null,
+      );
+      dirs.set(dir, d);
+    }
+    return d;
+  };
+  return async (p: string): Promise<string | null> => {
+    const name = path.basename(p);
+    const d = await dirOf(path.dirname(p));
+    const link = d?.entries.get(name);
+    if (!d || link === undefined) return null;
+    if (link) return realpath(p).catch(() => null);
+    return path.join(d.real, name);
+  };
+}
 
 /**
  * Seconde vérification des fichiers locaux d'un plugin de code limité, sur le chemin réel (liens symboliques résolus,
@@ -193,12 +249,21 @@ export async function keepReal(
   level: PluginLevel,
   granted: readonly string[],
   realpath: Realpath = (p) => fsp.realpath(p),
+  readdir: Readdir = (dir) => fsp.readdir(dir, { withFileTypes: true }),
 ): Promise<{ elements: ElementInput[]; dropped: number }> {
   if (level === 'privileged') return { elements, dropped: 0 };
   const roots = (await Promise.all(granted.map((g) => realpath(g).catch(() => null)))).filter((r): r is string => !!r);
-  const ok = async (p: string): Promise<boolean> => {
-    const real = await realpath(p).catch(() => null);
-    return !!real && roots.some((r) => real === r || isInside(real, [r]));
+  const realOf = realPaths(realpath, readdir);
+  const inRoots = insideGranted(roots);
+  // Une même image (affiche d'un dossier) sert à plusieurs éléments : vérifiée une fois.
+  const checked = new Map<string, Promise<boolean>>();
+  const ok = (p: string): Promise<boolean> => {
+    let r = checked.get(p);
+    if (!r) {
+      r = realOf(p).then((real) => !!real && inRoots(real));
+      checked.set(p, r);
+    }
+    return r;
   };
   const kept: (ElementInput | null)[] = new Array(elements.length).fill(null);
   let next = 0;
