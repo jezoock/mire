@@ -51,6 +51,17 @@ export const pluginTextKey = (id: string): string => id.replaceAll('.', '_');
 export const pluginTextPrefix = (id: string): string => `pluginTexts.${pluginTextKey(id)}.`;
 
 /** Plugin de code démarré : son canal (attaché à son port) et de quoi l'arrêter. */
+/** Options d'un appel à un plugin. */
+export interface CallOptions {
+  /** Délai de la requête (ms). */
+  timeout?: number;
+  /**
+   * Une exception levée par le code du plugin (`CHANNEL_ERRORS.plugin`) est relancée sans le désactiver : analyse d'un
+   * emplacement injoignable (P5-12), dont la source lève une erreur au message affichable.
+   */
+  keepOnPluginError?: boolean;
+}
+
 export interface RunnerHandle {
   channel: Channel;
   stop(): void;
@@ -233,8 +244,11 @@ export function createPluginService(opts: PluginServiceOptions) {
   // -------------------------------------------------------------------------------------------------------------
   // Exécution
 
-  /** Requête à un plugin : comptée (pour désigner un fautif), et toute erreur du plugin le désactive. */
-  async function call<T>(id: string, target: string, method: string, args: unknown[] = [], options: { timeout?: number } = {}): Promise<T> {
+  /**
+   * Requête à un plugin : comptée (pour désigner un fautif), et toute erreur du plugin le désactive, sauf, avec
+   * `keepOnPluginError`, une exception levée par son code (`CHANNEL_ERRORS.plugin`) : elle est seulement relancée.
+   */
+  async function call<T>(id: string, target: string, method: string, args: unknown[] = [], options: CallOptions = {}): Promise<T> {
     const a = active.get(id);
     if (!a?.runner) throw new ChannelError(CHANNEL_ERRORS.notFound, `${id} is not active.`);
     a.busy++;
@@ -242,8 +256,11 @@ export function createPluginService(opts: PluginServiceOptions) {
       return await a.runner.channel.request<T>(target, method, args, options);
     } catch (err) {
       const code = (err as { code?: string })?.code;
-      // Une annulation ou une méthode absente vient de l'appelant, pas du plugin.
-      if (code !== CHANNEL_ERRORS.cancelled && code !== CHANNEL_ERRORS.notFound) fault(id, err);
+      // Une annulation ou une méthode absente vient de l'appelant, pas du plugin. Une exception attendue (emplacement
+      // injoignable, P5-12) est un résultat pour l'appelant qui le demande ; délai, hôte disparu, réponse trop grosse :
+      // toujours une panne.
+      const expected = options.keepOnPluginError === true && code === CHANNEL_ERRORS.plugin;
+      if (code !== CHANNEL_ERRORS.cancelled && code !== CHANNEL_ERRORS.notFound && !expected) fault(id, err);
       throw err;
     } finally {
       a.busy--;
@@ -562,16 +579,9 @@ export function createPluginService(opts: PluginServiceOptions) {
 
     /**
      * Appelle une méthode d'une contribution de code active (« même API par messages ») : sources, infos en ligne,
-     * recherche… Une erreur du plugin le désactive.
+     * recherche… Une erreur du plugin le désactive (sauf l'exception attendue d'un appel `keepOnPluginError`).
      */
-    call(
-      pluginId: string,
-      kind: ContributionKind,
-      contributionId: string,
-      method: string,
-      args: unknown[] = [],
-      options: { timeout?: number } = {},
-    ): Promise<unknown> {
+    call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args: unknown[] = [], options: CallOptions = {}): Promise<unknown> {
       return call(pluginId, `${kind}/${contributionId}`, method, args, options);
     },
 

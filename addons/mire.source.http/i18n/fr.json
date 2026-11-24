@@ -11,7 +11,6 @@
     },
     "source": {
       "name": "Serveur web",
-      "unavailable": "Adresse inaccessible ({reason}).",
       "status": "le serveur a répondu avec le code {status}",
       "unreachable": "serveur injoignable",
       "elsewhere": "le serveur renvoie vers une autre adresse"

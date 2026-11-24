@@ -35,10 +35,12 @@ const PLATFORM = process.platform;
  * Plugin factice : lit la page ou la liste par `ctx.http` (l'accord est donc vérifié), puis rend des éléments écrits
  * à la main, comme les rendraient les vrais plugins.
  */
-function fakeSource(ctx: { http: { getText(url: string): Promise<string | null> } }) {
+function fakeSource(ctx: { http: { getText(url: string): Promise<string | null> } }, down: { message: string | null }) {
   return {
     handles: (loc: { url?: string }) => !!loc?.url,
     async scan(loc: { url: string }) {
+      // Serveur éteint : la source lève une erreur au message affichable (contrat du SDK).
+      if (down.message !== null) throw new Error(down.message);
       const text = await ctx.http.getText(loc.url);
       if (text === null) throw new Error('absent');
       if (/\.m3u$/.test(loc.url)) {
@@ -97,7 +99,9 @@ async function wire(sources: LibrarySource[]) {
     storage: () => createPluginStorage(path.join(tmp, '.aucun'), 0),
   });
   const port = forPlugin({ id: manifest.id, manifest: manifest as never });
-  const source = fakeSource({ http: { getText: (url) => port.handle('http.getText', [url], new AbortController().signal) as Promise<string | null> } });
+  const down = { message: null as string | null };
+  const calls: unknown[] = [];
+  const source = fakeSource({ http: { getText: (url) => port.handle('http.getText', [url], new AbortController().signal) as Promise<string | null> } }, down);
   const entry = { pluginId: manifest.id, kind: 'sources', id: 'src-factice', declaration: { id: 'src-factice' } } as unknown as ContributionEntry;
   let enabled = true;
   const listeners = new Set<(kinds: ContributionKind[]) => void>();
@@ -108,8 +112,10 @@ async function wire(sources: LibrarySource[]) {
       listeners.add(l);
       return () => listeners.delete(l);
     },
-    call: async (_id, _kind, _c, method, args = []) =>
-      structuredClone(await (source as unknown as Record<string, (...a: unknown[]) => unknown>)[method](...structuredClone(args))),
+    call: async (_id, _kind, _c, method, args = [], options) => {
+      if (method === 'scan') calls.push(options);
+      return structuredClone(await (source as unknown as Record<string, (...a: unknown[]) => unknown>)[method](...structuredClone(args)));
+    },
     levelOf: () => (enabled ? 'code' : null),
     folders: () => [],
     hosts: () => [],
@@ -123,9 +129,13 @@ async function wire(sources: LibrarySource[]) {
     catalog,
     claimed: (k) => b.claimed(k),
     pluginScans: () => b.rescan(),
+    pluginFailure: (k) => b.failure(k),
   });
   await b.setLocations(libraryLocations(sources));
   return {
+    down,
+    calls,
+    bridges: b,
     catalog,
     library,
     logs,
@@ -217,5 +227,44 @@ describe('liste M3U en ligne lue par un plugin', () => {
     await library.scan();
     assert.equal(catalog.size(), 0);
     assert.ok(logs.some((m) => /absente\.m3u/.test(m)));
+  });
+});
+
+describe('emplacement injoignable : le plugin reste actif, le catalogue garde la dernière analyse', () => {
+  const sources: LibrarySource[] = [{ id: 'v', kind: 'video', location: `${base}/films/` }];
+
+  it('erreur du plugin : éléments gardés, son message dans l’état de la source ; effacée après une analyse réussie', async () => {
+    const { catalog, library, down, calls } = await wire(sources);
+    await library.scan();
+    const keys = catalog.keys().sort();
+    assert.equal(keys.length, 2);
+    // L'analyse d'un emplacement demande que l'exception du plugin ne le désactive pas.
+    assert.ok(calls.every((o) => (o as { keepOnPluginError?: boolean }).keepOnPluginError === true));
+    down.message = 'serveur injoignable';
+    const off = await library.scan();
+    assert.deepEqual(off.status.v, { ok: false, error: 'Emplacement inaccessible : serveur injoignable', count: 2 });
+    assert.deepEqual(catalog.keys().sort(), keys);
+    assert.equal(off.items.length, 2);
+    down.message = null;
+    const on = await library.scan();
+    assert.deepEqual(on.status.v, { ok: true, error: null, count: 2 });
+  });
+
+  it('message long tronqué (500 caractères) ; message vide : texte du cœur seul', async () => {
+    const { library, down } = await wire(sources);
+    down.message = `<b>${'x'.repeat(600)}`;
+    const { status } = await library.scan();
+    assert.equal(status.v.error, `Emplacement inaccessible : <b>${'x'.repeat(497)}`);
+    down.message = '';
+    assert.equal((await library.scan()).status.v.error, 'Emplacement inaccessible.');
+  });
+
+  it('emplacement retiré de la configuration : son échec est oublié', async () => {
+    const { bridges, library, down } = await wire(sources);
+    down.message = 'serveur injoignable';
+    await library.scan();
+    assert.equal(bridges.failure(`${base}/films/`), 'serveur injoignable');
+    await bridges.setLocations([]);
+    assert.equal(bridges.failure(`${base}/films/`), null);
   });
 });

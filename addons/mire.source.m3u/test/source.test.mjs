@@ -92,10 +92,10 @@ describe('liste en ligne', () => {
 
   it('liste inaccessible (absente, serveur injoignable, adresse non accordée) : message affichable', async () => {
     const absent = fakeContext({ urls: [LIST] }).ctx;
-    await assert.rejects(createSource(absent).scan(online(LIST)), { message: 'Liste de lecture inaccessible.' });
+    await assert.rejects(createSource(absent).scan(online(LIST)), { message: 'liste de lecture introuvable ou illisible' });
     const down = fakeContext({ urls: [LIST], down: true, locale: 'en' }).ctx;
-    await assert.rejects(createSource(down).scan(online(LIST)), { message: "Can't open this playlist." });
-    await assert.rejects(createSource(fakeContext().ctx).scan(online(LIST)), { message: 'Liste de lecture inaccessible.' });
+    await assert.rejects(createSource(down).scan(online(LIST)), { message: 'playlist missing or unreadable' });
+    await assert.rejects(createSource(fakeContext().ctx).scan(online(LIST)), { message: 'liste de lecture introuvable ou illisible' });
   });
 
   it('clé : comme `m3uEntryKey` du cœur (liste et flux normalisés, `|` et `%` de la liste échappés)', () => {
@@ -136,9 +136,9 @@ describe('liste de cet ordinateur', () => {
   });
 
   it('liste illisible (dossier non accordé, fichier absent) : message affichable', async () => {
-    await assert.rejects(createSource(fakeContext().ctx).scan(local(list, ['audio'])), { message: 'Liste de lecture inaccessible.' });
+    await assert.rejects(createSource(fakeContext().ctx).scan(local(list, ['audio'])), { message: 'liste de lecture introuvable ou illisible' });
     const s = createSource(fakeContext({ folders: [path.dirname(list)] }).ctx);
-    await assert.rejects(s.scan(local(t.at('Listes/absente.m3u'), ['audio'])), { message: 'Liste de lecture inaccessible.' });
+    await assert.rejects(s.scan(local(t.at('Listes/absente.m3u'), ['audio'])), { message: 'liste de lecture introuvable ou illisible' });
   });
 
   it('chemins : résolus, séparateur du système du chemin ; clé comme `normalizePath` du cœur', () => {

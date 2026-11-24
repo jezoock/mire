@@ -10,7 +10,11 @@
  *   (serveur web, liste en ligne) est accordée de la même façon au contexte `http` (`assignedUrls`).
  *   Seuls les plugins inclus ou du dépôt officiel reçoivent ces emplacements, et un dossier seulement s'ils déclarent
  *   `folders`. Une source qui n'en accepte aucun est analysée une fois sans emplacement (`scan(null)`), sous
- *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation.
+ *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation. Un emplacement injoignable
+ *   (serveur éteint, disque débranché) : la source lève une erreur au message affichable (contrat du SDK) ; elle ne
+ *   désactive pas le plugin (`keepOnPluginError`, analyse d'un emplacement seulement), le catalogue garde l'analyse
+ *   précédente, et le message (texte brut, borné) est retenu pour l'état de la source (`failure`) jusqu'à la
+ *   prochaine analyse réussie.
  * - `metadata` → moteur d'infos en ligne (`scrape/engine.ts`, `extraProviders`), après les fournisseurs du cœur. Les
  *   images d'une fiche (`image`, `backdrop`) arrivent par leur adresse : elles sont copiées dans le dossier d'images,
  *   seulement depuis un hôte `https:` déclaré par le plugin ; ce qu'il manque pour interroger la source (`requires`)
@@ -73,7 +77,14 @@ export const BRIDGE_LIMITS = Object.freeze({
 export interface BridgeService {
   contributions(kind: ContributionKind): ContributionEntry[];
   onContributionsChange(listener: (kinds: ContributionKind[]) => void): () => void;
-  call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args?: unknown[], options?: { timeout?: number }): Promise<unknown>;
+  call(
+    pluginId: string,
+    kind: ContributionKind,
+    contributionId: string,
+    method: string,
+    args?: unknown[],
+    options?: { timeout?: number; keepOnPluginError?: boolean },
+  ): Promise<unknown>;
   levelOf(id: string): PluginLevel | null;
   folders(id: string): string[];
   /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`). */
@@ -656,6 +667,12 @@ export function createPluginBridges({
   let wanted = new Map<string, Target>();
   /** Analyses arrivées au catalogue : référence → empreinte (source et emplacement) de la dernière analyse. */
   const scanned = new Map<string, { ref: ElementSourceRef; print: string }>();
+  /**
+   * Dernier échec de l'analyse d'un emplacement (clé), avec l'empreinte de cette analyse : le message du plugin (texte
+   * brut, borné), effacé à la prochaine analyse réussie, ou quand l'emplacement quitte la configuration ou change de
+   * source.
+   */
+  const failures = new Map<string, { print: string; message: string }>();
   /** Analyses en cours : référence → empreinte et fin de l'analyse. */
   const running = new Map<string, { print: string; done: Promise<void> }>();
   let queue: Promise<void> = Promise.resolve();
@@ -789,7 +806,9 @@ export function createPluginBridges({
     const where = `${e.pluginId} (sources/${e.id}${t.location ? ` : ${t.location.location}` : ''})`;
     try {
       const timeout = t.location ? BRIDGE_LIMITS.locationScanTimeout : BRIDGE_LIMITS.scanTimeout;
-      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [t.location], { timeout });
+      // Un emplacement injoignable (serveur éteint, disque débranché) : la source lève une erreur au message affichable
+      // (contrat du SDK), qui ne désactive pas le plugin ; le catalogue garde l'analyse précédente.
+      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [t.location], { timeout, keepOnPluginError: !!t.location });
       // Désactivé ou emplacement retiré pendant l'analyse : rien n'est ajouté.
       if (!current(t)) return;
       const folders = granted(e.pluginId);
@@ -801,9 +820,13 @@ export function createPluginBridges({
       if (dropped) log(`Plugins : ${where} : ${dropped} élément(s) écarté(s) (invalides ou non permis).`);
       catalog.setSource(ref, real.elements);
       scanned.set(refId(ref), { ref, print: print(t) });
+      failures.delete(ref.instance);
     } catch (err) {
-      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service).
+      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service), une erreur attendue d'un
+      // emplacement est retenue pour l'état de la source.
       log(`Plugins : analyse de ${where} impossible : ${(err as Error)?.message ?? err}`);
+      const message = pluginMessage((err as Error)?.message);
+      if (t.location && current(t)) failures.set(t.ref.instance, { print: print(t), message: message ?? '' });
     }
   }
 
@@ -821,6 +844,9 @@ export function createPluginBridges({
       next.set(refId(ref), { entry: e, location: null, ref });
     }
     wanted = next;
+    // Échec d'un emplacement qui n'est plus voulu tel quel (retiré, autre source, autres types) : oublié.
+    const live = new Set([...next.values()].filter((t) => t.location).map(print));
+    for (const [key, f] of [...failures]) if (!live.has(f.print)) failures.delete(key);
     for (const [k, { ref }] of [...scanned]) {
       if (next.has(k)) continue;
       scanned.delete(k);
@@ -986,6 +1012,11 @@ export function createPluginBridges({
       locations = list.map((l) => ({ key: l.key, location: structuredClone(l.location) }));
       return sync();
     },
+    /**
+     * Message de la dernière analyse en échec de cet emplacement (instance du cœur), texte brut du plugin borné à 500
+     * caractères (vide s'il n'en a pas donné) ; `null` si la dernière analyse a réussi.
+     */
+    failure: (key: string): string | null => failures.get(key)?.message ?? null,
     /** Vrai si un plugin lit cet emplacement de la bibliothèque (instance du cœur) : la bibliothèque du cœur le laisse. */
     claimed: (key: string): boolean => assigned.has(key),
     /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */

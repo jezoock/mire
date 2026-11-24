@@ -14,6 +14,7 @@ import { itemFromElement } from './from-element.ts';
 import { itemFromPath } from './item-from-path.ts';
 import { scanLibrary, unreachable, type ScanOptions } from './scan.ts';
 import { findSubtitles, type Subtitle } from './subtitles.ts';
+import { t } from '../i18n/current.ts';
 import type { LibraryItem, RemoteSubtitle, RemoteSubtitles, ScannedLocation, ScanResult, SourceTarget } from './types.ts';
 
 export interface LibraryServiceDeps {
@@ -33,6 +34,11 @@ export interface LibraryServiceDeps {
    * emplacement lu par un plugin soient à jour (l'interface historique les reçoit depuis le catalogue).
    */
   pluginScans?: () => Promise<void>;
+  /**
+   * Message de la dernière analyse en échec d'un emplacement lu par un plugin (instance), texte brut du plugin ;
+   * `null` si elle a réussi (P5-12). Montré comme état de la source, dans un texte du cœur.
+   */
+  pluginFailure?: (instance: string) => string | null;
   /** Sous-titres trouvés par les plugins pour une vidéo locale déjà autorisée (P5-11b). */
   pluginSubtitles?: (videoPath: string) => Promise<Subtitle[]>;
   /** Un emplacement n'a pas pu alimenter le catalogue (journal par défaut) ; l'analyse continue. */
@@ -116,6 +122,13 @@ export function createLibraryService(deps: LibraryServiceDeps) {
     });
   }
 
+  /** Échec de la dernière analyse du plugin qui lit cet emplacement, dans un texte du cœur ; `null` sinon. */
+  function failureOf(target: SourceTarget): string | null {
+    const message = deps.pluginFailure?.(locationInstance(target));
+    if (message == null) return null;
+    return message ? t('library.errors.sourceFailed', { details: message }) : t('library.errors.sourceFailedPlain');
+  }
+
   /** Le catalogue ne doit jamais empêcher la bibliothèque de répondre. */
   function guarded(fn: () => void): void {
     try {
@@ -148,7 +161,8 @@ export function createLibraryService(deps: LibraryServiceDeps) {
       if (catalog) {
         opts.onScanned = (scanned) => guarded(() => feed(catalog, scanned, seen));
         opts.pluginItems = (target, kinds) => pluginItems(catalog, target, kinds, fromPlugins);
-        opts.unreachable = (target) => (target.resolved.type === 'path' && checks.get(target.resolved.path)) || unreachable(target);
+        opts.unreachable = async (target) =>
+          (await ((target.resolved.type === 'path' && checks.get(target.resolved.path)) || unreachable(target))) ?? failureOf(target);
       }
       const { items, status, subtitles } = await scan(opts);
       if (catalog) guarded(() => prune(catalog, seen));

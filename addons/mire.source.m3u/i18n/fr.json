@@ -11,7 +11,7 @@
     },
     "source": {
       "name": "Liste M3U",
-      "unavailable": "Liste de lecture inaccessible."
+      "unavailable": "liste de lecture introuvable ou illisible"
     }
   }
 }

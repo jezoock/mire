@@ -294,6 +294,8 @@
       "errors": {
         "networkShareUnavailable": "Partage réseau inaccessible : {path}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.",
         "folderNotFound": "Dossier introuvable : {path}",
+        "sourceFailed": "Emplacement inaccessible : {details}",
+        "sourceFailedPlain": "Emplacement inaccessible.",
         "addressUnavailable": "Adresse inaccessible ({reason}).",
         "crawlTimeout": "délai dépassé",
         "crawlUnreachable": "serveur injoignable",

@@ -140,11 +140,11 @@ describe('pages d’index', () => {
 
 describe('erreurs : message affichable', () => {
   it('page absente, code de réponse, serveur injoignable, renvoi vers une autre adresse', async () => {
-    await assert.rejects(scan(`${BASE}/absent/`, ['video']), { message: 'Adresse inaccessible (le serveur a répondu avec le code 404).' });
-    await assert.rejects(scan(`${BASE}/panne/`, ['video']), { message: 'Adresse inaccessible (le serveur a répondu avec le code 500).' });
-    await assert.rejects(scan(films, ['video'], { down: true }), { message: 'Adresse inaccessible (serveur injoignable).' });
-    await assert.rejects(scan(`${BASE}/redirige/`, ['video']), { message: 'Adresse inaccessible (le serveur renvoie vers une autre adresse).' });
-    await assert.rejects(scan(films, ['video'], { locale: 'en', down: true }), { message: "Can't open this address (server unreachable)." });
+    await assert.rejects(scan(`${BASE}/absent/`, ['video']), { message: 'le serveur a répondu avec le code 404' });
+    await assert.rejects(scan(`${BASE}/panne/`, ['video']), { message: 'le serveur a répondu avec le code 500' });
+    await assert.rejects(scan(films, ['video'], { down: true }), { message: 'serveur injoignable' });
+    await assert.rejects(scan(`${BASE}/redirige/`, ['video']), { message: 'le serveur renvoie vers une autre adresse' });
+    await assert.rejects(scan(films, ['video'], { locale: 'en', down: true }), { message: 'server unreachable' });
   });
 
   it('une page suivante inaccessible est passée', async () => {

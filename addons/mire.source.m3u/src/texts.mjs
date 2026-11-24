@@ -4,10 +4,10 @@
 
 const TEXTS = {
   fr: {
-    unavailable: 'Liste de lecture inaccessible.',
+    unavailable: 'liste de lecture introuvable ou illisible',
   },
   en: {
-    unavailable: "Can't open this playlist.",
+    unavailable: 'playlist missing or unreadable',
   },
 };
 

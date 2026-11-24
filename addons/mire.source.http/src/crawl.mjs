@@ -52,7 +52,8 @@ function reasonOf(err, t) {
 
 /**
  * Parcourt les pages sous `startUrl` ; `onDir(dirUrl, dirName, files)` reçoit les fichiers de chaque page. La première
- * page inaccessible lève une erreur au message affichable ; une page suivante inaccessible est passée.
+ * page inaccessible lève une erreur au message affichable (la raison : Mire la montre dans l'état de la source, garde
+ * l'analyse précédente et laisse le plugin actif) ; une page suivante inaccessible est passée.
  */
 export async function crawl(http, startUrl, onDir, { t, maxPages = MAX_PAGES } = {}) {
   const base = new URL(startUrl.endsWith('/') ? startUrl : `${startUrl}/`);
@@ -69,7 +70,7 @@ export async function crawl(http, startUrl, onDir, { t, maxPages = MAX_PAGES } =
       if (res.status < 200 || res.status > 299) throw Object.assign(new Error(`status ${res.status}`), { status: res.status });
       html = res.text;
     } catch (err) {
-      if (first) throw new Error(t('unavailable', { reason: reasonOf(err, t) }));
+      if (first) throw new Error(reasonOf(err, t));
       continue;
     }
     first = false;

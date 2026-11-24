@@ -11,7 +11,7 @@
     },
     "source": {
       "name": "M3U playlist",
-      "unavailable": "Can't open this playlist."
+      "unavailable": "playlist missing or unreadable"
     }
   }
 }

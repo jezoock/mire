@@ -11,7 +11,6 @@
     },
     "source": {
       "name": "Web server",
-      "unavailable": "Can't open this address ({reason}).",
       "status": "the server responded with code {status}",
       "unreachable": "server unreachable",
       "elsewhere": "the server sends you to another address"

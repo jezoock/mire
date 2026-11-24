@@ -250,3 +250,31 @@ describe('liste de lecture locale : son dossier est accordé avec elle', () => {
     bridges.stop();
   });
 });
+
+describe('analyse sans emplacement : une exception du plugin reste une panne', () => {
+  it('`keepOnPluginError` seulement pour l’analyse d’un emplacement', async () => {
+    const options: unknown[] = [];
+    const entry = { pluginId: 'org.exemple.liste', kind: 'sources', id: 'liste', declaration: { id: 'liste' } } as unknown as ContributionEntry;
+    const service: BridgeService = {
+      contributions: (kind) => (kind === 'sources' ? [entry] : []),
+      onContributionsChange: () => () => {},
+      async call(_p, _k, _i, method, _args, o) {
+        if (method === 'handles') return false;
+        options.push(o);
+        return [];
+      },
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: false }),
+    };
+    const bridges = createPluginBridges({ service, catalog: { setSource() {}, removeSource() {} }, log: () => {} });
+    await bridges.setLocations([
+      { key: 'https://x.exemple.org/', location: { location: 'https://x.exemple.org/', url: 'https://x.exemple.org/', network: false, kinds: ['video'] } },
+    ]);
+    await bridges.rescan();
+    assert.ok(options.length > 0);
+    assert.ok(options.every((o) => (o as { keepOnPluginError?: boolean }).keepOnPluginError === false));
+    bridges.stop();
+  });
+});

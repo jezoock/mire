@@ -4,13 +4,11 @@
 
 const TEXTS = {
   fr: {
-    unavailable: 'Adresse inaccessible ({reason}).',
     status: 'le serveur a répondu avec le code {status}',
     unreachable: 'serveur injoignable',
     elsewhere: 'le serveur renvoie vers une autre adresse',
   },
   en: {
-    unavailable: "Can't open this address ({reason}).",
     status: 'the server responded with code {status}',
     unreachable: 'server unreachable',
     elsewhere: 'the server sends you to another address',
