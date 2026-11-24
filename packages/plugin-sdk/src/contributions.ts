@@ -24,9 +24,9 @@ export type SourceMediaKind = 'video' | 'audio' | 'image' | 'game';
 
 /**
  * Emplacement de la bibliothèque ou dossier de jeux PC, tel que le cœur le passe à une source de plugin (`handles`,
- * `scan`) : un dossier ou un partage réseau (`path`), ou une adresse (`url`). Les emplacements restent dans la configuration de Mire ;
- * un dossier n'est passé qu'à une source qui l'a accepté (`handles`), et lui est alors accordé (`ctx.files`) tant
- * qu'il reste dans la bibliothèque.
+ * `scan`) : un dossier ou un partage réseau (`path`), ou une adresse (`url`). Les emplacements restent dans la
+ * configuration de Mire ; un dossier n'est passé qu'à une source qui l'a accepté (`handles`), et lui est alors accordé
+ * (`ctx.files`) tant qu'il reste dans la bibliothèque ou dans les dossiers de jeux.
  */
 export interface SourceLocation {
   /** Emplacement tel que l'utilisateur l'a saisi (`D:\\Films`, `smb://nas/films`, `https://…/films/`). */
