@@ -354,11 +354,15 @@ export function createPluginBridges({
     return !!w && print(w) === print(t);
   };
 
-  /** Lance l'analyse `t` ; une analyse déjà en cours pour le même emplacement est attendue plutôt que relancée. */
-  function scan(t: Target, force = false): Promise<void> {
+  /**
+   * Lance l'analyse `t` ; une analyse déjà en cours pour le même emplacement est attendue plutôt que relancée, même
+   * pour `rescan` (elle a commencé après les changements qui l'ont demandée, ou en même temps : deux parcours du même
+   * dossier ne verraient rien de plus).
+   */
+  function scan(t: Target): Promise<void> {
     const k = refId(t.ref);
     const now = running.get(k);
-    if (now && now.print === print(t) && !force) return now.done;
+    if (now && now.print === print(t)) return now.done;
     const done = runScan(t).finally(() => {
       if (running.get(k)?.done === done) running.delete(k);
     });
@@ -412,7 +416,7 @@ export function createPluginBridges({
     if (claimsChanged) onClaimsChange?.();
     // Nouvelles analyses, ou celles déjà en cours : la promesse de `sync` ne se résout qu'une fois tout arrivé.
     const due = ([k, t]: [string, Target]) => force || scanned.get(k)?.print !== print(t);
-    return [...next].filter(due).map(([, t]) => scan(t, force));
+    return [...next].filter(due).map(([, t]) => scan(t));
   }
 
   /**

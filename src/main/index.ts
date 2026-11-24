@@ -151,8 +151,18 @@ function start(pending: PendingFiles): Running {
 
   // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments ; un emplacement lu par un plugin
   // (P5-11a, sources des plugins plus bas) est laissé à ce plugin.
+  // L'analyse attend aussi celles des sources des plugins (P5-11c), une fois les plugins démarrés : l'interface
+  // historique reçoit les fichiers d'un dossier lu par un plugin depuis le catalogue.
   let pluginBridges: PluginBridges | undefined;
-  const library = createLibraryService({ config, access, catalog, claimed: (k) => pluginBridges?.claimed(k) ?? false });
+  let pluginsReady: () => void = () => {};
+  const pluginsStart = new Promise<void>((resolve) => (pluginsReady = resolve));
+  const library = createLibraryService({
+    config,
+    access,
+    catalog,
+    claimed: (k) => pluginBridges?.claimed(k) ?? false,
+    pluginScans: () => pluginsStart.then(() => pluginBridges?.rescan()),
+  });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
   const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
@@ -260,10 +270,19 @@ function start(pending: PendingFiles): Running {
   // corbeille. Le catalogue suit ; les éléments déplacés reviennent sous leur nouvelle clé à l'analyse suivante,
   // lancée peu après la dernière opération (une sélection de plusieurs fichiers ne lance qu'une analyse).
   let rescanTimer: NodeJS.Timeout | undefined;
-  const rescan = () => {
+  let rescanPlugins = false;
+  const later = (plugins: boolean) => {
     clearTimeout(rescanTimer);
-    rescanTimer = setTimeout(() => library.scan().catch((err: Error) => console.error('Catalogue (fichiers) :', err.message)), 2000);
+    rescanPlugins ||= plugins;
+    rescanTimer = setTimeout(() => {
+      const opts = { plugins: rescanPlugins };
+      rescanPlugins = false;
+      library.scan(opts).catch((err: Error) => console.error('Catalogue (fichiers) :', err.message));
+    }, 2000);
   };
+  const rescan = () => later(true);
+  // Un plugin prend ou rend un emplacement : ses propres analyses sont déjà lancées, seul le catalogue du cœur suit.
+  const rescanCore = () => later(false);
   const fileManager = createFilesService({
     roots: () => managedRoots(config.get()),
     ops: { trash: (p) => shell.trashItem(p) },
@@ -379,7 +398,7 @@ function start(pending: PendingFiles): Running {
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
   // Emplacements de la bibliothèque (P5-11a) : proposés aux sources des plugins ; quand un plugin en prend ou en rend
   // un, la bibliothèque du cœur est analysée de nouveau pour retirer ou retrouver ses propres éléments.
-  const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescan });
+  const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescanCore });
   pluginBridges = bridges;
   const syncLocations = (cfg: Config) => void bridges.setLocations(libraryLocations(cfg.library.sources));
   syncLocations(config.get());
@@ -497,6 +516,7 @@ function start(pending: PendingFiles): Running {
     // Plugins démarrés : une palette choisie toujours absente est désormais manquante (P5-02).
     .finally(() => {
       pluginsStarted = true;
+      pluginsReady();
       syncWebApps();
       palettesChanged();
     });

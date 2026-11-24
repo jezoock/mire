@@ -321,3 +321,28 @@ test.describe('services de streaming (P5-05)', () => {
     );
   });
 });
+
+test.describe('dossiers de cet ordinateur (P5-11c)', () => {
+  const queue = (library: unknown) => (((migrate({ version: 9, library }).config as Any).continuity ?? []) as string[]).filter((id) => id === 'P5-11c');
+  const at = (...locations: unknown[]) => ({ sources: locations.map((location, i) => ({ id: `s${i}`, kind: 'video', location })) });
+
+  test('plugin inclus `mire.source.local`, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-11c') as ContinuityRule;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.source.local', 'bundled', undefined]);
+  });
+
+  test('une bibliothèque avec un dossier de cet ordinateur : le plugin est activé ; les emplacements restent', () => {
+    assert.deepEqual(queue(at('/home/moi/Films')), ['P5-11c']);
+    assert.deepEqual(queue(at('https://nas.local/films/', 'D:\\Films')), ['P5-11c']);
+    const library = at('/home/moi/Films', '\\\\NAS\\Musique');
+    const { config } = migrate({ version: 9, library: structuredClone(library) });
+    assert.deepEqual((config as Any).library, library);
+  });
+
+  test('sans dossier de cet ordinateur (adresses, partages réseau, rien) : la règle ne s’applique pas', () => {
+    assert.deepEqual(queue(at('https://nas.local/films/', 'smb://nas/films', '\\\\NAS\\Films', '//nas/films', '', 42)), []);
+    assert.deepEqual(queue({ sources: [] }), []);
+    assert.deepEqual(queue(undefined), []);
+    assert.deepEqual(queue({ sources: 'x' }), []);
+  });
+});

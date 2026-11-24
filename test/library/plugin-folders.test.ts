@@ -1,0 +1,184 @@
+// Dossiers de cet ordinateur lus par le plugin inclus `mire.source.local` (P5-11c), branché au cœur : continuité
+// d'une installation existante (mêmes clés `local:<chemin>`, mêmes éléments, rien de retiré), mêmes fichiers et même
+// état des sources pour l'interface historique, plugin désactivé puis réactivé, dossier atteint par un lien
+// symbolique, bibliothèque de démonstration du test de fumée. Les tests du code déplacé sont dans
+// plugins/mire.source.local/test/.
+import { after, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { ART_RE, COVER_RE, EXT, FANART_RE, type Config, type LibrarySource } from '@mire/shared';
+import { createCatalog, type CatalogChange } from '../../src/main/catalog/index.ts';
+import { localFileKey } from '../../src/main/catalog/keys.ts';
+import { folderProvider, librarySources, scanLibrary, type LibraryItem, type ScannedLocation } from '../../src/main/library/index.ts';
+import { libraryTree } from './fixtures.ts';
+import { PLUGIN_DIR, wireLocalPlugin } from './plugin-folders.ts';
+
+const tree = libraryTree();
+const { touch } = tree;
+// Chemin réel : sous macOS, le dossier temporaire passe par un lien (/var → /private/var).
+const root = fs.realpathSync(tree.root);
+touch('Films/Amélie (2001).fr.srt');
+touch('Films/Amélie (2001).en.vtt');
+after(tree.remove);
+
+const at = (rel: string) => path.join(root, rel);
+const src = (id: string, kind: LibrarySource['kind'], location: string): LibrarySource => ({ id, kind, location });
+const SOURCES = [
+  src('films', 'video', at('Films')),
+  src('photos', 'image', at('Films')),
+  src('series', 'video', at('Séries')),
+  src('musique', 'audio', at('Musique')),
+  src('images', 'image', at('Images')),
+  src('profond', 'video', at('Profond')),
+  src('absent', 'video', at('Absent')),
+];
+
+function setup(sources: LibrarySource[]) {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-catalog-')), 'sources');
+  const catalog = createCatalog({ dir, debounceMs: 0, onIgnored: () => {} });
+  const changes: CatalogChange[] = [];
+  catalog.onChange((c) => changes.push(c));
+  const cfg = { library: { sources }, bookmarks: [] } as unknown as Config;
+  return { catalog, changes, cfg, config: { get: () => cfg } };
+}
+
+/** Ce que l'analyse du cœur rendait avant P5-11c : fichiers et état des sources, éléments du catalogue (`src-local`). */
+async function before(sources: LibrarySource[]) {
+  const scanned: ScannedLocation[] = [];
+  const result = await scanLibrary({ sources, providers: [folderProvider], onScanned: (s) => scanned.push(s) });
+  // Mêmes éléments que l'ancienne source `src-local` : celle des partages, avec le tag `local`.
+  const asShare = (s: ScannedLocation) => ({ ...s, target: { ...s.target, resolved: { ...s.target.resolved, network: true } } });
+  const share = librarySources().find((x) => x.id === 'src-smb')!;
+  const sourcesOf = scanned.map((s) => ({
+    ref: { plugin: 'src-local', instance: share.instance(asShare(s)) },
+    elements: share.elementsOf(asShare(s)).map((e) => ({ ...e, tags: ['local'] })),
+  }));
+  return { ...result, sources: sourcesOf };
+}
+
+const byPath = (items: LibraryItem[]) => [...items].sort((a, b) => a.path.localeCompare(b.path) || a.kind.localeCompare(b.kind));
+
+describe('mire.source.local branché au cœur', () => {
+  it('installation existante : mêmes clés et mêmes éléments, rien de retiré ni d’ajouté, l’ancienne source part', async () => {
+    const { catalog, changes, config } = setup(SOURCES);
+    const old = await before(SOURCES);
+    for (const s of old.sources) if (s.elements.length) catalog.setSource(s.ref, s.elements);
+    const oldKeys = catalog.keys().sort();
+    const oldElements = new Map(oldKeys.map((k) => [k, catalog.get(k)!]));
+    assert.ok(oldKeys.length > 0);
+    changes.splice(0);
+
+    const logs: string[] = [];
+    const { library } = await wireLocalPlugin({ config, catalog, log: (m) => logs.push(m) });
+    await library.scan();
+
+    assert.deepEqual(catalog.keys().sort(), oldKeys);
+    for (const k of oldKeys) {
+      const e = catalog.get(k)!;
+      const was = oldElements.get(k)!;
+      assert.equal(e.source.plugin, 'mire.source.local', k);
+      assert.equal(e.source.instance, was.source.instance, k);
+      // Sous-titres : ordre de lecture du disque.
+      const subs = (x: typeof e) => ({ ...x.infos, subtitles: x.infos.subtitles ? [...(x.infos.subtitles as string[])].sort() : undefined });
+      assert.deepEqual([e.name, e.open, e.tags, subs(e), e.images], [was.name, was.open, was.tags, subs(was), was.images], k);
+    }
+    assert.ok(catalog.sources().every((r) => r.plugin === 'mire.source.local'));
+    for (const c of changes) {
+      assert.deepEqual(c.removed, []);
+      assert.deepEqual(c.added, []);
+    }
+    // Le dossier absent : journal de l'analyse du plugin, rien d'autre.
+    assert.ok(
+      logs.every((m) => m.includes('Dossier introuvable')),
+      logs.join('\n'),
+    );
+  });
+
+  it('interface historique : mêmes fichiers et même état des sources qu’avant', async () => {
+    const { catalog, config } = setup(SOURCES);
+    const old = await before(SOURCES);
+    const { library } = await wireLocalPlugin({ config, catalog });
+    const now = await library.scan();
+    assert.deepEqual(byPath(now.items), byPath(old.items));
+    assert.deepEqual(now.status, old.status);
+    assert.equal(now.status.absent.error, `Dossier introuvable : ${at('Absent')}`);
+  });
+
+  it('plugin désactivé : ses éléments disparaissent sans erreur, et reviennent à la réactivation', async () => {
+    const { catalog, config } = setup(SOURCES.slice(0, 4));
+    const logs: string[] = [];
+    const plugin = await wireLocalPlugin({ config, catalog, log: (m) => logs.push(m) });
+    const first = await plugin.library.scan();
+    const keys = catalog.keys().sort();
+    assert.ok(keys.length > 0);
+
+    await plugin.setEnabled(false);
+    const off = await plugin.library.scan();
+    assert.deepEqual(catalog.keys(), []);
+    assert.deepEqual(off.items, []);
+    assert.ok(Object.values(off.status).every((s) => s.ok && s.count === 0));
+
+    await plugin.setEnabled(true);
+    const on = await plugin.library.scan();
+    assert.deepEqual(catalog.keys().sort(), keys);
+    assert.deepEqual(byPath(on.items), byPath(first.items));
+    assert.deepEqual(logs, []);
+  });
+
+  it('dossier retiré de la configuration : ses éléments partent, il n’est plus accordé', async () => {
+    const { catalog, cfg, config } = setup(SOURCES.slice(0, 1));
+    const plugin = await wireLocalPlugin({ config, catalog });
+    await plugin.library.scan();
+    assert.ok(catalog.size() > 0);
+    assert.deepEqual(plugin.bridges.assignedFolders('mire.source.local'), [at('Films')]);
+    cfg.library.sources = [];
+    await plugin.syncLocations();
+    await plugin.library.scan();
+    assert.equal(catalog.size(), 0);
+    assert.deepEqual(plugin.bridges.assignedFolders('mire.source.local'), []);
+  });
+
+  it('dossier atteint par un lien symbolique : chemins et clés de la configuration', async (t) => {
+    const link = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-lien-')), 'Films');
+    try {
+      fs.symlinkSync(at('Films'), link, 'dir');
+    } catch {
+      return t.skip('liens symboliques indisponibles');
+    }
+    const sources = [src('films', 'video', link)];
+    const { catalog, config } = setup(sources);
+    const old = await before(sources);
+    const { library } = await wireLocalPlugin({ config, catalog });
+    const now = await library.scan();
+    assert.ok(now.items.length > 0);
+    assert.deepEqual(byPath(now.items), byPath(old.items));
+    assert.ok(catalog.keys().every((k) => k.startsWith(localFileKey(link) + '/')));
+  });
+
+  it('bibliothèque de démonstration du test de fumée : mêmes 8 éléments', async () => {
+    const fixtures = path.join(import.meta.dirname, '../e2e/fixtures/bibliotheque');
+    const sources: LibrarySource[] = [
+      { id: 'v', kind: 'video', location: path.join(fixtures, 'Vidéos') },
+      { id: 'a', kind: 'audio', location: path.join(fixtures, 'Musique') },
+      { id: 'i', kind: 'image', location: path.join(fixtures, 'Images') },
+    ];
+    const { catalog, config } = setup(sources);
+    const { library } = await wireLocalPlugin({ config, catalog });
+    const { items, status } = await library.scan();
+    assert.equal(items.length, 8);
+    assert.deepEqual(
+      Object.values(status).map((s) => s.count),
+      [4, 2, 2],
+    );
+    assert.deepEqual(byPath(items), byPath((await before(sources)).items));
+  });
+
+  it('formats du plugin : ceux du cœur', async () => {
+    const formats = await import(pathToFileURL(path.join(PLUGIN_DIR, 'src', 'formats.mjs')).href);
+    assert.deepEqual(formats.EXT, EXT);
+    for (const [name, re] of Object.entries({ COVER_RE, ART_RE, FANART_RE })) assert.equal(String(formats[name]), String(re), name);
+  });
+});

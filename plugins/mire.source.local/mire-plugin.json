@@ -1,0 +1,21 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.source.local",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "sources": [
+      {
+        "id": "src-local",
+        "main": "src/source.mjs"
+      }
+    ]
+  },
+  "permissions": {
+    "folders": true
+  },
+  "i18n": "i18n/"
+}

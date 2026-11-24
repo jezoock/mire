@@ -101,7 +101,8 @@ export function mainContext(s: MainServices): MainContext {
     adblock: s.adblock,
     configPath: () => s.files.config,
     themeBackground: s.window.themeBackground,
-    scanLibrary: s.library.scan,
+    // Sans argument venu de l'interface : l'analyse complète, sources des plugins comprises.
+    scanLibrary: () => s.library.scan(),
     findSubtitles: s.library.findSubtitles,
     openMediaDialog: s.dialogs.openMedia,
     itemFromPath: s.library.itemFromPath,

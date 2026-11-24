@@ -1,6 +1,10 @@
 // Sources de la bibliothèque → éléments (P2-02) : un élément par fichier avec ses tags de source, sous-titres,
 // analyses répétées sans doublon ni réécriture, emplacements qui se recouvrent, emplacement inaccessible ou retiré,
 // et `library.scan` qui rend les mêmes `LibraryItem` qu'avant.
+//
+// Depuis P5-11c, les dossiers de cet ordinateur sont lus par le plugin `mire.source.local`
+// (test/library/plugin-folders.test.ts) : la mécanique du catalogue est vérifiée ici avec la source des partages
+// réseau du cœur (`src-smb`), sur des dossiers temporaires présentés comme des partages.
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,8 +14,8 @@ import type { Config, LibrarySource } from '@mire/shared';
 import { createCatalog, type CatalogChange } from '../../src/main/catalog/index.ts';
 import { localFileKey, m3uEntryKey, remoteFileKey } from '../../src/main/catalog/keys.ts';
 import { sourceFileName } from '../../src/main/catalog/persistence.ts';
-import { librarySources, resolveLocation, scanLibrary } from '../../src/main/library/index.ts';
-import type { ScannedLocation } from '../../src/main/library/index.ts';
+import { DEFAULT_PROVIDERS, folderProvider, librarySources, resolveLocation, scanLibrary } from '../../src/main/library/index.ts';
+import type { ScannedLocation, ScanOptions } from '../../src/main/library/index.ts';
 import { createLibraryService } from '../../src/main/library/service.ts';
 import { indexServer, libraryTree } from './fixtures.ts';
 
@@ -30,6 +34,15 @@ const PLATFORM = process.platform;
 const at = (rel: string) => path.join(root, rel);
 const src = (id: string, kind: LibrarySource['kind'], location: string): LibrarySource => ({ id, kind, location });
 
+/** Analyse où chaque dossier temporaire est lu comme un partage réseau (`src-smb`). */
+const asShares = (o: ScanOptions) =>
+  scanLibrary({
+    ...o,
+    providers: [...DEFAULT_PROVIDERS, folderProvider],
+    onScanned: (s) =>
+      o.onScanned?.(s.target.resolved.type === 'path' ? { ...s, target: { ...s.target, resolved: { ...s.target.resolved, network: true } } } : s),
+  });
+
 function setup(sources: LibrarySource[]) {
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-catalog-')), 'sources');
   const changes: CatalogChange[] = [];
@@ -42,11 +55,12 @@ function setup(sources: LibrarySource[]) {
     access: { allowFile: () => {}, isAllowed: () => true },
     catalog,
     onCatalogError: (err) => errors.push(err),
+    scan: asShares,
   });
   return { dir, catalog, changes, cfg, library, errors };
 }
 
-describe('sources de la bibliothèque : dossier local', () => {
+describe('sources de la bibliothèque : dossiers (partages)', () => {
   it('un élément par fichier, avec ses tags de source, son dossier, ses images et ses sous-titres', async () => {
     const { catalog, library } = setup([src('films', 'video', at('Films')), src('photos', 'image', at('Films'))]);
     const { items } = await library.scan();
@@ -54,10 +68,10 @@ describe('sources de la bibliothèque : dossier local', () => {
     const amelie = catalog.element(localFileKey(at('Films/Amélie (2001).mkv'), PLATFORM));
     assert.deepEqual(amelie && { ...amelie, added: 0 }, {
       key: localFileKey(at('Films/Amélie (2001).mkv'), PLATFORM),
-      source: { plugin: 'src-local', instance: localFileKey(at('Films'), PLATFORM).slice('local:'.length) },
+      source: { plugin: 'src-smb', instance: localFileKey(at('Films'), PLATFORM).slice('local:'.length) },
       name: 'Amélie (2001)',
       open: { kind: 'file', path: at('Films/Amélie (2001).mkv') },
-      tags: ['local'],
+      tags: ['network'],
       infos: { folder: 'Films', subtitles: [at('Films/Amélie (2001).en.vtt'), at('Films/Amélie (2001).fr.srt')].sort() },
       images: { poster: at('Films/Amélie (2001).jpg'), background: at('Films/Amélie (2001)-fanart.jpg') },
       added: 0,
@@ -148,10 +162,10 @@ describe('sources de la bibliothèque : dossier local', () => {
 
   it('nombre maximal d’éléments atteint : la liste coupée ne retire rien du catalogue', async () => {
     const seen: ScannedLocation[] = [];
-    await scanLibrary({ sources: [src('films', 'video', at('Films'))], maxItems: 1, onScanned: (s) => seen.push(s) });
+    await asShares({ sources: [src('films', 'video', at('Films'))], maxItems: 1, onScanned: (s) => seen.push(s) });
     assert.equal(seen.length, 1);
     assert.equal(seen[0].complete, false);
-    await scanLibrary({ sources: [src('films', 'video', at('Films'))], onScanned: (s) => seen.push(s) });
+    await asShares({ sources: [src('films', 'video', at('Films'))], onScanned: (s) => seen.push(s) });
     assert.equal(seen[1].complete, true);
   });
 
@@ -166,8 +180,11 @@ describe('sources de la bibliothèque : dossier local', () => {
         },
         removeSource: () => ({ added: [], changed: [], removed: [] }),
         sources: () => [],
+        keysOf: () => [],
+        get: () => undefined,
       },
       onCatalogError: (err) => errors.push(err),
+      scan: asShares,
     });
     const { items } = await library.scan();
     assert.equal(items.length, 2);
@@ -192,11 +209,11 @@ describe('sources de la bibliothèque : `library.scan` inchangé', () => {
     ];
     const cfg = { library: { sources }, bookmarks: [{ id: 'b', url: 'https://site/x', title: 'X', type: 'movie' }] } as unknown as Config;
     const access = { allowFile: () => {}, isAllowed: () => true };
-    const without = await createLibraryService({ config: { get: () => cfg }, access }).scan();
+    const without = await createLibraryService({ config: { get: () => cfg }, access, scan: asShares }).scan();
     const { catalog } = setup([]);
-    const withCatalog = await createLibraryService({ config: { get: () => cfg }, access, catalog }).scan();
+    const withCatalog = await createLibraryService({ config: { get: () => cfg }, access, catalog, scan: asShares }).scan();
     assert.deepEqual(withCatalog, without);
-    const { items, status } = await scanLibrary({ sources, bookmarks: cfg.bookmarks });
+    const { items, status } = await asShares({ sources, bookmarks: cfg.bookmarks });
     assert.deepEqual(withCatalog, { items, status });
     assert.ok(catalog.size() > 0);
   });
@@ -262,7 +279,8 @@ describe('sources de la bibliothèque : `ElementSource`', () => {
   };
 
   it('chaque emplacement a sa source, et un identifiant d’emplacement stable', () => {
-    assert.deepEqual(sourceFor('D:\\Films\\', 'win32'), { id: 'src-local', tags: ['local'], instance: 'd:/films' });
+    // Dossier de cet ordinateur : lu par le plugin `mire.source.local` (P5-11c), plus par le cœur.
+    assert.equal(sourceFor('D:\\Films\\', 'win32'), undefined);
     assert.deepEqual(sourceFor('\\\\NAS\\Films', 'win32'), { id: 'src-smb', tags: ['network'], instance: '//nas/films' });
     assert.deepEqual(sourceFor('smb://nas/Films', 'win32'), { id: 'src-smb', tags: ['network'], instance: '//nas/films' });
     assert.deepEqual(sourceFor('smb://nas/Films', 'linux'), {
@@ -270,13 +288,13 @@ describe('sources de la bibliothèque : `ElementSource`', () => {
       tags: ['network'],
       instance: '/run/user/1000/gvfs/smb-share:server=nas,share=films',
     });
-    assert.deepEqual(sourceFor('/home/moi/Films/', 'linux'), { id: 'src-local', tags: ['local'], instance: '/home/moi/Films' });
+    assert.equal(sourceFor('/home/moi/Films/', 'linux'), undefined);
     assert.deepEqual(sourceFor('HTTPS://Nas.local/films/', 'linux'), { id: 'src-http', tags: ['remote'], instance: 'https://nas.local/films/' });
     assert.deepEqual(sourceFor('https://box/liste.m3u#x', 'linux'), { id: 'src-m3u', tags: ['remote'], instance: 'https://box/liste.m3u' });
   });
 
   it('`scan` d’un emplacement seul rend les mêmes éléments que l’analyse de la bibliothèque', async () => {
-    for (const location of [at('Films'), `${server.base}/films/`, `${server.base}/listes/chaines.m3u`]) {
+    for (const location of [`${server.base}/films/`, `${server.base}/listes/chaines.m3u`]) {
       const kinds = new Set(['video', 'image'] as const);
       const loc = { target: target(location, PLATFORM), kinds };
       const source = librarySources(PLATFORM).find((s) => s.handles(loc));

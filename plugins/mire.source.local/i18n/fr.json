@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Dossiers de cet ordinateur",
+      "description": "Ajoute à la bibliothèque les vidéos, la musique et les images des dossiers de cet ordinateur, avec leurs affiches et leurs sous-titres."
+    },
+    "source": {
+      "folderNotFound": "Dossier introuvable : {path}"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Folders on this computer",
+      "description": "Adds the videos, music and pictures in folders on this computer to the library, with their posters and subtitles."
+    },
+    "source": {
+      "folderNotFound": "Folder not found: {path}"
+    }
+  }
+}
