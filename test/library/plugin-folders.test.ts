@@ -158,6 +158,32 @@ describe('mire.source.local branché au cœur', () => {
     assert.ok(catalog.keys().every((k) => k.startsWith(localFileKey(link) + '/')));
   });
 
+  it('lien à l’intérieur d’un dossier qui mène hors des dossiers accordés : écarté (fichier, dossier, affiche)', async (t) => {
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mire-prive-'));
+    fs.writeFileSync(path.join(outside, 'secret.mkv'), '');
+    fs.writeFileSync(path.join(outside, 'secret.jpg'), '');
+    const lib = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-liens-')));
+    fs.writeFileSync(path.join(lib, 'Film.mkv'), '');
+    try {
+      fs.symlinkSync(path.join(outside, 'secret.mkv'), path.join(lib, 'lien.mkv'));
+      fs.symlinkSync(path.join(outside, 'secret.jpg'), path.join(lib, 'Film.jpg'));
+      fs.symlinkSync(outside, path.join(lib, 'Ailleurs'), 'dir');
+    } catch {
+      return t.skip('liens symboliques indisponibles');
+    }
+    const { catalog, config } = setup([src('films', 'video', lib)]);
+    const { library } = await wireLocalPlugin({ config, catalog });
+    const { items } = await library.scan();
+    assert.deepEqual(
+      items.map((i) => [i.path, i.cover]),
+      [[path.join(lib, 'Film.mkv'), null]],
+    );
+    assert.deepEqual(catalog.keys(), [localFileKey(path.join(lib, 'Film.mkv'))]);
+    assert.deepEqual(catalog.get(localFileKey(path.join(lib, 'Film.mkv')))?.images, {});
+    fs.rmSync(outside, { recursive: true, force: true });
+    fs.rmSync(lib, { recursive: true, force: true });
+  });
+
   it('bibliothèque de démonstration du test de fumée : mêmes 8 éléments', async () => {
     const fixtures = path.join(import.meta.dirname, '../e2e/fixtures/bibliotheque');
     const sources: LibrarySource[] = [

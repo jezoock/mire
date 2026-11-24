@@ -22,7 +22,12 @@ export const MAX_ITEMS = 150000;
 // Extensions lues : tous les médias (les images servent d'affiches même pour une source de vidéos) et les sous-titres.
 const EXTENSIONS = [...EXT.video, ...EXT.audio, ...EXT.image, ...SUBTITLE_EXTS].map((e) => e.slice(1));
 
-const isFolder = (location) => !!location && typeof location.path === 'string' && location.path !== '' && location.network !== true;
+/** Types de fichiers lus ici ; un autre (`game` : dossiers de jeux PC, P5-13) va à d'autres sources. */
+const MEDIA_KINDS = ['video', 'audio', 'image'];
+const mediaKinds = (location) => (Array.isArray(location.kinds) ? location.kinds.filter((k) => MEDIA_KINDS.includes(k)) : []);
+
+const isFolder = (location) =>
+  !!location && typeof location.path === 'string' && location.path !== '' && location.network !== true && mediaKinds(location).length > 0;
 
 export default function createSource(ctx) {
   const t = translator(ctx.locale);
@@ -38,7 +43,7 @@ export default function createSource(ctx) {
       return elementsOf(
         location.path,
         files.map((f) => f.path),
-        location.kinds,
+        mediaKinds(location),
         MAX_ITEMS,
       );
     },

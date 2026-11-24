@@ -76,6 +76,19 @@ describe('manifeste et contrat', () => {
     assert.equal(s.handles(null), false);
   });
 
+  it('handles : seulement des vidéos, de la musique ou des images (pas un dossier de jeux PC, `game`)', async () => {
+    const s = createSource(fakeContext().ctx);
+    const folder = (kinds) => ({ location: '/jeux', path: '/jeux', network: false, kinds });
+    assert.equal(s.handles(folder(['game'])), false);
+    assert.equal(s.handles(folder([])), false);
+    assert.equal(s.handles(folder(['game', 'audio'])), true);
+    // Un type inconnu n'est jamais lu, même avec d'autres.
+    assert.deepEqual(
+      (await scan('Musique', ['game', 'audio'])).map((e) => e.name),
+      ['01 - Début'],
+    );
+  });
+
   it('walk : dossiers cachés écartés, profondeur et nombre de fichiers bornés comme le cœur', async () => {
     const { ctx, walks } = fakeContext({ granted: [lib.root] });
     await createSource(ctx).scan(at('Films', ['video']));
