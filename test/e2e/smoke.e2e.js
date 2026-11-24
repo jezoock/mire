@@ -4626,4 +4626,35 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await local(), before);
     });
   });
+
+  describe('serveur web et liste M3U (P5-12)', () => {
+    it('plugins à installer absents : une adresse de la bibliothèque n’affiche rien, sans erreur, et son état le dit ; la bibliothèque de démonstration ne change pas', async () => {
+      const ids = await page.evaluate(() => window.api.pluginsList().then((l) => l.map((p) => p.id)));
+      assert.ok(!ids.includes('mire.source.http') && !ids.includes('mire.source.m3u'), ids.join());
+      const scan = () => page.evaluate(() => window.api.scanLibrary());
+      const before = (await scan()).items.map((i) => i.path).sort();
+      const web = { id: 'e2e-web', kind: 'video', location: 'http://127.0.0.1:9/films/' };
+      const list = { id: 'e2e-m3u', kind: 'audio', location: 'http://127.0.0.1:9/radios.m3u' };
+      const original = await page.evaluate(() => window.api.getConfig().then((r) => r.config));
+      await page.evaluate(
+        (sources) =>
+          window.api
+            .getConfig()
+            .then(({ config }) => window.api.saveConfig({ ...config, library: { ...config.library, sources: [...config.library.sources, ...sources] } })),
+        [web, list],
+      );
+      try {
+        const { items, status } = await scan();
+        assert.deepEqual(items.map((i) => i.path).sort(), before);
+        for (const id of [web.id, list.id]) {
+          assert.equal(status[id]?.ok, true, id);
+          assert.equal(status[id]?.count, 0, id);
+          assert.match(status[id]?.note ?? '', /aucun plugin activé|no enabled plugin/i, id);
+        }
+      } finally {
+        await page.evaluate((config) => window.api.saveConfig(config), original);
+      }
+      assert.deepEqual((await scan()).items.map((i) => i.path).sort(), before);
+    });
+  });
 });
