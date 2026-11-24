@@ -38,7 +38,7 @@ export interface WatchCard {
 
 /**
  * Partie « Où regarder » :
- * - `nokey` : il manque la clé du catalogue (bouton vers les réglages) ;
+ * - `nokey` : il manque un réglage du plugin, une clé (bouton vers ses réglages) ;
  * - `loading`, `error`, `empty` : un message ;
  * - `done` : les titres trouvés.
  */
@@ -46,6 +46,8 @@ export interface WatchView {
   status: 'nokey' | 'loading' | 'error' | 'empty' | 'done';
   message: string;
   cards: WatchCard[];
+  /** Source des données (texte du plugin), sous les titres trouvés. */
+  attribution?: string;
 }
 
 /** Site où chercher la recherche en cours : identifiant, nom, couleurs, et ce qu'il fera (« Chercher « amélie » »). */
@@ -71,9 +73,8 @@ export interface SearchLabels {
   /** Parties fixes. */
   watch?: string;
   sites?: string;
-  /** Bouton qui mène à la clé du catalogue, et source des données. */
+  /** Bouton qui mène aux réglages du plugin (sa clé). */
   addKey?: string;
-  attribution?: string;
   /** Aucun résultat dans le catalogue. */
   none?: string;
 }

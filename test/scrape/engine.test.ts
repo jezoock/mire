@@ -63,7 +63,7 @@ function fakeProvider(o: FakeOptions = {}) {
 function engine(dataDir: string, providers: MetadataProvider[], extra: { now?: () => number; progress?: ScrapeProgress[] } = {}) {
   return createScrapeEngine({
     dataDir,
-    getConfig: () => ({ search: { tmdbToken: '', language: 'fr-FR', region: 'FR' }, games: [], emulators: [] }),
+    getConfig: () => ({ search: { language: 'fr-FR' }, games: [], emulators: [] }),
     listRoms: async () => ({ ok: true, roms: [] }),
     onProgress: (p) => extra.progress?.push(p),
     providers,

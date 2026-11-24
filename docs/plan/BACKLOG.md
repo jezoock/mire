@@ -178,7 +178,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | ID | Tâche | Taille | Dépend de | 🧑 | Statut | PR |
 | --- | --- | --- | --- | --- | --- | --- |
 | P5-01 | Continuité pour les installations existantes | M | P3-07, P2-11 |  | faite | [#98](https://github.com/jezoock/mire/pull/98) |
-| P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | à faire | |
+| P5-02 | Palettes Plein jour, Minuit, Velours | S | P5-01, P4-02 |  | faite | |
 | P5-03 | Pages prêtes à l'emploi | S | P5-01, P2-07 |  | faite | |
 | P5-04 | Profils de manettes | S | P5-01, P4-03 |  | faite | |
 | P5-05 | Services de streaming | M | P5-01 | 🧑 | à faire | |
@@ -191,7 +191,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-12 | Serveur web, liste M3U | M | P5-11 |  | à faire | |
 | P5-13 | Jeux PC | M | P5-01 | 🧑 | à faire | |
 | P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | M | P5-01 |  | à faire | |
-| P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | à faire | |
+| P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | faite | [#101](https://github.com/jezoock/mire/pull/101) |
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | à faire | |
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |

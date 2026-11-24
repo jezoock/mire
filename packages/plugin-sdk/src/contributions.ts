@@ -83,8 +83,12 @@ export interface MetadataFacts {
   overview?: string;
   genre?: string;
   artist?: string;
-  /** Chemin de l'image copiée dans le dossier d'images. */
+  /**
+   * Image (affiche) : un plugin rend son adresse `https:`, sur un hôte de ses `permissions.hosts` ; Mire la copie dans
+   * son dossier d'images et enregistre le chemin de la copie.
+   */
   image: string | null;
+  /** Image de fond, comme `image`. */
   backdrop?: string | null;
   series?: boolean;
   source: string;

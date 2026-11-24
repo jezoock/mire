@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "fr",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Palettes d’essai"
+    },
+    "palettes": {
+      "jour": {
+        "name": "Plein jour"
+      },
+      "minuit": {
+        "name": "Minuit"
+      },
+      "velours": {
+        "name": "Velours"
+      }
+    }
+  }
+}

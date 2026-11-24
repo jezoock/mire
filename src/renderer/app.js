@@ -8,7 +8,7 @@ import { toast } from './ui/toast.ts';
 import * as dialogs from './ui/dialogs.ts';
 import { PAGE, S } from './state/index.ts';
 import { api } from './api/index.ts';
-import { fold, splitAlbumFolder } from '@mire/shared';
+import { DEFAULT_PALETTE, fold, splitAlbumFolder } from '@mire/shared';
 import * as D from './domain/index.ts';
 import { cleanTrack, collator, folderLabel, folderText, genresOf, labelOf, metaKey, scrapeKey } from './domain/index.ts';
 import { mediaUrl } from './core/media.ts';
@@ -63,6 +63,17 @@ const allLocalGames = () => D.allLocalGames({ games: S.config.games, autoGames: 
 
 // Le réglage « thème » désigne une palette (P4-02) ; le chargeur suit aussi le mode du système (« Automatique »).
 const palette = createPaletteLoader();
+// Palettes des plugins (P5-02) : la feuille de chacune est fabriquée par le chargeur à partir de jetons vérifiés. Une
+// palette choisie absente (plugin pas encore installé, désactivé) laisse place à la palette par défaut, avec un message.
+let pluginPalettes = [];
+palette.onMissing(() => toast(t('settingsView.palettes.missing', { name: t(`palettes.${DEFAULT_PALETTE}`) }), { duration: 8000 }));
+async function loadPluginPalettes() {
+  const info = await api.palettesList().catch(() => null);
+  if (!info) return;
+  pluginPalettes = info.palettes;
+  palette.setPlugins(info);
+  if (S.section === SETTINGS_VIEW) settings.refresh();
+}
 function applyTheme() {
   palette.set(S.config?.ui?.theme);
   // Thème des pages (P4-11) : sa palette, ses polices et sa mise en page, sans redémarrage ; il peut placer le menu.
@@ -166,7 +177,7 @@ const search = createSearch({
   t,
   raw: (key) => i18n.raw(key),
   catalog: (q) => api.catalogSearch(q),
-  watch: (q) => (S.config?.search?.tmdbToken ? api.searchStreaming(q) : null),
+  watch: (q) => api.searchStreaming(q),
   pages: () => shell.pages(),
   sites: () => S.config?.web ?? [],
   color: safeColor,
@@ -230,6 +241,7 @@ const settings = createSettings({
     sourceStatus: S.sourceStatus,
     gameSourceStatus: S.gameSourceStatus,
     scanning: !!S.scanning,
+    pluginPalettes: pluginPalettes.map((p) => ({ id: p.id, name: p.name })),
   }),
   plugins: () => api.pluginsSettings(),
   pages: () => api.pagesOverview(),
@@ -764,7 +776,7 @@ function focusInfoHtml(ref) {
   const place = ref.kind === 'rom' ? `${emuName}${it.remote ? ', disponible en ligne' : ''}` : ref.kind === 'game' ? (it.auto ? 'Jeu PC trouvé dans vos dossiers' : 'Jeu PC') : folderText(it);
   const line = [it.sYear, it.sGenre, place].filter(Boolean).join(', ');
   let overview = it.sOverview;
-  if (!overview && ref.kind === 'video') overview = S.config.search.tmdbToken ? 'Pas encore d’infos pour cette vidéo. Le rouage en haut à droite permet de les récupérer en ligne.' : 'Ajoutez une clé TMDB (rouage en haut à droite, ou Réglages) pour récupérer les affiches, genres et résumés.';
+  if (!overview && ref.kind === 'video') overview = 'Pas encore d’infos pour cette vidéo. Le rouage en haut à droite permet de les récupérer en ligne.';
   return `<div class="fi-text"><h2 class="fi-title">${esc(title)}</h2><p class="fi-line">${esc(line)}</p>${overview ? `<p class="fi-overview">${esc(overview)}</p>` : ''}</div>
     <div class="fi-actions">${remoteRomButton(ref)}<button class="btn btn-ghost btn-sm focusable" data-action="edit-focused">Modifier</button>${deleteRomButton(ref)}</div>`;
 }
@@ -1778,10 +1790,7 @@ function panelSpec(section) {
         { id: 'menu', label: 'Menu', html: menuBlock },
       ];
     case 'search':
-      return [{ id: 'search', label: 'Recherche', html: () => `<section class="pset"><h3 class="pset-h">Catalogues de streaming</h3>
-        <p class="set-help">Avec une clé gratuite de TMDB, la recherche montre les films et séries et le service où les regarder.</p>
-        ${cfgInput('search.tmdbToken', 'Clé ou jeton TMDB', c.search.tmdbToken, 'Facultatif', 'password')}
-        <div class="field"><label for="cfg-region">Pays des disponibilités</label><select class="input focusable" id="cfg-region" data-cfg="search.region">${[['FR', 'France'], ['BE', 'Belgique'], ['CH', 'Suisse'], ['LU', 'Luxembourg'], ['CA', 'Canada']].map(([v, l]) => `<option value="${v}"${v === (c.search.region || 'FR') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+      return [{ id: 'search', label: 'Recherche', html: () => `<section class="pset"><h3 class="pset-h">Recherche</h3>
         <div class="btn-row"><button type="button" class="btn btn-ghost btn-sm focusable" data-action="clear-queries">Effacer les recherches récentes</button></div></section>` }];
     case 'videos':
     case 'music':
@@ -1789,7 +1798,7 @@ function panelSpec(section) {
       const kind = { videos: 'video', music: 'audio', images: 'image' }[section];
       const tabs = [{ id: 'sources', label: 'Sources', html: () => `<section class="pset"><p class="set-help">Dossiers, partages réseau (\\\\NAS\\Films, smb://nas/films) ou serveurs web. Appliqué immédiatement.</p><div class="sources-box" data-kinds="${kind}">${sourcesHtml([kind])}</div>
         <div class="btn-row"><button type="button" class="btn btn-ghost btn-sm focusable" data-action="rescan">Analyser à nouveau</button></div></section>` }];
-      if (section === 'videos') tabs.push({ id: 'infos', label: 'Infos et affiches', html: () => scrapeBlock('videos', c.search.tmdbToken ? 'Affiches, résumés, genres et fonds d’écran depuis TMDB.' : 'Ajoutez une clé TMDB (Réglages ou page Rechercher) pour récupérer affiches, résumés, genres et fonds d’écran.') });
+      if (section === 'videos') tabs.push({ id: 'infos', label: 'Infos et affiches', html: () => scrapeBlock('videos', 'Affiches, résumés, genres et fonds d’écran depuis TMDB.') });
       if (section === 'music') tabs.push({ id: 'infos', label: 'Infos et pochettes', html: () => scrapeBlock('music', 'Pochettes, artistes, années et genres depuis MusicBrainz.') });
       tabs.push({ id: 'display', label: 'Affichage', html: () => `<section class="pset"><label class="check"><input type="checkbox" class="focusable" data-ui="backdrop"${c.ui.backdrop !== false ? ' checked' : ''}> Afficher le fond d’écran de l’élément sélectionné</label>
         ${section === 'videos' ? cfgInput('externalPlayer.path', 'Lecteur externe (formats non lus par Mire, télévision)', c.externalPlayer.path, 'Détection automatique (mpv, puis VLC)') : ''}</section>` });
@@ -2720,6 +2729,8 @@ function tick() {
     if (S.section === CENTRE_VIEW) centre.refresh();
   });
   api.pluginsContinuity().then(continuityNotice).catch(() => {});
+  api.onPalettesChange(() => void loadPluginPalettes());
+  void loadPluginPalettes();
   tick();
   setInterval(tick, 5000);
 

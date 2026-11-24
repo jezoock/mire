@@ -1,16 +1,17 @@
 // Palettes du cœur (P4-02) : fichiers de jetons et métadonnées cohérents, contrastes de « Contraste élevé » chiffrés,
-// chargeur de palette (bascule sans rechargement, « Automatique » qui suit le système).
+// chargeur de palette (bascule sans rechargement, « Automatique » qui suit le système), palettes des plugins (P5-02) :
+// feuille fabriquée à partir de jetons revérifiés, palette absente remplacée par celle par défaut, avec un message.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PALETTE_OPTIONAL_TOKENS, PALETTE_TOKENS, parsePaletteMeta } from '@mire/shared';
-import { createPaletteLoader, paletteHref } from '@mire/ui/palettes';
+import { CORE_PALETTES, PALETTE_OPTIONAL_TOKENS, PALETTE_TOKENS, parsePaletteMeta } from '@mire/shared';
+import { createPaletteLoader, paletteHref, pluginDeclarations } from '@mire/ui/palettes';
 import type { PaletteHost } from '@mire/ui/palettes';
 
 const ROOT = path.join(import.meta.dirname, '..', '..');
 const PALETTES = path.join(ROOT, 'src', 'renderer', 'palettes');
-const CORE = ['ecran', 'jour', 'minuit', 'velours', 'contraste'];
+const CORE = ['ecran', 'contraste'];
 
 /** Déclarations d'un fichier de palette : son sélecteur et ses propriétés. */
 function readPalette(id: string) {
@@ -29,8 +30,9 @@ function readPalette(id: string) {
 }
 
 describe('palettes du cœur', () => {
-  it('le dossier contient les cinq palettes', () => {
+  it('le dossier contient les palettes du cœur, et elles seules (les autres sont des plugins, P5-02)', () => {
     assert.deepEqual(fs.readdirSync(PALETTES).sort(), [...CORE].sort());
+    assert.deepEqual([...CORE_PALETTES], CORE);
   });
 
   for (const id of CORE) {
@@ -146,29 +148,38 @@ describe('contrastes de « Contraste élevé »', () => {
 function fakeHost(linked: string[], light = false) {
   const listeners: (() => void)[] = [];
   const pending: { id: string; href: string; ready: () => void }[] = [];
+  const sheets: { id: string; declarations: readonly [string, string][] }[] = [];
   const media = { matches: light, addEventListener: (_t: 'change', l: () => void) => void listeners.push(l) };
   const host: PaletteHost = {
     root: { dataset: { palette: 'ecran' } },
-    hasTokens: (id) => linked.includes(id),
+    hasTokens: (id) => linked.includes(id) || sheets.some((s) => s.id === id),
     addTokens: (id, href, ready) => void pending.push({ id, href, ready }),
+    setPluginTokens: (list) => void sheets.splice(0, sheets.length, ...list),
     light: media,
   };
   const setLight = (v: boolean) => {
     media.matches = v;
     for (const l of listeners) l();
   };
-  return { host, pending, setLight, shown: () => host.root.dataset.palette };
+  return { host, pending, sheets, setLight, shown: () => host.root.dataset.palette };
 }
+
+/** Palette de plugin telle que le processus principal la donne : jetons obligatoires, plus des valeurs à revérifier. */
+const plugin = (id: string, scheme: 'light' | 'dark' = 'dark', extra: Record<string, string> = {}) => ({
+  id,
+  scheme,
+  tokens: { ...Object.fromEntries(PALETTE_TOKENS.map((t) => [t, t === 'ring-mix' ? '58%' : '#f1efe8'])), ...extra },
+});
 
 describe('chargeur de palette', () => {
   it('applique immédiatement une palette déjà liée', () => {
     const f = fakeHost(CORE);
     const loader = createPaletteLoader(f.host);
-    loader.set('minuit');
-    assert.equal(f.shown(), 'minuit');
     loader.set('contraste');
     assert.equal(f.shown(), 'contraste');
     assert.equal(loader.current(), 'contraste');
+    loader.set('ecran');
+    assert.equal(f.shown(), 'ecran');
     assert.equal(f.pending.length, 0);
   });
 
@@ -178,37 +189,105 @@ describe('chargeur de palette', () => {
     assert.equal(f.shown(), 'ecran');
   });
 
-  it('« Automatique » suit le mode du système, et ses changements', () => {
-    const f = fakeHost(CORE, true);
+  it('palette du cœur pas encore liée : sa feuille est liée, puis appliquée une fois chargée', () => {
+    const f = fakeHost([]);
     const loader = createPaletteLoader(f.host);
-    loader.set('auto');
-    assert.equal(f.shown(), 'jour');
-    f.setLight(false);
-    assert.equal(f.shown(), 'ecran');
-    loader.set('velours');
-    f.setLight(true);
-    assert.equal(f.shown(), 'velours');
-  });
-
-  it('une autre palette : sa feuille est liée, puis appliquée une fois chargée', () => {
-    const f = fakeHost(CORE);
-    const loader = createPaletteLoader(f.host);
-    loader.set('sepia');
-    assert.equal(f.shown(), 'ecran');
+    loader.set('contraste');
     assert.deepEqual(
       f.pending.map((p) => [p.id, p.href]),
-      [['sepia', 'palettes/sepia/sepia.css']],
+      [['contraste', 'palettes/contraste/contraste.css']],
     );
+    assert.equal(f.shown(), 'ecran');
     f.pending[0]!.ready();
-    assert.equal(f.shown(), 'sepia');
+    assert.equal(f.shown(), 'contraste');
   });
 
   it("une demande plus récente l'emporte sur un chargement en cours", () => {
+    const f = fakeHost(['ecran']);
+    const loader = createPaletteLoader(f.host);
+    loader.set('contraste');
+    loader.set('ecran');
+    f.pending[0]!.ready();
+    assert.equal(f.shown(), 'ecran');
+  });
+});
+
+describe('palettes des plugins (P5-02)', () => {
+  it('feuille fabriquée par le cœur : color-scheme et un --jeton par valeur valide, le reste écarté', () => {
+    const decl = pluginDeclarations(
+      plugin('sable', 'light', { 'ring-w': '3px', 'mono-mix': '62%', 'ring-from': 'red; color: red', 'mire-edge': 'url(x)', autre: '#000000' }),
+    );
+    assert.deepEqual(decl[0], ['color-scheme', 'light']);
+    const names = decl.map(([n]) => n);
+    assert.deepEqual(
+      names.slice(1, PALETTE_TOKENS.length + 1),
+      PALETTE_TOKENS.map((t) => `--${t}`),
+    );
+    assert.ok(names.includes('--ring-w') && names.includes('--mono-mix'));
+    for (const n of ['--ring-from', '--mire-edge', '--autre']) assert.ok(!names.includes(n), n);
+    // Un jeton revérifié ici aussi : une valeur glissée dans les données ne passe pas.
+    const forged = pluginDeclarations({ id: 'x', scheme: 'dark', tokens: { bg: '#000000; } body { display: none' } });
+    assert.deepEqual(forged, [['color-scheme', 'dark']]);
+  });
+
+  it('palette de plugin choisie : appliquée quand les palettes arrivent ; toutes ont leur feuille', () => {
     const f = fakeHost(CORE);
     const loader = createPaletteLoader(f.host);
-    loader.set('sepia');
+    const missing: string[] = [];
+    loader.onMissing((id) => missing.push(id));
     loader.set('minuit');
-    f.pending[0]!.ready();
+    // Plugins pas encore démarrés : la palette par défaut, sans message.
+    assert.equal(f.shown(), 'ecran');
+    loader.setPlugins({ ready: false, palettes: [] });
+    assert.equal(f.shown(), 'ecran');
+    loader.setPlugins({ ready: true, palettes: [plugin('minuit'), plugin('velours'), plugin('ecran'), plugin('Mal formé')] });
     assert.equal(f.shown(), 'minuit');
+    // Une palette du cœur ou un identifiant invalide ne viennent jamais d'un plugin.
+    assert.deepEqual(
+      f.sheets.map((s) => s.id),
+      ['minuit', 'velours'],
+    );
+    assert.ok(loader.available('velours'));
+    assert.ok(!loader.available('jour'));
+    assert.deepEqual(missing, []);
+  });
+
+  it('palette absente une fois les plugins démarrés : la palette par défaut, un seul message, puis retour avec le plugin', () => {
+    const f = fakeHost(CORE);
+    const loader = createPaletteLoader(f.host);
+    const missing: string[] = [];
+    loader.onMissing((id) => missing.push(id));
+    loader.set('velours');
+    loader.setPlugins({ ready: true, palettes: [] });
+    assert.equal(f.shown(), 'ecran');
+    assert.deepEqual(missing, ['velours']);
+    // Relu (autre plugin, langue…) : pas de nouveau message.
+    loader.set('velours');
+    loader.setPlugins({ ready: true, palettes: [plugin('minuit')] });
+    assert.deepEqual(missing, ['velours']);
+    // Plugin installé : la palette revient, sans toucher au réglage.
+    loader.setPlugins({ ready: true, palettes: [plugin('velours')] });
+    assert.equal(f.shown(), 'velours');
+    // Désactivé de nouveau : retour à la palette par défaut, avec un message.
+    loader.setPlugins({ ready: true, palettes: [] });
+    assert.equal(f.shown(), 'ecran');
+    assert.deepEqual(missing, ['velours', 'velours']);
+  });
+
+  it('« Automatique » : Plein jour en mode clair si son plugin est là, sinon la palette par défaut sans message', () => {
+    const f = fakeHost(CORE, true);
+    const loader = createPaletteLoader(f.host);
+    const missing: string[] = [];
+    loader.onMissing((id) => missing.push(id));
+    loader.set('auto');
+    loader.setPlugins({ ready: true, palettes: [] });
+    assert.equal(f.shown(), 'ecran');
+    loader.setPlugins({ ready: true, palettes: [plugin('jour', 'light')] });
+    assert.equal(f.shown(), 'jour');
+    f.setLight(false);
+    assert.equal(f.shown(), 'ecran');
+    f.setLight(true);
+    assert.equal(f.shown(), 'jour');
+    assert.deepEqual(missing, []);
   });
 });

@@ -12,12 +12,13 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind } from '@mire/plugin-sdk';
 import type { Element, PageDefinition } from '@mire/shared';
-import type { GamepadProfile, PluginMetadataProvider, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
+import type { GamepadProfile, PluginMetadataProvider, PluginPalettes, PluginSettingsInfo, PluginSummary } from '@mire/shared/ipc';
 import { readGamepadProfiles } from './gamepads.ts';
 import { freeGamesOf, romSitesFor } from './packs.ts';
 import { readPluginPages } from './pages.ts';
 import { readExternalPlayers } from './apps.ts';
 import type { ExternalPlayerSpec } from '../platform/types.ts';
+import { readPluginPalettes } from './palettes.ts';
 import type { Messages } from '@mire/shared/i18n';
 import type { Contributor } from '../catalog/tags/engine.ts';
 import type { Registry } from '../catalog/tags/registry.ts';
@@ -37,6 +38,7 @@ import type { createContextHandler } from './context.ts';
 import { checkPresent, dependentsOf, type DependencyNode, type DependencyProblem } from './dependencies.ts';
 import type { PluginEndpoint } from './host.ts';
 import type { Journal } from './journal.ts';
+import { grantedPermissions } from './permissions.ts';
 import { contributionEntries, createContributionRegistry, declaredTagsAndInfos, RESTART_KINDS, type ContributionEntry } from './registry.ts';
 import type { RuntimePlugin } from './runtime.ts';
 import type { PluginSettingsStore } from './settings.ts';
@@ -161,6 +163,8 @@ export function createPluginService(opts: PluginServiceOptions) {
   const restartPending = new Set<string>();
   let watchdogTimer: NodeJS.Timeout | null = null;
   let stopped = false;
+  /** Plugins démarrés (fin de `start`) : les palettes des plugins sont alors connues (P5-02). */
+  let started = false;
 
   const taggers = createPluginTaggers({
     refresh: (keys) => opts.refresh(keys),
@@ -469,6 +473,7 @@ export function createPluginService(opts: PluginServiceOptions) {
         log(id, 'warn', `Refusé : ${refusalMessage(id, k.refusal)} ${JSON.stringify(k.refusal.vars)}`);
       }
       for (const id of order) if (state.get(id).enabled) await activate(id);
+      started = true;
     },
 
     /** Tous les plugins trouvés, avec leur état (pour le futur Centre). */
@@ -632,6 +637,12 @@ export function createPluginService(opts: PluginServiceOptions) {
       }));
     },
 
+    /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`) : les ponts n'en copient des images que d'eux. */
+    hosts: (id: string): string[] => {
+      const m = active.get(id)?.plugin.manifest;
+      return m ? [...grantedPermissions(m).hosts] : [];
+    },
+
     /** Profils de manettes des plugins actifs (contributions `gamepads`, P5-04), vérifiés, dans l'ordre d'essai. */
     gamepadProfiles: (): GamepadProfile[] => readGamepadProfiles(registry.list('gamepads')),
     /** Sites de jeux proposés pour un système par les packs `romSites` des plugins actifs (P5-07), vérifiés. */
@@ -649,6 +660,12 @@ export function createPluginService(opts: PluginServiceOptions) {
       readExternalPlayers(
         registry.list('apps').filter((e) => ['bundled', 'official'].includes(trustOf(known.get(e.pluginId) ?? { origin: 'installed', repository: null }))),
       ),
+
+    /**
+     * Palettes des plugins actifs (contributions `palettes`, P5-02), vérifiées. `ready` : les plugins ont démarré ;
+     * avant, une palette absente n'est pas encore « manquante ».
+     */
+    palettes: (): PluginPalettes => ({ ready: started, palettes: readPluginPalettes(registry.list('palettes')) }),
 
     /** Dossiers accordés à un plugin (`ctx.files`). */
     folders: (id: string): string[] => state.folders(id),
