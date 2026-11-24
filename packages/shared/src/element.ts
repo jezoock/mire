@@ -23,8 +23,8 @@ export interface TagSummary {
   id: string;
   /** Nom affiché, dans la langue de l'interface. */
   name: string;
-  /** Tag du cœur, créé par l'utilisateur, ou posé sans être déclaré (`other`). */
-  origin: 'core' | 'user' | 'other';
+  /** Tag du cœur, créé par l'utilisateur, déclaré par un plugin actif (`plugin`, P5-09), ou posé sans être déclaré (`other`). */
+  origin: 'core' | 'user' | 'plugin' | 'other';
   /** Nombre d'éléments qui le portent. */
   count: number;
 }

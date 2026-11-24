@@ -15,8 +15,8 @@ import { createTagIndex } from './tag-index.ts';
 
 /**
  * Contribution automatique (tags automatiques, infos en ligne) : ce qu'elle pose sur un élément, ou `null`. Elle
- * reçoit l'élément avec les tags du type de fichier et de la source. Les tags automatiques (`tags/taggers.ts`) et les
- * infos en ligne (P2-06) passent par là.
+ * reçoit l'élément avec les tags du type de fichier et de la source. Les tags automatiques des plugins
+ * (`plugins/taggers.ts`) et les infos en ligne (P2-06) passent par là.
  */
 export interface Contributor {
   id: string;
@@ -122,24 +122,35 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
     return typeof title === 'string' && title.trim() ? title.trim() : e.name;
   }
 
+  /** Tag connu : du cœur, de l'utilisateur, déclaré par un plugin actif, ou posé sur un élément. */
+  const knownTag = (id: string): boolean => registry.isCoreTag(id) || registry.isUserTag(id) || registry.isPluginTag(id) || index.tagCount(id) > 0;
+
   /** Identifiant d'un tag nommé à la main : tag connu, ou nom simplifié (nouveau tag de l'utilisateur). */
   function tagId(name: string): string {
-    if (registry.isCoreTag(name) || registry.isUserTag(name) || index.tagCount(name)) return name;
-    return userTagId(name);
+    return knownTag(name) ? name : userTagId(name);
   }
 
-  /** Tags connus (`tags.list`) : ceux du cœur, puis de l'utilisateur, puis ceux posés sans être déclarés. */
+  /**
+   * Tags connus (`tags.list`) : ceux du cœur, puis ceux des plugins actifs (dans l'ordre d'activation), puis ceux de
+   * l'utilisateur, puis ceux posés sans être déclarés. Un tag de l'utilisateur garde sa place s'il porte le même
+   * identifiant qu'un tag de plugin.
+   */
   function tagsList(): TagSummary[] {
-    const core = registry.coreTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'core', count: index.tagCount(id) }));
-    const user = registry.userTags().map((id): TagSummary => ({ id, name: registry.tagName(id), origin: 'user', count: index.tagCount(id) }));
+    const summary = (id: string, origin: TagSummary['origin']): TagSummary => ({ id, name: registry.tagName(id), origin, count: index.tagCount(id) });
+    const core = registry.coreTags().map((id) => summary(id, 'core'));
+    const user = registry.userTags().map((id) => summary(id, 'user'));
     user.sort((a, b) => a.name.localeCompare(b.name));
-    const known = new Set([...core, ...user].map((t) => t.id));
+    const plugin = registry
+      .pluginTags()
+      .filter((id) => !registry.isUserTag(id))
+      .map((id) => summary(id, 'plugin'));
+    const known = new Set([...core, ...plugin, ...user].map((t) => t.id));
     const other = index
       .tags()
       .filter((id) => !known.has(id))
       .sort()
       .map((id): TagSummary => ({ id, name: id, origin: 'other', count: index.tagCount(id) }));
-    return [...core, ...user, ...other];
+    return [...core, ...plugin, ...user, ...other];
   }
 
   const validKey = (key: unknown): key is ElementKey => typeof key === 'string' && keyGenre(key) !== null;
@@ -168,7 +179,7 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
         if (on !== true && on !== false && on !== null) continue;
         const id = tagId(name.trim());
         if (!id) continue;
-        if (on && !registry.isCoreTag(id) && !registry.isUserTag(id) && !index.tagCount(id)) overrides.addUserTag(id, name.trim());
+        if (on && !knownTag(id)) overrides.addUserTag(id, name.trim());
         next[id] = on;
       }
       if (Object.keys(next).length) overrides.setTags(key, next);
@@ -251,7 +262,7 @@ export function createTagEngine({ catalog, overrides, registry, rules, contribut
      */
     mergeTags(from: unknown, into: unknown): number | null {
       if (typeof from !== 'string' || typeof into !== 'string' || from === into || !registry.isUserTag(from)) return null;
-      if (!registry.isCoreTag(into) && !registry.isUserTag(into) && !index.tagCount(into)) return null;
+      if (!knownTag(into)) return null;
       return overrides.dropTag(from, index.withTags([from]), into).length;
     },
 

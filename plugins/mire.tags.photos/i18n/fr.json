@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Tags automatiques : photos",
+      "description": "Range les photos par dossier (« Vacances » ; « Mariage, Partie 2 » quand le nom du dossier seul ne dit rien)."
+    },
+    "infos": {
+      "folder": "Dossier"
+    }
+  }
+}

@@ -190,12 +190,31 @@ const options = targets.map((t, i) => ({
   plugins: i === 0 ? [...t.plugins, copyPlugin] : t.plugins,
 }));
 
+/**
+ * Fichiers d'un plugin inclus à emporter : ceux de son paquet publié (le manifeste et `files` de son `package.json`)
+ * quand il en a un, sans ses tests ; sinon tout le dossier.
+ */
+function publishedFiles(dir) {
+  let files;
+  try {
+    files = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).files;
+  } catch {
+    return null;
+  }
+  return Array.isArray(files) ? ['mire-plugin.json', ...files.filter((f) => typeof f === 'string' && f).map((f) => f.replace(/\/+$/, ''))] : null;
+}
+
 // Plugins inclus : resources/plugins/ est refait à chaque construction (un plugin retiré de plugins/ en disparaît).
 function copyBundledPlugins() {
   fs.rmSync(RESOURCES_PLUGINS, { recursive: true, force: true });
   fs.mkdirSync(RESOURCES_PLUGINS, { recursive: true });
   for (const e of fs.readdirSync(BUNDLED_PLUGINS, { withFileTypes: true })) {
-    if (e.isDirectory()) fs.cpSync(path.join(BUNDLED_PLUGINS, e.name), path.join(RESOURCES_PLUGINS, e.name), { recursive: true });
+    if (!e.isDirectory()) continue;
+    const from = path.join(BUNDLED_PLUGINS, e.name);
+    const to = path.join(RESOURCES_PLUGINS, e.name);
+    const files = publishedFiles(from);
+    if (!files) fs.cpSync(from, to, { recursive: true });
+    else for (const f of new Set(files)) fs.cpSync(path.join(from, f), path.join(to, f), { recursive: true });
   }
 }
 

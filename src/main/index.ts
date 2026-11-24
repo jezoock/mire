@@ -36,7 +36,6 @@ import { createTagEngine } from './catalog/tags/engine.ts';
 import { createPages } from './catalog/pages/index.ts';
 import { createSearch } from './catalog/search/index.ts';
 import { createLists } from './catalog/lists/index.ts';
-import { builtinTaggers, taggerContributor } from './catalog/tags/taggers.ts';
 import { fileTagRules } from './catalog/tags/file-rules.ts';
 import { createRegistry } from './catalog/tags/registry.ts';
 import { createTargetFinder } from './catalog/targets.ts';
@@ -223,15 +222,14 @@ function start(pending: PendingFiles): Running {
     console.log(
       `Catalogue : infos en ligne reprises (${scraped.matched} rattachées à un élément, ${scraped.unmatched.length} gardées sous leur ancienne clé).`,
     );
-  // Tags et infos effectifs, index ; les règles par extension, les consoles et l'ordre des fournisseurs suivent la
-  // configuration. Tags automatiques internes (séries, films, musique, consoles, photos), puis infos en ligne : le
-  // moteur fait passer les infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
-  // Tags automatiques des plugins actifs (P3-03) : branchés une fois l'hôte de plugins créé, plus bas.
+  // Tags et infos effectifs, index ; les règles par extension et l'ordre des fournisseurs suivent la configuration.
+  // Tags automatiques des plugins actifs (P3-03 ; séries, films, musique, consoles et photos sont des plugins inclus
+  // depuis P5-09), branchés une fois l'hôte de plugins créé, plus bas ; puis infos en ligne : le moteur fait passer les
+  // infos en ligne avant celles des tags automatiques, quel que soit l'ordre de la liste.
   // Fournisseurs d'infos des plugins actifs (P4-20) : après ceux du cœur, sauf ordre choisi dans les Réglages.
   let pluginTaggers: () => Contributor[] = () => [];
   let pluginProviders: () => string[] = () => [];
   const contributors = () => [
-    ...builtinTaggers(() => config.get().emulators).map(taggerContributor),
     ...pluginTaggers(),
     ...metadataContributors(metadata, metadataOrder(config.get().catalog, [...new Set([...defaultKnown(), ...pluginProviders()])])),
   ];
@@ -245,8 +243,7 @@ function start(pending: PendingFiles): Running {
   });
   config.onChange((next, prev) => {
     if (JSON.stringify(next.catalog?.fileTags) !== JSON.stringify(prev.catalog?.fileTags)) tags.refreshRules();
-    const providers = JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders);
-    if (providers || JSON.stringify(next.emulators) !== JSON.stringify(prev.emulators)) tags.setContributors(contributors());
+    if (JSON.stringify(next.catalog?.metadataProviders) !== JSON.stringify(prev.catalog?.metadataProviders)) tags.setContributors(contributors());
   });
   // Pages : définitions lues, rien n'est calculé avant la première demande ; les pages touchées sont annoncées.
   const catalogPages = createPages({ file: files.catalogPages, engine: tags, catalog, translate: t });

@@ -8,10 +8,11 @@ import { slug, type InfoType, type InfoValue } from '@mire/shared';
 import type { InfoDeclaration } from '@mire/plugin-sdk';
 
 /**
- * Tags posés par le cœur : type de fichier, tags des sources de la bibliothèque (P2-02), tags automatiques internes
- * (P2-05, plugins inclus en phase 5), puis tags des sources des jeux, de la télévision et des sites (P2-03).
+ * Tags posés par le cœur : type de fichier, tags des sources de la bibliothèque (P2-02), puis tags des sources des
+ * jeux, de la télévision et des sites (P2-03). Les tags automatiques (`series`, `movie`…) sont ceux des plugins qui
+ * les déclarent (P5-09) : un plugin désactivé emporte les siens.
  */
-export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote', 'series', 'movie', 'game', 'tv', 'stream'] as const;
+export const CORE_TAGS = ['video', 'audio', 'image', 'local', 'network', 'remote', 'game', 'tv', 'stream'] as const;
 
 // Déclaration d'une info (type de valeur, recherche) : publiée dans le SDK, un plugin la reprend dans son manifeste.
 export type { InfoDeclaration };
@@ -41,7 +42,8 @@ export const CORE_INFOS: Readonly<Record<string, InfoDeclaration>> = {
   genres: list(),
   overview: text(),
   artist: text(),
-  // Tags automatiques (P2-05).
+  // Posées par les tags automatiques (plugins inclus depuis P5-09), saisies à la main ou venues des infos en ligne :
+  // le cœur les déclare pour que les éditeurs, les pages et la recherche les connaissent sans ces plugins.
   series: text(),
   season: NUMBER,
   episode: NUMBER,
@@ -157,6 +159,8 @@ export function createRegistry(translate: (key: string) => string) {
     infoSearch: (id: string): ReturnType<typeof searchedAs> => searchedAs(declaration(id)),
     /** Plugins actifs qui déclarent un tag (identifiants, dans l'ordre d'activation ; P4-21). */
     pluginsOf: (id: string): string[] => [...plugins].filter(([, p]) => p.tags.includes(id)).map(([pid]) => pid),
+    /** Tags déclarés par les plugins actifs et pas par le cœur, sans doublon, dans l'ordre d'activation. */
+    pluginTags: (): string[] => [...new Set([...plugins.values()].flatMap((p) => p.tags))].filter((id) => !core.has(id)),
     /** Tag déclaré par un plugin actif. */
     isPluginTag: (id: string): boolean => !core.has(id) && !!pluginTag(id),
     /** Infos déclarées par un plugin actif (en plus de celles du cœur). */

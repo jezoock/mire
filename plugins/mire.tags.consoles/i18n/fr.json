@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Tags automatiques : consoles",
+      "description": "Trouve la console d’un jeu d’après l’extension de son fichier (« .gb » : Game Boy), quand sa console ne la dit pas déjà."
+    },
+    "infos": {
+      "system": "Console"
+    }
+  }
+}

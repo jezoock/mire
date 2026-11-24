@@ -79,7 +79,12 @@
       "P5-20",
       "P5-11b",
       "P5-07-libres",
-      "P5-02-minuit"
+      "P5-02-minuit",
+      "P5-09-series",
+      "P5-09-movies",
+      "P5-09-music",
+      "P5-09-consoles",
+      "P5-09-photos"
     ]
   },
   "changed": true

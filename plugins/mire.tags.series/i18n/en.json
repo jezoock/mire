@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Automatic tags: TV shows",
+      "description": "Recognizes episodes from file names (“Friends S01E03”, “Season 1/S01E03”): “TV shows” tag, with the show, season and episode."
+    },
+    "tags": {
+      "series": "TV shows"
+    },
+    "infos": {
+      "series": "TV show",
+      "season": "Season",
+      "episode": "Episode"
+    }
+  }
+}
