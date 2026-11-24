@@ -3,20 +3,21 @@
  * ouvert, sous-titres d'une vidéo. Garde les sous-titres des vidéos en ligne trouvés par la dernière analyse.
  * Chaque analyse alimente aussi le catalogue d'éléments, un emplacement à la fois (`element-sources.ts`).
  */
-import type { Config, ElementSourceRef } from '@mire/shared';
+import type { Config, ElementSourceRef, MediaKind } from '@mire/shared';
 import type { Catalog } from '../catalog/index.ts';
 import type { AccessPolicy } from '../security/access-policy.ts';
-import { isLibrarySource, librarySources } from './element-sources.ts';
+import { isLibrarySource, librarySources, locationInstance } from './element-sources.ts';
+import { itemFromElement } from './from-element.ts';
 import { itemFromPath } from './item-from-path.ts';
 import { scanLibrary, type ScanOptions } from './scan.ts';
 import { findSubtitles, type Subtitle } from './subtitles.ts';
-import type { RemoteSubtitles, ScannedLocation, ScanResult } from './types.ts';
+import type { LibraryItem, RemoteSubtitles, ScannedLocation, ScanResult, SourceTarget } from './types.ts';
 
 export interface LibraryServiceDeps {
   config: { get(): Config };
   access: Pick<AccessPolicy, 'allowFile' | 'isAllowed'>;
   /** Catalogue d'éléments que chaque analyse alimente. */
-  catalog?: Pick<Catalog, 'setSource' | 'removeSource' | 'sources'>;
+  catalog?: Pick<Catalog, 'setSource' | 'removeSource' | 'sources' | 'keysOf' | 'get'>;
   /** Analyse (tests). */
   scan?: (opts: ScanOptions) => Promise<ScanResult>;
   /**
@@ -24,6 +25,11 @@ export interface LibraryServiceDeps {
    * alors du plugin, et ceux du cœur quittent le catalogue.
    */
   claimed?: (instance: string) => boolean;
+  /**
+   * Analyses des sources des plugins (P5-11c) : attendues avant de rendre la bibliothèque, pour que les fichiers d'un
+   * emplacement lu par un plugin soient à jour (l'interface historique les reçoit depuis le catalogue).
+   */
+  pluginScans?: () => Promise<void>;
   /** Sous-titres trouvés par les plugins pour une vidéo locale déjà autorisée (P5-11b). */
   pluginSubtitles?: (videoPath: string) => Promise<Subtitle[]>;
   /** Un emplacement n'a pas pu alimenter le catalogue (journal par défaut) ; l'analyse continue. */
@@ -56,6 +62,19 @@ export function createLibraryService(deps: LibraryServiceDeps) {
     for (const ref of cat.sources()) if (isLibrarySource(ref.plugin) && !seen.has(refId(ref))) cat.removeSource(ref);
   }
 
+  /** Fichiers qu'un plugin a mis au catalogue pour l'emplacement qu'il lit ; `null` si aucun plugin ne le lit. */
+  function pluginItems(cat: NonNullable<LibraryServiceDeps['catalog']>, target: SourceTarget, kinds: ReadonlySet<MediaKind>): LibraryItem[] | null {
+    const instance = locationInstance(target);
+    if (!deps.claimed?.(instance)) return null;
+    const ref = cat.sources().find((r) => r.instance === instance && !isLibrarySource(r.plugin));
+    if (!ref) return [];
+    return cat.keysOf(ref).flatMap((key) => {
+      const e = cat.get(key);
+      const item = e ? itemFromElement(e, kinds) : null;
+      return item ? [item] : [];
+    });
+  }
+
   /** Le catalogue ne doit jamais empêcher la bibliothèque de répondre. */
   function guarded(fn: () => void): void {
     try {
@@ -66,12 +85,20 @@ export function createLibraryService(deps: LibraryServiceDeps) {
   }
 
   return {
-    /** Analyse de toutes les sources ; renvoie aussi l'état de chacune (nombre d'éléments, erreur). */
-    async scan() {
+    /**
+     * Analyse de toutes les sources ; renvoie aussi l'état de chacune (nombre d'éléments, erreur). `plugins: false` :
+     * sans attendre de nouvelles analyses des plugins (le catalogue du cœur seulement suit la configuration).
+     */
+    async scan({ plugins = true }: { plugins?: boolean } = {}) {
+      // Une source de plugin en panne ne bloque pas la bibliothèque : elle garde sa dernière analyse.
+      if (plugins) await deps.pluginScans?.().catch((err: Error) => onCatalogError(err));
       const cfg = config.get();
       const opts: ScanOptions = { sources: cfg.library.sources, bookmarks: cfg.bookmarks || [] };
       const seen = new Set<string>();
-      if (catalog) opts.onScanned = (scanned) => guarded(() => feed(catalog, scanned, seen));
+      if (catalog) {
+        opts.onScanned = (scanned) => guarded(() => feed(catalog, scanned, seen));
+        opts.pluginItems = (target, kinds) => pluginItems(catalog, target, kinds);
+      }
       const { items, status, subtitles } = await scan(opts);
       if (catalog) guarded(() => prune(catalog, seen));
       remote = subtitles;

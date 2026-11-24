@@ -4576,4 +4576,30 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await langs(), ['en', 'fr']);
     });
   });
+
+  describe('dossiers de cet ordinateur (P5-11c)', () => {
+    it('le plugin inclus mire.source.local est actif ; la bibliothèque de démonstration est inchangée ; désactivé, ses fichiers partent, réactivé ils reviennent', async () => {
+      const plugin = () => page.evaluate(() => window.api.pluginsList().then((l) => l.find((p) => p.id === 'mire.source.local')));
+      assert.deepEqual(await plugin().then((p) => p && [p.origin, p.enabled, p.status]), ['bundled', true, 'active']);
+      const local = () =>
+        page.evaluate(() =>
+          window.api.scanLibrary().then((r) =>
+            r.items
+              .filter((i) => !i.bookmark && !/^https?:/i.test(i.path))
+              .map((i) => `${i.kind} ${i.name}`)
+              .sort(),
+          ),
+        );
+      const before = await local();
+      // Bibliothèque de démonstration (test/library/local.test.ts) : 4 vidéos, 2 morceaux, 2 images.
+      assert.equal(before.length, 8, before.join());
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.source.local', false));
+      await until(async () => (await plugin())?.status === 'disabled', { timeout: 10000 });
+      assert.deepEqual(await local(), []);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.source.local', true));
+      await until(async () => (await plugin())?.status === 'active', { timeout: 10000 });
+      await until(async () => (await local()).length === 8, { timeout: 10000 });
+      assert.deepEqual(await local(), before);
+    });
+  });
 });

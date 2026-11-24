@@ -23,7 +23,7 @@ import { gameConfigFeed } from '../../src/main/games/element-sources.ts';
 import { createGames } from '../../src/main/games/index.ts';
 import type { GamesDeps } from '../../src/main/games/types.ts';
 import { builtinTranslator } from '../../src/main/i18n/index.ts';
-import { createLibraryService } from '../../src/main/library/service.ts';
+import { wireLocalPlugin } from '../library/plugin-folders.ts';
 import { tvConfigFeed } from '../../src/main/tv/element-sources.ts';
 import { createTv } from '../../src/main/tv/index.ts';
 import { siteConfigFeed } from '../../src/main/web/element-sources.ts';
@@ -45,7 +45,7 @@ function demo(extra: (c: Config) => Config = (c) => c) {
   return { dir, fixtures, config };
 }
 
-function wire(dir: string, config: ReturnType<typeof createConfigService>) {
+async function wire(dir: string, config: ReturnType<typeof createConfigService>) {
   const catalog = createCatalog({ dir: path.join(dir, 'catalog', 'sources'), debounceMs: 0, onIgnored: () => {} });
   catalog.load();
   const find = createTargetFinder(catalog);
@@ -75,12 +75,13 @@ function wire(dir: string, config: ReturnType<typeof createConfigService>) {
     catalog,
   } as unknown as GamesDeps);
   const tv = createTv({ config, toUi: () => {}, catalog });
-  const library = createLibraryService({ config, access: { allowFile: () => {}, isAllowed: () => true }, catalog });
+  // Dossiers de la bibliothèque : plugin inclus `mire.source.local` (P5-11c).
+  const { library } = await wireLocalPlugin({ config, catalog });
   return { catalog, overrides, metadata, engine, games, tv, library };
 }
 
 /** Ce que fait l'interface historique au démarrage : bibliothèque, dossiers de jeux, jeux de chaque console, chaînes. */
-async function startUi(w: ReturnType<typeof wire>, config: Config) {
+async function startUi(w: Awaited<ReturnType<typeof wire>>, config: Config) {
   await Promise.all([w.library.scan(), w.games.scanGameSources()]);
   for (const emu of config.emulators) await w.games.listRoms(emu.id);
   await w.tv.channels();
@@ -89,17 +90,17 @@ async function startUi(w: ReturnType<typeof wire>, config: Config) {
 describe('configuration de démonstration → catalogue', () => {
   it('toutes les sortes d\u2019éléments : fichiers, jeux de console, jeux PC, chaînes, sites', async () => {
     const { dir, config } = demo();
-    const w = wire(dir, config);
+    const w = await wire(dir, config);
     await startUi(w, config.get());
     const genres = new Set(w.catalog.keys().map(keyGenre));
     for (const g of ['local', 'rom', 'pc', 'tv', 'site'] as const) assert.ok(genres.has(g), g);
     const plugins = new Set(w.catalog.sources().map((s) => s.plugin));
-    for (const p of ['src-local', 'jeux-roms', 'jeux-pc-manuel', 'tv-m3u', 'web-perso']) assert.ok(plugins.has(p), p);
+    for (const p of ['mire.source.local', 'jeux-roms', 'jeux-pc-manuel', 'tv-m3u', 'web-perso']) assert.ok(plugins.has(p), p);
   });
 
   it('tags `game`, `tv`, `stream` ; info `system` des jeux de console une seule fois, celle de la console', async () => {
     const { dir, config } = demo();
-    const w = wire(dir, config);
+    const w = await wire(dir, config);
     await startUi(w, config.get());
     const snes = config.get().emulators[0];
     const rom = w.catalog.keys().find((k) => k.startsWith(`rom:${snes.id}|`))!;
@@ -162,7 +163,7 @@ describe('fiches gardées sous une ancienne clé → leur élément', () => {
       o.load();
       return o.legacyAll();
     })();
-    const w = wire(dir, config);
+    const w = await wire(dir, config);
     // … sauf celles dont l'élément vient de la configuration (marque-pages, jeux ajoutés à la main) : reprises au
     // chargement, ou rattachées dès l'arrivée de l'élément. Les ROM arrivent avec la première liste de la console.
     await startUi(w, config.get());

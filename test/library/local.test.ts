@@ -1,14 +1,18 @@
 // Bibliothèque (P1-14) sur dossiers temporaires : affiches, fanart, épisodes, images d'illustration ignorées,
 // profondeur, dossiers cachés ; regroupement des sources, marque-pages, fichiers ouverts.
+// Depuis P5-11c, les dossiers de cet ordinateur sont lus par le plugin `mire.source.local` (ses tests sont dans
+// plugins/mire.source.local/test/) : le parcours du cœur (`folderProvider`) ne sert plus qu'aux partages réseau.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { scanLibrary, itemFromPath, MAX_ITEMS } from '../../src/main/library/index.ts';
+import { scanLibrary as scanWith, folderProvider, itemFromPath, MAX_ITEMS } from '../../src/main/library/index.ts';
+import type { ScanOptions } from '../../src/main/library/index.ts';
 import type { LibraryItem } from '../../src/main/library/index.ts';
 import type { Bookmark, LibrarySource } from '@mire/shared';
 import { libraryTree } from './fixtures.ts';
 
 const { root, remove } = libraryTree();
+const scanLibrary = (o: ScanOptions) => scanWith({ providers: [folderProvider], ...o });
 test.after(remove);
 
 const src = (id: string, kind: LibrarySource['kind'], rel: string): LibrarySource => ({ id, kind, location: path.join(root, rel) });

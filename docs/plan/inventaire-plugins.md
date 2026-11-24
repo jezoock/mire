@@ -27,7 +27,7 @@ Ce qui remplit Vidéos, Musique et Images.
 
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
-| `src-local` | Dossier sur cet ordinateur | Plugin inclus | Source | Fichiers | src/main/library/providers/local.ts, library/scan.ts |  |
+| `src-local` | Dossier sur cet ordinateur | Plugin inclus | Source | Fichiers | plugin `mire.source.local` (mire-addons ; copie incluse dans `plugins/`) ; cœur : emplacements (`library.sources`), pont des sources (src/main/plugins/bridges.ts), fichiers de l'interface historique tirés du catalogue (src/main/library/from-element.ts) |  |
 | `src-smb` | Partage réseau (NAS) | Plugin inclus | Source | Fichiers, Réseau local ⚠ | src/main/library/location.ts |  |
 | `src-http` | Serveur web (page d'index) | À installer | Source | Internet | src/main/library/providers/http-index.ts |  |
 | `src-m3u` | Liste M3U | À installer | Source | Fichiers, Internet | src/main/library/providers/m3u.ts |  |

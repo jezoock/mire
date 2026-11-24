@@ -168,8 +168,14 @@ L'extraction demandait d'abord des changements du socle des plugins de code ; el
 - **P5-11b — Sous-titres** : nature `subtitles` dans le SDK (`find(videoPath)`, le cœur ne transmet qu'un chemin déjà
   autorisé par sa politique d'accès ; P6-16 OpenSubtitles s'en servira), son pont, plugin inclus `mire.subtitles`
   (`code`, `folders`), règle de continuité.
-- **P5-11c — Dossier local** : plugin inclus `mire.source.local` (`code`, `folders`), retrait de `localProvider` pour
-  les dossiers, règle de continuité ; plugin désactivé : ses éléments disparaissent et reviennent à la réactivation.
+- **P5-11c — Dossier local** (fait) : plugin inclus `mire.source.local` (`code`, `folders`) qui lit les dossiers de
+  la bibliothèque par `ctx.files.walk` ; le cœur ne parcourt plus lui-même que les partages réseau (`networkProvider`,
+  jusqu'à P5-11d) ; règle de continuité `P5-11c` (mode `bundled`, mêmes clés `local:<chemin>`) ; plugin désactivé :
+  ses éléments disparaissent et reviennent à la réactivation. L'interface historique (jusqu'à P4-24) reçoit les
+  fichiers d'un emplacement lu par un plugin depuis le catalogue (`library/from-element.ts`), après les analyses des
+  plugins ; l'état des sources (dossier introuvable) reste calculé par le cœur. Socle : `files.walk` rend les fichiers
+  sous la racine telle que donnée (un dossier atteint par un lien symbolique garde ses clés), `rescan` attend une
+  analyse identique déjà en cours au lieu d'en lancer une deuxième.
 - **P5-11d — Partage réseau** : plugin inclus `mire.source.network` (`code`, `folders` : un partage est lu comme un
   dossier monté par le système, sans « Réseau local »), règle de continuité ; 🧑 vérification sur un vrai NAS.
 

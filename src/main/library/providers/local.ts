@@ -1,4 +1,8 @@
-/** Fournisseur « local » : dossiers du disque et partages réseau (ex-`walkLibrary`). */
+/**
+ * Parcours d'un dossier de la bibliothèque (ex-`walkLibrary`). Les dossiers de cet ordinateur sont lus par le plugin
+ * inclus `mire.source.local` (P5-11c) ; le cœur ne lit plus ainsi que les partages réseau (`networkProvider`), jusqu'à
+ * leur propre plugin (P5-11d).
+ */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { Dirent } from 'node:fs';
@@ -87,8 +91,9 @@ export function walkLibrary(root: string, kinds: ReadonlySet<MediaKind>, ctx: Sc
   });
 }
 
-export const localProvider: SourceProvider = {
-  id: 'local',
+/** Parcours de n'importe quel dossier (tests, et base de `networkProvider`). */
+export const folderProvider: SourceProvider = {
+  id: 'folder',
   canHandle: (target) => target.resolved.type === 'path',
   async scan(target, kinds, ctx) {
     if (target.resolved.type !== 'path') return;
@@ -100,4 +105,11 @@ export const localProvider: SourceProvider = {
     }
     await walkLibrary(root, kinds, ctx);
   },
+};
+
+/** Partages réseau (`\\\\NAS\\Films`, `smb://…`) : le seul emplacement de fichiers que le cœur lit encore. */
+export const networkProvider: SourceProvider = {
+  ...folderProvider,
+  id: 'network',
+  canHandle: (target) => target.resolved.type === 'path' && target.resolved.network,
 };

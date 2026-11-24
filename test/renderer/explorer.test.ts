@@ -27,6 +27,8 @@ type Messages = Record<string, unknown>;
 function translator(messages: Messages) {
   return (key: string, vars: Record<string, string | number> = {}) => {
     const v = key.split('.').reduce<unknown>((o, k) => (o as Messages | undefined)?.[k], messages);
+    // Texte d'un plugin absent : la clé, comme le moteur de traduction de Mire.
+    if (v === undefined && key.startsWith('pluginTexts.')) return key;
     assert.equal(typeof v, 'string', key);
     return (v as string).replace(/\{(\w+)\}/g, (_, n: string) => String(vars[n]));
   };
@@ -257,6 +259,10 @@ describe('Explorateur : colonnes', () => {
     assert.equal(sourceLabel('jeux-roms', 'snes|/roms', tEn), 'Console games · roms');
     assert.equal(sourceLabel('web-bm', 'config', tEn), 'Bookmarks');
     assert.equal(sourceLabel('src-http', 'https://nas.local/', tFr), 'Serveur web · nas.local');
+    // Source d'un plugin : le nom que ses catalogues donnent à sa sorte (`source.name`), sinon son identifiant.
+    const withPlugin = translator({ ...fr.messages, pluginTexts: { mire_source_local: { source: { name: 'Dossier' } } } } as Messages);
+    assert.equal(sourceLabel('mire.source.local', '/bib/Images', withPlugin), 'Dossier · Images');
+    assert.equal(sourceLabel('org.exemple.source', '/bib/Images', tFr), 'org.exemple.source · Images');
     assert.deepEqual(['/bib/Films/', 'C:\\Jeux', 'https://nas/films/', '/'].map(placeName), ['Films', 'Jeux', 'films', '/']);
     assert.deepEqual(parseFolderNode(folderNode('s1', 'a/b')), { source: 's1', path: 'a/b' });
     assert.equal(parseFolderNode('folder:[1]'), null);

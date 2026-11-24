@@ -4,9 +4,10 @@
  * sous-titres trouvés à côté des vidéos en ligne. Les marque-pages de streaming s'ajoutent comme des vidéos.
  */
 import type { Bookmark, LibrarySource, MediaKind } from '@mire/shared';
+import fsp from 'node:fs/promises';
 import { pathKey } from '../fs/walk.ts';
-import { resolveLocation } from './location.ts';
-import { localProvider } from './providers/local.ts';
+import { locationError, resolveLocation } from './location.ts';
+import { networkProvider } from './providers/local.ts';
 import { httpIndexProvider } from './providers/http-index.ts';
 import { m3uProvider } from './providers/m3u.ts';
 import type { LibraryItem, RemoteSubtitles, ScanContext, ScannedLocation, ScanResult, SourceProvider, SourceStatus, SourceTarget } from './types.ts';
@@ -16,7 +17,7 @@ import { t } from '../i18n/current.ts';
 export const MAX_ITEMS = 150000;
 
 /** Fournisseurs essayés dans l'ordre : le premier qui sait lire l'emplacement l'analyse. */
-export const DEFAULT_PROVIDERS: readonly SourceProvider[] = [m3uProvider, httpIndexProvider, localProvider];
+export const DEFAULT_PROVIDERS: readonly SourceProvider[] = [m3uProvider, httpIndexProvider, networkProvider];
 
 export interface ScanOptions {
   sources: readonly LibrarySource[];
@@ -26,6 +27,22 @@ export interface ScanOptions {
   platform?: NodeJS.Platform;
   /** Appelé après chaque emplacement analysé (catalogue d'éléments). */
   onScanned?: (scanned: ScannedLocation) => void;
+  /**
+   * Fichiers d'un emplacement lu par un plugin (P5-11c), ou `null` si aucun plugin ne le lit : le cœur ne le parcourt
+   * pas, il vérifie seulement qu'il est accessible (état de la source).
+   */
+  pluginItems?: (target: SourceTarget, kinds: ReadonlySet<MediaKind>) => LibraryItem[] | null;
+}
+
+/** Message d'un dossier inaccessible ; `null` s'il est là (ou pour une adresse). */
+async function unreachable(target: SourceTarget): Promise<string | null> {
+  if (target.resolved.type !== 'path') return null;
+  try {
+    await fsp.access(target.resolved.path);
+    return null;
+  } catch {
+    return locationError(target.location, target.resolved);
+  }
 }
 
 interface SourceGroup {
@@ -72,7 +89,7 @@ export function bookmarkItem(b: Bookmark): LibraryItem {
 }
 
 export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
-  const { sources, bookmarks = [], providers = DEFAULT_PROVIDERS, maxItems = MAX_ITEMS, platform, onScanned } = opts;
+  const { sources, bookmarks = [], providers = DEFAULT_PROVIDERS, maxItems = MAX_ITEMS, platform, onScanned, pluginItems } = opts;
   const items: LibraryItem[] = [];
   const subtitles: RemoteSubtitles = new Map();
   const status: Record<string, SourceStatus> = {};
@@ -83,8 +100,14 @@ export async function scanLibrary(opts: ScanOptions): Promise<ScanResult> {
     const start = items.length;
     let error: string | null = null;
     try {
-      const provider = providers.find((p) => p.canHandle(g.target));
-      if (provider) await provider.scan(g.target, g.kinds, ctx);
+      const taken = pluginItems?.(g.target, g.kinds);
+      if (taken) {
+        error = await unreachable(g.target);
+        items.push(...taken.slice(0, Math.max(0, maxItems - items.length)));
+      } else {
+        const provider = providers.find((p) => p.canHandle(g.target));
+        if (provider) await provider.scan(g.target, g.kinds, ctx);
+      }
     } catch (err) {
       error = (err as Error).message;
     }

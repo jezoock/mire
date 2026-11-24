@@ -10,6 +10,7 @@ import type { ElementSourceRef } from '@mire/shared';
 import type { SourceLocation } from '@mire/plugin-sdk';
 import { checkElements, createPluginBridges, keepReal, type BridgeService } from '../../src/main/plugins/bridges.ts';
 import { localFileKey } from '../../src/main/catalog/keys.ts';
+import { isInside } from '../../src/main/lib/paths.ts';
 import { libraryLocations } from '../../src/main/library/locations.ts';
 import { createLibraryService } from '../../src/main/library/service.ts';
 import type { ContributionEntry } from '../../src/main/plugins/registry.ts';
@@ -45,6 +46,30 @@ describe('checkElements et keepReal : fichiers locaux d’un plugin de code', ()
       [localFileKey(alien), `plugin:${P}|${localFileKey(path.join(films, 'Autre.mkv'))}`, `plugin:${P}|radio`],
     );
     assert.equal(r.dropped, 1);
+  });
+
+  it('dossiers accordés : même règle que `isInside` (racine, voisin au même début de nom, `..`, chemin relatif)', () => {
+    const at = (rel: string) => path.join(films, rel);
+    const paths = [
+      films,
+      at('a.mkv'),
+      at('sous/b.mkv'),
+      `${films}2/c.mkv`,
+      at('../Prive/secret.mkv'),
+      path.join(outside, 'x.mkv'),
+      'relatif.mkv',
+      `${films}${path.sep}`,
+    ];
+    const kept = (list: string[]) =>
+      checkElements(
+        P,
+        'code',
+        [films],
+        list.map((f) => fileOf(f)),
+      ).elements.map((e) => e.open.kind === 'file' && e.open.path);
+    const expected = paths.filter((f) => path.isAbsolute(f) && (path.resolve(f) === path.resolve(films) || isInside(f, [films])));
+    assert.deepEqual(kept(paths), expected);
+    assert.deepEqual(expected, [films, at('a.mkv'), at('sous/b.mkv'), `${films}${path.sep}`]);
   });
 
   it('accepte une image locale d’un dossier accordé, pas une autre', () => {

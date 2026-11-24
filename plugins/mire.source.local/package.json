@@ -1,0 +1,16 @@
+{
+  "name": "mire.source.local",
+  "private": true,
+  "description": "Dossiers de cet ordinateur dans la bibliothèque de Mire",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}

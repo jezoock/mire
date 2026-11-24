@@ -224,6 +224,25 @@ describe('ctx.files', () => {
     assert.equal((await names({})).length, 4);
   });
 
+  it('walk : un dossier accordé atteint par un lien symbolique rend ses fichiers sous le chemin donné', async (t) => {
+    const real = path.join(root, 'disque', 'Films');
+    mkdirSync(real, { recursive: true });
+    writeFileSync(path.join(real, 'e.mkv'), 'x');
+    const link = path.join(root, 'films-lien');
+    try {
+      symlinkSync(real, link, 'dir');
+    } catch {
+      return t.skip('liens symboliques indisponibles');
+    }
+    const { ctx, folders } = context({ level: 'code', permissions: { folders: true } });
+    folders.set('org.exemple.test', [link]);
+    const all = (await ctx().handle('files.walk', [link], signal())) as { path: string }[];
+    assert.deepEqual(
+      all.map((e) => e.path),
+      [path.join(link, 'e.mkv')],
+    );
+  });
+
   it('les dossiers accordés sont ceux du plugin du port, pas ceux d’un autre ; il faut la permission', async () => {
     const { forPlugin, folders } = context({ level: 'code', permissions: { folders: true } });
     folders.set('org.exemple.a', [granted]);
