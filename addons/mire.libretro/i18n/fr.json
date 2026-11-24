@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "libretro",
+      "description": "Jaquettes, captures, genres et années de vos jeux de console, depuis libretro-thumbnails et libretro-database (les images de RetroArch). Sans clé."
+    },
+    "libretro": {
+      "unknownSystemConfig": "Système de la console inconnu : ajoutez « system » dans sa configuration.",
+      "unknownSystem": "Système de la console inconnu : indiquez-le avec « Modifier la console ».",
+      "coversUnavailable": "La liste des jaquettes de ce système est indisponible pour le moment.",
+      "genres": {
+        "platform": "Plateformes",
+        "action": "Action",
+        "sports": "Sport",
+        "rolePlaying": "Jeu de rôle",
+        "adventure": "Aventure",
+        "strategy": "Stratégie",
+        "racing": "Course",
+        "puzzle": "Réflexion",
+        "shooter": "Tir",
+        "shootEmUp": "Shoot’em up",
+        "board": "Jeu de plateau",
+        "beatEmUp": "Beat’em up",
+        "fighting": "Combat",
+        "simulation": "Simulation",
+        "compilation": "Compilation",
+        "gambling": "Casino",
+        "educational": "Éducatif",
+        "pinball": "Flipper",
+        "card": "Cartes",
+        "sportsWithAnimals": "Sport",
+        "huntingAndFishing": "Chasse et pêche",
+        "casualGame": "Jeu familial",
+        "various": "Divers",
+        "quiz": "Quiz",
+        "lightgunShooter": "Tir au pistolet",
+        "musicDancing": "Musique et danse",
+        "thinking": "Réflexion",
+        "adult": "Adulte"
+      }
+    }
+  }
+}

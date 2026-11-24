@@ -261,7 +261,7 @@ test.describe('migration v10 (P5-01)', () => {
     const raw: Any = { version: 9, catalog: { metadataProviders: ['libretro', 'tmdb', 'mire.tmdb/tmdb', 3] } };
     // Sans clé TMDB, la règle P5-15 ne s'applique pas (seules celles des manettes, P5-04) ; l'ordre est renommé quand même.
     assert.equal(applyContinuity(raw).includes('P5-15'), false);
-    assert.deepEqual(raw.catalog.metadataProviders, ['libretro', 'mire.tmdb/tmdb', 3]);
+    assert.deepEqual(raw.catalog.metadataProviders, ['mire.libretro/libretro', 'mire.tmdb/tmdb', 3]);
     assert.equal(providerRenames().tmdb, 'mire.tmdb/tmdb');
     // Une règle ne peut renommer un fournisseur que vers un des siens.
     assert.match(checkRules([{ ...INSTALL, providers: { tmdb: 'org.tiers/infos' } }])[0], /must be renamed/);
@@ -279,6 +279,26 @@ test.describe('migration v10 (P5-01)', () => {
     assert.equal(raw.plugins, undefined);
     for (const library of [{ sources: [{ kind: 'video', location: '/Films' }] }, { sources: [] }, { sources: 'x' }, undefined, [music]]) {
       const none: Any = { version: 9, library };
+      const before = structuredClone(none);
+      assert.deepEqual(applyContinuity(none, [rule]), []);
+      assert.deepEqual(none, before);
+    }
+  });
+
+  test('P5-16 : libretro installé s’il y a une console dont le système est reconnu, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-16-libretro')!;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.libretro', 'install', undefined]);
+    for (const emu of [
+      { id: 'snes', name: 'Snes9x', path: 'C:/Emu/snes9x.exe', extensions: ['.sfc'] },
+      { id: 'x', name: 'Ma console', path: 'truc.exe', system: 'Nintendo - Game Boy' },
+      { id: 'y', name: 'Ma console', path: 'truc.exe', extensions: ['.GBA'] },
+    ]) {
+      const raw: Any = { version: 9, emulators: [{ id: 'z', name: 'Inconnue', path: 'z.exe', extensions: ['.xyz'] }, emu] };
+      assert.deepEqual(applyContinuity(raw, [rule]), ['P5-16-libretro'], emu.id);
+      assert.equal(raw.plugins, undefined);
+    }
+    for (const emulators of [[], [{ id: 'z', name: 'Inconnue', path: 'z.exe', extensions: ['.xyz'] }], 'x', [3, null], undefined]) {
+      const none: Any = { version: 9, emulators };
       const before = structuredClone(none);
       assert.deepEqual(applyContinuity(none, [rule]), []);
       assert.deepEqual(none, before);
@@ -333,10 +353,11 @@ test.describe('migration v10 (P5-01)', () => {
       applied.some((id) => id.startsWith('P5-16')),
       false,
     );
-    assert.deepEqual(raw.catalog.metadataProviders, ['mire.steam/steam', 'libretro', 'mire.musicbrainz/musicbrainz', 'mire.tmdb/tmdb']);
+    assert.deepEqual(raw.catalog.metadataProviders, ['mire.steam/steam', 'mire.libretro/libretro', 'mire.musicbrainz/musicbrainz', 'mire.tmdb/tmdb']);
     assert.deepEqual(providerRenames(), {
       tmdb: 'mire.tmdb/tmdb',
       musicbrainz: 'mire.musicbrainz/musicbrainz',
+      libretro: 'mire.libretro/libretro',
       steam: 'mire.steam/steam',
     });
     assert.deepEqual(checkRules(CONTINUITY_RULES), []);

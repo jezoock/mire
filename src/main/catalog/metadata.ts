@@ -25,8 +25,8 @@ import { targetsOf } from './targets.ts';
 
 export const METADATA_VERSION = 1;
 
-/** Fournisseurs d'infos du cœur, dans l'ordre par défaut (celui de la récupération groupée) ; TMDB, MusicBrainz, Steam : plugins (P5-15, P5-16). */
-export const METADATA_PROVIDERS: readonly string[] = ['libretro'];
+/** Fournisseurs d'infos du cœur : aucun depuis P5-16 (TMDB, MusicBrainz, libretro, Steam sont des plugins). */
+export const METADATA_PROVIDERS: readonly string[] = [];
 
 export interface MetadataFile {
   version: number;

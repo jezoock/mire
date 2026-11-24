@@ -513,15 +513,16 @@ describe('ponts', () => {
     await assert.rejects(provider.candidates({ query: 'Dune' } as never, {} as never), { message: 'Clé refusée.' });
   });
 
-  it('fournisseur devenu un plugin (P5-16) : les fiches déjà enregistrées (a:, g:) sont gardées, sans nouvelle récupération', async (t) => {
+  it('fournisseur devenu un plugin (P5-16) : les fiches déjà enregistrées (a:, r:, g:) sont gardées, sans nouvelle récupération', async (t) => {
     const scraped: unknown[] = [];
     const entry = (id: string, kind: string) => ({ pluginId: `mire.${id}`, kind: 'metadata', id, declaration: { kinds: [kind] } });
     const service: BridgeService = {
-      contributions: (kind) => (kind === 'metadata' ? [entry('musicbrainz', 'album'), entry('steam', 'pc')] : []) as never,
+      contributions: (kind) => (kind === 'metadata' ? [entry('musicbrainz', 'album'), entry('libretro', 'rom'), entry('steam', 'pc')] : []) as never,
       onContributionsChange: () => () => {},
       call: async (pluginId, _k, _id, method, args) => {
         if (method === 'requires') return null;
-        if (method === 'collect') return pluginId === 'mire.musicbrainz' ? (args?.[0] as RunOptions).albums : (args?.[0] as RunOptions).pcGames;
+        // Seul MusicBrainz rassemble lui-même : les jeux le sont par le cœur.
+        if (method === 'collect') return pluginId === 'mire.musicbrainz' ? (args?.[0] as RunOptions).albums : [];
         scraped.push(args?.[0]);
         return { title: 'Nouvelle', image: null };
       },
@@ -537,23 +538,36 @@ describe('ponts', () => {
     const store = createDbFileStore(path.join(dataDir, 'db.json'));
     store.set('a:/m/Discovery', old('Discovery', 'MusicBrainz'));
     store.set('g:hades', old('Hades', 'Steam'));
+    store.set('r:/r/Zelda.sfc', old('Zelda', 'libretro'));
     const engine = createScrapeEngine({
       dataDir,
-      getConfig: () => ({ search: {}, games: [], emulators: [] }) as never,
-      listRoms: async () => ({ ok: true, roms: [] }),
+      getConfig: () => ({ games: [], emulators: [{ id: 'snes', name: 'Snes9x', path: 'snes9x.exe', extensions: ['.sfc'] }] }) as never,
+      listRoms: async () => ({
+        ok: true,
+        roms: [
+          { path: '/r/Zelda.sfc', name: 'Zelda' },
+          { path: '/r/Mario.sfc', name: 'Mario' },
+        ],
+      }),
       onProgress: () => {},
       providers: [],
       extraProviders: bridges.metadataProviders,
       store,
     });
     const r = await engine.run({ albums: [{ dir: '/m/Discovery' }, { dir: '/m/Nouveau' }], pcGames: [{ name: 'Hadès' }, { name: 'Ys' }] });
-    assert.equal(r.total, 2);
-    assert.deepEqual(scraped, [{ dir: '/m/Nouveau' }, { name: 'Ys' }]);
+    assert.equal(r.total, 3);
+    assert.deepEqual(scraped, [
+      { dir: '/m/Nouveau' },
+      { name: 'Mario', emu: 'snes', system: 'Nintendo - Super Nintendo Entertainment System' },
+      { name: 'Ys' },
+    ]);
     // Les anciennes fiches sont intactes ; les nouvelles portent le nom du fournisseur du plugin.
     assert.equal(store.get('a:/m/Discovery')?.title, 'Discovery');
     assert.equal(store.get('g:hades')?.source, 'Steam');
     assert.equal(store.get('a:/m/Nouveau')?.source, 'mire.musicbrainz/musicbrainz');
     assert.equal(store.get('g:ys')?.source, 'mire.steam/steam');
+    assert.equal(store.get('r:/r/Zelda.sfc')?.title, 'Zelda');
+    assert.equal(store.get('r:/r/Mario.sfc')?.source, 'mire.libretro/libretro');
     await store.flush();
   });
 

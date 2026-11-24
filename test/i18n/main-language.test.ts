@@ -9,12 +9,8 @@ import { BUILTIN_CATALOGS, flattenMessages } from '@mire/shared/i18n';
 import { DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { builtinTranslator, createLanguageService, currentLanguage, t, useLanguage } from '../../src/main/i18n/index.ts';
 import { locationError } from '../../src/main/library/location.ts';
-import { GAME_GENRES, libretroProvider } from '../../src/main/scrape/providers/libretro.ts';
 import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
-import { loadRoutes } from '../scrape/fake-fetch.ts';
-import { providerContext } from '../scrape/helpers.ts';
-import { roms } from '../scrape/scenario.ts';
 
 const ROOT = path.join(import.meta.dirname, '..', '..');
 const english = () => useLanguage(builtinTranslator('en'));
@@ -42,12 +38,8 @@ describe('clés employées par le processus principal', () => {
     for (const key of used) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
 
-  it('clés construites : genres, émulateurs, BIOS et jeux de la boutique', () => {
-    const keys = [
-      ...Object.values(GAME_GENRES).map((id) => `scrape.genres.games.${id}`),
-      ...EMULATORS.map((e) => `store.emulators.${e.id}`),
-      ...[...BIOS_HINTS].map((id) => `store.bios.${id}`),
-    ];
+  it('clés construites : émulateurs, BIOS et jeux de la boutique (genres : plugins des infos en ligne, P5-16)', () => {
+    const keys = [...EMULATORS.map((e) => `store.emulators.${e.id}`), ...[...BIOS_HINTS].map((id) => `store.bios.${id}`)];
     for (const key of keys) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
 });
@@ -113,18 +105,6 @@ describe('langue des textes', () => {
     assert.match(en.emulators[0].desc, /^One program for 8-bit and 16-bit consoles/);
     assert.equal(en.games.find((g: { id: string }) => g.id === 'cavestory')?.author, 'andwn, based on Daisuke Amaya');
     assert.ok(!('basedOn' in en.games[0]));
-  });
-});
-
-describe('genres', () => {
-  it('libretro : traduit en français, valeur de libretro en anglais', async (tc) => {
-    const scrape = async () => {
-      const { ctx } = providerContext(tc, loadRoutes('libretro'));
-      return (await libretroProvider().scrape({ ...roms[0], emu: 'snes' }, undefined, ctx('r:smw')))?.genre;
-    };
-    assert.equal(await scrape(), 'Plateformes');
-    english();
-    assert.equal(await scrape(), 'Platform');
   });
 });
 

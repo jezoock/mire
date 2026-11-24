@@ -225,7 +225,7 @@
         },
         "providers": {
           "label": "Ordre des fournisseurs d’infos",
-          "help": "Pour une même info, le premier de la liste l’emporte."
+          "help": "Pour une même info, le premier de la liste l’emporte. Les fournisseurs viennent des plugins d’infos en ligne, à installer depuis le Centre."
         }
       },
       "adblock": {
@@ -513,42 +513,7 @@
       }
     },
     "scrape": {
-      "genres": {
-        "games": {
-          "platform": "Plateformes",
-          "action": "Action",
-          "sports": "Sport",
-          "rolePlaying": "Jeu de rôle",
-          "adventure": "Aventure",
-          "strategy": "Stratégie",
-          "racing": "Course",
-          "puzzle": "Réflexion",
-          "shooter": "Tir",
-          "shootEmUp": "Shoot’em up",
-          "board": "Jeu de plateau",
-          "beatEmUp": "Beat’em up",
-          "fighting": "Combat",
-          "simulation": "Simulation",
-          "compilation": "Compilation",
-          "gambling": "Casino",
-          "educational": "Éducatif",
-          "pinball": "Flipper",
-          "card": "Cartes",
-          "sportsWithAnimals": "Sport",
-          "huntingAndFishing": "Chasse et pêche",
-          "casualGame": "Jeu familial",
-          "various": "Divers",
-          "quiz": "Quiz",
-          "lightgunShooter": "Tir au pistolet",
-          "musicDancing": "Musique et danse",
-          "thinking": "Réflexion",
-          "adult": "Adulte"
-        }
-      },
       "errors": {
-        "unknownSystemConfig": "Système de la console inconnu : ajoutez « system » dans sa configuration.",
-        "unknownSystem": "Système de la console inconnu : indiquez-le avec « Modifier la console ».",
-        "coversUnavailable": "La liste des jaquettes de ce système est indisponible pour le moment.",
         "alreadyRunning": "Une récupération est déjà en cours.",
         "noTitle": "Indiquez un titre à chercher.",
         "unknownType": "Type inconnu.",
@@ -1441,7 +1406,6 @@
         "missing": "La palette choisie n’est pas disponible : son plugin n’est pas installé ou il est désactivé. Mire utilise « {name} » en attendant."
       },
       "providers": {
-        "libretro": "libretro (jeux de console)",
         "plugin": "{name} (plugin)"
       },
       "plugin": {

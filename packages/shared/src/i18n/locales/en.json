@@ -225,7 +225,7 @@
         },
         "providers": {
           "label": "Order of the detail providers",
-          "help": "For the same detail, the first one in the list wins."
+          "help": "For the same detail, the first one in the list wins. Providers come from online info plugins, which you can install from the Centre."
         }
       },
       "adblock": {
@@ -513,42 +513,7 @@
       }
     },
     "scrape": {
-      "genres": {
-        "games": {
-          "platform": "Platform",
-          "action": "Action",
-          "sports": "Sports",
-          "rolePlaying": "Role-Playing (RPG)",
-          "adventure": "Adventure",
-          "strategy": "Strategy",
-          "racing": "Racing",
-          "puzzle": "Puzzle",
-          "shooter": "Shooter",
-          "shootEmUp": "Shoot'em Up",
-          "board": "Board",
-          "beatEmUp": "Beat'em Up",
-          "fighting": "Fighting",
-          "simulation": "Simulation",
-          "compilation": "Compilation",
-          "gambling": "Gambling",
-          "educational": "Educational",
-          "pinball": "Pinball",
-          "card": "Card",
-          "sportsWithAnimals": "Sports with Animals",
-          "huntingAndFishing": "Hunting and Fishing",
-          "casualGame": "Casual Game",
-          "various": "Various",
-          "quiz": "Quiz",
-          "lightgunShooter": "Lightgun Shooter",
-          "musicDancing": "Music / Dancing",
-          "thinking": "Thinking",
-          "adult": "Adult"
-        }
-      },
       "errors": {
-        "unknownSystemConfig": "Unknown console system: add \"system\" to its configuration.",
-        "unknownSystem": "Unknown console system: set it with \"Edit console\".",
-        "coversUnavailable": "The cover list for this system isn't available right now.",
         "alreadyRunning": "Already looking up details.",
         "noTitle": "Enter a title to search for.",
         "unknownType": "Unknown type.",
@@ -1441,7 +1406,6 @@
         "missing": "The chosen palette isn’t available: its plugin isn’t installed or is turned off. Mire uses “{name}” in the meantime."
       },
       "providers": {
-        "libretro": "libretro (console games)",
         "plugin": "{name} (plugin)"
       },
       "plugin": {

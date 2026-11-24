@@ -477,10 +477,11 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
    `scrape/img/`. L'interface les affiche par `media://` ;
 5. annonce la progression (événement `scrape-progress`) ; « Arrêter » appelle `scrapeCancel`.
 
-Les sources d'infos en ligne sont des plugins à installer (films et séries : `mire.tmdb`, P5-15 ; albums :
-`mire.musicbrainz`, jeux PC : `mire.steam`, P5-16), branchés par les ponts des plugins (`plugins/bridges.ts`) ; libretro
-(jeux de console) en devient un aussi (P5-16). La langue des fiches est un réglage de chaque plugin (`language`,
-`auto` : celle de l'interface).
+Les sources d'infos en ligne sont toutes des plugins à installer (films et séries : `mire.tmdb`, P5-15 ; albums :
+`mire.musicbrainz`, jeux de console : `mire.libretro`, jeux PC : `mire.steam`, P5-16), branchés par les ponts des
+plugins (`plugins/bridges.ts`). Les jeux sont rassemblés par le cœur (`coreGames`) ; un plugin n'en reçoit que le nom,
+la console et son système, ou l'identifiant Steam, jamais le chemin (`gameForPlugin`). La langue des fiches est un
+réglage de chaque plugin (`language`, `auto` : celle de l'interface).
 
 ### Télécharger un jeu, puis l'annoncer
 

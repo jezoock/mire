@@ -141,7 +141,7 @@ describe('panneaux générés depuis le schéma', () => {
     const providers = fieldOf(panels, 'scrape.providers');
     assert.deepEqual(
       providers.lists?.[0]?.items.map((x) => x.id),
-      ['libretro'],
+      [],
     );
     assert.equal(providers.lists?.[0]?.toggle, false);
     // Plus aucun bouton « Régler dans … » : chaque bloc propre aux pages est un champ de l'écran.
@@ -163,22 +163,24 @@ describe('panneaux générés depuis le schéma', () => {
   });
 
   it('ordre des fournisseurs : ceux de la configuration, puis les autres ; inconnus ignorés', () => {
-    const plugins = ['mire.musicbrainz/musicbrainz', 'mire.steam/steam'];
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['mire.steam/steam', 'inconnu', 'steam', 'libretro'] } }, plugins), [
+    const plugins = ['mire.musicbrainz/musicbrainz', 'mire.libretro/libretro', 'mire.steam/steam'];
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['mire.steam/steam', 'inconnu', 'steam', 'mire.libretro/libretro'] } }, plugins), [
       'mire.steam/steam',
-      'libretro',
+      'mire.libretro/libretro',
       'mire.musicbrainz/musicbrainz',
     ]);
-    // TMDB (P5-15), MusicBrainz et Steam (P5-16) sont des plugins : sans eux, leurs fournisseurs ne sont pas dans la liste.
-    assert.deepEqual(providerOrder({}), ['libretro']);
+    // TMDB (P5-15), MusicBrainz, libretro et Steam (P5-16) sont des plugins : sans eux, la liste est vide.
+    assert.deepEqual(providerOrder({}), []);
   });
 
   it('les fournisseurs des plugins actifs rejoignent l’ordre, sous le nom de leur plugin', () => {
-    const extra = ['org.films/infos'];
-    assert.deepEqual(providerOrder({}, extra), ['libretro', 'org.films/infos']);
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'libretro'] } }, extra), ['org.films/infos', 'libretro']);
+    const two = ['mire.libretro/libretro', 'org.films/infos'];
+    assert.deepEqual(providerOrder({}, two), two);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos'] } }, two), ['org.films/infos', 'mire.libretro/libretro']);
     // Un plugin désactivé : son fournisseur quitte la liste.
-    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'libretro'] } }), ['libretro']);
+    assert.deepEqual(providerOrder({ catalog: { metadataProviders: ['org.films/infos', 'mire.libretro/libretro'] } }, ['mire.libretro/libretro']), [
+      'mire.libretro/libretro',
+    ]);
     const providers = [{ id: 'org.films/infos', plugin: 'org.films', name: 'Films libres', kinds: ['video'] }];
     for (const [t, label] of [
       [fr.t, 'Films libres (plugin)'],
@@ -480,7 +482,7 @@ describe('contrôleur mire-settings (P4-20)', () => {
     const { ctx, named } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate({ home }) });
     const c = new SettingsController(ctx);
     await c.setOrder({ kind: 'providers', keys: ['steam', 'x', 'libretro'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['libretro']]]);
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', []]]);
     let saved: Data | null = null;
     const { ctx: ctx2 } = context({ 'ui.saveUi': (mutate: (u: Data) => void) => mutate((saved = { home })) });
     await new SettingsController(ctx2).setOrder({ kind: 'rows', keys: ['bars', 'recent'] });
@@ -523,7 +525,7 @@ describe('contrôleur mire-settings (P4-20)', () => {
   it('nouvel ordre : les fournisseurs des plugins actifs sont gardés', async () => {
     const { ctx, named } = context({ 'api.pluginsMetadataProviders': [{ id: 'org.films/infos' }] });
     await new SettingsController(ctx).setOrder({ kind: 'providers', keys: ['org.films/infos', 'x', 'libretro'] });
-    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos', 'libretro']]]);
+    assert.deepEqual(named('ui.setCfg'), [['ui.setCfg', 'catalog.metadataProviders', ['org.films/infos']]]);
   });
 
   it('sources : un dossier choisi par le processus principal, une adresse, un retrait ; nature vérifiée', async () => {

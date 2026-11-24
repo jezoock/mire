@@ -25,6 +25,7 @@
  *     settings: [{ from: 'search.tmdbToken', to: 'token', secret: true }] },
  */
 import { OFFICIAL_PREFIX, PLUGIN_ID_RE } from '../../../../packages/plugin-sdk/src/validate.ts';
+import { guessSystem } from '@mire/shared';
 import { isObjectLike, type Loose } from '../normalize/common.ts';
 
 export interface SettingMove {
@@ -86,6 +87,20 @@ const someIn = (c: Loose, key: string): boolean => Array.isArray(c[key]) && c[ke
 const hasMusic = (c: Loose): boolean =>
   isRecord(c.library) && Array.isArray(c.library.sources) && c.library.sources.some((s: unknown) => isRecord(s) && s.kind === 'audio');
 
+/** Une console dont le système libretro est reconnu : ses jeux avaient jaquettes et genres de libretro (P5-16). */
+const hasKnownConsole = (c: Loose): boolean =>
+  Array.isArray(c.emulators) &&
+  c.emulators.some((e: unknown) => {
+    if (!isRecord(e)) return false;
+    const hint = {
+      system: typeof e.system === 'string' ? e.system : '',
+      name: String(e.name ?? ''),
+      path: String(e.path ?? ''),
+      extensions: Array.isArray(e.extensions) ? e.extensions : [],
+    };
+    return guessSystem(hint) !== '';
+  });
+
 /** Des jeux PC (ajoutés, dossiers de jeux ou marque-pages « PC ») : leurs fiches venaient de Steam (P5-16). */
 const hasPcGames = (c: Loose): boolean =>
   someIn(c, 'games') || someIn(c, 'gameSources') || (Array.isArray(c.gameBookmarks) && c.gameBookmarks.some((b) => isRecord(b) && b.console === 'pc'));
@@ -143,6 +158,13 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
     mode: 'install',
     applies: hasMusic,
     providers: { musicbrainz: 'mire.musicbrainz/musicbrainz' },
+  },
+  {
+    id: 'P5-16-libretro',
+    plugin: 'mire.libretro',
+    mode: 'install',
+    applies: hasKnownConsole,
+    providers: { libretro: 'mire.libretro/libretro' },
   },
   {
     id: 'P5-16-steam',

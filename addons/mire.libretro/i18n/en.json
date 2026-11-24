@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "libretro",
+      "description": "Box art, screenshots, genres and years for your console games, from libretro-thumbnails and libretro-database (RetroArch’s images). No key needed."
+    },
+    "libretro": {
+      "unknownSystemConfig": "Unknown console system: add \"system\" to its configuration.",
+      "unknownSystem": "Unknown console system: set it with \"Edit console\".",
+      "coversUnavailable": "The cover list for this system isn't available right now.",
+      "genres": {
+        "platform": "Platform",
+        "action": "Action",
+        "sports": "Sports",
+        "rolePlaying": "Role-Playing (RPG)",
+        "adventure": "Adventure",
+        "strategy": "Strategy",
+        "racing": "Racing",
+        "puzzle": "Puzzle",
+        "shooter": "Shooter",
+        "shootEmUp": "Shoot'em Up",
+        "board": "Board",
+        "beatEmUp": "Beat'em Up",
+        "fighting": "Fighting",
+        "simulation": "Simulation",
+        "compilation": "Compilation",
+        "gambling": "Gambling",
+        "educational": "Educational",
+        "pinball": "Pinball",
+        "card": "Card",
+        "sportsWithAnimals": "Sports with Animals",
+        "huntingAndFishing": "Hunting and Fishing",
+        "casualGame": "Casual Game",
+        "various": "Various",
+        "quiz": "Quiz",
+        "lightgunShooter": "Lightgun Shooter",
+        "musicDancing": "Music / Dancing",
+        "thinking": "Thinking",
+        "adult": "Adult"
+      }
+    }
+  }
+}

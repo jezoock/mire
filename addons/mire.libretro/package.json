@@ -1,0 +1,16 @@
+{
+  "name": "mire.libretro",
+  "private": true,
+  "description": "Jaquettes, captures, genres et années des jeux de console (libretro-thumbnails, libretro-database)",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}
