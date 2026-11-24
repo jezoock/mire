@@ -120,7 +120,11 @@ describe('pages d’index', () => {
 
   it('liens hors du dossier de départ écartés', () => {
     const base = new URL(films);
-    const { dirs, files } = linksOf('<a href="../">..</a><a href="/autre/">x</a><a href="a/">a</a><a href="b.mkv">b</a><a href="//ailleurs/c.mkv">c</a>', films, base);
+    const { dirs, files } = linksOf(
+      '<a href="../">..</a><a href="/autre/">x</a><a href="a/">a</a><a href="b.mkv">b</a><a href="//ailleurs/c.mkv">c</a>',
+      films,
+      base,
+    );
     assert.deepEqual(dirs, [`${films}a/`]);
     assert.deepEqual(
       files.map((u) => u.href),

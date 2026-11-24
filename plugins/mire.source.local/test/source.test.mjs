@@ -51,7 +51,7 @@ const byName = (elements) => new Map(elements.map((e) => [e.name, e]));
 describe('manifeste et contrat', () => {
   it('niveau code, permission `folders` seule, une source `src-local`', () => {
     assert.equal(manifest.id, 'mire.source.local');
-    assert.equal(manifest.version, '1.0.1');
+    assert.equal(manifest.version, '1.0.2');
     assert.equal(manifest.level, 'code');
     assert.deepEqual(manifest.permissions, { folders: true });
     assert.deepEqual(manifest.contributes, { sources: [{ id: 'src-local', main: 'src/source.mjs' }] });
@@ -78,6 +78,9 @@ describe('manifeste et contrat', () => {
     assert.equal(s.handles({ location: 'smb://nas/films', path: '/Volumes/films', network: true, kinds: ['video'] }), false);
     assert.equal(s.handles({ location: 'https://nas/films/', url: 'https://nas/films/', network: false, kinds: ['video'] }), false);
     assert.equal(s.handles(null), false);
+    // Liste de lecture de cet ordinateur : lue par `mire.source.m3u` (P5-12).
+    assert.equal(s.handles({ location: '/listes/radios.m3u', path: '/listes/radios.m3u', network: false, kinds: ['audio'] }), false);
+    assert.equal(s.handles({ location: 'D:\\Listes\\TV.M3U8', path: 'D:\\Listes\\TV.M3U8', network: false, kinds: ['video'] }), false);
   });
 
   it('handles : seulement des vidéos, de la musique ou des images (pas un dossier de jeux PC, `game`)', async () => {

@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "M3U playlists",
+      "description": "Adds the videos, music and streams of an M3U playlist, online or on this computer, to the library."
+    },
+    "source": {
+      "name": "M3U playlist",
+      "unavailable": "Can't open this playlist."
+    }
+  }
+}
