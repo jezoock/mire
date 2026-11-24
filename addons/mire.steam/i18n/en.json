@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Steam",
+      "description": "Info, covers and backgrounds for your PC games, from the Steam store. No key needed."
+    },
+    "settings": {
+      "language": {
+        "label": "Language of game info",
+        "help": "“auto”: Mire’s language. Otherwise a code such as en-US or fr-FR."
+      }
+    },
+    "steam": {
+      "unreachable": "Can’t reach the Steam store. Check your internet connection.",
+      "status": "The Steam store responded with code {status}."
+    }
+  }
+}

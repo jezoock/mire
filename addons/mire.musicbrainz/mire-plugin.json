@@ -1,0 +1,22 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.musicbrainz",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "metadata": [
+      {
+        "id": "musicbrainz",
+        "main": "src/metadata.mjs",
+        "kinds": ["album"]
+      }
+    ]
+  },
+  "permissions": {
+    "hosts": ["musicbrainz.org", "coverartarchive.org", "archive.org", "*.archive.org"]
+  },
+  "i18n": "i18n/"
+}

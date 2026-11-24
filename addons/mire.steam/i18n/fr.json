@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Steam",
+      "description": "Infos, jaquettes et fonds de vos jeux PC, depuis le magasin Steam. Sans clé."
+    },
+    "settings": {
+      "language": {
+        "label": "Langue des fiches",
+        "help": "« auto » : la langue de Mire. Sinon un code comme fr-FR ou en-US."
+      }
+    },
+    "steam": {
+      "unreachable": "Le magasin Steam est injoignable. Vérifiez la connexion Internet.",
+      "status": "Le magasin Steam a répondu avec le code {status}."
+    }
+  }
+}

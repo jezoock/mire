@@ -1,0 +1,29 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.steam",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "metadata": [
+      {
+        "id": "steam",
+        "main": "src/metadata.mjs",
+        "kinds": ["pc"]
+      }
+    ]
+  },
+  "permissions": {
+    "hosts": ["store.steampowered.com", "shared.akamai.steamstatic.com", "cdn.akamai.steamstatic.com", "store.akamai.steamstatic.com"]
+  },
+  "settings": [
+    {
+      "key": "language",
+      "type": "text",
+      "default": "auto"
+    }
+  ],
+  "i18n": "i18n/"
+}

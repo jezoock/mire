@@ -1,0 +1,16 @@
+{
+  "name": "mire.musicbrainz",
+  "private": true,
+  "description": "Infos et pochettes des albums (MusicBrainz et Cover Art Archive)",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}
