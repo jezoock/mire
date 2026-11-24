@@ -156,15 +156,6 @@
           "options": {
             "auto": "Automatic (system language)"
           }
-        },
-        "metadata": {
-          "label": "Language of the details",
-          "help": "Language of the summaries and titles found online.",
-          "options": {
-            "empty": "Same as the interface",
-            "fr-FR": "French",
-            "en-US": "English"
-          }
         }
       },
       "home": {
@@ -234,7 +225,7 @@
         },
         "providers": {
           "label": "Order of the detail providers",
-          "help": "For the same detail, the first one in the list wins."
+          "help": "For the same detail, the first one in the list wins. Providers come from online info plugins, which you can install from the Centre."
         }
       },
       "adblock": {
@@ -523,75 +514,7 @@
       }
     },
     "scrape": {
-      "genres": {
-        "games": {
-          "platform": "Platform",
-          "action": "Action",
-          "sports": "Sports",
-          "rolePlaying": "Role-Playing (RPG)",
-          "adventure": "Adventure",
-          "strategy": "Strategy",
-          "racing": "Racing",
-          "puzzle": "Puzzle",
-          "shooter": "Shooter",
-          "shootEmUp": "Shoot'em Up",
-          "board": "Board",
-          "beatEmUp": "Beat'em Up",
-          "fighting": "Fighting",
-          "simulation": "Simulation",
-          "compilation": "Compilation",
-          "gambling": "Gambling",
-          "educational": "Educational",
-          "pinball": "Pinball",
-          "card": "Card",
-          "sportsWithAnimals": "Sports with Animals",
-          "huntingAndFishing": "Hunting and Fishing",
-          "casualGame": "Casual Game",
-          "various": "Various",
-          "quiz": "Quiz",
-          "lightgunShooter": "Lightgun Shooter",
-          "musicDancing": "Music / Dancing",
-          "thinking": "Thinking",
-          "adult": "Adult"
-        },
-        "music": {
-          "electronic": "Electronic",
-          "hipHop": "Hip hop",
-          "classical": "Classical",
-          "soundtrack": "Soundtrack",
-          "frenchHouse": "French house",
-          "house": "House",
-          "pop": "Pop",
-          "rock": "Rock",
-          "jazz": "Jazz",
-          "blues": "Blues",
-          "metal": "Metal",
-          "heavyMetal": "Heavy metal",
-          "folk": "Folk",
-          "chansonFrancaise": "Chanson française",
-          "chanson": "Chanson",
-          "reggae": "Reggae",
-          "soul": "Soul",
-          "funk": "Funk",
-          "rnb": "R&B",
-          "country": "Country",
-          "punk": "Punk",
-          "ambient": "Ambient",
-          "techno": "Techno",
-          "downtempo": "Downtempo",
-          "tripHop": "Trip hop",
-          "alternativeRock": "Alternative rock",
-          "indieRock": "Indie rock",
-          "indiePop": "Indie pop",
-          "world": "World",
-          "disco": "Disco",
-          "rap": "Rap"
-        }
-      },
       "errors": {
-        "unknownSystemConfig": "Unknown console system: add \"system\" to its configuration.",
-        "unknownSystem": "Unknown console system: set it with \"Edit console\".",
-        "coversUnavailable": "The cover list for this system isn't available right now.",
         "alreadyRunning": "Already looking up details.",
         "noTitle": "Enter a title to search for.",
         "unknownType": "Unknown type.",
@@ -1484,9 +1407,6 @@
         "missing": "The chosen palette isn’t available: its plugin isn’t installed or is turned off. Mire uses “{name}” in the meantime."
       },
       "providers": {
-        "musicbrainz": "MusicBrainz (music)",
-        "libretro": "libretro (console games)",
-        "steam": "Steam (PC games)",
         "plugin": "{name} (plugin)"
       },
       "plugin": {

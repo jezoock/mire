@@ -477,10 +477,11 @@ L'interface demande une récupération groupée (`scrapeRun`), une fiche (`scrap
    `scrape/img/`. L'interface les affiche par `media://` ;
 5. annonce la progression (événement `scrape-progress`) ; « Arrêter » appelle `scrapeCancel`.
 
-Les fournisseurs du cœur, dans l'ordre : MusicBrainz et Cover Art Archive (albums), libretro-thumbnails (jeux de
-console), Steam (jeux PC) ; puis ceux des plugins (films et séries : `mire.tmdb`, à installer, P5-15). Ils passent par `ctx.io` (client HTTP avec les délais et
-messages habituels, copie d'images). La langue des fiches suit celle de l'interface, sauf si `search.language` est
-fixé (`i18n/metadata.ts`).
+Les sources d'infos en ligne sont toutes des plugins à installer (films et séries : `mire.tmdb`, P5-15 ; albums :
+`mire.musicbrainz`, jeux de console : `mire.libretro`, jeux PC : `mire.steam`, P5-16), branchés par les ponts des
+plugins (`plugins/bridges.ts`). Les jeux sont rassemblés par le cœur (`coreGames`) ; un plugin n'en reçoit que le nom,
+la console et son système, ou l'identifiant Steam, jamais le chemin (`gameForPlugin`). La langue des fiches est un
+réglage de chaque plugin (`language`, `auto` : celle de l'interface).
 
 ### Télécharger un jeu, puis l'annoncer
 
@@ -533,8 +534,8 @@ fixé (`i18n/metadata.ts`).
 4. Quand la configuration change de langue, le service prévient ses abonnés ; la racine de composition envoie
    alors `i18n:changed` (`onLanguageChange`) à l'interface, avec les catalogues à consulter. L'interface peut aussi
    les demander par `i18nGet`. Elle n'utilise encore ni l'un ni l'autre (phase 2).
-5. Les fiches Steam sont demandées dans la langue de l'interface, sauf si `search.language` est fixé (TMDB : réglage
-   `language` du plugin `mire.tmdb`).
+5. Les fiches sont demandées dans la langue de l'interface, sauf si le réglage `language` du plugin qui les fournit est
+   fixé (`mire.tmdb`, `mire.steam`).
 
 ## Interfaces d'extension
 
