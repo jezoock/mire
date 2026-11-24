@@ -39,7 +39,7 @@ export default function createSource(ctx) {
     async scan(location) {
       if (!isFolder(location)) return [];
       if (!(await ctx.files.exists(location.path))) throw new Error(t('folderNotFound', { path: location.location }));
-      const files = await ctx.files.walk(location.path, { extensions: EXTENSIONS, depth: MAX_DEPTH, limit: MAX_ITEMS, skipHidden: true });
+      const files = await ctx.files.walk(location.path, { extensions: EXTENSIONS, depth: MAX_DEPTH, limit: MAX_ITEMS, skipHidden: true, details: false });
       return elementsOf(
         location.path,
         files.map((f) => f.path),

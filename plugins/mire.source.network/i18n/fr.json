@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Partages réseau (NAS)",
+      "description": "Ajoute à la bibliothèque les vidéos, la musique et les images des dossiers partagés sur le réseau (NAS, autre ordinateur), avec leurs affiches et leurs sous-titres."
+    },
+    "source": {
+      "name": "Partage réseau",
+      "shareUnavailable": "Partage réseau inaccessible : {path}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté."
+    }
+  }
+}

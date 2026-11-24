@@ -1,6 +1,6 @@
 // Contexte de plugin simulé (forme de `PluginContext` du SDK) : `files.walk` et `files.exists` lisent le disque comme
 // le cœur de Mire (`src/main/plugins/context.ts`) : seulement sous les dossiers accordés, sans suivre les liens,
-// dossiers et fichiers cachés écartés avec `skipHidden`.
+// dossiers et fichiers cachés écartés avec `skipHidden`, chemins seuls avec `details: false`.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -31,8 +31,11 @@ export function fakeContext({ granted = [], locale = 'fr' } = {}) {
           if (d.isDirectory()) {
             if (level < (o.depth ?? Infinity)) go(full, level + 1);
           } else if (d.isFile() && (!exts || exts.has(path.extname(d.name).toLowerCase()))) {
-            const st = fs.statSync(full);
-            out.push({ path: full, size: st.size, modified: st.mtimeMs });
+            if (o.details === false) out.push({ path: full });
+            else {
+              const st = fs.statSync(full);
+              out.push({ path: full, size: st.size, modified: st.mtimeMs });
+            }
           }
         }
       };
@@ -40,7 +43,7 @@ export function fakeContext({ granted = [], locale = 'fr' } = {}) {
       return out;
     },
   };
-  const ctx = { id: 'mire.source.local', version: '1.0.0', locale, files, log: { info() {}, warn() {}, error() {} }, events: { on: () => () => {} } };
+  const ctx = { id: 'mire.source.local', version: '1.0.1', locale, files, log: { info() {}, warn() {}, error() {} }, events: { on: () => () => {} } };
   return { ctx, walks };
 }
 

@@ -5,6 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { KIND, NATIVE } from '@mire/shared';
+import { localFileKey } from '../../src/main/catalog/keys.ts';
+import { fileElement, librarySource } from '../../src/main/library/element-sources.ts';
+import type { LibraryItem, SourceProvider } from '../../src/main/library/types.ts';
 
 export interface LibraryTree {
   root: string;
@@ -87,3 +91,51 @@ export async function indexServer(): Promise<{ base: string; close(): void }> {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   return { base: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, close: () => server.close() };
 }
+
+/**
+ * Fournisseur factice des tests du cœur : les dossiers et les partages sont lus par des plugins inclus (P5-11c,
+ * P5-11d), le cœur n'a plus de parcours de fichiers. Celui-ci rend les médias d'un dossier (dossiers et fichiers
+ * cachés écartés), sans affiches ni sous-titres, dans l'ordre des chemins.
+ */
+export const fakeFolderProvider: SourceProvider = {
+  id: 'dossier-factice',
+  canHandle: (target) => target.resolved.type === 'path',
+  async scan(target, kinds, ctx) {
+    if (target.resolved.type !== 'path') return;
+    const root = target.resolved.path;
+    if (!fs.existsSync(root)) throw new Error(`Introuvable : ${target.location}`);
+    const rels = (fs.readdirSync(root, { recursive: true }) as string[]).sort();
+    for (const rel of rels) {
+      if (rel.split(path.sep).some((part) => part.startsWith('.') || part.startsWith('$'))) continue;
+      const file = path.join(root, rel);
+      const ext = path.extname(file).toLowerCase();
+      const kind = KIND[ext];
+      if (!kind || !kinds.has(kind) || !fs.statSync(file).isFile()) continue;
+      const dir = path.dirname(file);
+      const item: LibraryItem = {
+        path: file,
+        name: path.basename(file, ext),
+        ext,
+        kind,
+        folder: path.basename(dir),
+        dir,
+        native: NATIVE.has(ext),
+        cover: null,
+        fanart: null,
+      };
+      ctx.out.push(item);
+      if (ctx.out.length >= ctx.maxItems) return;
+    }
+  },
+};
+
+/** Source d'éléments factice du cœur, branchée sur `fakeFolderProvider` (tag `factice`). */
+export const fakeFolderSource = (platform: NodeJS.Platform = process.platform) =>
+  librarySource(
+    'dossier-factice',
+    ['factice'],
+    fakeFolderProvider,
+    () => true,
+    (item) => fileElement(localFileKey(item.path, platform), item, { folder: item.folder }),
+    platform,
+  );

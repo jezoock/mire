@@ -17,7 +17,7 @@ import dns from 'node:dns';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import type { FileEntry, HttpRequestOptions, HttpResponse, WalkOptions } from '@mire/plugin-sdk';
+import type { FileEntry, FilePath, HttpRequestOptions, HttpResponse, WalkOptions } from '@mire/plugin-sdk';
 import { HttpError, request, type FetchLike } from '../net/http.ts';
 import { createAccessPolicy } from '../security/access-policy.ts';
 import { CHANNEL_ERRORS, ChannelError } from './channel.ts';
@@ -263,8 +263,13 @@ export function createContextHandler(deps: ContextDeps) {
       } catch {
         return null;
       }
-      const realRoots = await Promise.all(roots.map((r) => fsp.realpath(r).catch(() => r)));
-      if (!under(real, realRoots)) throw refused('This path leads outside the granted folders.');
+      // D'abord les dossiers accordés qui contiennent le chemin, puis les autres seulement s'il le faut : un partage
+      // réseau absent, parmi les dossiers du plugin, ne fait pas attendre la lecture des autres.
+      const realOf = (list: string[]) => Promise.all(list.map((r) => fsp.realpath(r).catch(() => r)));
+      const mine = roots.filter((r) => under(file, [r]));
+      if (under(real, await realOf(mine))) return real;
+      const others = await realOf(roots.filter((r) => !mine.includes(r)));
+      if (!under(real, others)) throw refused('This path leads outside the granted folders.');
       return real;
     }
 
@@ -277,7 +282,7 @@ export function createContextHandler(deps: ContextDeps) {
       return fsp.readFile(real);
     }
 
-    async function walk(rootArg: unknown, raw: unknown, signal: AbortSignal): Promise<FileEntry[]> {
+    async function walk(rootArg: unknown, raw: unknown, signal: AbortSignal): Promise<FileEntry[] | FilePath[]> {
       if (!(await checkedPath(rootArg))) throw new ChannelError(CHANNEL_ERRORS.io, 'Folder not found.');
       // Chemins rendus sous la racine telle que donnée (vérifiée ci-dessus, chemin réel compris) : un dossier de la
       // bibliothèque atteint par un lien symbolique garde les chemins, donc les clés, qu'il a dans la configuration.
@@ -286,9 +291,12 @@ export function createContextHandler(deps: ContextDeps) {
       const exts = Array.isArray(o.extensions) ? new Set(o.extensions.map((e) => `.${String(e).toLowerCase().replace(/^\./, '')}`)) : null;
       const depth = Number.isInteger(o.depth) && o.depth! >= 0 ? o.depth! : Infinity;
       const max = Number.isInteger(o.limit) && o.limit! > 0 ? Math.min(o.limit!, LIMITS.walkMax) : LIMITS.walkDefault;
-      // Même règle que la bibliothèque (`walkLibrary`) : dossiers cachés et système, fichiers cachés.
+      // Même règle que l'ancienne bibliothèque du cœur (`walkLibrary`) : dossiers cachés et système, fichiers cachés.
       const hidden = o.skipHidden === true;
-      const out: FileEntry[] = [];
+      // Sans détails, aucun fichier n'est lu : chemins seuls (une grande bibliothèque passait l'essentiel du parcours
+      // à lire taille et date).
+      const details = o.details !== false;
+      const out: Array<FileEntry | FilePath> = [];
       const stack: Array<{ dir: string; level: number }> = [{ dir: root, level: 0 }];
       while (stack.length && out.length < max) {
         if (signal.aborted) throw new ChannelError(CHANNEL_ERRORS.cancelled, 'Walk cancelled.');
@@ -309,6 +317,13 @@ export function createContextHandler(deps: ContextDeps) {
             files.push(full);
           }
         }
+        if (!details) {
+          for (const f of files) {
+            if (out.length >= max) break;
+            out.push({ path: f });
+          }
+          continue;
+        }
         // Taille et date des fichiers du dossier, par lots lus en même temps (un à un, une grande bibliothèque attend
         // chaque lecture du disque).
         for (let i = 0; i < files.length && out.length < max; i += LIMITS.walkStats) {
@@ -317,7 +332,7 @@ export function createContextHandler(deps: ContextDeps) {
           stats.forEach((st, j) => st && out.push({ path: batch[j], size: st.size, modified: st.mtimeMs }));
         }
       }
-      return out;
+      return out as FileEntry[] | FilePath[];
     }
 
     async function requestFolder(purpose: unknown): Promise<string | null> {

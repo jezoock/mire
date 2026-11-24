@@ -51,7 +51,7 @@ const byName = (elements) => new Map(elements.map((e) => [e.name, e]));
 describe('manifeste et contrat', () => {
   it('niveau code, permission `folders` seule, une source `src-local`', () => {
     assert.equal(manifest.id, 'mire.source.local');
-    assert.equal(manifest.version, '1.0.0');
+    assert.equal(manifest.version, '1.0.1');
     assert.equal(manifest.level, 'code');
     assert.deepEqual(manifest.permissions, { folders: true });
     assert.deepEqual(manifest.contributes, { sources: [{ id: 'src-local', main: 'src/source.mjs' }] });
@@ -93,12 +93,12 @@ describe('manifeste et contrat', () => {
     );
   });
 
-  it('walk : dossiers cachés écartés, profondeur et nombre de fichiers bornés comme le cœur', async () => {
+  it('walk : chemins seuls (sans taille ni date), dossiers cachés écartés, profondeur et nombre bornés comme le cœur', async () => {
     const { ctx, walks } = fakeContext({ granted: [lib.root] });
     await createSource(ctx).scan(at('Films', ['video']));
     assert.equal(walks.length, 1);
     const o = walks[0].options;
-    assert.deepEqual([o.skipHidden, o.depth, o.limit], [true, MAX_DEPTH, MAX_ITEMS]);
+    assert.deepEqual([o.details, o.skipHidden, o.depth, o.limit], [false, true, MAX_DEPTH, MAX_ITEMS]);
     assert.equal(MAX_ITEMS, 150000);
     for (const e of ['mkv', 'mp3', 'jpg', 'srt', 'vtt']) assert.ok(o.extensions.includes(e), e);
   });

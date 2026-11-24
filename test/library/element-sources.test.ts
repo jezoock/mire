@@ -2,9 +2,9 @@
 // analyses répétées sans doublon ni réécriture, emplacements qui se recouvrent, emplacement inaccessible ou retiré,
 // et `library.scan` qui rend les mêmes `LibraryItem` qu'avant.
 //
-// Depuis P5-11c, les dossiers de cet ordinateur sont lus par le plugin `mire.source.local`
-// (test/library/plugin-folders.test.ts) : la mécanique du catalogue est vérifiée ici avec la source des partages
-// réseau du cœur (`src-smb`), sur des dossiers temporaires présentés comme des partages.
+// Les dossiers de cet ordinateur et les partages réseau sont lus par les plugins `mire.source.local` (P5-11c) et
+// `mire.source.network` (P5-11d) (test/library/plugin-folders.test.ts) : la mécanique du catalogue est vérifiée ici
+// avec une source factice du cœur (`dossier-factice`, test/library/fixtures.ts), sur des dossiers temporaires.
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,11 +14,10 @@ import type { Config, LibrarySource } from '@mire/shared';
 import { createCatalog, type CatalogChange } from '../../src/main/catalog/index.ts';
 import { localFileKey, m3uEntryKey, remoteFileKey } from '../../src/main/catalog/keys.ts';
 import { sourceFileName } from '../../src/main/catalog/persistence.ts';
-import { DEFAULT_PROVIDERS, folderProvider, librarySources, resolveLocation, scanLibrary } from '../../src/main/library/index.ts';
+import { DEFAULT_PROVIDERS, librarySources, resolveLocation, scanLibrary } from '../../src/main/library/index.ts';
 import type { ScannedLocation, ScanOptions } from '../../src/main/library/index.ts';
 import { createLibraryService } from '../../src/main/library/service.ts';
-import { bundledSubtitles } from '../plugins/bundled-subtitles.ts';
-import { indexServer, libraryTree } from './fixtures.ts';
+import { fakeFolderProvider, fakeFolderSource, indexServer, libraryTree } from './fixtures.ts';
 
 const tree = libraryTree();
 const { root, touch } = tree;
@@ -35,14 +34,10 @@ const PLATFORM = process.platform;
 const at = (rel: string) => path.join(root, rel);
 const src = (id: string, kind: LibrarySource['kind'], location: string): LibrarySource => ({ id, kind, location });
 
-/** Analyse où chaque dossier temporaire est lu comme un partage réseau (`src-smb`). */
-const asShares = (o: ScanOptions) =>
-  scanLibrary({
-    ...o,
-    providers: [...DEFAULT_PROVIDERS, folderProvider],
-    onScanned: (s) =>
-      o.onScanned?.(s.target.resolved.type === 'path' ? { ...s, target: { ...s.target, resolved: { ...s.target.resolved, network: true } } } : s),
-  });
+/** Analyse où chaque dossier temporaire est lu par le fournisseur factice. */
+const asShares = (o: ScanOptions) => scanLibrary({ ...o, providers: [...DEFAULT_PROVIDERS, fakeFolderProvider] });
+/** Sources d'éléments du cœur, plus la source factice. */
+const withFake = () => [...librarySources(), fakeFolderSource()];
 
 function setup(sources: LibrarySource[]) {
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-catalog-')), 'sources');
@@ -57,40 +52,27 @@ function setup(sources: LibrarySource[]) {
     catalog,
     onCatalogError: (err) => errors.push(err),
     scan: asShares,
-    // Sous-titres à l'ouverture : plugin inclus mire.subtitles (P5-11b).
-    pluginSubtitles: (p) => bundledSubtitles().bridges.subtitles(p),
+    sources: withFake(),
   });
   return { dir, catalog, changes, cfg, library, errors };
 }
 
-describe('sources de la bibliothèque : dossiers (partages)', () => {
-  it('un élément par fichier, avec ses tags de source, son dossier, ses images et ses sous-titres', async () => {
+describe('sources de la bibliothèque : dossiers (source factice)', () => {
+  it('un élément par fichier, avec ses tags de source et son dossier', async () => {
     const { catalog, library } = setup([src('films', 'video', at('Films')), src('photos', 'image', at('Films'))]);
     const { items } = await library.scan();
     assert.deepEqual(catalog.keys().sort(), items.map((i) => localFileKey(i.path, PLATFORM)).sort());
     const amelie = catalog.element(localFileKey(at('Films/Amélie (2001).mkv'), PLATFORM));
     assert.deepEqual(amelie && { ...amelie, added: 0 }, {
       key: localFileKey(at('Films/Amélie (2001).mkv'), PLATFORM),
-      source: { plugin: 'src-smb', instance: localFileKey(at('Films'), PLATFORM).slice('local:'.length) },
+      source: { plugin: 'dossier-factice', instance: localFileKey(at('Films'), PLATFORM).slice('local:'.length) },
       name: 'Amélie (2001)',
       open: { kind: 'file', path: at('Films/Amélie (2001).mkv') },
-      tags: ['network'],
-      infos: { folder: 'Films', subtitles: [at('Films/Amélie (2001).en.vtt'), at('Films/Amélie (2001).fr.srt')].sort() },
-      images: { poster: at('Films/Amélie (2001).jpg'), background: at('Films/Amélie (2001)-fanart.jpg') },
+      tags: ['factice'],
+      infos: { folder: 'Films' },
+      images: {},
       added: 0,
     });
-    const photo = catalog.element(localFileKey(at('Films/Photo de tournage.png'), PLATFORM));
-    assert.deepEqual(photo?.infos, { folder: 'Films' });
-    assert.deepEqual(photo?.images, {});
-  });
-
-  it('les sous-titres trouvés pendant l’analyse sont ceux que la vidéo propose à l’ouverture', async () => {
-    const { catalog, library } = setup([src('films', 'video', at('Films'))]);
-    await library.scan();
-    const video = at('Films/Amélie (2001).mkv');
-    const subs = catalog.element(localFileKey(video, PLATFORM))?.infos.subtitles as string[];
-    assert.equal(subs.length, (await library.findSubtitles(video)).length);
-    assert.equal(catalog.element(localFileKey(at('Films/Sans affiche (1999).mp4'), PLATFORM))?.infos.subtitles, undefined);
   });
 
   it('analyses répétées : mêmes éléments, aucun doublon, aucun changement annoncé, fichier non réécrit', async () => {
@@ -188,6 +170,7 @@ describe('sources de la bibliothèque : dossiers (partages)', () => {
       },
       onCatalogError: (err) => errors.push(err),
       scan: asShares,
+      sources: withFake(),
     });
     const { items } = await library.scan();
     assert.equal(items.length, 2);
@@ -212,9 +195,9 @@ describe('sources de la bibliothèque : `library.scan` inchangé', () => {
     ];
     const cfg = { library: { sources }, bookmarks: [{ id: 'b', url: 'https://site/x', title: 'X', type: 'movie' }] } as unknown as Config;
     const access = { allowFile: () => {}, isAllowed: () => true };
-    const without = await createLibraryService({ config: { get: () => cfg }, access, scan: asShares }).scan();
+    const without = await createLibraryService({ config: { get: () => cfg }, access, scan: asShares, sources: withFake() }).scan();
     const { catalog } = setup([]);
-    const withCatalog = await createLibraryService({ config: { get: () => cfg }, access, catalog, scan: asShares }).scan();
+    const withCatalog = await createLibraryService({ config: { get: () => cfg }, access, catalog, scan: asShares, sources: withFake() }).scan();
     assert.deepEqual(withCatalog, without);
     const { items, status } = await asShares({ sources, bookmarks: cfg.bookmarks });
     assert.deepEqual(withCatalog, { items, status });
@@ -282,15 +265,11 @@ describe('sources de la bibliothèque : `ElementSource`', () => {
   };
 
   it('chaque emplacement a sa source, et un identifiant d’emplacement stable', () => {
-    // Dossier de cet ordinateur : lu par le plugin `mire.source.local` (P5-11c), plus par le cœur.
+    // Dossier de cet ordinateur, partage réseau : lus par les plugins `mire.source.local` et `mire.source.network`.
     assert.equal(sourceFor('D:\\Films\\', 'win32'), undefined);
-    assert.deepEqual(sourceFor('\\\\NAS\\Films', 'win32'), { id: 'src-smb', tags: ['network'], instance: '//nas/films' });
-    assert.deepEqual(sourceFor('smb://nas/Films', 'win32'), { id: 'src-smb', tags: ['network'], instance: '//nas/films' });
-    assert.deepEqual(sourceFor('smb://nas/Films', 'linux'), {
-      id: 'src-smb',
-      tags: ['network'],
-      instance: '/run/user/1000/gvfs/smb-share:server=nas,share=films',
-    });
+    assert.equal(sourceFor('\\\\NAS\\Films', 'win32'), undefined);
+    assert.equal(sourceFor('smb://nas/Films', 'win32'), undefined);
+    assert.equal(sourceFor('smb://nas/Films', 'linux'), undefined);
     assert.equal(sourceFor('/home/moi/Films/', 'linux'), undefined);
     assert.deepEqual(sourceFor('HTTPS://Nas.local/films/', 'linux'), { id: 'src-http', tags: ['remote'], instance: 'https://nas.local/films/' });
     assert.deepEqual(sourceFor('https://box/liste.m3u#x', 'linux'), { id: 'src-m3u', tags: ['remote'], instance: 'https://box/liste.m3u' });

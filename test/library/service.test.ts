@@ -2,6 +2,10 @@
 // index.js) : l'analyse garde les sous-titres des vidéos en ligne pour la recherche de sous-titres.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { createLibraryService } from '../../src/main/library/service.ts';
 
 // Seule adresse servie pendant ces tests : le sous-titre trouvé par l'analyse ; tout autre accès réseau échoue.
@@ -41,5 +45,28 @@ describe('createLibraryService', () => {
     assert.equal(await library.itemFromPath(42), null);
     assert.equal(await library.itemFromPath('/chemin/introuvable.mkv'), null);
     assert.deepEqual(allowed, []);
+  });
+
+  it('emplacement lu par un plugin : son état est vérifié pendant les analyses des plugins, pas après (un partage absent n’attend qu’une fois)', async () => {
+    const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mire-etat-')), 'Partage');
+    const sources = [{ id: 'nas', kind: 'video', location: dir }];
+    const catalog = { setSource: () => {}, removeSource: () => {}, sources: () => [], keysOf: () => [], get: () => undefined };
+    const library = createLibraryService({
+      config: { get: () => ({ library: { sources }, bookmarks: [] }) as never },
+      access: { allowFile: () => {}, isAllowed: () => true },
+      catalog: catalog as never,
+      claimed: () => true,
+      // Le partage apparaît pendant l'analyse du plugin : l'état, vérifié en même temps, est celui du début.
+      pluginScans: async () => {
+        await sleep(50);
+        fs.mkdirSync(dir);
+      },
+    });
+    const { status } = await library.scan();
+    assert.equal(status.nas.ok, false);
+    assert.match(status.nas.error!, /introuvable/);
+    // Analyse suivante : il est là.
+    assert.equal((await library.scan({ plugins: false })).status.nas.ok, true);
+    fs.rmSync(path.dirname(dir), { recursive: true, force: true });
   });
 });
