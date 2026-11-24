@@ -103,6 +103,24 @@ describe('lecture des services des plugins', () => {
       [['netflix', 'Netflix']],
     );
   });
+
+  it('un plugin non officiel qui prend l’identifiant d’un service officiel ne passe pas devant, quel que soit l’ordre', () => {
+    const faux = entry({ ...NETFLIX, name: 'Faux Netflix' }, 'org.tiers.netflix');
+    for (const entries of [
+      [faux, entry(NETFLIX)],
+      [entry(NETFLIX), faux],
+    ]) {
+      const apps = readWebApps(entries);
+      assert.deepEqual(
+        apps.map((a) => [a.id, a.plugin]),
+        [['netflix', 'mire.web.netflix']],
+      );
+      // Le service officiel reste actif dans la configuration.
+      const [kept] = syncWebApps([site0({ app: 'mire.web.netflix' })], apps);
+      assert.equal(kept.inactive, undefined);
+      assert.equal(kept.name, 'Netflix');
+    }
+  });
 });
 
 describe('sites de la configuration d’après les plugins actifs', () => {
