@@ -4441,4 +4441,53 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
   });
+
+  // Tags automatiques (P5-09) : cinq plugins inclus de niveau code, actifs dès le premier lancement ; un épisode de la
+  // bibliothèque porte le tag `series` et ses infos ; plugin désactivé, ses tags disparaissent, un tag saisi à la main
+  // reste ; réactivé, ils reviennent.
+  describe('tags automatiques, plugins inclus (P5-09)', () => {
+    const seriesKeys = () => page.evaluate(() => window.api.catalogPage('tag:series', [], null).then((l) => (l.elements ?? []).map((e) => e.key)));
+    const waitSeries = (some) =>
+      page.waitForFunction((want) => window.api.catalogPage('tag:series', [], null).then((l) => (l.elements ?? []).length > 0 === want), some, {
+        polling: 100,
+      });
+
+    it('les cinq plugins inclus sont actifs ; un épisode porte `series`, sa saison et son épisode', async () => {
+      const list = await page.evaluate(() => window.api.pluginsList());
+      for (const k of ['series', 'movies', 'music', 'consoles', 'photos']) {
+        const p = list.find((x) => x.id === `mire.tags.${k}`);
+        assert.deepEqual([p?.origin, p?.status], ['bundled', 'active'], k);
+      }
+      // Les lots se calculent dans l'hôte isolé : le tag arrive peu après le démarrage.
+      await waitSeries(true);
+      const keys = await seriesKeys();
+      const episodes = await Promise.all(keys.map((k) => page.evaluate((key) => window.api.catalogElement(key), k)));
+      const e = episodes.find((x) => x.name === 'S01E01');
+      assert.ok(e, episodes.map((x) => x.name).join());
+      assert.ok(e.tags.includes('video') && e.tags.includes('series'), e.tags.join());
+      assert.deepEqual([e.infos.season, e.infos.episode], [1, 1]);
+      const tag = (await page.evaluate(() => window.api.tagsList())).find((t) => t.id === 'series');
+      assert.deepEqual([tag?.origin, tag?.name], ['plugin', 'Séries']);
+    });
+
+    it('plugin désactivé : ses tags disparaissent, un tag saisi à la main reste ; réactivé, ils reviennent', async () => {
+      const [key] = await seriesKeys();
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'Gardé e2e': true }), key);
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', false));
+      await waitSeries(false);
+      const off = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.equal(off.tags.includes('series'), false);
+      assert.ok(off.tags.includes('garde-e2e'), off.tags.join());
+      assert.equal(off.infos.season, undefined);
+      assert.equal(
+        (await page.evaluate(() => window.api.tagsList())).some((t) => t.id === 'series'),
+        false,
+      );
+      await page.evaluate(() => window.api.pluginsSetEnabled('mire.tags.series', true));
+      await waitSeries(true);
+      const on = await page.evaluate((k) => window.api.catalogElement(k), key);
+      assert.ok(on.tags.includes('series') && on.tags.includes('garde-e2e'), on.tags.join());
+      await page.evaluate((k) => window.api.catalogSetTags(k, { 'garde-e2e': null }), key);
+    });
+  });
 });

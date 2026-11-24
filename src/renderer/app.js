@@ -2677,6 +2677,13 @@ function tick() {
   await i18nReady;
   const list = await pages;
   shell.setPages(Array.isArray(list) ? list : null);
+  // Pages des plugins activés après ce premier écran (démarrage des plugins plus long que celui de l'interface) ou
+  // retirées avec leur plugin : le menu suit. Redessiné seulement si la liste a changé (`pages:changed` arrive aussi
+  // à chaque calcul des tags automatiques).
+  api.onPagesChange(async () => {
+    const next = await api.pagesList().catch(() => null);
+    if (Array.isArray(next) && JSON.stringify(next) !== JSON.stringify(shell.pages())) shell.setPages(next);
+  });
   S.scrape = (await api.scrapeData()) || {};
   S.meta = (await api.metaAll()) || {};
   S.adblock = await api.adblockStatus();
