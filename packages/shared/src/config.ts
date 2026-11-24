@@ -276,7 +276,7 @@ export interface CatalogSettings {
    */
   fileTags?: Record<string, string[]>;
   /**
-   * Ordre de priorité des fournisseurs d'infos en ligne (`tmdb`, `musicbrainz`, `libretro`, `steam`) : pour une même
+   * Ordre de priorité des fournisseurs d'infos en ligne (`libretro`, ceux des plugins : `mire.tmdb/tmdb`…) : pour une même
    * info, le premier l'emporte. Ceux qui manquent suivent, dans l'ordre par défaut. Absent : l'ordre par défaut.
    */
   metadataProviders?: string[];
