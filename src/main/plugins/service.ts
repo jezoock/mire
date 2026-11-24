@@ -17,6 +17,7 @@ import { readGamepadProfiles } from './gamepads.ts';
 import { freeGamesOf, romSitesFor } from './packs.ts';
 import { readPluginPages } from './pages.ts';
 import { readExternalPlayers } from './apps.ts';
+import { readWebApps, type WebApp } from './web-apps.ts';
 import type { ExternalPlayerSpec } from '../platform/types.ts';
 import { readPluginPalettes } from './palettes.ts';
 import type { Messages } from '@mire/shared/i18n';
@@ -588,6 +589,17 @@ export function createPluginService(opts: PluginServiceOptions) {
       });
     },
 
+    /**
+     * Ce qu'un plugin actif peut recevoir des emplacements de la bibliothèque (P5-11a) : seulement s'il est inclus ou
+     * du dépôt officiel, et un dossier seulement s'il déclare `folders` (et que son niveau le permet).
+     */
+    sourceRights(id: string): { trusted: boolean; folders: boolean } {
+      const a = active.get(id);
+      const k = known.get(id);
+      if (!a || !k) return { trusted: false, folders: false };
+      return { trusted: ['bundled', 'official'].includes(trustOf(k)), folders: grantedPermissions(a.plugin.manifest).folders };
+    },
+
     /** Niveau d'un plugin actif (`null` sinon) : les ponts appliquent ses règles aux résultats qu'il rend. */
     levelOf: (id: string) => active.get(id)?.plugin.manifest.level ?? null,
 
@@ -649,6 +661,8 @@ export function createPluginService(opts: PluginServiceOptions) {
     romSitesFor: (system: string) => romSitesFor(registry.list('packs'), system),
     /** Jeux libres des packs `freeGames` des plugins actifs (P5-07), vérifiés. */
     freeGames: () => freeGamesOf(registry.list('packs')),
+    /** Services de streaming des plugins actifs (contributions `webApps`, P5-05), vérifiés. */
+    webApps: (): WebApp[] => readWebApps(registry.list('webApps')),
     /** Pages prêtes à l'emploi des plugins actifs (contributions `pages`, P5-03), vérifiées. */
     pageDefinitions: (): PageDefinition[] => readPluginPages(registry.list('pages')),
 
