@@ -1,5 +1,5 @@
-// Plugin d'essai du test de fumée (P5-16) : un fournisseur d'infos d'albums qui ne trouve jamais rien, sans réseau. Il
-// donne un second fournisseur à la liste des réglages depuis que MusicBrainz et Steam sont des plugins à installer.
+// Plugin d'essai du test de fumée (P5-16) : un fournisseur d'infos d'albums qui ne trouve jamais rien, sans réseau.
+// Les fournisseurs d'infos sont tous des plugins à installer : sans lui, la liste des réglages serait vide.
 export default function albums() {
   return {
     id: 'albums',

@@ -11,6 +11,11 @@
         "id": "albums",
         "main": "albums.mjs",
         "kinds": ["album"]
+      },
+      {
+        "id": "jeux",
+        "main": "jeux.mjs",
+        "kinds": ["pc"]
       }
     ]
   },

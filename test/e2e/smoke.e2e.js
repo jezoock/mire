@@ -22,6 +22,8 @@ const CORE_PALETTES = ['ecran', 'contraste'];
 const PALETTE_PLUGIN = path.join(__dirname, 'palettes', 'org.exemple.palettes');
 // Service de streaming d'un plugin factice (P5-05), installé à la main comme le plugin de palettes.
 const SERVICE_PLUGIN = path.join(__dirname, 'webapps', 'org.exemple.service');
+// Fournisseur d'infos d'un plugin factice (P5-16), sans réseau : les fournisseurs d'infos sont tous des plugins.
+const INFOS_PLUGIN = path.join(__dirname, 'infos', 'org.exemple.infos');
 // Fond d'une palette : palette.json pour celles du cœur, jeton `bg` du plugin factice pour les autres.
 const paletteBackground = (id) =>
   CORE_PALETTES.includes(id)
@@ -94,6 +96,7 @@ function prepareData() {
   // Plugin de palettes factice, installé à la main : userData/plugins/<id>/<version>/ (P5-02).
   fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
   fs.cpSync(SERVICE_PLUGIN, path.join(data, 'plugins', 'org.exemple.service', '1.0.0'), { recursive: true });
+  fs.cpSync(INFOS_PLUGIN, path.join(data, 'plugins', 'org.exemple.infos', '1.0.0'), { recursive: true });
   return data;
 }
 
@@ -3290,22 +3293,29 @@ describe('Test de fumée de Mire', () => {
 
     it('l’ordre d’une liste change au clavier (ds-sortable) : celui des fournisseurs d’infos', async () => {
       await openSettings();
-      // TMDB est un plugin à installer (P5-15) : seuls les fournisseurs du cœur sans lui.
-      assert.deepEqual(await providers(), ['musicbrainz', 'libretro', 'steam']);
+      // Les fournisseurs d'infos sont tous des plugins (TMDB : P5-15 ; MusicBrainz, libretro, Steam : P5-16) : ceux du
+      // plugin factice, actif, forment la liste.
+      const ALBUMS = 'org.exemple.infos/albums';
+      const JEUX = 'org.exemple.infos/jeux';
+      await page.waitForFunction((sel) => document.querySelectorAll(`${sel} ds-sortable[data-list="providers"] [data-key]`).length === 2, VIEW);
+      assert.deepEqual(await providers(), [ALBUMS, JEUX]);
       const item = (key) => page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="${key}"]`);
-      await item('libretro').scrollIntoViewIfNeeded();
-      await item('libretro').focus();
+      await item(JEUX).scrollIntoViewIfNeeded();
+      await item(JEUX).focus();
       await page.keyboard.press('Space');
       await page.keyboard.press('ArrowUp');
       await page.keyboard.press('Space');
-      await waitSaved('catalog.metadataProviders', ['libretro', 'musicbrainz', 'steam']);
-      await page.waitForFunction((sel) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === 'libretro', VIEW);
+      await waitSaved('catalog.metadataProviders', [JEUX, ALBUMS]);
+      await page.waitForFunction(
+        ([sel, key]) => document.querySelector(`${sel} ds-sortable[data-list="providers"] [data-key]`)?.dataset.key === key,
+        [VIEW, JEUX],
+      );
       await page.locator(`${VIEW} ds-sortable[data-list="providers"]`).scrollIntoViewIfNeeded();
       await settle();
       await page.locator(`${VIEW} [data-panel="scrape"]`).screenshot({ path: path.join(SHOTS, 'settings-order.png') });
       // Retour à l'ordre d'origine, par le bouton qui monte un élément d'un rang.
-      await page.locator(`${VIEW} ds-sortable[data-list="providers"] [data-key="musicbrainz"] button`).first().click();
-      await waitSaved('catalog.metadataProviders', ['musicbrainz', 'libretro', 'steam']);
+      await item(ALBUMS).locator('button').first().click();
+      await waitSaved('catalog.metadataProviders', [ALBUMS, JEUX]);
       assert.deepEqual(errors, []);
     });
 
