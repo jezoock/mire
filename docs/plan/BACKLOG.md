@@ -194,7 +194,9 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-12 | Serveur web, liste M3U | M | P5-11a |  | à faire | |
 | P5-13a | Jeux PC : dossiers de jeux | M | P5-01, P5-11a | 🧑 | faite | [#111](https://github.com/jezoock/mire/pull/111) |
 | P5-13b | Jeux PC : jeu ajouté à la main | M | P5-13a | 🧑 | à faire | |
-| P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | M | P5-01 |  | à faire | |
+| P5-14a | Jeux de console : dossiers d'une console | M | P5-01, P5-11a |  | faite | |
+| P5-14b | Jeux de console : sources en ligne d'une console | S | P5-14a, P5-12 |  | à faire | |
+| P5-14c | Marque-pages de jeux (reportée : SDK des téléchargements, avec P5-18) | M | P5-14a, P5-18 |  | à faire | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | faite | [#101](https://github.com/jezoock/mire/pull/101) |
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | faite | [#112](https://github.com/jezoock/mire/pull/112) |
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
