@@ -291,7 +291,7 @@ export function createContextHandler(deps: ContextDeps) {
       const exts = Array.isArray(o.extensions) ? new Set(o.extensions.map((e) => `.${String(e).toLowerCase().replace(/^\./, '')}`)) : null;
       const depth = Number.isInteger(o.depth) && o.depth! >= 0 ? o.depth! : Infinity;
       const max = Number.isInteger(o.limit) && o.limit! > 0 ? Math.min(o.limit!, LIMITS.walkMax) : LIMITS.walkDefault;
-      // Même règle que la bibliothèque (`walkLibrary`) : dossiers cachés et système, fichiers cachés.
+      // Même règle que l'ancienne bibliothèque du cœur (`walkLibrary`) : dossiers cachés et système, fichiers cachés.
       const hidden = o.skipHidden === true;
       // Sans détails, aucun fichier n'est lu : chemins seuls (une grande bibliothèque passait l'essentiel du parcours
       // à lire taille et date).

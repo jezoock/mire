@@ -143,18 +143,13 @@
             },
             "infos": {
               "folder": "Films",
-              "subtitles": [
-                "<racine>/Films/Amélie (2001).en.vtt",
-                "<racine>/Films/Amélie (2001).fr.srt"
-              ]
+              "subtitles": ["<racine>/Films/Amélie (2001).en.vtt", "<racine>/Films/Amélie (2001).fr.srt"]
             },
             "images": {
               "poster": "<racine>/Films/Amélie (2001).jpg",
               "background": "<racine>/Films/Amélie (2001)-fanart.jpg"
             },
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<racine>/Films/Photo de tournage.png",
@@ -167,9 +162,7 @@
               "folder": "Films"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<racine>/Films/Sans affiche (1999).mp4",
@@ -185,9 +178,7 @@
               "poster": "<racine>/Films/poster.jpg",
               "background": "<racine>/Films/fanart.jpg"
             },
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -205,9 +196,7 @@
               "folder": "Saison 1"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -227,9 +216,7 @@
             "images": {
               "poster": "<racine>/Musique/Album/cover.jpg"
             },
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -247,9 +234,7 @@
               "folder": "Vacances"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<racine>/Images/Vacances/Plage.png",
@@ -262,9 +247,7 @@
               "folder": "Vacances"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -282,9 +265,7 @@
               "folder": "n16"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -423,9 +404,7 @@
               "folder": "Vidéos"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<demonstration>/Vidéos/Le Voyage dans la Lune (1902).mkv",
@@ -438,9 +417,7 @@
               "folder": "Vidéos"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<demonstration>/Vidéos/Série/Saison 1/S01E01.mkv",
@@ -453,9 +430,7 @@
               "folder": "Saison 1"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<demonstration>/Vidéos/Série/Saison 1/S01E02.mkv",
@@ -468,9 +443,7 @@
               "folder": "Saison 1"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -488,9 +461,7 @@
               "folder": "Premier album"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<demonstration>/Musique/Orchestre de démonstration/Premier album/02 - Final.mp3",
@@ -503,9 +474,7 @@
               "folder": "Premier album"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       },
@@ -523,9 +492,7 @@
               "folder": "Vacances"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           },
           {
             "key": "local:<demonstration>/Images/Vacances/Plage.png",
@@ -538,9 +505,7 @@
               "folder": "Vacances"
             },
             "images": {},
-            "tags": [
-              "network"
-            ]
+            "tags": ["network"]
           }
         ]
       }
