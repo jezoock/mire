@@ -38,11 +38,11 @@ module.exports = [
   {
     // Plugins inclus (copie de mire-addons) : leur code tourne dans l'hôte isolé (Worker, sans Node) ; leurs tests
     // tournent sous Node.
-    files: ['plugins/**/*.mjs', 'addons/**/*.mjs'],
+    files: ['plugins/**/*.mjs'],
     languageOptions: { ecmaVersion: 'latest', sourceType: 'module', globals: globals.worker },
   },
   {
-    files: ['plugins/*/test/**/*.mjs', 'addons/*/test/**/*.mjs'],
+    files: ['plugins/*/test/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
   {
