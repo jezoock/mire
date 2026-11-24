@@ -187,8 +187,11 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |
 | P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | à faire | |
 | P5-10 | Thème Mire | S | P4-11, P4-24 |  | à faire | |
-| P5-11 | Dossier local, partage réseau, sous-titres | M | P5-01, P3-04 |  | à faire | |
-| P5-12 | Serveur web, liste M3U | M | P5-11 |  | à faire | |
+| P5-11a | Socle des sources de fichiers | M | P5-01, P3-04 |  | faite | [#107](https://github.com/jezoock/mire/pull/107) |
+| P5-11b | Sous-titres | S | P5-11a |  | à faire | |
+| P5-11c | Dossier local | M | P5-11a |  | à faire | |
+| P5-11d | Partage réseau | S | P5-11a, P5-11c | 🧑 | à faire | |
+| P5-12 | Serveur web, liste M3U | M | P5-11a |  | à faire | |
 | P5-13 | Jeux PC | M | P5-01 | 🧑 | à faire | |
 | P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | M | P5-01 |  | à faire | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | M | P5-01, P2-06 |  | faite | [#101](https://github.com/jezoock/mire/pull/101) |
