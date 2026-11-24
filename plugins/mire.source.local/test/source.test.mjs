@@ -63,8 +63,12 @@ describe('manifeste et contrat', () => {
     assert.deepEqual(s.tags, ['local']);
   });
 
-  it('textes embarqués : ceux des catalogues', () => {
-    for (const lang of ['fr', 'en']) assert.deepEqual(TEXT_CATALOGS[lang], read(`i18n/${lang}.json`).messages.source);
+  it('textes embarqués : ceux des catalogues ; nom de la sorte de source pour l’explorateur de Mire (`source.name`)', () => {
+    for (const lang of ['fr', 'en']) {
+      const { name, ...embedded } = read(`i18n/${lang}.json`).messages.source;
+      assert.deepEqual(TEXT_CATALOGS[lang], embedded);
+      assert.equal(name, { fr: 'Dossier', en: 'Folder' }[lang]);
+    }
   });
 
   it('handles : un dossier seulement, ni partage réseau ni adresse', () => {

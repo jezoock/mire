@@ -10,6 +10,7 @@
       "description": "Adds the videos, music and pictures in folders on this computer to the library, with their posters and subtitles."
     },
     "source": {
+      "name": "Folder",
       "folderNotFound": "Folder not found: {path}"
     }
   }

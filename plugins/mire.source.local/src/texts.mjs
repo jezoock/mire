@@ -1,5 +1,6 @@
-// Messages du plugin montrés par Mire. Ce sont ceux de la section `source` de i18n/fr.json et i18n/en.json (un test
-// vérifie qu'ils sont identiques) : l'hôte isolé ne lit pas les catalogues, le code les embarque.
+// Messages du plugin montrés par Mire : ceux de la section `source` de i18n/fr.json et i18n/en.json (un test vérifie
+// qu'ils sont identiques), sauf `source.name` que Mire lit lui-même (nom de la sorte de source dans l'explorateur).
+// L'hôte isolé ne lit pas les catalogues : le code les embarque.
 
 const TEXTS = {
   fr: {

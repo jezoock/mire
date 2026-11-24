@@ -76,7 +76,7 @@ export function parseFolderNode(node: string): { source: string; path: string } 
   }
 }
 
-/** Sources qui ont un nom dans les catalogues (`explorer.sourceKinds`) ; les autres (plugins) gardent leur identifiant. */
+/** Sources du cœur qui ont un nom dans les catalogues (`explorer.sourceKinds`) ; celles des plugins, voir `pluginSourceKind`. */
 export const SOURCE_KINDS = [
   'src-local',
   'src-smb',
@@ -101,9 +101,16 @@ export function placeName(place: string): string {
   return s.slice(Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\')) + 1) || place;
 }
 
+/** Sorte d'une source de plugin : texte `source.name` de ses catalogues (`pluginTexts.<id>.source.name`), sinon son identifiant. */
+function pluginSourceKind(plugin: string, t: Translate): string {
+  const key = `pluginTexts.${plugin.replaceAll('.', '_')}.source.name`;
+  const text = t(key);
+  return text && text !== key ? text : plugin;
+}
+
 /** Nom d'une source : sa sorte, puis où elle se trouve (sauf pour une source tirée de la configuration). */
 export function sourceLabel(plugin: string, place: string, t: Translate): string {
-  const kind = (SOURCE_KINDS as readonly string[]).includes(plugin) ? t(`explorer.sourceKinds.${plugin}`) : plugin;
+  const kind = (SOURCE_KINDS as readonly string[]).includes(plugin) ? t(`explorer.sourceKinds.${plugin}`) : pluginSourceKind(plugin, t);
   // `console|chemin` (consoles) : seul le chemin se montre.
   const where = place.slice(place.lastIndexOf('|') + 1);
   return where && where !== 'config' ? t('explorer.sourceLabel', { kind, place: placeName(where) }) : kind;
