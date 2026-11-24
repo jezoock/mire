@@ -19,7 +19,7 @@ export const PLUGIN_LEVELS = ['data', 'code', 'privileged'] as const;
 export type PluginLevel = (typeof PLUGIN_LEVELS)[number];
 
 /** Contributions de code : chaque entrée a un fichier `main`. */
-export const CODE_CONTRIBUTIONS = ['sources', 'metadata', 'taggers', 'search', 'webExtensions', 'downloaders'] as const;
+export const CODE_CONTRIBUTIONS = ['sources', 'metadata', 'taggers', 'search', 'subtitles', 'webExtensions', 'downloaders'] as const;
 /** Contributions de données : chaque entrée a un fichier `file` (JSON ou ressource), jamais de `main`. */
 export const DATA_CONTRIBUTIONS = ['webApps', 'apps', 'systems', 'packs', 'pages', 'themes', 'palettes', 'languages', 'gamepads'] as const;
 /** Toutes les contributions, liste fermée. */
@@ -38,6 +38,7 @@ export const CONTRIBUTION_LEVEL: Readonly<Record<CodeContributionKind, PluginLev
   metadata: 'code',
   taggers: 'code',
   search: 'code',
+  subtitles: 'code',
   webExtensions: 'privileged',
   downloaders: 'privileged',
 };
@@ -72,6 +73,7 @@ export const CONTRIBUTION_FIELDS: Readonly<Record<ContributionKind, readonly str
   metadata: ['id', 'main', 'kinds', 'infos'],
   taggers: ['id', 'main', 'tags', 'infos'],
   search: ['id', 'main'],
+  subtitles: ['id', 'main'],
   webExtensions: ['id', 'main'],
   downloaders: ['id', 'main'],
   webApps: ['id', 'file'],
@@ -124,6 +126,7 @@ export interface PluginContributions {
   metadata?: MetadataContribution[];
   taggers?: TaggerContribution[];
   search?: CodeContribution[];
+  subtitles?: CodeContribution[];
   webExtensions?: CodeContribution[];
   downloaders?: CodeContribution[];
   webApps?: DataContribution[];

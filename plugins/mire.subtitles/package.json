@@ -1,0 +1,16 @@
+{
+  "name": "mire.subtitles",
+  "private": true,
+  "description": "Sous-titres posés à côté des vidéos (.srt, .vtt)",
+  "files": [
+    "mire-plugin.json",
+    "i18n/",
+    "src/"
+  ],
+  "scripts": {
+    "validate": "mire-plugin validate . --official"
+  },
+  "devDependencies": {
+    "@mire/plugin-sdk": "0.1.0"
+  }
+}

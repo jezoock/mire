@@ -13,6 +13,7 @@ import { sourceFileName } from '../../src/main/catalog/persistence.ts';
 import { librarySources, resolveLocation, scanLibrary } from '../../src/main/library/index.ts';
 import type { ScannedLocation } from '../../src/main/library/index.ts';
 import { createLibraryService } from '../../src/main/library/service.ts';
+import { bundledSubtitles } from '../plugins/bundled-subtitles.ts';
 import { indexServer, libraryTree } from './fixtures.ts';
 
 const tree = libraryTree();
@@ -42,6 +43,8 @@ function setup(sources: LibrarySource[]) {
     access: { allowFile: () => {}, isAllowed: () => true },
     catalog,
     onCatalogError: (err) => errors.push(err),
+    // Sous-titres à l'ouverture : plugin inclus mire.subtitles (P5-11b).
+    pluginSubtitles: (p) => bundledSubtitles().bridges.subtitles(p),
   });
   return { dir, catalog, changes, cfg, library, errors };
 }

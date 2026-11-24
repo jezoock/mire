@@ -35,6 +35,7 @@ const CONTRIBUTION_KINDS = new Set([
   'metadata',
   'taggers',
   'search',
+  'subtitles',
   'webExtensions',
   'downloaders',
   'webApps',

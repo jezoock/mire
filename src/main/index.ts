@@ -152,7 +152,13 @@ function start(pending: PendingFiles): Running {
   // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments ; un emplacement lu par un plugin
   // (P5-11a, sources des plugins plus bas) est laissé à ce plugin.
   let pluginBridges: PluginBridges | undefined;
-  const library = createLibraryService({ config, access, catalog, claimed: (k) => pluginBridges?.claimed(k) ?? false });
+  const library = createLibraryService({
+    config,
+    access,
+    catalog,
+    claimed: (k) => pluginBridges?.claimed(k) ?? false,
+    pluginSubtitles: async (p) => (pluginBridges ? pluginBridges.subtitles(p) : []),
+  });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
   const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
@@ -298,10 +304,14 @@ function start(pending: PendingFiles): Running {
     languages: Object.keys(BUILTIN_CATALOGS),
     state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
-    // Dossiers d'un plugin : ceux que l'utilisateur lui a accordés, et ceux de la bibliothèque qu'il lit (P5-11a).
+    // Dossiers d'un plugin : ceux que l'utilisateur lui a accordés, ceux de la bibliothèque qu'il lit (P5-11a), et le
+    // dossier d'une vidéo pendant qu'il en cherche les sous-titres (P5-11b).
     context: createContextHandler({
       pickFolder,
-      folders: { list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? [])])], add: pluginState.addFolder },
+      folders: {
+        list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? []), ...(pluginBridges?.lentFolders(id) ?? [])])],
+        add: pluginState.addFolder,
+      },
       storage: storages.of,
     }),
     settings: pluginSettings,

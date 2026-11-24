@@ -31,7 +31,7 @@ Ce qui remplit Vidéos, Musique et Images.
 | `src-smb` | Partage réseau (NAS) | Plugin inclus | Source | Fichiers, Réseau local ⚠ | src/main/library/location.ts |  |
 | `src-http` | Serveur web (page d'index) | À installer | Source | Internet | src/main/library/providers/http-index.ts |  |
 | `src-m3u` | Liste M3U | À installer | Source | Fichiers, Internet | src/main/library/providers/m3u.ts |  |
-| `src-subs` | Sous-titres | Plugin inclus | Fonction | Fichiers, Internet | src/main/library/subtitles.ts |  |
+| `src-subs` | Sous-titres | Plugin inclus | Fonction | Fichiers, Internet | plugin `mire.subtitles` (mire-addons, P5-11b ; copie incluse dans `plugins/`) ; cœur : pont `subtitles` (src/main/plugins/bridges.ts), lecture et sous-titres des serveurs web (src/main/library/subtitles.ts) | Les sous-titres d'un serveur web restent au cœur jusqu'à P5-12 |
 | `src-open` | Ouvrir un fichier | Cœur | Socle | Fichiers | src/main/library/item-from-path.ts, app/lifecycle.ts |  |
 | `src-formats` | Formats reconnus | Cœur | Socle | Données seules | packages/shared (KIND, NATIVE, MIME, EXT) |  |
 | `src-meta` | Infos modifiées à la main | Cœur | Socle | Fichiers | src/main/meta/user-meta.ts |  |
