@@ -1,0 +1,18 @@
+{
+  "$schema": "../../sdk/schema/mire-plugin.schema.json",
+  "id": "mire.source.http",
+  "version": "1.0.0",
+  "engines": {
+    "mire": "^1.0.0"
+  },
+  "level": "code",
+  "contributes": {
+    "sources": [
+      {
+        "id": "src-http",
+        "main": "src/source.mjs"
+      }
+    ]
+  },
+  "i18n": "i18n/"
+}
