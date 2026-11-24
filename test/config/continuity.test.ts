@@ -523,3 +523,37 @@ test.describe('partages réseau (P5-11d)', () => {
     assert.deepEqual(queue({ sources: 'x' }), []);
   });
 });
+
+test.describe('serveur web et liste M3U (P5-12)', () => {
+  const queue = (library: unknown) => (((migrate({ version: 9, library }).config as Any).continuity ?? []) as string[]).filter((id) => id.startsWith('P5-12'));
+  const at = (...locations: unknown[]) => ({ sources: locations.map((location, i) => ({ id: `s${i}`, kind: 'video', location })) });
+
+  test('plugins à installer `mire.source.http` et `mire.source.m3u`, rien à déplacer', () => {
+    const rules = CONTINUITY_RULES.filter((r) => r.id.startsWith('P5-12'));
+    assert.deepEqual(
+      rules.map((r) => [r.id, r.plugin, r.mode, r.settings]),
+      [
+        ['P5-12-http', 'mire.source.http', 'install', undefined],
+        ['P5-12-m3u', 'mire.source.m3u', 'install', undefined],
+      ],
+    );
+  });
+
+  test('une adresse de serveur web, une liste en ligne : le plugin qui la lit est installé ; les emplacements restent', () => {
+    assert.deepEqual(queue(at('/home/moi/Films', 'http://192.168.1.10/films/')), ['P5-12-http']);
+    assert.deepEqual(queue(at(' HTTPS://nas.local/musique ')), ['P5-12-http']);
+    assert.deepEqual(queue(at('https://box.exemple.org/tv.m3u')), ['P5-12-m3u']);
+    assert.deepEqual(queue(at('http://box/live/liste.M3U8?jeton=1')), ['P5-12-m3u']);
+    assert.deepEqual(queue(at('https://box.exemple.org/tv.m3u', 'http://nas/films/')), ['P5-12-http', 'P5-12-m3u']);
+    const library = at('/home/moi/Films', 'http://192.168.1.10/films/', 'https://box.exemple.org/tv.m3u');
+    const { config } = migrate({ version: 9, library: structuredClone(library) });
+    assert.deepEqual((config as Any).library, library);
+  });
+
+  test('sans adresse web (dossiers, partages, liste locale, rien) : les règles ne s’appliquent pas', () => {
+    assert.deepEqual(queue(at('/home/moi/Films', 'D:\\Films', 'smb://nas/films', '/home/moi/radios.m3u', 'ftp://nas/films', 'http://', '', 42)), []);
+    assert.deepEqual(queue({ sources: [] }), []);
+    assert.deepEqual(queue(undefined), []);
+    assert.deepEqual(queue({ sources: 'x' }), []);
+  });
+});
