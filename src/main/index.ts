@@ -50,6 +50,8 @@ import { t } from './i18n/current.ts';
 import { registerIpc } from './ipc/handlers/index.ts';
 import { mainContext } from './ipc/main-context.ts';
 import { createLibraryService } from './library/service.ts';
+import { libraryLocations } from './library/locations.ts';
+import type { PluginBridges } from './plugins/bridges.ts';
 import { catalogFollow } from './files/follow.ts';
 import { managedRoots } from './files/roots.ts';
 import { createFolders } from './catalog/folders.ts';
@@ -144,8 +146,10 @@ function start(pending: PendingFiles): Running {
   const window = createMainWindow({ BrowserWindow, shell, nativeTheme, config, files: pages, web: () => web, onClosed, rescue });
   const { toUi } = window;
 
-  // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments.
-  const library = createLibraryService({ config, access, catalog });
+  // Chaque analyse de la bibliothèque alimente aussi le catalogue d'éléments ; un emplacement lu par un plugin
+  // (P5-11a, sources des plugins plus bas) est laissé à ce plugin.
+  let pluginBridges: PluginBridges | undefined;
+  const library = createLibraryService({ config, access, catalog, claimed: (k) => pluginBridges?.claimed(k) ?? false });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
   const meta = createUserMeta({ overrides, imgDir: files.metaImg, chooseImage: dialogs.chooseMetaImage });
@@ -291,7 +295,12 @@ function start(pending: PendingFiles): Running {
     languages: Object.keys(BUILTIN_CATALOGS),
     state: pluginState,
     journal: createJournal({ dir: files.pluginLogs }),
-    context: createContextHandler({ pickFolder, folders: { list: pluginState.folders, add: pluginState.addFolder }, storage: storages.of }),
+    // Dossiers d'un plugin : ceux que l'utilisateur lui a accordés, et ceux de la bibliothèque qu'il lit (P5-11a).
+    context: createContextHandler({
+      pickFolder,
+      folders: { list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? [])])], add: pluginState.addFolder },
+      storage: storages.of,
+    }),
     settings: pluginSettings,
     flush: storages.flush,
     dropData: storages.drop,
@@ -365,7 +374,15 @@ function start(pending: PendingFiles): Running {
   }
   config.onChange(() => setImmediate(syncWebApps));
   // Sources, infos en ligne et recherche des plugins (P3-04) : catalogue, moteur d'infos, `pluginBridges.search`.
-  const pluginBridges = createPluginBridges({ service: plugins, catalog });
+  // Emplacements de la bibliothèque (P5-11a) : proposés aux sources des plugins ; quand un plugin en prend ou en rend
+  // un, la bibliothèque du cœur est analysée de nouveau pour retirer ou retrouver ses propres éléments.
+  const bridges = createPluginBridges({ service: plugins, catalog, onClaimsChange: rescan });
+  pluginBridges = bridges;
+  const syncLocations = (cfg: Config) => void bridges.setLocations(libraryLocations(cfg.library.sources));
+  syncLocations(config.get());
+  config.onChange((next, prev) => {
+    if (JSON.stringify(next.library.sources) !== JSON.stringify(prev.library.sources)) syncLocations(next);
+  });
   i18n.onChange((info) => plugins.emit('language', { language: info.language }));
   // Une fiche enregistrée (ou oubliée) recalcule son élément ; une adresse analysée retrouve sa fiche.
   metadata.onChange((keys) => tags.refresh(keys));
@@ -392,7 +409,7 @@ function start(pending: PendingFiles): Running {
     listRoms: games.listRoms,
     onProgress: (p) => toUi('scrape-progress', p),
     store: metadata.scrapeStore,
-    extraProviders: pluginBridges.metadataProviders,
+    extraProviders: bridges.metadataProviders,
   });
   // Configuration lue et dossier d'images créé : les racines autorisées se calculeront à la première question.
   access.invalidate();

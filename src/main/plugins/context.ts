@@ -39,9 +39,9 @@ export const LIMITS = Object.freeze({
   httpTimeoutMax: 60000,
   redirects: 5,
   headers: 64,
-  /** Fichiers rendus par `walk` : 10 000 par défaut, 50 000 au plus. */
+  /** Fichiers rendus par `walk` : 10 000 par défaut, 150 000 au plus (le nombre maximal d'éléments de la bibliothèque). */
   walkDefault: 10000,
-  walkMax: 50000,
+  walkMax: 150000,
   /** Texte du motif d'une demande de dossier. */
   purpose: 200,
 });
@@ -282,6 +282,8 @@ export function createContextHandler(deps: ContextDeps) {
       const exts = Array.isArray(o.extensions) ? new Set(o.extensions.map((e) => `.${String(e).toLowerCase().replace(/^\./, '')}`)) : null;
       const depth = Number.isInteger(o.depth) && o.depth! >= 0 ? o.depth! : Infinity;
       const max = Number.isInteger(o.limit) && o.limit! > 0 ? Math.min(o.limit!, LIMITS.walkMax) : LIMITS.walkDefault;
+      // Même règle que la bibliothèque (`walkLibrary`) : dossiers cachés et système, fichiers cachés.
+      const hidden = o.skipHidden === true;
       const out: FileEntry[] = [];
       const stack: Array<{ dir: string; level: number }> = [{ dir: root, level: 0 }];
       while (stack.length && out.length < max) {
@@ -298,8 +300,8 @@ export function createContextHandler(deps: ContextDeps) {
           const full = path.join(dir, d.name);
           // Les liens ne sont pas suivis : ils pourraient mener hors des dossiers accordés.
           if (d.isDirectory()) {
-            if (level < depth) stack.push({ dir: full, level: level + 1 });
-          } else if (d.isFile() && (!exts || exts.has(path.extname(d.name).toLowerCase()))) {
+            if (level < depth && !(hidden && (d.name.startsWith('.') || d.name.startsWith('$')))) stack.push({ dir: full, level: level + 1 });
+          } else if (d.isFile() && !(hidden && d.name.startsWith('.')) && (!exts || exts.has(path.extname(d.name).toLowerCase()))) {
             const st = await fsp.stat(full).catch(() => null);
             if (st) out.push({ path: full, size: st.size, modified: st.mtimeMs });
           }

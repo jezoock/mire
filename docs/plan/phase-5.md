@@ -114,8 +114,11 @@ Règles communes à chaque extraction :
 | P5-07 | Sites de jeux légaux, jeux libres | `jeux-sites`, `jeux-libres` | à installer | P5-01 | S | |
 | P5-09 | Tags automatiques : séries, films, musique, consoles, photos, genres et années | `tagauto-*` | inclus | P5-01, P2-05, P2-06 | M | |
 | P5-10 | Thème Mire | `theme-mire` | inclus | P4-11, P4-24 | S | |
-| P5-11 | Dossier local, partage réseau, sous-titres | `src-local`, `src-smb`, `src-subs` | inclus | P5-01, P3-04 | M | |
-| P5-12 | Serveur web, liste M3U | `src-http`, `src-m3u` | à installer | P5-11 | M | |
+| P5-11a | Socle des sources de fichiers (voir plus bas) | — | cœur | P5-01, P3-04 | M | |
+| P5-11b | Sous-titres | `src-subs` | inclus | P5-11a | S | |
+| P5-11c | Dossier local | `src-local` | inclus | P5-11a | M | |
+| P5-11d | Partage réseau | `src-smb` | inclus | P5-11a, P5-11c | S | 🧑 |
+| P5-12 | Serveur web, liste M3U | `src-http`, `src-m3u` | à installer | P5-11a | M | |
 | P5-13 | Jeux PC (dossiers et jeux ajoutés à la main) | `jeux-pc`, `jeux-pc-manuel` | inclus | P5-01 | M | 🧑 |
 | P5-14 | Jeux de console, jeux sur disque, marque-pages de jeux | `jeux-roms`, `jeux-disque`, `jeux-marque` | inclus | P5-01 | M | |
 | P5-15 | Infos en ligne TMDB et « Où regarder » | `info-tmdb`, `info-ouregarder` | à installer | P5-01, P2-06 | M | |
@@ -129,3 +132,32 @@ Règles communes à chaque extraction :
 - **P5-21** : le cœur ne contient plus que les éléments « Cœur » de l'inventaire (vérification dans la PR) ;
   `docs/architecture.md` reprend `docs/architecture-cible.md`, qui devient historique ; mesures (démarrage, mémoire)
   comparées à celles de la fin de la phase 4.
+
+---
+
+## P5-11 — Dossier local, partage réseau, sous-titres (découpée)
+
+L'extraction demandait d'abord des changements du socle des plugins de code ; elle est découpée en quatre tâches
+(décision de la session de pilotage, 23/11/2026).
+
+- **P5-11a — Socle des sources de fichiers** (fait) :
+  - les emplacements restent dans `config.library.sources` (`src/main/library/locations.ts`) ; le pont des sources
+    (`src/main/plugins/bridges.ts`) demande `handles(location)` à chaque source active, et la première qui accepte
+    reçoit `scan(location)`, une instance par emplacement (chemin ou adresse normalisés) ;
+  - seuls les plugins inclus ou du dépôt officiel reçoivent ces emplacements, et un dossier seulement s'ils déclarent
+    `folders` ; un dossier pris est accordé au plugin tant qu'il reste dans la bibliothèque (accord dérivé de la
+    configuration : les dossiers d'une installation existante sont repris sans champ de plus dans les règles de
+    continuité) ; la bibliothèque du cœur laisse au plugin l'emplacement qu'il a pris (`claimed`) ;
+  - clé `local:<chemin>` gardée pour un plugin `code` si elle vaut celle de son `open.path`, dans ses dossiers
+    accordés ; images locales acceptées dans ces dossiers ; les deux sont vérifiées une seconde fois sur le chemin
+    réel (`keepReal`, liens symboliques refusés) ; `media://` et la politique d'accès de l'interface ne changent pas ;
+  - bornes : 150 000 éléments par analyse, 10 minutes par emplacement, 150 000 fichiers pour `walk` ; option
+    `skipHidden` de `walk` (SDK) ; type `SourceLocation` (SDK).
+- **P5-11b — Sous-titres** : nature `subtitles` dans le SDK (`find(videoPath)`, le cœur ne transmet qu'un chemin déjà
+  autorisé par sa politique d'accès ; P6-16 OpenSubtitles s'en servira), son pont, plugin inclus `mire.subtitles`
+  (`code`, `folders`), règle de continuité.
+- **P5-11c — Dossier local** : plugin inclus `mire.source.local` (`code`, `folders`), retrait de `localProvider` pour
+  les dossiers, règle de continuité ; plugin désactivé : ses éléments disparaissent et reviennent à la réactivation.
+- **P5-11d — Partage réseau** : plugin inclus `mire.source.network` (`code`, `folders` : un partage est lu comme un
+  dossier monté par le système, sans « Réseau local »), règle de continuité ; 🧑 vérification sur un vrai NAS.
+

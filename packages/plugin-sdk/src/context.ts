@@ -48,8 +48,10 @@ export interface WalkOptions {
   extensions?: string[];
   /** Profondeur maximale (illimitée si absent). */
   depth?: number;
-  /** Nombre maximal de fichiers rendus. */
+  /** Nombre maximal de fichiers rendus (150 000 au plus). */
   limit?: number;
+  /** Ignore les dossiers dont le nom commence par `.` ou `$` (cachés, système) et les fichiers commençant par `.`. */
+  skipHidden?: boolean;
 }
 
 /**
