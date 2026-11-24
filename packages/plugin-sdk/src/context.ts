@@ -42,6 +42,12 @@ export interface FileEntry {
   modified: number;
 }
 
+/** Fichier trouvé par un parcours sans détails (`details: false`) : son chemin seulement. */
+export interface FilePath {
+  /** Chemin complet. */
+  path: string;
+}
+
 /** Options d'un parcours de dossier. */
 export interface WalkOptions {
   /** Extensions gardées, sans le point (`mkv`, `mp3`) ; toutes si absent. */
@@ -52,6 +58,11 @@ export interface WalkOptions {
   limit?: number;
   /** Ignore les dossiers dont le nom commence par `.` ou `$` (cachés, système) et les fichiers commençant par `.`. */
   skipHidden?: boolean;
+  /**
+   * Taille et date de chaque fichier (vrai par défaut). `false` : chemins seuls, parcours bien plus rapide sur un
+   * grand dossier (Mire ne lit plus chaque fichier).
+   */
+  details?: boolean;
 }
 
 /**
@@ -64,6 +75,7 @@ export interface PluginFiles {
   readText(path: string): Promise<string>;
   readBytes(path: string): Promise<Uint8Array>;
   exists(path: string): Promise<boolean>;
+  walk(root: string, options: WalkOptions & { details: false }): Promise<FilePath[]>;
   walk(root: string, options?: WalkOptions): Promise<FileEntry[]>;
 }
 
