@@ -2677,6 +2677,10 @@ function tick() {
   await i18nReady;
   const list = await pages;
   shell.setPages(Array.isArray(list) ? list : null);
+  // Les pages prêtes à l'emploi arrivent avec leurs plugins, démarrés après la fenêtre (P5-03) : le menu suit
+  // `pages:changed`, et relit la liste une fois abonné, au cas où elle aurait changé depuis la première lecture.
+  api.onPagesChange(() => void legacyUi.reloadPages());
+  void legacyUi.reloadPages();
   S.scrape = (await api.scrapeData()) || {};
   S.meta = (await api.metaAll()) || {};
   S.adblock = await api.adblockStatus();
