@@ -173,6 +173,19 @@ describe('jeux de console → éléments (`jeux-roms`)', () => {
     assert.equal(catalog.element(romKey('snes-1', at('snes', 'Zelda (France).sfc'), P))?.source.plugin, ROM_PLUGIN);
   });
 
+  it('au démarrage, la liste attend que les plugins aient pris leurs dossiers', async () => {
+    const { games, active, roms } = setup();
+    active.on = false;
+    let release = () => {};
+    const started = new Promise<void>((resolve) => (release = resolve));
+    Object.assign(roms, { ready: () => started });
+    const list = games.listRoms('snes-1');
+    active.on = true;
+    release();
+    const r = await list;
+    assert.ok(r.ok && r.roms.length === 4);
+  });
+
   it('plugin désactivé : plus de jeux des dossiers, sans erreur, un message qui le dit ; ils reviennent à la réactivation', async () => {
     const { catalog, games, active, errors } = setup();
     await games.listRoms('snes-1');

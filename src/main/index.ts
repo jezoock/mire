@@ -220,6 +220,7 @@ function start(pending: PendingFiles): Running {
     },
     // Dossiers locaux des consoles (P5-14a) : lus par les sources des plugins, comme les dossiers de jeux PC.
     romFolders: {
+      ready: () => pluginsStart.then(() => pluginBridges?.idle()),
       rescan: (keys) => pluginBridges?.rescanLocations(keys) ?? Promise.resolve(),
       claimed: (key) => pluginBridges?.claimed(key) ?? false,
       catalog,

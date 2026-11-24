@@ -25,6 +25,8 @@ const MAX_ROMS = 20000;
 
 /** Ce que la lecture des dossiers d'une console demande au pont des sources et au catalogue (P5-14a). */
 export interface RomFolderDeps {
+  /** Fin du démarrage des plugins et des attributions d'emplacements en cours (avant, aucun dossier n'est pris). */
+  ready?(): Promise<void>;
   /** Analyse de nouveau ces emplacements (clés) avec la source du plugin qui les lit. */
   rescan(keys: string[]): Promise<void>;
   /** Vrai si la source d'un plugin actif lit cet emplacement. */
@@ -188,6 +190,7 @@ export async function pluginRoms(
 ): Promise<{ roms: Rom[]; errors: string[] }> {
   const errors: string[] = [];
   const keys: string[] = [];
+  if (locations.length) await deps?.ready?.();
   for (const location of locations) {
     const folder = romFolder(location, platform);
     if (!folder) {

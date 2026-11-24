@@ -903,7 +903,7 @@ export function createPluginBridges({
     claimed: (key: string): boolean => assigned.has(key),
     /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */
     assignedFolders,
-    /** Fin des synchronisations en cours (tests). */
+    /** Fin des synchronisations en cours (tests, et la liste des jeux d'une console au démarrage). */
     idle: (): Promise<void> => queue,
 
     stop: unsubscribe,
