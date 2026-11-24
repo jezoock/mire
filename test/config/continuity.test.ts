@@ -482,3 +482,28 @@ test.describe('dossiers de cet ordinateur (P5-11c)', () => {
     assert.deepEqual(queue({ sources: 'x' }), []);
   });
 });
+
+test.describe('partages réseau (P5-11d)', () => {
+  const queue = (library: unknown) => (((migrate({ version: 9, library }).config as Any).continuity ?? []) as string[]).filter((id) => id === 'P5-11d');
+  const at = (...locations: unknown[]) => ({ sources: locations.map((location, i) => ({ id: `s${i}`, kind: 'video', location })) });
+
+  test('plugin inclus `mire.source.network`, rien à déplacer', () => {
+    const rule = CONTINUITY_RULES.find((r) => r.id === 'P5-11d') as ContinuityRule;
+    assert.deepEqual([rule.plugin, rule.mode, rule.settings], ['mire.source.network', 'bundled', undefined]);
+  });
+
+  test('une bibliothèque avec un partage réseau (`\\\\NAS\\…`, `smb://…`, `//NAS/…`) : le plugin est activé ; les emplacements restent', () => {
+    for (const share of ['\\\\NAS\\Films', 'smb://nas/films', ' SMB://Nas/Films/Séries ', '//nas/films'])
+      assert.deepEqual(queue(at('/home/moi/Films', share)), ['P5-11d'], share);
+    const library = at('/home/moi/Films', '\\\\NAS\\Musique', 'smb://nas/films');
+    const { config } = migrate({ version: 9, library: structuredClone(library) });
+    assert.deepEqual((config as Any).library, library);
+  });
+
+  test('sans partage réseau (dossiers, adresses, rien) : la règle ne s’applique pas', () => {
+    assert.deepEqual(queue(at('/home/moi/Films', 'D:\\Films', 'https://nas.local/films/', 'smb://nas', '', 42)), []);
+    assert.deepEqual(queue({ sources: [] }), []);
+    assert.deepEqual(queue(undefined), []);
+    assert.deepEqual(queue({ sources: 'x' }), []);
+  });
+});

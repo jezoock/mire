@@ -28,7 +28,7 @@ Ce qui remplit Vidéos, Musique et Images.
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
 | `src-local` | Dossier sur cet ordinateur | Plugin inclus | Source | Fichiers | plugin `mire.source.local` (mire-addons ; copie incluse dans `plugins/`) ; cœur : emplacements (`library.sources`), pont des sources (src/main/plugins/bridges.ts), fichiers de l'interface historique tirés du catalogue (src/main/library/from-element.ts) |  |
-| `src-smb` | Partage réseau (NAS) | Plugin inclus | Source | Fichiers, Réseau local ⚠ | src/main/library/location.ts |  |
+| `src-smb` | Partage réseau (NAS) | Plugin inclus | Source | Fichiers | plugin `mire.source.network` (mire-addons ; copie incluse dans `plugins/`) : un partage est lu comme un dossier monté par le système, sans « Réseau local » ; cœur : chemin d'un partage (`smb://…`, src/main/library/location.ts), état d'un partage absent (src/main/library/scan.ts) |  |
 | `src-http` | Serveur web (page d'index) | À installer | Source | Internet | src/main/library/providers/http-index.ts |  |
 | `src-m3u` | Liste M3U | À installer | Source | Fichiers, Internet | src/main/library/providers/m3u.ts |  |
 | `src-subs` | Sous-titres | Plugin inclus | Fonction | Fichiers, Internet | plugin `mire.subtitles` (mire-addons, P5-11b ; copie incluse dans `plugins/`) ; cœur : pont `subtitles` (src/main/plugins/bridges.ts), lecture et sous-titres des serveurs web (src/main/library/subtitles.ts) | Les sous-titres d'un serveur web restent au cœur jusqu'à P5-12 |

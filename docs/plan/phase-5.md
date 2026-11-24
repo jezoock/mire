@@ -176,6 +176,12 @@ L'extraction demandait d'abord des changements du socle des plugins de code ; el
   plugins ; l'état des sources (dossier introuvable) reste calculé par le cœur. Socle : `files.walk` rend les fichiers
   sous la racine telle que donnée (un dossier atteint par un lien symbolique garde ses clés), `rescan` attend une
   analyse identique déjà en cours au lieu d'en lancer une deuxième.
-- **P5-11d — Partage réseau** : plugin inclus `mire.source.network` (`code`, `folders` : un partage est lu comme un
-  dossier monté par le système, sans « Réseau local »), règle de continuité ; 🧑 vérification sur un vrai NAS.
+- **P5-11d — Partage réseau** (fait) : plugin inclus `mire.source.network` (`code`, `folders` : un partage est lu
+  comme un dossier monté par le système, `smb://…` traduit en chemin par le cœur, sans « Réseau local ») ; le cœur
+  ne parcourt plus aucun dossier (`providers/local.ts` retiré ; ses tests utilisent une source factice) ; il garde le
+  message d'un partage absent, vérifié pendant les analyses des plugins (une seule attente) ; règle de continuité
+  `P5-11d` (mode `bundled`, mêmes clés `local:<chemin>`). Vitesse : option `details` de `walk` (SDK, `false` : chemins
+  seuls, sans taille ni date), prise par les deux plugins (`mire.source.local` 1.0.1) ; `keepReal` lit les dossiers
+  d'abord puis vérifie les fichiers sans attente, et ne lit les dossiers accordés sans rapport avec les fichiers que
+  si l'un d'eux mène ailleurs. 🧑 Vérification sur un vrai NAS.
 

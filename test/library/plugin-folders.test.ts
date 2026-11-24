@@ -1,8 +1,8 @@
-// Dossiers de cet ordinateur lus par le plugin inclus `mire.source.local` (P5-11c), branché au cœur : continuité
-// d'une installation existante (mêmes clés `local:<chemin>`, mêmes éléments, rien de retiré), mêmes fichiers et même
-// état des sources pour l'interface historique, plugin désactivé puis réactivé, dossier atteint par un lien
-// symbolique, bibliothèque de démonstration du test de fumée. Les tests du code déplacé sont dans
-// plugins/mire.source.local/test/.
+// Dossiers de cet ordinateur et partages réseau lus par les plugins inclus `mire.source.local` (P5-11c) et
+// `mire.source.network` (P5-11d), branchés au cœur : continuité d'une installation existante (mêmes clés
+// `local:<chemin>`, mêmes éléments, rien de retiré), mêmes fichiers et même état des sources pour l'interface
+// historique, plugin désactivé puis réactivé, dossier atteint par un lien symbolique, liens qui sortent des dossiers
+// accordés, bibliothèque de démonstration du test de fumée. Les tests du code déplacé sont dans plugins/<id>/test/.
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs, { readFileSync } from 'node:fs';
