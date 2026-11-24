@@ -116,6 +116,21 @@ const hasLocalFolder = (c: Loose): boolean =>
   Array.isArray((c.library as Loose).sources) &&
   ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && isLocalFolder(s.location));
 
+/**
+ * Emplacement de la bibliothèque qui est un partage réseau : `smb://…`, `\\\\NAS\\…` ou `//NAS/…` (P5-11d ; même
+ * lecture que `resolveLocation`, qui ne compte `//NAS/…` comme un partage que sous Windows).
+ */
+const isNetworkShare = (loc: unknown): boolean => {
+  const s = typeof loc === 'string' ? loc.trim() : '';
+  return /^smb:\/\/[^/]+\/[^/]+/i.test(s) || /^(\\\\|\/\/)[^\\/]/.test(s);
+};
+
+/** La bibliothèque lit au moins un partage réseau (P5-11d). */
+const hasNetworkShare = (c: Loose): boolean =>
+  isObjectLike(c.library) &&
+  Array.isArray((c.library as Loose).sources) &&
+  ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && isNetworkShare(s.location));
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
@@ -142,6 +157,9 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // `library.sources` (le plugin les reçoit du cœur, P5-11a) et ses fichiers gardent leurs clés `local:<chemin>` :
   // listes, reprise de lecture, fiches et tags sont retrouvés. Rien à déplacer.
   { id: 'P5-11c', plugin: 'mire.source.local', mode: 'bundled', applies: hasLocalFolder },
+  // P5-11d : partages réseau dans la bibliothèque, plugin inclus. Comme P5-11c : les emplacements restent dans
+  // `library.sources`, les fichiers gardent leurs clés `local:<chemin>`. Rien à déplacer.
+  { id: 'P5-11d', plugin: 'mire.source.network', mode: 'bundled', applies: hasNetworkShare },
   // P5-07 : sites de jeux légaux, plugin à installer ; la configuration dit si une console utilisait les sites proposés.
   { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
   // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.

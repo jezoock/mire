@@ -1,7 +1,7 @@
 {
   "$schema": "../../sdk/schema/mire-plugin.schema.json",
   "id": "mire.source.local",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "mire": "^1.0.0"
   },

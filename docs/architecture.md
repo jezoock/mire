@@ -55,7 +55,7 @@ Electron. Les tests passent donc de fausses dépendances. Tout le processus prin
 | `storage/` | Arborescence du dossier de données (`paths.ts`) et stockage JSON atomique (`json-store.ts`). Voir « Stockage JSON ». |
 | `security/` | Politique d'accès aux fichiers locaux (`access-policy.ts`) et ce que la configuration autorise (`allowed.ts`). |
 | `media-protocol/` | Protocole `media://` : sert les fichiers locaux à l'interface, avec les plages d'octets. |
-| `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`local`, `http-index`, `m3u`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
+| `library/` | Bibliothèque : emplacements (dossier, partage, adresse), fournisseurs de sources (`http-index`, `m3u` ; dossiers et partages : plugins `mire.source.local` et `mire.source.network`), analyse, sous-titres, élément d'un fichier ouvert ; sources d'éléments qui alimentent le catalogue (`element-sources.ts`). |
 | `catalog/` | Catalogue d'éléments (P2-01, P2-02, P2-04) : interface `ElementSource` (`types.ts`), clés stables (`keys.ts`), stockage en mémoire et événements (`index.ts`), un fichier par emplacement de source (`persistence.ts`) ; moteur de tags et d'infos (`tags/`), modifications faites à la main (`overrides.ts`, `legacy-meta.ts`) ; pages et regroupements (`pages/`, P2-07) ; listes (`lists/`, P2-08). Voir « Catalogue d'éléments ». |
 | `meta/` | Façade de l'interface historique sur les infos modifiées à la main (rangées dans `catalog/overrides.json` depuis P2-04) ; images choisies (`meta/img/`). |
 | `scrape/` | Récupération d'infos et d'images : moteur (`engine.ts`) et fournisseurs du cœur (MusicBrainz, libretro, Steam) ; TMDB est le plugin `mire.tmdb` (P5-15). |
@@ -556,8 +556,7 @@ Autres points d'extension du même genre, plus internes :
 
 - `EntryResolver` (`src/main/web/types.ts`) : traduit un préfixe d'identifiant de vue web (`rom:`, `bm:`, `tv:`) en
   entrée à afficher ; le registre refuse un préfixe déjà pris ;
-- `SourceProvider` (`src/main/library/types.ts`) : un genre d'emplacement de la bibliothèque (`local`,
-  `http-index`, `m3u`) ;
+- `SourceProvider` (`src/main/library/types.ts`) : un genre d'emplacement de la bibliothèque (`http-index`, `m3u`) ;
 - `GameSourceProvider` (`src/main/games/types.ts`) : un genre d'emplacement de jeux PC ;
 - `Downloader` (`src/main/downloads/types.ts`) : un moteur de téléchargement (HTTP, torrent) ;
 - les catalogues de `src/main/config/catalogs/` (sites, services TV) et de `src/main/store/catalog/` (émulateurs,
@@ -786,8 +785,9 @@ l'alimente (voir « Sources de la bibliothèque » plus bas), et depuis P2-03 le
 ### Sources de la bibliothèque
 
 Une source d'éléments (`ElementSource`, `catalog/types.ts`) trouve des éléments dans les emplacements qu'elle gère et
-les donne au catalogue ; c'est la contribution `sources` des futurs plugins. La bibliothèque en a quatre
-(`library/element-sources.ts`), une par plugin prévu à l'inventaire :
+les donne au catalogue ; c'est la contribution `sources` des plugins. Une par plugin prévu à l'inventaire ; les deux
+premières sont devenues les plugins inclus `mire.source.local` (P5-11c) et `mire.source.network` (P5-11d), les deux
+autres sont encore dans le cœur (`library/element-sources.ts`) :
 
 | Source | Emplacements | Tags de source | Élément |
 | --- | --- | --- | --- |

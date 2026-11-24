@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "code": "en",
+    "name": "English",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "Network shares (NAS)",
+      "description": "Adds the videos, music and pictures in folders shared on the network (NAS, another computer) to the library, with their posters and subtitles."
+    },
+    "source": {
+      "name": "Network share",
+      "shareUnavailable": "Network share unavailable: {path}. Check that the computer sharing it is on and that you're connected to it."
+    }
+  }
+}

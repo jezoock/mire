@@ -1,9 +1,10 @@
 /**
  * Sources d'éléments de la bibliothèque : les fichiers trouvés par les fournisseurs (`providers/`) deviennent des
- * éléments du catalogue. Une source par plugin prévu à l'inventaire : partage réseau (`src-smb`), serveur web
- * (`src-http`), liste M3U (`src-m3u`). Les dossiers de cet ordinateur (`src-local`) sont lus par le plugin inclus
- * `mire.source.local` (P5-11c) : les éléments que le cœur avait rangés sous `src-local` quittent le catalogue à la
- * première analyse (`isLibrarySource`), le plugin les y remet sous les mêmes clés.
+ * éléments du catalogue. Une source par plugin prévu à l'inventaire : serveur web (`src-http`), liste M3U
+ * (`src-m3u`). Les dossiers de cet ordinateur (`src-local`) et les partages réseau (`src-smb`) sont lus par les
+ * plugins inclus `mire.source.local` (P5-11c) et `mire.source.network` (P5-11d) : les éléments que le cœur avait
+ * rangés sous ces sources quittent le catalogue à la première analyse (`isLibrarySource`), les plugins les y remettent
+ * sous les mêmes clés.
  *
  * L'analyse de la bibliothèque (`scanLibrary`) ne parcourt chaque emplacement qu'une fois : elle rend ses
  * `LibraryItem` à l'interface historique, et la source en tire les éléments (`elementsOf`). `scan` analyse un
@@ -15,10 +16,9 @@
  */
 import { KIND, type MediaKind } from '@mire/shared';
 import type { ElementImages, InfoValue } from '@mire/shared';
-import { localFileKey, m3uEntryKey, normalizePath, normalizeUrl, remoteFileKey } from '../catalog/keys.ts';
+import { m3uEntryKey, normalizePath, normalizeUrl, remoteFileKey } from '../catalog/keys.ts';
 import type { ElementInput, ElementSource } from '../catalog/types.ts';
 import { httpIndexProvider } from './providers/http-index.ts';
-import { networkProvider } from './providers/local.ts';
 import { m3uProvider } from './providers/m3u.ts';
 import { MAX_ITEMS } from './scan.ts';
 import type { LibraryItem, ScanContext, ScannedLocation, SourceProvider, SourceTarget } from './types.ts';
@@ -34,7 +34,10 @@ export interface LibraryElementSource extends ElementSource<LibraryLocation> {
   elementsOf(scanned: ScannedLocation): ElementInput[];
 }
 
-/** Tags de chaque source (`src-local` : source d'avant P5-11c, gardée pour retirer ses éléments du catalogue). */
+/**
+ * Tags de chaque source (`src-local`, `src-smb` : sources d'avant P5-11c et P5-11d, gardées pour retirer leurs
+ * éléments du catalogue).
+ */
 export const LIBRARY_SOURCE_TAGS = {
   'src-local': ['local'],
   'src-smb': ['network'],
@@ -44,7 +47,7 @@ export const LIBRARY_SOURCE_TAGS = {
 
 export type LibrarySourceId = keyof typeof LIBRARY_SOURCE_TAGS;
 
-type ElementOf = (item: LibraryItem, subtitles: string[]) => Omit<ElementInput, 'tags'>;
+export type ElementOf = (item: LibraryItem, subtitles: string[]) => Omit<ElementInput, 'tags'>;
 
 /** Objet sans les valeurs absentes ou vides : un élément ne garde que ce qu'on sait de lui. */
 function compact<T>(o: Record<string, T | null | undefined>): Record<string, T> {
@@ -55,7 +58,7 @@ function compact<T>(o: Record<string, T | null | undefined>): Record<string, T> 
 
 const imagesOf = (item: LibraryItem): ElementImages => compact({ poster: item.cover, background: item.fanart });
 
-function fileElement(key: string, item: LibraryItem, infos: Record<string, InfoValue | undefined>): Omit<ElementInput, 'tags'> {
+export function fileElement(key: string, item: LibraryItem, infos: Record<string, InfoValue | undefined>): Omit<ElementInput, 'tags'> {
   return { key, name: item.name, open: { kind: 'file', path: item.path }, infos: compact(infos), images: imagesOf(item) };
 }
 
@@ -67,14 +70,15 @@ function hostOf(url: string): string | undefined {
   }
 }
 
-function librarySource(
-  id: LibrarySourceId,
+/** Source d'éléments d'un fournisseur (exportée pour les tests du cœur, avec une source factice). */
+export function librarySource(
+  id: string,
+  tags: readonly string[],
   provider: SourceProvider,
   accepts: (target: SourceTarget) => boolean,
   toElement: ElementOf,
   platform: NodeJS.Platform,
 ): LibraryElementSource {
-  const tags = LIBRARY_SOURCE_TAGS[id];
   const elementsOf = (scanned: ScannedLocation): ElementInput[] =>
     scanned.items.map((item) => ({ ...toElement(item, scanned.subtitles(item.path)), tags: [...tags] }));
   return {
@@ -96,14 +100,12 @@ function librarySource(
 export const locationInstance = ({ resolved }: SourceTarget, platform: NodeJS.Platform = process.platform): string =>
   resolved.type === 'url' ? normalizeUrl(resolved.url) : normalizePath(resolved.path, platform);
 
-const isNetwork = (target: SourceTarget) => target.resolved.type === 'path' && target.resolved.network;
-
 /** Sources d'éléments de la bibliothèque, dans l'ordre où elles sont essayées. */
 export function librarySources(platform: NodeJS.Platform = process.platform): LibraryElementSource[] {
-  const local: ElementOf = (item, subtitles) => fileElement(localFileKey(item.path, platform), item, { folder: item.folder, subtitles });
   return [
     librarySource(
       'src-m3u',
+      LIBRARY_SOURCE_TAGS['src-m3u'],
       m3uProvider,
       () => true,
       (item) => ({
@@ -119,12 +121,12 @@ export function librarySources(platform: NodeJS.Platform = process.platform): Li
     ),
     librarySource(
       'src-http',
+      LIBRARY_SOURCE_TAGS['src-http'],
       httpIndexProvider,
       () => true,
       (item, subtitles) => fileElement(remoteFileKey(item.path), item, { folder: item.folder, server: hostOf(item.path), subtitles }),
       platform,
     ),
-    librarySource('src-smb', networkProvider, isNetwork, local, platform),
   ];
 }
 

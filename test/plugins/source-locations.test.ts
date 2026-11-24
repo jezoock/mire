@@ -59,6 +59,16 @@ describe('checkElements et keepReal : fichiers locaux d’un plugin de code', ()
       path.join(outside, 'x.mkv'),
       'relatif.mkv',
       `${films}${path.sep}`,
+      // Chemins qui ne sont pas sous leur forme normale (résolus en entier) ou qui y ressemblent (gardés tels quels).
+      `${films}//d.mkv`,
+      `${films}/./e.mkv`,
+      `${films}/sous/../f.mkv`,
+      `${films}/..`,
+      `${films}/.`,
+      `${films}/..g.mkv`,
+      `${films}/h..mkv`,
+      `${films}/.../i.mkv`,
+      `${films}x/../Films/j.mkv`,
     ];
     const kept = (list: string[]) =>
       checkElements(
@@ -69,7 +79,18 @@ describe('checkElements et keepReal : fichiers locaux d’un plugin de code', ()
       ).elements.map((e) => e.open.kind === 'file' && e.open.path);
     const expected = paths.filter((f) => path.isAbsolute(f) && (path.resolve(f) === path.resolve(films) || isInside(f, [films])));
     assert.deepEqual(kept(paths), expected);
-    assert.deepEqual(expected, [films, at('a.mkv'), at('sous/b.mkv'), `${films}${path.sep}`]);
+    assert.deepEqual(expected, [
+      films,
+      at('a.mkv'),
+      at('sous/b.mkv'),
+      `${films}${path.sep}`,
+      `${films}//d.mkv`,
+      `${films}/./e.mkv`,
+      `${films}/.`,
+      `${films}/..g.mkv`,
+      `${films}/h..mkv`,
+      `${films}/.../i.mkv`,
+    ]);
   });
 
   it('accepte une image locale d’un dossier accordé, pas une autre', () => {
@@ -101,6 +122,25 @@ describe('checkElements et keepReal : fichiers locaux d’un plugin de code', ()
     );
     assert.equal(real.dropped, 2);
     assert.equal((await keepReal(written.elements, 'privileged', [])).elements.length, 3);
+  });
+
+  it('dossier accordé sans rapport (partage absent) : pas lu, sauf si un fichier mène hors des dossiers qui le contiennent', async () => {
+    const other = path.join(root, 'Autre');
+    mkdirSync(other, { recursive: true });
+    writeFileSync(path.join(other, 'b.mkv'), 'b');
+    symlinkSync(path.join(other, 'b.mkv'), path.join(films, 'vers-autre.mkv'));
+    const absent = path.join(root, 'Partage absent');
+    const asked: string[] = [];
+    const realpath = async (p: string) => (asked.push(p), (await import('node:fs/promises')).realpath(p));
+    const granted = [films, absent, other];
+    const alien = checkElements(P, 'code', granted, [fileOf(path.join(films, 'Alien.mkv'))]).elements;
+    assert.equal((await keepReal(alien, 'code', granted, realpath)).elements.length, 1);
+    assert.ok(!asked.includes(absent) && !asked.includes(other), asked.join(', '));
+    // Un lien vers un autre dossier accordé reste permis : les autres dossiers sont alors lus.
+    const linked = checkElements(P, 'code', granted, [fileOf(path.join(films, 'vers-autre.mkv'))]).elements;
+    assert.equal((await keepReal(linked, 'code', granted, realpath)).elements.length, 1);
+    assert.ok(asked.includes(absent) && asked.includes(other));
+    rmSync(path.join(films, 'vers-autre.mkv'));
   });
 });
 

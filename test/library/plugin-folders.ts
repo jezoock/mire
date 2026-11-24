@@ -1,7 +1,7 @@
-// Banc de test du plugin inclus `mire.source.local` (P5-11c) branché au cœur comme dans Mire : son code réel
-// (plugins/mire.source.local/), le contexte réel des plugins (`files.walk`, `files.exists`, dossiers accordés), le pont
-// des sources et la bibliothèque du cœur. Seul l'hôte isolé est remplacé : les appels passent par une copie
-// structurée, comme sur le canal.
+// Banc de test d'un plugin inclus de sources de fichiers (`mire.source.local`, P5-11c ; `mire.source.network`,
+// P5-11d) branché au cœur comme dans Mire : son code réel (plugins/<id>/), le contexte réel des plugins
+// (`files.walk`, `files.exists`, dossiers accordés), le pont des sources et la bibliothèque du cœur. Seul l'hôte isolé
+// est remplacé : les appels passent par une copie structurée, comme sur le canal.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -15,14 +15,19 @@ import { createLibraryService } from '../../src/main/library/service.ts';
 import { createPluginStorage } from '../../src/main/plugins/plugin-storage.ts';
 import type { ContributionKind } from '@mire/plugin-sdk';
 
-export const PLUGIN_DIR = path.join(import.meta.dirname, '..', '..', 'plugins', 'mire.source.local');
-const manifest = JSON.parse(readFileSync(path.join(PLUGIN_DIR, 'mire-plugin.json'), 'utf8'));
+export const PLUGIN_DIRS = {
+  local: path.join(import.meta.dirname, '..', '..', 'plugins', 'mire.source.local'),
+  network: path.join(import.meta.dirname, '..', '..', 'plugins', 'mire.source.network'),
+} as const;
+export const PLUGIN_DIR = PLUGIN_DIRS.local;
+const manifestOf = (dir: string) => JSON.parse(readFileSync(path.join(dir, 'mire-plugin.json'), 'utf8'));
 
 type Source = Record<string, (...args: unknown[]) => unknown>;
 
-/** Fabrique de la source du plugin (`src/source.mjs`). */
-export async function loadSource(): Promise<(ctx: unknown) => Source> {
-  const file = pathToFileURL(path.join(PLUGIN_DIR, manifest.contributes.sources[0].main)).href;
+/** Fabrique de la source d'un plugin (`src/source.mjs`). */
+export async function loadSource(plugin: keyof typeof PLUGIN_DIRS = 'local'): Promise<(ctx: unknown) => Source> {
+  const dir = PLUGIN_DIRS[plugin];
+  const file = pathToFileURL(path.join(dir, manifestOf(dir).contributes.sources[0].main)).href;
   return ((await import(file)) as { default: (ctx: unknown) => Source }).default;
 }
 
@@ -31,10 +36,18 @@ export interface WireOptions {
   catalog: Catalog;
   /** Journal du pont (éléments écartés, analyses en échec). */
   log?: (m: string) => void;
+  /** Plugin branché : `mire.source.local` (par défaut) ou `mire.source.network`. */
+  plugin?: 'local' | 'network';
+  /**
+   * Dossiers présentés au pont comme des partages réseau (`network: true`) : sous Linux, un dossier temporaire ne
+   * peut pas s'écrire comme un partage dans la configuration.
+   */
+  asShares?: boolean;
 }
 
-export async function wireLocalPlugin({ config, catalog, log = () => {} }: WireOptions) {
-  const createSource = await loadSource();
+export async function wireLocalPlugin({ config, catalog, log = () => {}, plugin = 'local', asShares = false }: WireOptions) {
+  const manifest = manifestOf(PLUGIN_DIRS[plugin]);
+  const createSource = await loadSource(plugin);
   let enabled = true;
   let bridges: ReturnType<typeof createPluginBridges> | undefined;
   const forPlugin = createContextHandler({
@@ -53,7 +66,8 @@ export async function wireLocalPlugin({ config, catalog, log = () => {} }: WireO
     events: { on: () => () => {} },
   };
   const source = createSource(ctx);
-  const entry: ContributionEntry = { pluginId: manifest.id, kind: 'sources', id: 'src-local', declaration: manifest.contributes.sources[0] };
+  const declaration = manifest.contributes.sources[0];
+  const entry: ContributionEntry = { pluginId: manifest.id, kind: 'sources', id: declaration.id, declaration };
   const listeners = new Set<(kinds: ContributionKind[]) => void>();
   const service: BridgeService = {
     contributions: (kind) => (enabled && kind === 'sources' ? [entry] : []),
@@ -77,7 +91,10 @@ export async function wireLocalPlugin({ config, catalog, log = () => {} }: WireO
     pluginScans: () => b.rescan(),
   });
   /** Emplacements de la configuration redonnés au pont, comme à chaque changement de configuration dans Mire. */
-  const syncLocations = () => b.setLocations(libraryLocations(config.get().library.sources));
+  const syncLocations = () =>
+    b.setLocations(
+      libraryLocations(config.get().library.sources).map((l) => (asShares && l.location.path ? { ...l, location: { ...l.location, network: true } } : l)),
+    );
   await syncLocations();
   return {
     library,

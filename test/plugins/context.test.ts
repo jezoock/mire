@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { PluginSetting } from '@mire/plugin-sdk';
+import type { FileEntry, FilePath, PluginFiles, PluginSetting } from '@mire/plugin-sdk';
 import type { PluginSettingsSection } from '@mire/shared';
 import {
   checkElements,
@@ -222,6 +222,30 @@ describe('ctx.files', () => {
       ((await ctx().handle('files.walk', [lib, o], signal())) as { path: string }[]).map((e) => path.relative(lib, e.path)).sort();
     assert.deepEqual(await names({ skipHidden: true }), [path.join('Films', 'c.mkv')]);
     assert.equal((await names({})).length, 4);
+  });
+
+  it('walk : `details` (vrai par défaut) donne taille et date ; `false` les chemins seuls, mêmes refus et mêmes limites', async () => {
+    const { ctx, folders } = context({ level: 'code', permissions: { folders: true } });
+    folders.set('org.exemple.test', [granted]);
+    const c = ctx();
+    const walk = async (o?: object) => (await c.handle('files.walk', o ? [granted, o] : [granted], signal())) as Record<string, unknown>[];
+    const sorted = (l: Record<string, unknown>[]) => [...l].sort((a, b) => String(a.path).localeCompare(String(b.path)));
+    const full = sorted(await walk());
+    assert.deepEqual(Object.keys(full[0]).sort(), ['modified', 'path', 'size']);
+    assert.equal(full[0].size, 4);
+    assert.deepEqual(sorted(await walk({ details: true })), full);
+    // Valeur qui n'est pas un booléen : valeur par défaut.
+    assert.deepEqual(sorted(await walk({ details: 'non' })), full);
+    const paths = sorted(await walk({ details: false }));
+    assert.deepEqual(
+      paths,
+      full.map((e) => ({ path: e.path })),
+    );
+    assert.equal((await walk({ details: false, extensions: ['mp3'] })).length, 1);
+    assert.equal((await walk({ details: false, depth: 0 })).length, 1);
+    assert.equal((await walk({ details: false, limit: 1 })).length, 1);
+    await assert.rejects(c.handle('files.walk', [other, { details: false }], signal()), (e) => code(e) === 'refused');
+    await assert.rejects(c.handle('files.walk', [path.join(granted, 'lien'), { details: false }], signal()), (e) => code(e) === 'refused');
   });
 
   it('walk : un dossier accordé atteint par un lien symbolique rend ses fichiers sous le chemin donné', async (t) => {
@@ -693,3 +717,13 @@ describe('ponts', () => {
     assert.equal(checkMissing({ skipped: 'a', error: 'x'.repeat(900) })?.error.length, 500);
   });
 });
+
+// Types du SDK (vérifiés par `npm run typecheck`) : `details: false` rend des chemins seuls, sinon taille et date.
+async function sdkWalkTypes(files: PluginFiles): Promise<void> {
+  const paths: FilePath[] = await files.walk('/films', { details: false, skipHidden: true });
+  const entries: FileEntry[] = await files.walk('/films', { extensions: ['mkv'] });
+  // @ts-expect-error : sans détails, pas de taille.
+  void paths[0].size;
+  void entries[0].size;
+}
+void sdkWalkTypes;
