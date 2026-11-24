@@ -421,6 +421,7 @@ describe('ponts', () => {
     ]);
     entries = [];
     for (const l of listeners) l(['sources']);
+    await new Promise((r) => setTimeout(r, 10));
     assert.deepEqual(removed, [{ plugin: 'org.exemple.r', instance: 'radios' }]);
     assert.deepEqual(await b.search('  dune '), [{ pluginId: 'org.exemple.r', id: 'ou', result: { query: 'dune', method: 'search' } }]);
   });

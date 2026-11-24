@@ -302,8 +302,8 @@ export function createPluginBridges({
   let wanted = new Map<string, Target>();
   /** Analyses arrivées au catalogue : référence → empreinte (source et emplacement) de la dernière analyse. */
   const scanned = new Map<string, { ref: ElementSourceRef; print: string }>();
-  /** Analyses en cours : référence → empreinte. */
-  const running = new Map<string, string>();
+  /** Analyses en cours : référence → empreinte et fin de l'analyse. */
+  const running = new Map<string, { print: string; done: Promise<void> }>();
   let queue: Promise<void> = Promise.resolve();
 
   /** Dossiers d'un plugin : accordés par l'utilisateur (`ctx.files.requestFolder`), et ceux de la bibliothèque qu'il lit. */
@@ -354,12 +354,22 @@ export function createPluginBridges({
     return !!w && print(w) === print(t);
   };
 
-  async function scan(t: Target): Promise<void> {
+  /** Lance l'analyse `t` ; une analyse déjà en cours pour le même emplacement est attendue plutôt que relancée. */
+  function scan(t: Target, force = false): Promise<void> {
+    const k = refId(t.ref);
+    const now = running.get(k);
+    if (now && now.print === print(t) && !force) return now.done;
+    const done = runScan(t).finally(() => {
+      if (running.get(k)?.done === done) running.delete(k);
+    });
+    running.set(k, { print: print(t), done });
+    return done;
+  }
+
+  async function runScan(t: Target): Promise<void> {
     const { entry: e, ref } = t;
     const level = service.levelOf(e.pluginId);
     if (!level) return;
-    const k = refId(ref);
-    running.set(k, print(t));
     const where = `${e.pluginId} (sources/${e.id}${t.location ? ` : ${t.location.location}` : ''})`;
     try {
       const timeout = t.location ? BRIDGE_LIMITS.locationScanTimeout : BRIDGE_LIMITS.scanTimeout;
@@ -377,8 +387,6 @@ export function createPluginBridges({
     } catch (err) {
       // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service).
       log(`Plugins : analyse de ${where} impossible : ${(err as Error)?.message ?? err}`);
-    } finally {
-      if (running.get(k) === print(t)) running.delete(k);
     }
   }
 
@@ -402,8 +410,9 @@ export function createPluginBridges({
       catalog.removeSource(ref);
     }
     if (claimsChanged) onClaimsChange?.();
-    const due = ([k, t]: [string, Target]) => force || (scanned.get(k)?.print !== print(t) && running.get(k) !== print(t));
-    return [...next].filter(due).map(([, t]) => scan(t));
+    // Nouvelles analyses, ou celles déjà en cours : la promesse de `sync` ne se résout qu'une fois tout arrivé.
+    const due = ([k, t]: [string, Target]) => force || scanned.get(k)?.print !== print(t);
+    return [...next].filter(due).map(([, t]) => scan(t, force));
   }
 
   /**
