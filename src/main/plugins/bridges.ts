@@ -6,6 +6,8 @@
  *   première qui l'accepte l'analyse (`scan(location)`) et ses éléments vont au catalogue sous
  *   `{ plugin: <id du plugin>, instance: <chemin ou adresse normalisés> }`. Un dossier accepté est accordé à ce plugin
  *   tant qu'il reste dans la bibliothèque (`assignedFolders`) : l'accord suit la configuration, sans rien mémoriser.
+ *   Un emplacement qui désigne un fichier (liste de lecture locale, P5-12) accorde aussi son dossier ; une adresse
+ *   (serveur web, liste en ligne) est accordée de la même façon au contexte `http` (`assignedUrls`).
  *   Seuls les plugins inclus ou du dépôt officiel reçoivent ces emplacements, et un dossier seulement s'ils déclarent
  *   `folders`. Une source qui n'en accepte aucun est analysée une fois sans emplacement (`scan(null)`), sous
  *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation.
@@ -31,21 +33,22 @@
  * dossiers, d'une console connue (celle d'un dossier de jeux proposé) : le cœur lance alors l'émulateur par la clé de
  * l'élément, le plugin ne lance rien. Ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un
  * élément du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) ou d'un jeu de console
- * (`rom:<console>|<chemin>`) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
+ * (`rom:<console>|<chemin>`), d'un fichier en ligne sous l'adresse de l'emplacement analysé (`remote:<adresse>`) ou
+ * d'une entrée de la liste analysée (`m3u:<liste>|<flux>`, P5-12) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
  * qu'il avait quand le cœur le trouvait (listes, reprise, fiches, favoris).
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
 import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
-import { localFileKey, romKey } from '../catalog/keys.ts';
+import { localFileKey, m3uEntryKey, remoteFileKey, romKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
 import { request, type FetchLike } from '../net/http.ts';
 import { ScrapeRefusal } from '../scrape/refusal.ts';
 import type { JobContext, MetadataProvider, ProviderContext, RunOptions, ScrapeConfig, ScrapeGroup, ScrapeItem } from '../scrape/types.ts';
-import { hostDeclared, isLocalHost } from './permissions.ts';
+import { hostDeclared, isLocalHost, urlGranted } from './permissions.ts';
 import type { ContributionEntry } from './registry.ts';
 
 /** Bornes des résultats rendus par un plugin. */
@@ -143,6 +146,11 @@ export interface ElementRights {
   launch?: boolean;
   /** Consoles connues (celles des dossiers de jeux proposés) : élément « jeu » d'un plugin de code limité. */
   consoles?: ReadonlySet<string>;
+  /**
+   * Emplacement de la bibliothèque analysé (P5-12) : un fichier en ligne sous son adresse garde la clé `remote:` du
+   * cœur, une entrée de liste la clé `m3u:<liste>|<flux>`.
+   */
+  location?: SourceLocation | null;
 }
 
 /** Comment ouvrir un élément d'un plugin, s'il en a le droit ; `null` sinon. */
@@ -185,11 +193,29 @@ const elementImageAllowed = (v: unknown, level: PluginLevel, granted: readonly s
 /** Fichier local de l'élément (`open.path` d'un fichier ou d'un jeu qui n'est pas une adresse), s'il y en a un. */
 const localPathOf = (open: OpenSpec): string | null => ((open.kind === 'file' || open.kind === 'game') && !isWebUrl(open.path) ? open.path : null);
 
-/** Clé que le cœur donnerait au fichier ou au jeu local de l'élément (`local:` ou `rom:`), s'il y en a un. */
-function coreKeyOf(open: OpenSpec, platform: NodeJS.Platform): string | null {
+/** Vrai si l'adresse est sous celle de l'emplacement (même origine, chemin de départ ou en dessous). */
+function underLocation(url: string, location: SourceLocation): boolean {
+  if (!location.url) return false;
+  try {
+    return urlGranted(new URL(url), [location.url]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Clé que le cœur donnerait à l'élément, s'il en a une : fichier ou jeu local (`local:`, `rom:`) ; fichier en ligne
+ * sous l'adresse de l'emplacement analysé (`remote:`) ; flux d'une liste, l'emplacement analysé étant la liste
+ * (`m3u:<liste>|<flux>`, P5-12).
+ */
+function coreKeyOf(open: OpenSpec, platform: NodeJS.Platform, location: SourceLocation | null | undefined): string | null {
   const local = localPathOf(open);
-  if (local === null) return null;
-  return open.kind === 'game' ? romKey(open.console, local, platform) : localFileKey(local, platform);
+  if (local !== null) return open.kind === 'game' ? romKey(open.console, local, platform) : localFileKey(local, platform);
+  if (!location) return null;
+  if (open.kind === 'file' && underLocation(open.path, location)) return remoteFileKey(open.path);
+  const list = location.url ?? location.path;
+  if (open.kind === 'stream' && list) return m3uEntryKey(list, open.url, platform);
+  return null;
 }
 
 /**
@@ -221,8 +247,9 @@ export function checkElements(
     const images: ElementInput['images'] = {};
     if (isObject(e.images))
       for (const k of ['poster', 'background', 'logo'] as const) if (elementImageAllowed(e.images[k], level, granted)) images[k] = e.images[k];
-    // Clé d'un fichier ou d'un jeu local, gardée telle quelle si elle désigne exactement le fichier vérifié.
-    const ownKey = e.key === coreKeyOf(open, platform);
+    // Clé du cœur (fichier ou jeu local, fichier en ligne, entrée de liste), gardée telle quelle si elle désigne
+    // exactement l'élément vérifié.
+    const ownKey = e.key === coreKeyOf(open, platform, rights.location);
     elements.push({
       key: ownKey ? e.key : `${prefix}${e.key}`,
       name: e.name,
@@ -620,6 +647,11 @@ export function createPluginBridges({
   let locations: KeyedLocation[] = [];
   /** Emplacement de la bibliothèque (clé) → source de plugin qui l'a accepté. */
   let assigned = new Map<string, { entry: ContributionEntry; location: SourceLocation }>();
+  /**
+   * Emplacement de la bibliothèque qui désigne un fichier (liste de lecture locale, P5-12) → son dossier, accordé
+   * avec lui : les fichiers qu'elle cite à côté d'elle.
+   */
+  let fileDirs = new Map<string, string>();
   /** Analyses voulues à cet instant, par référence au catalogue. */
   let wanted = new Map<string, Target>();
   /** Analyses arrivées au catalogue : référence → empreinte (source et emplacement) de la dernière analyse. */
@@ -633,7 +665,9 @@ export function createPluginBridges({
    * jeux qu'il lit (avec le dossier des jaquettes d'une console).
    */
   const assignedFolders = (pluginId: string): string[] =>
-    [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId ? [a.location.path, a.location.console?.images].filter((d): d is string => !!d) : []));
+    [...assigned].flatMap(([key, a]) =>
+      a.entry.pluginId === pluginId ? [a.location.path, fileDirs.get(key), a.location.console?.images].filter((d): d is string => !!d) : [],
+    );
   const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
   /**
    * Adresses de la bibliothèque lues par un plugin (serveur web, liste en ligne, P5-12) : accordées à ce plugin
@@ -681,6 +715,19 @@ export function createPluginBridges({
     return rights.trusted && (!location.path || rights.folders);
   }
 
+  /** Emplacements pris qui désignent un fichier de cet ordinateur (pas un partage, pas un dossier) → leur dossier. */
+  async function filesOf(list: Map<string, { location: SourceLocation }>): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    await Promise.all(
+      [...list].map(async ([key, { location }]) => {
+        if (!location.path || location.network || location.console) return;
+        const st = await fsp.stat(location.path).catch(() => null);
+        if (st?.isFile()) out.set(key, path.dirname(location.path));
+      }),
+    );
+    return out;
+  }
+
   async function accepts(e: ContributionEntry, location: SourceLocation): Promise<boolean> {
     try {
       return (await service.call(e.pluginId, 'sources', e.id, 'handles', [location], { timeout: BRIDGE_LIMITS.handlesTimeout })) === true;
@@ -708,6 +755,7 @@ export function createPluginBridges({
     }
     const owners = (m: typeof next) => JSON.stringify([...m].map(([k, a]) => [k, entryId(a.entry)]));
     const changed = owners(next) !== owners(assigned);
+    fileDirs = await filesOf(next);
     assigned = next;
     return changed;
   }
@@ -745,7 +793,7 @@ export function createPluginBridges({
       // Désactivé ou emplacement retiré pendant l'analyse : rien n'est ajouté.
       if (!current(t)) return;
       const folders = granted(e.pluginId);
-      const rights = { launch: service.sourceRights(e.pluginId).launch === true, consoles: knownConsoles() };
+      const rights = { launch: service.sourceRights(e.pluginId).launch === true, consoles: knownConsoles(), location: t.location };
       const written = checkElements(e.pluginId, level, folders, raw, platform, rights);
       const real = await keepReal(written.elements, level, folders, realpath);
       if (!current(t)) return;

@@ -3,11 +3,12 @@
 // tant qu'il reste dans la configuration ; tout le reste suit les règles du manifeste.
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { SourceLocation } from '@mire/plugin-sdk';
-import { createPluginBridges, type BridgeService } from '../../src/main/plugins/bridges.ts';
+import { m3uEntryKey, remoteFileKey } from '../../src/main/catalog/keys.ts';
+import { checkElements, createPluginBridges, type BridgeService } from '../../src/main/plugins/bridges.ts';
 import { createContextHandler, type ContextDeps } from '../../src/main/plugins/context.ts';
 import { urlGranted } from '../../src/main/plugins/permissions.ts';
 import { createPluginStorage, pluginDataDir } from '../../src/main/plugins/plugin-storage.ts';
@@ -179,6 +180,73 @@ describe('ponts : adresses accordées tant qu’elles restent dans la configurat
     const bridges = setup(false);
     await bridges.setLocations([url('http://192.168.1.10/films/')]);
     assert.deepEqual(bridges.assignedUrls('mire.source.http'), []);
+    bridges.stop();
+  });
+});
+
+describe('clés du cœur gardées pour un fichier en ligne ou une entrée de liste (P5-12)', () => {
+  const at = (u: string): SourceLocation => ({ location: u, url: u, network: false, kinds: ['video'] });
+  const film = 'http://192.168.1.10/films/Am%C3%A9lie.mkv';
+
+  it('fichier sous l’adresse de l’emplacement : clé `remote:` gardée si elle vaut celle de son `open`', () => {
+    const raw = [
+      { key: remoteFileKey(film), name: 'Amélie', open: { kind: 'file', path: film } },
+      { key: remoteFileKey('http://192.168.1.10/autre.mkv'), name: 'Autre', open: { kind: 'file', path: 'http://192.168.1.10/autre.mkv' } },
+      { key: remoteFileKey('http://192.168.1.10/films/b.mkv'), name: 'Menteur', open: { kind: 'file', path: film } },
+    ];
+    const { elements } = checkElements('mire.source.http', 'code', [], raw, 'linux', { location: at('http://192.168.1.10/films/') });
+    assert.deepEqual(
+      elements.map((e) => e.key),
+      [
+        remoteFileKey(film),
+        `plugin:mire.source.http|${remoteFileKey('http://192.168.1.10/autre.mkv')}`,
+        `plugin:mire.source.http|${remoteFileKey('http://192.168.1.10/films/b.mkv')}`,
+      ],
+    );
+    // Sans emplacement (source qui n'en reçoit pas) : préfixée.
+    assert.equal(checkElements('mire.source.http', 'code', [], raw.slice(0, 1), 'linux').elements[0].key, `plugin:mire.source.http|${remoteFileKey(film)}`);
+  });
+
+  it('entrée de liste : clé `m3u:<liste>|<flux>` de la liste analysée seulement', () => {
+    const list = 'https://box.exemple.org/tv.m3u';
+    const raw = [
+      { key: m3uEntryKey(list, 'http://flux/a', 'linux'), name: 'A', open: { kind: 'stream', url: 'http://flux/a' } },
+      { key: m3uEntryKey('https://box.exemple.org/autre.m3u', 'http://flux/b', 'linux'), name: 'B', open: { kind: 'stream', url: 'http://flux/b' } },
+    ];
+    const { elements } = checkElements('mire.source.m3u', 'code', [], raw, 'linux', { location: at(list) });
+    assert.deepEqual(
+      elements.map((e) => e.key),
+      [m3uEntryKey(list, 'http://flux/a', 'linux'), `plugin:mire.source.m3u|${m3uEntryKey('https://box.exemple.org/autre.m3u', 'http://flux/b', 'linux')}`],
+    );
+    const local = '/home/moi/Listes/radios.m3u';
+    const loc: SourceLocation = { location: local, path: local, network: false, kinds: ['audio'] };
+    const own = { key: m3uEntryKey(local, 'http://flux/r', 'linux'), name: 'R', open: { kind: 'stream', url: 'http://flux/r' } };
+    assert.equal(checkElements('mire.source.m3u', 'code', [], [own], 'linux', { location: loc }).elements[0].key, own.key);
+  });
+});
+
+describe('liste de lecture locale : son dossier est accordé avec elle', () => {
+  it('emplacement qui désigne un fichier → son dossier ; un dossier → lui seul', async () => {
+    const dir = path.join(root, 'Listes');
+    mkdirSync(dir, { recursive: true });
+    const list = path.join(dir, 'radios.m3u');
+    writeFileSync(list, '#EXTM3U\n');
+    const entries = [{ pluginId: 'mire.source.m3u', kind: 'sources', id: 'src-m3u', declaration: { id: 'src-m3u' } } as unknown as ContributionEntry];
+    const service: BridgeService = {
+      contributions: (kind) => (kind === 'sources' ? entries : []),
+      onContributionsChange: () => () => {},
+      call: async (_p, _k, _i, method) => (method === 'handles' ? true : []),
+      levelOf: () => 'code',
+      folders: () => [],
+      hosts: () => [],
+      sourceRights: () => ({ trusted: true, folders: true }),
+    };
+    const bridges = createPluginBridges({ service, catalog: { setSource() {}, removeSource() {} }, log: () => {} });
+    const loc = (p: string) => ({ key: p, location: { location: p, path: p, network: false, kinds: ['audio' as const] } });
+    await bridges.setLocations([loc(list), loc(root)]);
+    assert.deepEqual(bridges.assignedFolders('mire.source.m3u').sort(), [root, list, dir].sort());
+    await bridges.setLocations([loc(root)]);
+    assert.deepEqual(bridges.assignedFolders('mire.source.m3u'), [root]);
     bridges.stop();
   });
 });
