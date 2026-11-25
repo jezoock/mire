@@ -13,7 +13,6 @@ import { guessSystem } from '@mire/shared';
 import type { Emulator } from '@mire/shared';
 import type { ConsoleInput, EmulatorChoice } from '@mire/shared/ipc';
 import { newConsoleId } from '../config/normalize/consoles.ts';
-import { EMULATORS } from '../store/catalog/index.ts';
 
 export type { ConsoleInput, EmulatorChoice };
 
@@ -28,11 +27,17 @@ const texts = (v: unknown): string[] => (Array.isArray(v) ? v.map(text).filter(B
 /** Extensions écrites `.sfc` en minuscules, sans doublon. */
 const extensionsOf = (v: unknown): string[] => [...new Set(texts(v).map((x) => (x.startsWith('.') ? x : `.${x}`).toLowerCase()))];
 
-/** Nom de l'émulateur d'une console : celui de la boutique, sinon le nom du programme sans son extension. */
-export function emulatorName(emu: Pick<Emulator, 'path' | 'store'>): string {
+/** Nom d'un émulateur de la boutique d'après son identifiant (`undefined` s'il n'est plus proposé). */
+export type EmulatorNames = (storeId: string) => string | undefined;
+
+/**
+ * Nom de l'émulateur d'une console : celui de la boutique (`names`, émulateurs proposés par le cœur et les plugins),
+ * sinon le nom du programme sans son extension (console créée à la main, ou plugin de l'émulateur retiré).
+ */
+export function emulatorName(emu: Pick<Emulator, 'path' | 'store'>, names: EmulatorNames = () => undefined): string {
   const storeId = String(emu.store || '').split(':')[0];
-  const known = storeId ? EMULATORS.find((e) => e.id === storeId) : undefined;
-  if (known) return known.name;
+  const known = storeId ? names(storeId) : undefined;
+  if (known) return known;
   const base =
     String(emu.path || '')
       .split(/[\\/]/)
@@ -44,12 +49,12 @@ export function emulatorName(emu: Pick<Emulator, 'path' | 'store'>): string {
 const systemOf = (emu: Emulator): string => guessSystem(emu);
 
 /** Émulateurs proposés pour une console : le sien d'abord, puis ceux des consoles du même système. */
-export function emulatorChoices(emulators: readonly Emulator[], consoleId: unknown): EmulatorChoice[] {
+export function emulatorChoices(emulators: readonly Emulator[], consoleId: unknown, names?: EmulatorNames): EmulatorChoice[] {
   const own = emulators.find((e) => e.id === consoleId);
   if (!own) return [];
   const sys = systemOf(own);
   const others = sys ? emulators.filter((e) => e !== own && systemOf(e) === sys) : [];
-  return [own, ...others].map((e) => ({ id: e.id, emulator: emulatorName(e), console: String(e.name || '') }));
+  return [own, ...others].map((e) => ({ id: e.id, emulator: emulatorName(e, names), console: String(e.name || '') }));
 }
 
 /**

@@ -524,8 +524,6 @@
     },
     "store": {
       "emulators": {
-        "retroarch": "Un seul programme pour les consoles 8 et 16 bits, les Game Boy et la Nintendo 64. Choisissez les consoles à ajouter.",
-        "duckstation": "PlayStation. Demande le BIOS de votre console, à placer dans son dossier « bios ».",
         "pcsx2": "PlayStation 2. Demande le BIOS de votre console.",
         "ppsspp": "PlayStation Portable.",
         "dolphin": "GameCube et Wii. Sous Windows, demande le « Visual C++ Redistributable » de Microsoft.",
@@ -534,8 +532,6 @@
         "cemu": "Wii U."
       },
       "bios": {
-        "retroarch": "Selon les consoles : gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…",
-        "duckstation": "Le BIOS de votre PlayStation : scph1001.bin, scph5501.bin, scph7001.bin… (obligatoire).",
         "pcsx2": "Le BIOS de votre PlayStation 2, par exemple SCPH-70004.bin (obligatoire).",
         "melonds": "bios7.bin, bios9.bin et firmware.bin (facultatif : melonDS a un BIOS libre intégré). Indiquez-les ensuite dans melonDS, Configuration, Émulation.",
         "dolphin": "IPL.bin de votre GameCube (facultatif), à placer dans le sous-dossier de sa région (EUR, USA, JAP).",
@@ -1211,7 +1207,8 @@
           "dependencyInstalled": "{name} ({range}), déjà là",
           "warning": "Ce plugin vient d’un dépôt tiers et demande un accès étendu à votre ordinateur. Mire ne peut pas vérifier ce qu’il fait : installez-le seulement si vous faites confiance à ce dépôt. Votre accord vous sera demandé.",
           "warningInstalled": "Ce plugin vient d’un dépôt tiers et a, avec votre accord, un accès étendu à votre ordinateur.",
-          "conflict": "Ce plugin est déjà installé depuis un autre dépôt : celui-ci ne peut ni l’installer ni le mettre à jour."
+          "conflict": "Ce plugin est déjà installé depuis un autre dépôt : celui-ci ne peut ni l’installer ni le mettre à jour.",
+          "appsIgnored": "Ses programmes (lecteurs, émulateurs) ne sont pas utilisés : seuls les plugins livrés avec Mire ou venus du dépôt officiel peuvent faire installer ou lancer un programme."
         },
         "consent": {
           "title": "Accès étendu : votre accord",

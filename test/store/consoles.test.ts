@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { consoleEntry, mergeConsoles, removeConsoles } from '../../src/main/store/consoles.ts';
-import { EMULATORS } from '../../src/main/store/catalog/index.ts';
+import { pluginEmulators } from './emulator-fixtures.ts';
 
-const duck = EMULATORS.find((e) => e.id === 'duckstation')!;
+const duck = pluginEmulators().find((e) => e.id === 'duckstation')!;
 const ps1 = duck.systems[0];
 
 test('consoles : fiche d’une console de la boutique', () => {

@@ -192,14 +192,14 @@ La boutique d'aujourd'hui. Chaque émulateur deviendrait une app installable dep
 | ID | Élément | Décision | Nature | Accès | Code actuel | Note du tri |
 | --- | --- | --- | --- | --- | --- | --- |
 | `store-install` | Installateurs de la boutique | Cœur | Socle | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/installers/ | ok pour la fusion |
-| `emu-retroarch` | RetroArch | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-duckstation` | DuckStation | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-pcsx2` | PCSX2 | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-ppsspp` | PPSSPP | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-dolphin` | Dolphin | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-melonds` | melonDS | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-azahar` | Azahar | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
-| `emu-cemu` | Cemu | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts |  |
+| `emu-retroarch` | RetroArch | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | plugin `mire.emulator.retroarch` (P5-19a) |  |
+| `emu-duckstation` | DuckStation | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | plugin `mire.emulator.duckstation` (P5-19a) |  |
+| `emu-pcsx2` | PCSX2 | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
+| `emu-ppsspp` | PPSSPP | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
+| `emu-dolphin` | Dolphin | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
+| `emu-melonds` | melonDS | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
+| `emu-azahar` | Azahar | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
+| `emu-cemu` | Cemu | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | src/main/store/catalog/emulators.ts (jusqu'à P5-19b) |  |
 | `emu-mesen` | Mesen | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer |  |
 | `emu-snes9x` | Snes9x | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer |  |
 | `emu-mgba` | mGBA | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer |  |
@@ -218,8 +218,8 @@ La boutique d'aujourd'hui. Chaque émulateur deviendrait une app installable dep
 | `emu-xemu` | xemu | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer |  |
 | `emu-xenia` | Xenia | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer |  |
 | `emu-switch` | Émulateur Switch | À installer | App (programme) | Internet, Fichiers, Lance des programmes ⚠ | à créer | pas grave, on propose les plus populaires. Ca reste à l'utilisateur de choisir de se mettre hors la loi en mettant les clefs et le firmware. Nous on ne fournit que l'émulateur |
-| `emu-consoles-ra` | Consoles de RetroArch | À installer | Pack de données | Données seules | src/main/store/catalog/systems.ts |  |
-| `emu-bios` | Rappels des BIOS | Avec chaque émulateur | Pack de données | Données seules, Fichiers | src/main/store/bios.ts, catalog/bios-hints.ts | oui avec chaque émulateur — Les rappels de BIOS font partie du plugin de chaque émulateur. |
+| `emu-consoles-ra` | Consoles de RetroArch | À installer | Pack de données | Données seules | plugin `mire.emulator.retroarch` (P5-19a : consoles et cœurs dans ses données) |  |
+| `emu-bios` | Rappels des BIOS | Avec chaque émulateur | Pack de données | Données seules, Fichiers | dossier et rappel dans les données de chaque émulateur (plugins RetroArch et DuckStation, P5-19a ; cœur pour les six autres jusqu'à P5-19b) ; lecture des dossiers : src/main/store/bios.ts (cœur) | oui avec chaque émulateur — Les rappels de BIOS font partie du plugin de chaque émulateur. |
 
 ## Lecture et programmes externes
 

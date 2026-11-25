@@ -524,8 +524,6 @@
     },
     "store": {
       "emulators": {
-        "retroarch": "One program for 8-bit and 16-bit consoles, the Game Boy family and the Nintendo 64. Choose the consoles to add.",
-        "duckstation": "PlayStation. Needs the BIOS from your console, placed in its \"bios\" folder.",
         "pcsx2": "PlayStation 2. Needs the BIOS from your console.",
         "ppsspp": "PlayStation Portable.",
         "dolphin": "GameCube and Wii. On Windows, needs the Microsoft \"Visual C++ Redistributable\".",
@@ -534,8 +532,6 @@
         "cemu": "Wii U."
       },
       "bios": {
-        "retroarch": "Depending on the console: gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…",
-        "duckstation": "The BIOS from your PlayStation: scph1001.bin, scph5501.bin, scph7001.bin… (required).",
         "pcsx2": "The BIOS from your PlayStation 2, for example SCPH-70004.bin (required).",
         "melonds": "bios7.bin, bios9.bin and firmware.bin (optional: melonDS has a free built-in BIOS). Then set them in melonDS, Config, Emu settings.",
         "dolphin": "IPL.bin from your GameCube (optional), placed in the subfolder for its region (EUR, USA, JAP).",
@@ -1211,7 +1207,8 @@
           "dependencyInstalled": "{name} ({range}), already there",
           "warning": "This plugin comes from a third-party repository and asks for extended access to your computer. Mire cannot check what it does: only install it if you trust this repository. You will be asked for your consent.",
           "warningInstalled": "This plugin comes from a third-party repository and has, with your consent, extended access to your computer.",
-          "conflict": "This plugin is already installed from another repository: this one can neither install nor update it."
+          "conflict": "This plugin is already installed from another repository: this one can neither install nor update it.",
+          "appsIgnored": "Its programs (players, emulators) are not used: only plugins that come with Mire or from the official repository can have a program installed or started."
         },
         "consent": {
           "title": "Extended access: your consent",

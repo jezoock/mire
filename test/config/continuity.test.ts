@@ -153,6 +153,50 @@ test.describe('migration v10 (P5-01)', () => {
     assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], ['mire.games.roms', 'bundled', []]);
   });
 
+  test('P5-19a : RetroArch et DuckStation, plugins à installer, si une console a été installée avec eux ; les consoles restent', () => {
+    const queue = (raw: Any) => (migrate(structuredClone({ ...raw, version: 9 })).config as Any).continuity as string[];
+    const ra = {
+      id: 'retroarch:nes',
+      name: 'NES',
+      path: '/emu/retroarch/RetroArch-Linux-x86_64.AppImage',
+      args: ['-f', '-L', '/c/fceumm_libretro.so', '{rom}'],
+      store: 'retroarch:nes',
+    };
+    const duck = { id: 'duckstation:ps1', name: 'PlayStation', path: 'C:\\Emu\\duck.exe', args: ['-batch', '-fullscreen', '{rom}'], store: 'duckstation:ps1' };
+    assert.deepEqual(
+      ['P5-19-retroarch', 'P5-19-duckstation'].map((id) => queue({ emulators: [ra, duck] }).includes(id)),
+      [true, true],
+    );
+    assert.deepEqual(
+      ['P5-19-retroarch', 'P5-19-duckstation'].map((id) => queue({ emulators: [ra] }).includes(id)),
+      [true, false],
+    );
+    assert.deepEqual(
+      ['P5-19-retroarch', 'P5-19-duckstation'].map((id) => queue({ emulators: [duck] }).includes(id)),
+      [false, true],
+    );
+    // Console créée à la main, autre émulateur de la boutique, configuration vide ou mal formée : rien à installer.
+    const manual = { id: 'snes-1', name: 'SNES', path: 'C:\\Emu\\snes.exe' };
+    for (const emulators of [[manual], [{ id: 'pcsx2:ps2', store: 'pcsx2:ps2' }], [{ store: 'retroarchx' }], [], 'mal formé', [null, 4]]) {
+      const q = queue({ emulators });
+      assert.ok(!q.includes('P5-19-retroarch') && !q.includes('P5-19-duckstation'), JSON.stringify(emulators));
+    }
+    assert.ok(!queue({}).includes('P5-19-retroarch'));
+    // Les consoles gardent leur programme et leurs arguments : elles se lancent sans le plugin.
+    const { config } = migrate(structuredClone({ emulators: [ra, duck], version: 9 }));
+    assert.deepEqual(
+      (config as Any).emulators.map((e: Any) => [e.store, e.path, e.args]),
+      [ra, duck].map((e) => [e.store, e.path, e.args]),
+    );
+    for (const [id, plugin] of [
+      ['P5-19-retroarch', 'mire.emulator.retroarch'],
+      ['P5-19-duckstation', 'mire.emulator.duckstation'],
+    ]) {
+      const rule = CONTINUITY_RULES.find((r) => r.id === id);
+      assert.deepEqual([rule?.plugin, rule?.mode, rule?.settings ?? []], [plugin, 'install', []]);
+    }
+  });
+
   test('P5-11b : les sous-titres posés à côté des vidéos, plugin inclus, pour toute installation existante', () => {
     for (const raw of [readFixture('config-v9.json'), {}, { library: 'mal formé' }]) {
       const { config } = migrate(structuredClone({ ...raw, version: 9 }));

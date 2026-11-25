@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "DuckStation",
+      "description": "DuckStation dans la boutique de Mire : installation depuis sa page GitHub officielle, console PlayStation et rappel du BIOS. Mire ne fournit aucun BIOS."
+    },
+    "apps": {
+      "duckstation": {
+        "name": "DuckStation",
+        "description": "PlayStation. Demande le BIOS de votre console, à placer dans son dossier « bios ».",
+        "bios": "Le BIOS de votre PlayStation : scph1001.bin, scph5501.bin, scph7001.bin… (obligatoire)."
+      }
+    }
+  }
+}

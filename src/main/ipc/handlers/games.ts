@@ -33,7 +33,7 @@ export function gamesHandlers(ctx: MainContext) {
     // Consoles et émulateurs (P4-17) : la page ne modifie plus la liste des consoles elle-même.
     consoleSave: (input, id) => commit(saveConsole(ctx.config.get().emulators, input, id)),
     consoleRemove: (id) => commit(removeConsole(ctx.config.get().emulators, id)),
-    consoleEmulators: (id) => emulatorChoices(ctx.config.get().emulators, id),
+    consoleEmulators: (id) => emulatorChoices(ctx.config.get().emulators, id, ctx.store.emulatorName),
     consoleSetEmulator: (id, emulator) => commit(setConsoleEmulator(ctx.config.get().emulators, id, emulator)),
     gameEmulators: (key) => {
       const rom = romOf(key);
@@ -43,7 +43,7 @@ export function gamesHandlers(ctx: MainContext) {
       return {
         ok: true as const,
         console: emu.id,
-        choices: emulatorChoices(emulators, emu.id),
+        choices: emulatorChoices(emulators, emu.id, ctx.store.emulatorName),
         consoleDefault: emu.emulator ?? null,
         game: emu.gameEmulators?.[rom.key] ?? null,
       };

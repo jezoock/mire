@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "code": "fr",
+    "name": "Français",
+    "app": "1.0.0"
+  },
+  "messages": {
+    "plugin": {
+      "name": "RetroArch",
+      "description": "RetroArch dans la boutique de Mire : installation depuis le site de libretro, choix des consoles (NES, Super Nintendo, Game Boy, Nintendo 64, Mega Drive…) et rappel des BIOS. Mire ne fournit aucun BIOS."
+    },
+    "apps": {
+      "retroarch": {
+        "name": "RetroArch",
+        "description": "Un seul programme pour les consoles 8 et 16 bits, les Game Boy et la Nintendo 64. Choisissez les consoles à ajouter.",
+        "bios": "Selon les consoles : gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…"
+      }
+    }
+  }
+}

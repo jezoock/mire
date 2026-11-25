@@ -9,7 +9,7 @@ import { BUILTIN_CATALOGS, flattenMessages } from '@mire/shared/i18n';
 import { DEFAULT_CONFIG, migrate, normalizeConfig } from '../../src/main/config/index.ts';
 import { builtinTranslator, createLanguageService, currentLanguage, t, useLanguage } from '../../src/main/i18n/index.ts';
 import { locationError } from '../../src/main/library/location.ts';
-import { BIOS_HINTS, EMULATORS } from '../../src/main/store/catalog/index.ts';
+import { EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 
 const ROOT = path.join(import.meta.dirname, '..', '..');
@@ -39,7 +39,8 @@ describe('clés employées par le processus principal', () => {
   });
 
   it('clés construites : émulateurs, BIOS et jeux de la boutique (genres : plugins des infos en ligne, P5-16)', () => {
-    const keys = [...EMULATORS.map((e) => `store.emulators.${e.id}`), ...[...BIOS_HINTS].map((id) => `store.bios.${id}`)];
+    const keys = EMULATORS.flatMap((e) => [e.texts.desc, ...(e.bios ? [e.texts.bios] : [])]);
+    assert.equal(keys.length, 11);
     for (const key of keys) for (const code of ['fr', 'en'] as const) assert.ok(KEYS[code].has(key), `${key} absente en ${code}`);
   });
 });
@@ -98,11 +99,11 @@ describe('langue des textes', () => {
       freeGames: () => [GAME],
     } as never);
     const fr = store.catalog();
-    assert.match(fr.emulators[0].desc, /^Un seul programme pour les consoles/);
+    assert.match(fr.emulators[0].desc, /^PlayStation 2\. Demande le BIOS/);
     assert.equal(fr.games.find((g: { id: string }) => g.id === 'cavestory')?.author, 'andwn, d’après Daisuke Amaya');
     english();
     const en = store.catalog();
-    assert.match(en.emulators[0].desc, /^One program for 8-bit and 16-bit consoles/);
+    assert.match(en.emulators[0].desc, /^PlayStation 2\. Needs the BIOS/);
     assert.equal(en.games.find((g: { id: string }) => g.id === 'cavestory')?.author, 'andwn, based on Daisuke Amaya');
     assert.ok(!('basedOn' in en.games[0]));
   });

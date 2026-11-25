@@ -1,0 +1,87 @@
+{
+  "kind": "emulator",
+  "site": "https://www.retroarch.com",
+  "source": {
+    "buildbot": "retroarch"
+  },
+  "program": {
+    "windows": "retroarch.exe",
+    "linux": "RetroArch-Linux-x86_64.AppImage"
+  },
+  "consoles": [
+    {
+      "id": "nes",
+      "libretro": "Nintendo - Nintendo Entertainment System",
+      "folder": "NES",
+      "extensions": [".nes", ".fds", ".unf", ".zip"],
+      "core": "fceumm"
+    },
+    {
+      "id": "snes",
+      "libretro": "Nintendo - Super Nintendo Entertainment System",
+      "folder": "Super Nintendo",
+      "extensions": [".sfc", ".smc", ".zip"],
+      "core": "snes9x"
+    },
+    {
+      "id": "gb",
+      "libretro": "Nintendo - Game Boy",
+      "folder": "Game Boy",
+      "extensions": [".gb", ".zip"],
+      "core": "gambatte"
+    },
+    {
+      "id": "gbc",
+      "libretro": "Nintendo - Game Boy Color",
+      "folder": "Game Boy Color",
+      "extensions": [".gbc", ".zip"],
+      "core": "gambatte"
+    },
+    {
+      "id": "gba",
+      "libretro": "Nintendo - Game Boy Advance",
+      "folder": "Game Boy Advance",
+      "extensions": [".gba", ".zip"],
+      "core": "mgba"
+    },
+    {
+      "id": "n64",
+      "libretro": "Nintendo - Nintendo 64",
+      "folder": "Nintendo 64",
+      "extensions": [".n64", ".z64", ".v64", ".zip"],
+      "core": "mupen64plus_next"
+    },
+    {
+      "id": "md",
+      "libretro": "Sega - Mega Drive - Genesis",
+      "folder": "Mega Drive",
+      "extensions": [".md", ".gen", ".smd", ".bin", ".zip"],
+      "core": "genesis_plus_gx"
+    },
+    {
+      "id": "sms",
+      "libretro": "Sega - Master System - Mark III",
+      "folder": "Master System",
+      "extensions": [".sms", ".zip"],
+      "core": "genesis_plus_gx"
+    },
+    {
+      "id": "gg",
+      "libretro": "Sega - Game Gear",
+      "folder": "Game Gear",
+      "extensions": [".gg", ".zip"],
+      "core": "genesis_plus_gx"
+    },
+    {
+      "id": "pce",
+      "libretro": "NEC - PC Engine - TurboGrafx 16",
+      "folder": "PC Engine",
+      "extensions": [".pce", ".zip"],
+      "core": "mednafen_pce_fast"
+    }
+  ],
+  "bios": {
+    "windows": ["emulators", "retroarch", "system"],
+    "linux": ["xdgConfig", "retroarch", "system"]
+  }
+}

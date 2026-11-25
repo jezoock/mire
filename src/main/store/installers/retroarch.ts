@@ -1,11 +1,12 @@
 /**
  * RetroArch : le programme vient du buildbot de libretro (version de la dernière publication GitHub), puis un
- * cœur par console choisie (dernière compilation nocturne). Le programme déjà installé est réutilisé.
+ * cœur par console choisie (dernière compilation nocturne). Le programme déjà installé est réutilisé. Les consoles
+ * et leurs cœurs viennent des données de l'émulateur (plugin `mire.emulator.retroarch`) ; les adresses, du cœur.
  */
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { RETROARCH_SYSTEMS, type InstallPlatform, type StoreEmulator } from '../catalog/index.ts';
+import type { InstallPlatform, StoreEmulator } from '../catalog/index.ts';
 import { download, findFile, type InstallContext } from './files.ts';
 import { githubLatest } from './github-release.ts';
 import { t } from '../../i18n/current.ts';
@@ -37,17 +38,17 @@ async function installProgram(ctx: InstallContext, emu: StoreEmulator, dir: stri
   const exe = pattern ? await findFile(dir, pattern) : null;
   if (!exe) throw new Error(t('store.errors.retroarchNotFound'));
   if (ctx.platform !== 'win32') await fsp.chmod(exe, 0o755);
-  ctx.meta.retroarch = { version, exe, systems: [], at: Date.now() };
+  ctx.meta[emu.id] = { version, exe, systems: [], at: Date.now() };
   return exe;
 }
 
 export async function installRetroArch(ctx: InstallContext, emu: StoreEmulator, systemIds: string[]): Promise<void> {
-  const dir = path.join(ctx.emuRoot, 'retroarch');
-  const known = ctx.meta.retroarch?.exe;
+  const dir = path.join(ctx.emuRoot, emu.id);
+  const known = ctx.meta[emu.id]?.exe;
   const exe = known && fs.existsSync(known) ? known : await installProgram(ctx, emu, dir);
   const coresDir = path.join(dir, 'cores');
   const ext = coreExt(ctx.platform);
-  const systems = RETROARCH_SYSTEMS.filter((s) => systemIds.includes(s.id));
+  const systems = emu.systems.filter((s) => systemIds.includes(s.id));
   for (const core of [...new Set(systems.map((s) => s.core))]) {
     const coreFile = path.join(coresDir, `${core}_libretro.${ext}`);
     if (fs.existsSync(coreFile)) continue;
@@ -59,5 +60,5 @@ export async function installRetroArch(ctx: InstallContext, emu: StoreEmulator, 
     await fsp.unlink(zip).catch(() => {});
   }
   ctx.registerConsoles(emu, systems, exe, (sys) => ['-f', '-L', path.join(coresDir, `${sys.core}_libretro.${ext}`), '{rom}']);
-  ctx.meta.retroarch.systems = [...new Set([...(ctx.meta.retroarch.systems || []), ...systemIds])];
+  ctx.meta[emu.id].systems = [...new Set([...(ctx.meta[emu.id].systems || []), ...systemIds])];
 }
