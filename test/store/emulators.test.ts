@@ -413,7 +413,7 @@ describe(
               store: 'duckstation:ps1',
             },
           ]);
-          const card = store.catalog().emulators.find((e: Any) => e.id === 'duckstation');
+          const card: Any = store.catalog().emulators.find((e: Any) => e.id === 'duckstation');
           assert.deepEqual([card.installed, card.version, card.name], [true, 'v0.1-9669', 'DuckStation']);
           assert.equal(card.bios.hint, 'pluginTexts.mire_emulator_duckstation.apps.duckstation.bios');
         }
@@ -491,7 +491,7 @@ describe(
           store: 'retroarch:sms',
         },
       ]);
-      const card = store.catalog().emulators.find((e: Any) => e.id === 'retroarch');
+      const card: Any = store.catalog().emulators.find((e: Any) => e.id === 'retroarch');
       assert.deepEqual([card.installed, card.version, card.retroarch, card.available], [true, '1.21.0', true, true]);
       assert.equal(card.bios.dir, path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'retroarch', 'system'));
       assert.equal(card.bios.hint, 'pluginTexts.mire_emulator_retroarch.apps.retroarch.bios');
