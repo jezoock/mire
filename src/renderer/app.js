@@ -1,6 +1,6 @@
 /* Mire : interface. Affichage des sections et actions ; les lecteurs intégrés (players/) et la navigation au clavier
    et à la manette (nav/) sont branchés plus bas, avec ce qu'ils attendent de l'interface. */
-import { $, $$, esc } from './core/dom.ts';
+import { $ } from './core/dom.ts';
 import { plural } from './core/format.ts';
 import { ICON } from './core/icons.ts';
 import { onColor, safeColor } from './core/colors.ts';
@@ -564,28 +564,6 @@ api.onDownloadFinished(async (d) => {
   });
   if (res?.action === 'run') C.centre.runInstaller({ id: d.id, file: installer });
 });
-
-const SOURCE_GROUPS = [
-  ['video', 'Vidéos', ['vidéo']], ['audio', 'Musique', ['morceau', 'morceaux']], ['image', 'Images', ['image']], ['game', 'Jeux PC', ['jeu', 'jeux']],
-];
-const sourceKindLabel = (loc) => (/^https?:\/\//i.test(loc) ? 'Web' : /^(\\\\|\/\/|smb:)/i.test(loc) ? 'Réseau' : 'Dossier');
-
-// Code mort, retiré après la fusion de #117 (P5-12), qui en modifie une ligne (P4-24a1).
-// eslint-disable-next-line no-unused-vars
-function sourcesHtml(kinds = ['video', 'audio', 'image', 'game']) {
-  const single = kinds.length === 1;
-  return SOURCE_GROUPS.filter(([kind]) => kinds.includes(kind)).map(([kind, label, unit]) => {
-    const list = kind === 'game' ? S.config.gameSources : S.config.library.sources.filter((x) => x.kind === kind);
-    const status = kind === 'game' ? S.gameSourceStatus : S.sourceStatus;
-    const rows = list.length ? list.map((src) => {
-      const st = status[src.id];
-      const state = !st ? (S.scanning ? 'Analyse…' : '') : st.ok ? (st.note || plural(st.count, ...unit)) : st.error;
-      return `<li class="${st && !st.ok ? 'is-error' : ''}"><span class="src-type">${sourceKindLabel(src.location)}</span><span class="src-loc">${esc(src.location)}</span><span class="src-state">${esc(state)}</span><button type="button" class="btn btn-ghost btn-sm focusable" data-action="src-remove" data-kind="${kind}" data-id="${esc(src.id)}">Retirer</button></li>`;
-    }).join('') : '<li class="none">Aucune source.</li>';
-    return `<div class="src-group">${single ? '' : `<h3 class="set-sub">${label}</h3>`}<ul class="folder-list src-list">${rows}</ul>
-      <div class="btn-row"><button type="button" class="btn btn-sm focusable" data-action="src-add-folder" data-kind="${kind}">Ajouter un dossier</button><button type="button" class="btn btn-ghost btn-sm focusable" data-action="src-add-url" data-kind="${kind}">Ajouter une adresse réseau ou web</button></div></div>`;
-  }).join('');
-}
 
 async function addSource(kind, location) {
   if (!location) return;

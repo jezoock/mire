@@ -1,8 +1,5 @@
 {
   "src/renderer/app.js": {
-    "no-unused-vars": {
-      "count": 1
-    },
     "no-useless-assignment": {
       "count": 1
     }
