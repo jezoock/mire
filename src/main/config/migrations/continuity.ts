@@ -131,6 +131,25 @@ const hasNetworkShare = (c: Loose): boolean =>
   Array.isArray((c.library as Loose).sources) &&
   ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && isNetworkShare(s.location));
 
+/** Adresse web de la bibliothèque, et si elle désigne une liste M3U (`.m3u`, `.m3u8`) ; `null` sinon (P5-12). */
+const webLocation = (loc: unknown): { playlist: boolean } | null => {
+  const s = typeof loc === 'string' ? loc.trim() : '';
+  if (!/^https?:\/\//i.test(s)) return null;
+  try {
+    return { playlist: /\.m3u8?$/i.test(new URL(s).pathname) };
+  } catch {
+    return null;
+  }
+};
+
+/** La bibliothèque lit au moins une adresse web : un serveur web (`playlist: false`) ou une liste M3U (P5-12). */
+const hasWebLocation =
+  (playlist: boolean) =>
+  (c: Loose): boolean =>
+    isObjectLike(c.library) &&
+    Array.isArray((c.library as Loose).sources) &&
+    ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && webLocation(s.location)?.playlist === playlist);
+
 /** Une console installée par la boutique avec l'émulateur `id` (`store` = `<émulateur>:<console>`) ; P5-19. */
 const hasStoreConsole =
   (id: string) =>
@@ -166,6 +185,12 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-11d : partages réseau dans la bibliothèque, plugin inclus. Comme P5-11c : les emplacements restent dans
   // `library.sources`, les fichiers gardent leurs clés `local:<chemin>`. Rien à déplacer.
   { id: 'P5-11d', plugin: 'mire.source.network', mode: 'bundled', applies: hasNetworkShare },
+  // P5-12 : serveur web et liste M3U en ligne dans la bibliothèque, plugins à installer. Les adresses restent dans
+  // `library.sources` (accordées au plugin qui les lit tant qu'elles y restent) ; les éléments gardent leurs clés
+  // (`remote:<adresse>`, `m3u:<liste>|<flux>`) : listes, reprise de lecture, fiches et tags sont retrouvés une fois le
+  // plugin installé. Rien à déplacer.
+  { id: 'P5-12-http', plugin: 'mire.source.http', mode: 'install', applies: hasWebLocation(false) },
+  { id: 'P5-12-m3u', plugin: 'mire.source.m3u', mode: 'install', applies: hasWebLocation(true) },
   // P5-07 : sites de jeux légaux, plugin à installer ; la configuration dit si une console utilisait les sites proposés.
   { id: 'P5-07-sites', plugin: 'mire.game-sites', mode: 'install', applies: usesDefaultRomSites },
   // P5-07 : jeux libres de la boutique, plugin à installer ; la configuration ne dit pas si la liste servait : toute installation existante.

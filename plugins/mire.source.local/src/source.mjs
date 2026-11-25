@@ -7,8 +7,9 @@
  * bibliothèque. Les fichiers sont lus par `ctx.files.walk` (parcours fait par le cœur, sans suivre les liens), puis
  * le cœur revérifie chaque fichier et chaque image sur son chemin réel.
  *
- * Seuls les dossiers sont pris ici : les partages réseau (`network`) restent au cœur, puis au plugin
- * `mire.source.network` (P5-11d), et les adresses aux autres sources.
+ * Seuls les dossiers sont pris ici : les partages réseau (`network`) vont au plugin `mire.source.network` (P5-11d),
+ * les adresses et les listes de lecture (`.m3u`, `.m3u8`) aux autres sources (`mire.source.http`,
+ * `mire.source.m3u`, P5-12).
  */
 import { EXT, SUBTITLE_EXTS } from './formats.mjs';
 import { elementsOf } from './folder.mjs';
@@ -26,8 +27,16 @@ const EXTENSIONS = [...EXT.video, ...EXT.audio, ...EXT.image, ...SUBTITLE_EXTS].
 const MEDIA_KINDS = ['video', 'audio', 'image'];
 const mediaKinds = (location) => (Array.isArray(location.kinds) ? location.kinds.filter((k) => MEDIA_KINDS.includes(k)) : []);
 
+// Une liste de lecture de cet ordinateur (`radios.m3u`) va au plugin `mire.source.m3u` (P5-12), pas au parcours.
+const PLAYLIST = /\.m3u8?$/i;
+
 const isFolder = (location) =>
-  !!location && typeof location.path === 'string' && location.path !== '' && location.network !== true && mediaKinds(location).length > 0;
+  !!location &&
+  typeof location.path === 'string' &&
+  location.path !== '' &&
+  location.network !== true &&
+  !PLAYLIST.test(location.path) &&
+  mediaKinds(location).length > 0;
 
 export default function createSource(ctx) {
   const t = translator(ctx.locale);

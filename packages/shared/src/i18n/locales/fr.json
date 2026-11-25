@@ -288,16 +288,18 @@
       "errors": {
         "networkShareUnavailable": "Partage réseau inaccessible : {path}. Vérifiez que l’ordinateur du partage est allumé et que vous y êtes connecté.",
         "folderNotFound": "Dossier introuvable : {path}",
+        "sourceFailed": "Emplacement inaccessible : {details}",
+        "sourceFailedPlain": "Emplacement inaccessible.",
         "addressUnavailable": "Adresse inaccessible ({reason}).",
         "crawlTimeout": "délai dépassé",
         "crawlUnreachable": "serveur injoignable",
         "crawlStatus": "le serveur a répondu avec le code {status}",
-        "playlistUnavailable": "Liste de lecture inaccessible.",
         "serverStatus": "Le serveur a répondu avec le code {status}.",
         "addressUnreachable": "Adresse injoignable."
       },
       "subtitles": "Sous-titres",
-      "streamingFolder": "Streaming"
+      "streamingFolder": "Streaming",
+      "noReader": "Rien à afficher : aucun plugin activé ne lit cet emplacement. Ajoutez-en un depuis le Centre."
     },
     "net": {
       "errors": {

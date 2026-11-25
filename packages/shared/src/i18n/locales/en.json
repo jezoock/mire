@@ -288,16 +288,18 @@
       "errors": {
         "networkShareUnavailable": "Network share unavailable: {path}. Check that the computer sharing it is on and that you're connected to it.",
         "folderNotFound": "Folder not found: {path}",
+        "sourceFailed": "Location unavailable: {details}",
+        "sourceFailedPlain": "Location unavailable.",
         "addressUnavailable": "Can't open this address ({reason}).",
         "crawlTimeout": "timed out",
         "crawlUnreachable": "server unreachable",
         "crawlStatus": "the server responded with code {status}",
-        "playlistUnavailable": "Can't open this playlist.",
         "serverStatus": "The server responded with code {status}.",
         "addressUnreachable": "Can't reach this address."
       },
       "subtitles": "Subtitles",
-      "streamingFolder": "Streaming"
+      "streamingFolder": "Streaming",
+      "noReader": "Nothing to show: no enabled plugin reads this location. Add one from the Centre."
     },
     "net": {
       "errors": {

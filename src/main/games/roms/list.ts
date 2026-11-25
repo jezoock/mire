@@ -12,7 +12,7 @@ import path from 'node:path';
 import { KIND, cleanRomName, isHttpUrl, safeDecode } from '@mire/shared';
 import type { Config, ElementSourceRef, Emulator, OpenSpec } from '@mire/shared';
 import { findConsole } from '../../config/index.ts';
-import { crawlHttp } from '../../library/providers/http-index.ts';
+import { crawlHttp } from '../../net/crawl.ts';
 import { locationError, resolveLocation } from '../../library/location.ts';
 import * as disc from '../disc/index.ts';
 import type { GameDownloads, Rom } from '../types.ts';

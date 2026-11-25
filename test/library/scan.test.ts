@@ -42,11 +42,19 @@ test('source en échec : erreur affichable, les autres sources continuent', asyn
   assert.equal(status.m.count, 1);
 });
 
-test('dossier ou partage qu’aucune source ne lit (plugin désactivé) : ni élément ni erreur', async () => {
-  assert.deepEqual(DEFAULT_PROVIDERS.map((p) => p.id).sort(), ['http-index', 'm3u']);
-  const { items, status } = await scanWith({ sources: [src('films', 'video', 'Films'), { id: 'nas', kind: 'video', location: '\\\\NAS-absent\\Films' }] });
+test('emplacement qu’aucune source ne lit (plugin absent ou désactivé) : ni élément ni erreur, l’état le dit', async () => {
+  // Le cœur n'a plus de fournisseur : dossiers, partages, serveurs web et listes M3U sont lus par des plugins (P5-12).
+  assert.deepEqual(DEFAULT_PROVIDERS, []);
+  const sources: LibrarySource[] = [
+    src('films', 'video', 'Films'),
+    { id: 'nas', kind: 'video', location: '\\\\NAS-absent\\Films' },
+    { id: 'web', kind: 'video', location: 'http://192.168.1.10/films/' },
+    { id: 'm3u', kind: 'audio', location: 'https://box.exemple.org/radios.m3u' },
+  ];
+  const { items, status } = await scanWith({ sources });
   assert.deepEqual(items, []);
-  assert.deepEqual(status, { films: { ok: true, error: null, count: 0 }, nas: { ok: true, error: null, count: 0 } });
+  const none = { ok: true, error: null, count: 0, note: 'Rien à afficher : aucun plugin activé ne lit cet emplacement. Ajoutez-en un depuis le Centre.' };
+  assert.deepEqual(status, { films: none, nas: none, web: none, m3u: none });
 });
 
 test('emplacement lu par un plugin : le cœur donne son état (dossier introuvable, partage inaccessible)', async () => {

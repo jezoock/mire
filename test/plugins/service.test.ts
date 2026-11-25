@@ -37,7 +37,7 @@ function plugin(installed: string, id: string, level: string, contributes: objec
   });
 }
 
-const TAGGER = `export default () => ({ id: 'annee', compute(e) { if (e.name === 'boom') throw new Error('panne voulue'); const m = /(\\d{4})/.exec(e.name); return m ? { tags: ['date'] } : null; }, hello(x) { return 'bonjour ' + x; } });`;
+const TAGGER = `export default () => ({ id: 'annee', compute(e) { if (e.name === 'boom') throw new Error('panne voulue'); const m = /(\\d{4})/.exec(e.name); return m ? { tags: ['date'] } : null; }, hello(x) { return 'bonjour ' + x; }, attends() { return new Promise(() => {}); } });`;
 
 function setup(extra: { hang?: boolean } = {}) {
   const base = path.join(root, `s${++n}`);
@@ -204,6 +204,30 @@ describe('service des plugins', () => {
     assert.match(readFileSync(path.join(t.installed, 'logs', 'org.exemple.annees.log'), 'utf8'), /ERROR plugins\.faults\.exception/);
     // Les autres continuent.
     assert.equal(statuses(t.service)['org.exemple.couleurs'], 'active');
+  });
+
+  it('exception attendue (`keepOnPluginError`, analyse d’un emplacement injoignable) : relancée, le plugin reste actif', async () => {
+    const t = setup();
+    opened.push(t);
+    await t.service.start();
+    await assert.rejects(t.service.call('org.exemple.annees', 'taggers', 'annee', 'compute', [el('k', 'boom')], { keepOnPluginError: true }), /panne voulue/);
+    await wait(30);
+    assert.equal(statuses(t.service)['org.exemple.annees'], 'active');
+    // Sans l'option : une panne.
+    await assert.rejects(t.service.call('org.exemple.annees', 'taggers', 'annee', 'compute', [el('k', 'boom')]), /panne voulue/);
+    await wait(30);
+    assert.equal(statuses(t.service)['org.exemple.annees'], 'fault');
+  });
+
+  it('`keepOnPluginError` ne couvre pas un délai dépassé : le plugin est désactivé', async () => {
+    const t = setup();
+    opened.push(t);
+    await t.service.start();
+    await assert.rejects(t.service.call('org.exemple.annees', 'taggers', 'annee', 'attends', [], { timeout: 50, keepOnPluginError: true }));
+    await wait(30);
+    const p = t.service.list().find((x) => x.id === 'org.exemple.annees')!;
+    assert.equal(p.status, 'fault');
+    assert.match(p.message!, /plugins\.faults\.timeout/);
   });
 
   it('chien de garde : un plugin qui ne répond plus est désactivé', async () => {

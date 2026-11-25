@@ -1,5 +1,5 @@
 /**
- * Chaînes de télévision : lecture d'une liste M3U (partagée avec le fournisseur « m3u » de la bibliothèque),
+ * Chaînes de télévision : lecture d'une liste M3U (copiée dans le plugin `mire.source.m3u` de la bibliothèque, P5-12),
  * qualité d'un flux et regroupement des variantes d'une même chaîne (HD, SD, bas débit).
  */
 import type { Channel, M3uEntry, Quality } from './types.ts';

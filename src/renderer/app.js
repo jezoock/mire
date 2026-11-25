@@ -579,7 +579,7 @@ function sourcesHtml(kinds = ['video', 'audio', 'image', 'game']) {
     const status = kind === 'game' ? S.gameSourceStatus : S.sourceStatus;
     const rows = list.length ? list.map((src) => {
       const st = status[src.id];
-      const state = !st ? (S.scanning ? 'Analyse…' : '') : st.ok ? plural(st.count, ...unit) : st.error;
+      const state = !st ? (S.scanning ? 'Analyse…' : '') : st.ok ? (st.note || plural(st.count, ...unit)) : st.error;
       return `<li class="${st && !st.ok ? 'is-error' : ''}"><span class="src-type">${sourceKindLabel(src.location)}</span><span class="src-loc">${esc(src.location)}</span><span class="src-state">${esc(state)}</span><button type="button" class="btn btn-ghost btn-sm focusable" data-action="src-remove" data-kind="${kind}" data-id="${esc(src.id)}">Retirer</button></li>`;
     }).join('') : '<li class="none">Aucune source.</li>';
     return `<div class="src-group">${single ? '' : `<h3 class="set-sub">${label}</h3>`}<ul class="folder-list src-list">${rows}</ul>

@@ -164,6 +164,8 @@ function start(pending: PendingFiles): Running {
     claimed: (k) => pluginBridges?.claimed(k) ?? false,
     pluginScans: () => pluginsStart.then(() => pluginBridges?.rescan()),
     pluginSubtitles: async (p) => (pluginBridges ? pluginBridges.subtitles(p) : []),
+    // Emplacement injoignable pour le plugin qui le lit (serveur éteint, disque débranché) : l'état de la source le dit.
+    pluginFailure: (k) => pluginBridges?.failure(k) ?? null,
   });
   const dialogs = createDialogs({ dialog, window: window.get, itemFromPath: library.itemFromPath });
   // Façade de l'interface historique sur les modifications faites à la main.
@@ -338,6 +340,8 @@ function start(pending: PendingFiles): Running {
         list: (id) => [...new Set([...pluginState.folders(id), ...(pluginBridges?.assignedFolders(id) ?? []), ...(pluginBridges?.lentFolders(id) ?? [])])],
         add: pluginState.addFolder,
       },
+      // Adresses de la bibliothèque qu'il lit (serveur web, liste en ligne, P5-12), tant qu'elles y restent.
+      origins: { list: (id) => pluginBridges?.assignedUrls(id) ?? [] },
       storage: storages.of,
     }),
     settings: pluginSettings,

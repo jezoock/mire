@@ -52,7 +52,7 @@ export interface ScanContext {
   platform?: NodeJS.Platform;
 }
 
-/** Fournisseur de sources : sait parcourir un genre d'emplacement (dossier, page d'index, liste M3U). */
+/** Fournisseur de sources du cœur : sait parcourir un genre d'emplacement (les tests en passent un factice). */
 export interface SourceProvider {
   id: string;
   canHandle(target: SourceTarget): boolean;
@@ -65,6 +65,8 @@ export interface SourceStatus {
   ok: boolean;
   error: string | null;
   count: number;
+  /** Ce qui explique un emplacement vide sans erreur (aucun plugin actif ne le lit). */
+  note?: string;
 }
 
 /** Emplacement analysé, avec ce que son fournisseur y a trouvé (pour alimenter le catalogue d'éléments). */

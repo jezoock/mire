@@ -6,9 +6,15 @@
  *   première qui l'accepte l'analyse (`scan(location)`) et ses éléments vont au catalogue sous
  *   `{ plugin: <id du plugin>, instance: <chemin ou adresse normalisés> }`. Un dossier accepté est accordé à ce plugin
  *   tant qu'il reste dans la bibliothèque (`assignedFolders`) : l'accord suit la configuration, sans rien mémoriser.
+ *   Un emplacement qui désigne un fichier (liste de lecture locale, P5-12) accorde aussi son dossier ; une adresse
+ *   (serveur web, liste en ligne) est accordée de la même façon au contexte `http` (`assignedUrls`).
  *   Seuls les plugins inclus ou du dépôt officiel reçoivent ces emplacements, et un dossier seulement s'ils déclarent
  *   `folders`. Une source qui n'en accepte aucun est analysée une fois sans emplacement (`scan(null)`), sous
- *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation.
+ *   l'identifiant de sa contribution. Tout est retiré du catalogue à la désactivation. Un emplacement injoignable
+ *   (serveur éteint, disque débranché) : la source lève une erreur au message affichable (contrat du SDK) ; elle ne
+ *   désactive pas le plugin (`keepOnPluginError`, analyse d'un emplacement seulement), le catalogue garde l'analyse
+ *   précédente, et le message (texte brut, borné) est retenu pour l'état de la source (`failure`) jusqu'à la
+ *   prochaine analyse réussie.
  * - `metadata` → moteur d'infos en ligne (`scrape/engine.ts`, `extraProviders`), après les fournisseurs du cœur. Les
  *   images d'une fiche (`image`, `backdrop`) arrivent par leur adresse : elles sont copiées dans le dossier d'images,
  *   seulement depuis un hôte `https:` déclaré par le plugin ; ce qu'il manque pour interroger la source (`requires`)
@@ -31,21 +37,22 @@
  * dossiers, d'une console connue (celle d'un dossier de jeux proposé) : le cœur lance alors l'émulateur par la clé de
  * l'élément, le plugin ne lance rien. Ses clés sont préfixées par `plugin:<id>|` pour ne jamais prendre la place d'un
  * élément du cœur ou d'un autre plugin, sauf la clé d'un fichier local (`local:<chemin>`) ou d'un jeu de console
- * (`rom:<console>|<chemin>`) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
+ * (`rom:<console>|<chemin>`), d'un fichier en ligne sous l'adresse de l'emplacement analysé (`remote:<adresse>`) ou
+ * d'une entrée de la liste analysée (`m3u:<liste>|<flux>`, ou un fichier local qu'elle cite, P5-12) qui désigne exactement son `open` vérifié : un fichier ou un jeu garde ainsi la clé
  * qu'il avait quand le cœur le trouvait (listes, reprise, fiches, favoris).
  */
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import type { ContributionKind, ElementInput, InfoValue, MetadataFacts, MetadataKind, OpenSpec, PluginLevel, SourceLocation } from '@mire/plugin-sdk';
 import { fold, guessSystem, type ElementSourceRef } from '@mire/shared';
-import { localFileKey, romKey } from '../catalog/keys.ts';
+import { joinKey, localFileKey, m3uEntryKey, normalizeLocation, normalizePath, remoteFileKey, romKey } from '../catalog/keys.ts';
 import type { KeyedLocation } from '../library/locations.ts';
 import { isInside } from '../lib/paths.ts';
 import { decodeText, srtToVtt } from '../lib/text.ts';
 import { request, type FetchLike } from '../net/http.ts';
 import { ScrapeRefusal } from '../scrape/refusal.ts';
 import type { JobContext, MetadataProvider, ProviderContext, RunOptions, ScrapeConfig, ScrapeGroup, ScrapeItem } from '../scrape/types.ts';
-import { hostDeclared, isLocalHost } from './permissions.ts';
+import { hostDeclared, isLocalHost, urlGranted } from './permissions.ts';
 import type { ContributionEntry } from './registry.ts';
 
 /** Bornes des résultats rendus par un plugin. */
@@ -70,7 +77,14 @@ export const BRIDGE_LIMITS = Object.freeze({
 export interface BridgeService {
   contributions(kind: ContributionKind): ContributionEntry[];
   onContributionsChange(listener: (kinds: ContributionKind[]) => void): () => void;
-  call(pluginId: string, kind: ContributionKind, contributionId: string, method: string, args?: unknown[], options?: { timeout?: number }): Promise<unknown>;
+  call(
+    pluginId: string,
+    kind: ContributionKind,
+    contributionId: string,
+    method: string,
+    args?: unknown[],
+    options?: { timeout?: number; keepOnPluginError?: boolean },
+  ): Promise<unknown>;
   levelOf(id: string): PluginLevel | null;
   folders(id: string): string[];
   /** Hôtes Internet déclarés par un plugin actif (`permissions.hosts`). */
@@ -143,6 +157,11 @@ export interface ElementRights {
   launch?: boolean;
   /** Consoles connues (celles des dossiers de jeux proposés) : élément « jeu » d'un plugin de code limité. */
   consoles?: ReadonlySet<string>;
+  /**
+   * Emplacement de la bibliothèque analysé (P5-12) : un fichier en ligne sous son adresse garde la clé `remote:` du
+   * cœur, une entrée de liste la clé `m3u:<liste>|<flux>`.
+   */
+  location?: SourceLocation | null;
 }
 
 /** Comment ouvrir un élément d'un plugin, s'il en a le droit ; `null` sinon. */
@@ -185,11 +204,49 @@ const elementImageAllowed = (v: unknown, level: PluginLevel, granted: readonly s
 /** Fichier local de l'élément (`open.path` d'un fichier ou d'un jeu qui n'est pas une adresse), s'il y en a un. */
 const localPathOf = (open: OpenSpec): string | null => ((open.kind === 'file' || open.kind === 'game') && !isWebUrl(open.path) ? open.path : null);
 
-/** Clé que le cœur donnerait au fichier ou au jeu local de l'élément (`local:` ou `rom:`), s'il y en a un. */
-function coreKeyOf(open: OpenSpec, platform: NodeJS.Platform): string | null {
+/** Vrai si l'adresse est sous celle de l'emplacement (même origine, chemin de départ ou en dessous). */
+function underLocation(url: string, location: SourceLocation): boolean {
+  if (!location.url) return false;
+  try {
+    return urlGranted(new URL(url), [location.url]);
+  } catch {
+    return false;
+  }
+}
+
+/** Emplacement analysé qui est une liste de lecture (`.m3u`, `.m3u8`), en ligne ou de cet ordinateur : son adresse ou son chemin. */
+function playlistOf(location: SourceLocation): string | null {
+  const list = location.url ?? location.path;
+  if (!list) return null;
+  let where = list;
+  try {
+    if (location.url) where = new URL(location.url).pathname;
+  } catch {
+    return null;
+  }
+  return /\.m3u8?$/i.test(where) ? list : null;
+}
+
+/**
+ * Clés que le cœur donnerait à l'élément : fichier ou jeu local (`local:`, `rom:`) ; fichier en ligne sous l'adresse
+ * de l'emplacement analysé (`remote:`) ; flux d'une liste, l'emplacement analysé étant la liste (`m3u:<liste>|<flux>`,
+ * P5-12) ; fichier local cité par la liste analysée (`m3u:<liste>|<chemin>`, celle de `m3uEntryKey`, ou le chemin
+ * normalisé comme un chemin : la même sous Linux et macOS).
+ */
+function coreKeysOf(open: OpenSpec, platform: NodeJS.Platform, location: SourceLocation | null | undefined): string[] {
   const local = localPathOf(open);
-  if (local === null) return null;
-  return open.kind === 'game' ? romKey(open.console, local, platform) : localFileKey(local, platform);
+  const list = location ? playlistOf(location) : null;
+  if (local !== null) {
+    if (open.kind === 'game') return [romKey(open.console, local, platform)];
+    const keys = [localFileKey(local, platform)];
+    if (list) keys.push(m3uEntryKey(list, local, platform), joinKey('m3u', normalizeLocation(list, platform), normalizePath(local, platform)));
+    return keys;
+  }
+  if (!location) return [];
+  if (open.kind === 'file' && underLocation(open.path, location)) return [remoteFileKey(open.path)];
+  const where = location.url ?? location.path;
+  if (open.kind === 'stream' && where) return [m3uEntryKey(where, open.url, platform)];
+  return [];
 }
 
 /**
@@ -221,8 +278,9 @@ export function checkElements(
     const images: ElementInput['images'] = {};
     if (isObject(e.images))
       for (const k of ['poster', 'background', 'logo'] as const) if (elementImageAllowed(e.images[k], level, granted)) images[k] = e.images[k];
-    // Clé d'un fichier ou d'un jeu local, gardée telle quelle si elle désigne exactement le fichier vérifié.
-    const ownKey = e.key === coreKeyOf(open, platform);
+    // Clé du cœur (fichier ou jeu local, fichier en ligne, entrée de liste), gardée telle quelle si elle désigne
+    // exactement l'élément vérifié.
+    const ownKey = coreKeysOf(open, platform, rights.location).includes(e.key);
     elements.push({
       key: ownKey ? e.key : `${prefix}${e.key}`,
       name: e.name,
@@ -620,10 +678,21 @@ export function createPluginBridges({
   let locations: KeyedLocation[] = [];
   /** Emplacement de la bibliothèque (clé) → source de plugin qui l'a accepté. */
   let assigned = new Map<string, { entry: ContributionEntry; location: SourceLocation }>();
+  /**
+   * Emplacement de la bibliothèque qui désigne un fichier (liste de lecture locale, P5-12) → son dossier, accordé
+   * avec lui : les fichiers qu'elle cite à côté d'elle.
+   */
+  let fileDirs = new Map<string, string>();
   /** Analyses voulues à cet instant, par référence au catalogue. */
   let wanted = new Map<string, Target>();
   /** Analyses arrivées au catalogue : référence → empreinte (source et emplacement) de la dernière analyse. */
   const scanned = new Map<string, { ref: ElementSourceRef; print: string }>();
+  /**
+   * Dernier échec de l'analyse d'un emplacement (clé), avec l'empreinte de cette analyse : le message du plugin (texte
+   * brut, borné), effacé à la prochaine analyse réussie, ou quand l'emplacement quitte la configuration ou change de
+   * source.
+   */
+  const failures = new Map<string, { print: string; message: string }>();
   /** Analyses en cours : référence → empreinte et fin de l'analyse. */
   const running = new Map<string, { print: string; done: Promise<void> }>();
   let queue: Promise<void> = Promise.resolve();
@@ -633,8 +702,17 @@ export function createPluginBridges({
    * jeux qu'il lit (avec le dossier des jaquettes d'une console).
    */
   const assignedFolders = (pluginId: string): string[] =>
-    [...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId ? [a.location.path, a.location.console?.images].filter((d): d is string => !!d) : []));
+    [...assigned].flatMap(([key, a]) =>
+      a.entry.pluginId === pluginId ? [a.location.path, fileDirs.get(key), a.location.console?.images].filter((d): d is string => !!d) : [],
+    );
   const granted = (pluginId: string): string[] => [...new Set([...service.folders(pluginId), ...assignedFolders(pluginId)])];
+  /**
+   * Adresses de la bibliothèque lues par un plugin (serveur web, liste en ligne, P5-12) : accordées à ce plugin
+   * (`ctx.http`, origine exacte et sous leur chemin) tant qu'elles restent dans la configuration.
+   */
+  const assignedUrls = (pluginId: string): string[] => [
+    ...new Set([...assigned.values()].flatMap((a) => (a.entry.pluginId === pluginId && a.location.url ? [a.location.url] : []))),
+  ];
   /** Consoles des dossiers de jeux proposés : les seules qu'un jeu d'un plugin de code limité peut désigner. */
   const knownConsoles = (): Set<string> => new Set(locations.flatMap((l) => (l.location.console ? [l.location.console.id] : [])));
 
@@ -674,6 +752,19 @@ export function createPluginBridges({
     return rights.trusted && (!location.path || rights.folders);
   }
 
+  /** Emplacements pris qui désignent un fichier de cet ordinateur (pas un partage, pas un dossier) → leur dossier. */
+  async function filesOf(list: Map<string, { location: SourceLocation }>): Promise<Map<string, string>> {
+    const out = new Map<string, string>();
+    await Promise.all(
+      [...list].map(async ([key, { location }]) => {
+        if (!location.path || location.network || location.console) return;
+        const st = await fsp.stat(location.path).catch(() => null);
+        if (st?.isFile()) out.set(key, path.dirname(location.path));
+      }),
+    );
+    return out;
+  }
+
   async function accepts(e: ContributionEntry, location: SourceLocation): Promise<boolean> {
     try {
       return (await service.call(e.pluginId, 'sources', e.id, 'handles', [location], { timeout: BRIDGE_LIMITS.handlesTimeout })) === true;
@@ -701,6 +792,7 @@ export function createPluginBridges({
     }
     const owners = (m: typeof next) => JSON.stringify([...m].map(([k, a]) => [k, entryId(a.entry)]));
     const changed = owners(next) !== owners(assigned);
+    fileDirs = await filesOf(next);
     assigned = next;
     return changed;
   }
@@ -734,11 +826,13 @@ export function createPluginBridges({
     const where = `${e.pluginId} (sources/${e.id}${t.location ? ` : ${t.location.location}` : ''})`;
     try {
       const timeout = t.location ? BRIDGE_LIMITS.locationScanTimeout : BRIDGE_LIMITS.scanTimeout;
-      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [t.location], { timeout });
+      // Un emplacement injoignable (serveur éteint, disque débranché) : la source lève une erreur au message affichable
+      // (contrat du SDK), qui ne désactive pas le plugin ; le catalogue garde l'analyse précédente.
+      const raw = await service.call(e.pluginId, 'sources', e.id, 'scan', [t.location], { timeout, keepOnPluginError: !!t.location });
       // Désactivé ou emplacement retiré pendant l'analyse : rien n'est ajouté.
       if (!current(t)) return;
       const folders = granted(e.pluginId);
-      const rights = { launch: service.sourceRights(e.pluginId).launch === true, consoles: knownConsoles() };
+      const rights = { launch: service.sourceRights(e.pluginId).launch === true, consoles: knownConsoles(), location: t.location };
       const written = checkElements(e.pluginId, level, folders, raw, platform, rights);
       const real = await keepReal(written.elements, level, folders, realpath);
       if (!current(t)) return;
@@ -746,9 +840,13 @@ export function createPluginBridges({
       if (dropped) log(`Plugins : ${where} : ${dropped} élément(s) écarté(s) (invalides ou non permis).`);
       catalog.setSource(ref, real.elements);
       scanned.set(refId(ref), { ref, print: print(t) });
+      failures.delete(ref.instance);
     } catch (err) {
-      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service).
+      // Le catalogue garde la dernière analyse ; une panne du plugin le désactive (service), une erreur attendue d'un
+      // emplacement est retenue pour l'état de la source.
       log(`Plugins : analyse de ${where} impossible : ${(err as Error)?.message ?? err}`);
+      const message = pluginMessage((err as Error)?.message);
+      if (t.location && current(t)) failures.set(t.ref.instance, { print: print(t), message: message ?? '' });
     }
   }
 
@@ -766,6 +864,9 @@ export function createPluginBridges({
       next.set(refId(ref), { entry: e, location: null, ref });
     }
     wanted = next;
+    // Échec d'un emplacement qui n'est plus voulu tel quel (retiré, autre source, autres types) : oublié.
+    const live = new Set([...next.values()].filter((t) => t.location).map(print));
+    for (const [key, f] of [...failures]) if (!live.has(f.print)) failures.delete(key);
     for (const [k, { ref }] of [...scanned]) {
       if (next.has(k)) continue;
       scanned.delete(k);
@@ -931,10 +1032,17 @@ export function createPluginBridges({
       locations = list.map((l) => ({ key: l.key, location: structuredClone(l.location) }));
       return sync();
     },
+    /**
+     * Message de la dernière analyse en échec de cet emplacement (instance du cœur), texte brut du plugin borné à 500
+     * caractères (vide s'il n'en a pas donné) ; `null` si la dernière analyse a réussi.
+     */
+    failure: (key: string): string | null => failures.get(key)?.message ?? null,
     /** Vrai si un plugin lit cet emplacement de la bibliothèque (instance du cœur) : la bibliothèque du cœur le laisse. */
     claimed: (key: string): boolean => assigned.has(key),
     /** Dossiers de la bibliothèque lus par ce plugin : accordés tant qu'ils restent dans la configuration. */
     assignedFolders,
+    /** Adresses de la bibliothèque lues par ce plugin : accordées tant qu'elles restent dans la configuration (P5-12). */
+    assignedUrls,
     /** Fin des synchronisations en cours (tests, et la liste des jeux d'une console au démarrage). */
     idle: (): Promise<void> => queue,
 

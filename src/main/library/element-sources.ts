@@ -1,25 +1,19 @@
 /**
- * Sources d'éléments de la bibliothèque : les fichiers trouvés par les fournisseurs (`providers/`) deviennent des
- * éléments du catalogue. Une source par plugin prévu à l'inventaire : serveur web (`src-http`), liste M3U
- * (`src-m3u`). Les dossiers de cet ordinateur (`src-local`) et les partages réseau (`src-smb`) sont lus par les
- * plugins inclus `mire.source.local` (P5-11c) et `mire.source.network` (P5-11d) : les éléments que le cœur avait
- * rangés sous ces sources quittent le catalogue à la première analyse (`isLibrarySource`), les plugins les y remettent
- * sous les mêmes clés.
+ * Sources d'éléments de la bibliothèque : les fichiers trouvés par les fournisseurs du cœur deviennent des éléments du
+ * catalogue. Il n'en reste aucune : les dossiers de cet ordinateur (`src-local`) et les partages réseau (`src-smb`)
+ * sont lus par les plugins inclus `mire.source.local` (P5-11c) et `mire.source.network` (P5-11d), les serveurs web
+ * (`src-http`) et les listes M3U (`src-m3u`) par les plugins à installer `mire.source.http` et `mire.source.m3u`
+ * (P5-12). Les éléments que le cœur avait rangés sous ces sources quittent le catalogue à la première analyse
+ * (`isLibrarySource`), les plugins les y remettent sous les mêmes clés.
  *
  * L'analyse de la bibliothèque (`scanLibrary`) ne parcourt chaque emplacement qu'une fois : elle rend ses
  * `LibraryItem` à l'interface historique, et la source en tire les éléments (`elementsOf`). `scan` analyse un
- * emplacement seul, comme le fera l'hôte des plugins.
- *
- * Seuls les tags et les infos que la source connaît sont posés ici (tags de source, dossier, serveur, sous-titres,
- * images trouvées à côté du fichier, type de média d'une entrée M3U sans extension) ; le type de fichier est posé
- * par le moteur de tags (P2-04), les épisodes viendront des tags automatiques (P2-05).
+ * emplacement seul, comme le fait l'hôte des plugins.
  */
-import { KIND, type MediaKind } from '@mire/shared';
+import type { MediaKind } from '@mire/shared';
 import type { ElementImages, InfoValue } from '@mire/shared';
-import { m3uEntryKey, normalizePath, normalizeUrl, remoteFileKey } from '../catalog/keys.ts';
+import { normalizePath, normalizeUrl } from '../catalog/keys.ts';
 import type { ElementInput, ElementSource } from '../catalog/types.ts';
-import { httpIndexProvider } from './providers/http-index.ts';
-import { m3uProvider } from './providers/m3u.ts';
 import { MAX_ITEMS } from './scan.ts';
 import type { LibraryItem, ScanContext, ScannedLocation, SourceProvider, SourceTarget } from './types.ts';
 
@@ -35,8 +29,7 @@ export interface LibraryElementSource extends ElementSource<LibraryLocation> {
 }
 
 /**
- * Tags de chaque source (`src-local`, `src-smb` : sources d'avant P5-11c et P5-11d, gardées pour retirer leurs
- * éléments du catalogue).
+ * Tags de chaque source du cœur d'avant P5-11c, P5-11d et P5-12 : gardées pour retirer leurs éléments du catalogue.
  */
 export const LIBRARY_SOURCE_TAGS = {
   'src-local': ['local'],
@@ -60,14 +53,6 @@ const imagesOf = (item: LibraryItem): ElementImages => compact({ poster: item.co
 
 export function fileElement(key: string, item: LibraryItem, infos: Record<string, InfoValue | undefined>): Omit<ElementInput, 'tags'> {
   return { key, name: item.name, open: { kind: 'file', path: item.path }, infos: compact(infos), images: imagesOf(item) };
-}
-
-function hostOf(url: string): string | undefined {
-  try {
-    return new URL(url).host || undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 /** Source d'éléments d'un fournisseur (exportée pour les tests du cœur, avec une source factice). */
@@ -100,34 +85,12 @@ export function librarySource(
 export const locationInstance = ({ resolved }: SourceTarget, platform: NodeJS.Platform = process.platform): string =>
   resolved.type === 'url' ? normalizeUrl(resolved.url) : normalizePath(resolved.path, platform);
 
-/** Sources d'éléments de la bibliothèque, dans l'ordre où elles sont essayées. */
-export function librarySources(platform: NodeJS.Platform = process.platform): LibraryElementSource[] {
-  return [
-    librarySource(
-      'src-m3u',
-      LIBRARY_SOURCE_TAGS['src-m3u'],
-      m3uProvider,
-      () => true,
-      (item) => ({
-        key: m3uEntryKey(item.dir, item.path, platform),
-        name: item.name,
-        open: { kind: 'stream', url: item.path },
-        // Sans extension reconnue, le type de média vient de celui de la source configurée : le moteur de tags
-        // en tire `video`, `audio` ou `image` (P2-04).
-        infos: compact({ playlist: item.folder, mediaType: KIND[item.ext] ? undefined : item.kind }),
-        images: compact({ logo: item.cover }),
-      }),
-      platform,
-    ),
-    librarySource(
-      'src-http',
-      LIBRARY_SOURCE_TAGS['src-http'],
-      httpIndexProvider,
-      () => true,
-      (item, subtitles) => fileElement(remoteFileKey(item.path), item, { folder: item.folder, server: hostOf(item.path), subtitles }),
-      platform,
-    ),
-  ];
+/**
+ * Sources d'éléments du cœur, dans l'ordre où elles sont essayées : il n'en reste aucune (P5-12), tous les
+ * emplacements de la bibliothèque sont lus par des plugins. Les tests en passent une factice (`librarySource`).
+ */
+export function librarySources(_platform: NodeJS.Platform = process.platform): LibraryElementSource[] {
+  return [];
 }
 
 /** Vrai si la source d'un élément est une source de la bibliothèque. */
