@@ -36,12 +36,6 @@ export class CentreController extends Controller {
     this.ctx.ui.showCentreTab(tab);
   }
 
-  /** Ouvre le Centre sur ses apps (« Ouvrir les apps du Centre » de la page Jeux historique). */
-  openApps(): void {
-    this.ctx.ui.showCentreTab('apps');
-    this.ctx.ui.open('screen:center', { focus: 'content' });
-  }
-
   // ---------- Téléchargements ----------
 
   /** Formulaire d'ajout (P4-06) : un lien et sa destination, ou un fichier .torrent. */

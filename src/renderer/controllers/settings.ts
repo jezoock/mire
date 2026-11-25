@@ -1,7 +1,6 @@
 import { parsePluginFieldKey } from '@mire/ui/utils';
 import { parseSites } from '../domain/index.ts';
-import { plural } from '../core/format.ts';
-import { isHomeList, moveChosen, toggleChosen, withChosen } from '../home/settings.ts';
+import { isHomeList, toggleChosen, withChosen } from '../home/settings.ts';
 import { METADATA_PROVIDERS, SOURCE_KINDS } from '../settings/model.ts';
 import { openPageEditor } from '../settings/page-editor.ts';
 import { PAGES_LIST } from '../settings/pages.ts';
@@ -397,25 +396,6 @@ export class SettingsController extends Controller {
     await this.ctx.ui.settings.refresh();
   }
 
-  /** Position du menu : `left`, `right`, `top`, `bottom`. */
-  async setMenuPosition({ id }: { id: string }): Promise<void> {
-    await this.ctx.ui.saveUi((ui) => {
-      ui.menu = { ...ui.menu, position: id };
-    });
-    this.ctx.ui.applyMenu();
-  }
-
-  /**
-   * Déplace une valeur d'une liste de l'accueil (P4-12) : `kind` `rows` (rangées), `bars` (barres de la mire) ou
-   * `sites` (sites épinglés) ; `dir` : -1 vers le haut, 1 vers le bas.
-   */
-  async moveHomeItem({ kind, id, dir }: { kind: string; id: string; dir: number }): Promise<void> {
-    if (!isHomeList(kind)) throw new Error(`Liste de l'accueil inconnue : ${kind}`);
-    await this.ctx.ui.saveUi((ui) => {
-      ui.home = moveChosen(ui.home, kind, String(id), Number(dir));
-    });
-  }
-
   /** Montre (`on`) ou cache une valeur d'une liste de l'accueil (voir `moveHomeItem`). */
   async toggleHomeItem({ kind, id, on }: { kind: string; id: string; on: boolean }): Promise<void> {
     if (!isHomeList(kind)) throw new Error(`Liste de l'accueil inconnue : ${kind}`);
@@ -423,13 +403,6 @@ export class SettingsController extends Controller {
       ui.home = toggleChosen(ui.home, kind, String(id), !!on);
     });
     await this.ctx.ui.settings.refresh();
-  }
-
-  /** Horloge de l'accueil : affichée ou non. */
-  async setHomeClock({ on }: { on: boolean }): Promise<void> {
-    await this.ctx.ui.saveUi((ui) => {
-      ui.home = { ...ui.home, clock: !!on };
-    });
   }
 
   // ---------- Configuration ----------
@@ -452,7 +425,6 @@ export class SettingsController extends Controller {
       S.localRoms = {};
       toast(t('settingsView.config.imported'));
       ui.scan();
-      ui.loadLocalRoms();
       ui.go(S.section);
       await ui.settings.refresh({ plugins: true });
     } else if (r && !r.canceled) toast(r?.error || t('settingsView.config.importFailed'), { duration: 8000 });
@@ -487,14 +459,6 @@ export class SettingsController extends Controller {
     S.config = (await api.saveConfig(next as never)) as typeof S.config;
     toast(this.ctx.t('settingsView.web.added', { name }));
     return true;
-  }
-
-  /** Enregistre les sites de jeux PC (un par ligne). */
-  async savePcSites({ text }: { text: string }): Promise<void> {
-    const { S, api, toast } = this.ctx;
-    const sites = parseSites(text);
-    S.config = (await api.saveConfig({ ...S.config, pcSites: sites } as never)) as typeof S.config;
-    toast(`${plural(sites.length, 'site enregistré', 'sites enregistrés')}.`);
   }
 
   // ---------- Bloqueur de publicités ----------
@@ -562,18 +526,6 @@ export class SettingsController extends Controller {
     S.channels = null;
     S.tvWeb = null;
     S.tvError = null;
-    ui.refreshPanel();
-    if (S.section === 'tv') ui.loadChannels();
     await ui.settings.refresh();
-  }
-
-  /** Choisit le dossier des téléchargements. */
-  async chooseDownloadFolder(): Promise<void> {
-    const { S, api, ui } = this.ctx;
-    const dir = await api.downloadsPickDir();
-    if (!dir) return;
-    await ui.setCfg('downloads.dir', dir);
-    S.dlSettings.dir = dir;
-    ui.refreshPanel();
   }
 }

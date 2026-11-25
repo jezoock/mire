@@ -1,0 +1,506 @@
+// Menu (P4-07) : barre latérale ou carrousel, entrées, sites ouverts, menu rétractable. Repris de l'ancienne feuille
+// de l'interface historique (P4-24a1), chargé avant l'habillage du cœur comme elle.
+
+.bars7 > :nth-child(1) {
+  --c: var(--bar-white);
+}
+
+.bars7 > :nth-child(2) {
+  --c: var(--bar-yellow);
+}
+
+.bars7 > :nth-child(3) {
+  --c: var(--bar-cyan);
+}
+
+.bars7 > :nth-child(4) {
+  --c: var(--bar-green);
+}
+
+.bars7 > :nth-child(5) {
+  --c: var(--bar-magenta);
+}
+
+.bars7 > :nth-child(6) {
+  --c: var(--bar-red);
+}
+
+.bars7 > :nth-child(7) {
+  --c: var(--bar-blue);
+}
+
+body.menu-right .rail {
+  grid-column: 2;
+  grid-row: 1;
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+
+body.menu-bottom .rail {
+  grid-row: 2;
+}
+
+.rail {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 30px 16px 20px;
+  background: var(--bg-rail);
+  border-right: 1px solid var(--line);
+  z-index: 30;
+}
+
+.rail-items {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 26px;
+}
+
+.brand-bars {
+  display: flex;
+  height: 26px;
+  border-radius: 3px;
+  overflow: hidden;
+  flex: none;
+}
+
+.brand-bars i {
+  width: 6px;
+  background: var(--c);
+}
+
+.brand-name {
+  font-size: 30px;
+  font-weight: 800;
+  font-stretch: 125%;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.rail-arrow {
+  display: none;
+}
+
+.rail-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Repère à gauche du libellé : barre de couleur de la mire, ou icône (Rechercher, Ouvrir, Réglages, Quitter) */
+.rail-item .lead {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 32px;
+}
+
+.rail-item .chip {
+  width: 8px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0.5;
+  transition:
+    height 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.rail-item .ri-ico {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  color: var(--c);
+  opacity: 0.85;
+}
+
+.rail-item .ri-ico svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rail-item:hover {
+  color: var(--text);
+}
+
+.rail-item[aria-current='page'] {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.rail-item[aria-current='page'] .chip {
+  opacity: 1;
+  height: 32px;
+}
+
+.rail-item[aria-current='page'] .ri-ico {
+  color: var(--text);
+  opacity: 1;
+}
+
+.rail-item .lbl {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-spacer {
+  flex: 1;
+  min-height: 20px;
+}
+
+.rail-handle {
+  display: none;
+}
+
+/* Sites ouverts, sous « Streaming » */
+.rail-sessions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-sessions:empty {
+  display: none;
+}
+
+.rail-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 12px 7px 46px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.rail-sub .dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.rail-sub .lbl {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-sub:hover {
+  color: var(--text);
+}
+
+.rail-sub[aria-current='page'] {
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* ---------- Carrousel (menu en haut ou en bas) ---------- */
+body.menu-top .rail,
+body.menu-bottom .rail {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  height: var(--rail-h);
+  padding: 0 18px;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+body.menu-bottom .rail {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+}
+
+body.menu-top .brand,
+body.menu-bottom .brand {
+  padding: 0 8px 0 4px;
+}
+
+body.menu-top .rail-items,
+body.menu-bottom .rail-items {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 8px;
+  height: 100%;
+  padding: 12px 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+body.menu-top .rail-items::-webkit-scrollbar,
+body.menu-bottom .rail-items::-webkit-scrollbar {
+  display: none;
+}
+
+body.menu-top .rail-item,
+body.menu-bottom .rail-item {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-width: 132px;
+  padding: 8px 18px 8px 14px;
+  scroll-snap-align: center;
+  border: 1px solid transparent;
+}
+
+body.menu-top .rail-item .lead,
+body.menu-bottom .rail-item .lead {
+  width: auto;
+  height: 20px;
+  place-items: center start;
+}
+
+body.menu-top .rail-item .chip,
+body.menu-bottom .rail-item .chip {
+  width: 28px;
+  height: 6px;
+}
+
+body.menu-top .rail-item[aria-current='page'] .chip,
+body.menu-bottom .rail-item[aria-current='page'] .chip {
+  width: 44px;
+  height: 6px;
+}
+
+body.menu-top .rail-item[aria-current='page'],
+body.menu-bottom .rail-item[aria-current='page'] {
+  border-color: var(--line-strong);
+}
+
+body.menu-top .rail-sessions,
+body.menu-bottom .rail-sessions {
+  flex-direction: row;
+  gap: 8px;
+}
+
+body.menu-top .rail-sub,
+body.menu-bottom .rail-sub {
+  width: auto;
+  min-width: 120px;
+  padding: 8px 16px;
+  scroll-snap-align: center;
+}
+
+/* Entrées du bas (Centre, Réglages…) : en fin de carrousel, elles ne peuvent pas venir au centre ; accrochées au bord,
+   elles restent atteignables (sinon l'accrochage ramène le carrousel en arrière et coupe l'entrée choisie). */
+body.menu-top .rail-spacer ~ * .rail-item,
+body.menu-bottom .rail-spacer ~ * .rail-item {
+  scroll-snap-align: end;
+}
+
+body.menu-top .rail-spacer,
+body.menu-bottom .rail-spacer {
+  flex: 0 0 18px;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  margin: 6px 0 6px 10px;
+}
+
+body.menu-top .rail.has-overflow .rail-arrow,
+body.menu-bottom .rail.has-overflow .rail-arrow {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.rail-arrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rail.at-start .rail-arrow.prev,
+.rail.at-end .rail-arrow.next {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+body.menu-auto .rail {
+  position: fixed;
+  z-index: 45;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+body.menu-auto.menu-open .rail {
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.45);
+  transform: none !important;
+}
+
+body.menu-auto.menu-left .rail {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--rail-w);
+  transform: translateX(-100%);
+}
+
+body.menu-auto.menu-right .rail {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--rail-w);
+  transform: translateX(100%);
+}
+
+body.menu-auto.menu-top .rail {
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(-100%);
+}
+
+body.menu-auto.menu-bottom .rail {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transform: translateY(100%);
+}
+
+body.menu-auto .rail-handle {
+  position: fixed;
+  z-index: 44;
+  display: block;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+body.menu-auto .rail-handle:hover {
+  background: color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+body.menu-auto.menu-left .rail-handle {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+}
+
+body.menu-auto.menu-right .rail-handle {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+}
+
+body.menu-auto.menu-top .rail-handle {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+body.menu-auto.menu-bottom .rail-handle {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+}
+
+.rail-badge {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 11px;
+  background: var(--ring);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+body.menu-top .rail-badge,
+body.menu-bottom .rail-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+}
+
+body.menu-top .rail-item,
+body.menu-bottom .rail-item {
+  position: relative;
+}
+
+/* ------------------------------------------------------------------
+   Petites fenêtres
+   ------------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  .rail {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .brand {
+    justify-content: center;
+    padding: 0 0 30px;
+  }
+  body.menu-left .brand-name,
+  body.menu-right .brand-name,
+  body.menu-left .rail-item .lbl,
+  body.menu-right .rail-item .lbl,
+  body.menu-left .rail-sub .lbl,
+  body.menu-right .rail-sub .lbl {
+    display: none;
+  }
+  body.menu-left .rail-sub,
+  body.menu-right .rail-sub {
+    justify-content: center;
+    padding: 8px 0;
+  }
+  body.menu-left .rail-item,
+  body.menu-right .rail-item {
+    justify-content: center;
+    padding: 12px 0;
+  }
+  body.menu-auto .brand-name,
+  body.menu-auto .rail-item .lbl,
+  body.menu-auto .rail-sub .lbl {
+    display: initial !important;
+  }
+  body.menu-auto .rail-item {
+    justify-content: flex-start !important;
+    padding: 10px 12px !important;
+  }
+}

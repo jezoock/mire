@@ -32,7 +32,6 @@ export interface PageViewLabels {
   more?: string;
   loading?: string;
   empty?: string;
-  legacy?: string;
   /** « Tout lire » : proposé pour une page de musique (P4-29). */
   playAll?: string;
 }

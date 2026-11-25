@@ -4,9 +4,8 @@ import { openGroupEditor } from '../editors/group-editor.ts';
 import type { PagePath } from '@mire/shared';
 import { isGameBookmarkKey, isGameKey } from '../games/model.ts';
 import { callAction } from './registry.ts';
-import type { ItemRef } from './types.ts';
 
-/** `mire-app` : écrans, menu, réglages de la page, édition de l'élément sélectionné, notifications. */
+/** `mire-app` : écrans, menu, réglages de la page (le rouage), édition de l'élément sélectionné, notifications. */
 export class AppController extends Controller {
   /** Affiche un écran (`home`, `videos`, `settings`…) ; le focus va au contenu, sauf `focus: 'keep'`. */
   go({ section, focus = 'content' }: { section: string; focus?: string }): void {
@@ -45,34 +44,19 @@ export class AppController extends Controller {
     this.ctx.api.quit();
   }
 
-  /** « Afficher plus » : rend la position du premier élément ajouté. */
-  showMore(): number {
-    const { S, ui, page } = this.ctx;
-    const first = S.limit;
-    S.limit += page;
-    ui.render();
-    return first;
-  }
-
-  /** Réglages de la page affichée (le rouage), sur un onglet (`store`, `pc`…) ou le dernier ouvert. */
-  openPageSettings({ tab }: { tab?: string } = {}): void {
-    this.ctx.ui.openPageSettings(tab);
-  }
-
-  /** Écran Réglages, ouvert sur une partie (`sources`, `home`). */
+  /** Écran Réglages, ouvert sur une partie (`sources`, `home`…). */
   openSettings({ part }: { part: string }): void {
-    this.ctx.ui.revealSettings(`set-${part}`);
+    this.ctx.ui.revealSettings(String(part || '') || null);
   }
 
-  /** Modifie les infos de l'élément décrit en haut de la vue (sinon le premier de la vue). */
-  editInfo(): void {
-    const { S, ui } = this.ctx;
-    ui.editRef((S.focusRef as ItemRef | null) || ui.firstItemRef());
+  /** Le rouage de l'en-tête : les Réglages, sur la partie de la page affichée (ses sources, ses sites, ses jeux…). */
+  openPageSettings(): void {
+    this.ctx.ui.openPageSettings();
   }
 
   /**
    * Modifie les infos de l'élément sélectionné (touche ou bouton de la manette) ; faux s'il n'y en a pas. Une carte du
-   * catalogue (vue de page, accueil, Recherche) ouvre l'éditeur de P4-22, un élément d'une vue historique l'ancien.
+   * catalogue (vue de page, accueil, Recherche, explorateur) ouvre l'éditeur de P4-22, un regroupement le sien.
    */
   editSelection(): boolean {
     const key = this.ctx.ui.selectedKey?.();
@@ -83,13 +67,9 @@ export class AppController extends Controller {
       return true;
     }
     const group = this.ctx.ui.selectedGroup?.();
-    if (group) {
-      void openGroupEditor(this.ctx, group);
-      return true;
-    }
-    const ref = this.ctx.ui.selectedRef();
-    if (ref) this.ctx.ui.editRef(ref);
-    return !!ref;
+    if (!group) return false;
+    void openGroupEditor(this.ctx, group);
+    return true;
   }
 
   /** Message bref en bas de l'écran (texte déjà traduit). */

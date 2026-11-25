@@ -8,6 +8,7 @@ import {
   HOME_TARGET,
   HOME_VIEW,
   LEGACY_PAGE_SECTIONS,
+  settingsPartOf,
   PAGE_VIEW,
   createRouter,
   legacySectionOf,
@@ -216,5 +217,19 @@ describe('entrées du menu', () => {
     const active = new Set(['progressing', 'queued']);
     assert.equal(activeDownloads([{ state: 'progressing' }, { state: 'completed' }, { state: 'queued' }, {}], active), 2);
     assert.equal(activeDownloads([], active), 0);
+  });
+});
+
+describe('rouage de l’en-tête (P4-24a1)', () => {
+  it('ouvre la partie des Réglages de la section affichée, sinon le début', () => {
+    assert.equal(settingsPartOf('videos'), 'sources');
+    assert.equal(settingsPartOf('music'), 'sources');
+    assert.equal(settingsPartOf('streaming'), 'streaming');
+    assert.equal(settingsPartOf('tv'), 'tv');
+    assert.equal(settingsPartOf('games'), 'games');
+    assert.equal(settingsPartOf('downloads'), 'downloads');
+    assert.equal(settingsPartOf('home'), 'home');
+    assert.equal(settingsPartOf('search'), null);
+    assert.equal(settingsPartOf('toString'), null);
   });
 });

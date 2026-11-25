@@ -50,15 +50,7 @@ export interface ToastOptions {
   onAction?: () => void;
 }
 
-/** Élément désigné dans une vue (fiche à modifier, jeu à supprimer). */
-export interface ItemRef {
-  kind: string;
-  item?: Data;
-  consoleId?: unknown;
-  [key: string]: unknown;
-}
-
-/** Opérations de l'interface historique (`app.js`) utilisées par les contrôleurs. */
+/** Opérations de la page (`app.js`, jusqu'à P4-24a2) utilisées par les contrôleurs. */
 export interface LegacyUi {
   // Écrans et vues
   render(opts?: { resetScroll?: boolean }): void;
@@ -69,24 +61,17 @@ export interface LegacyUi {
   openPageGroup(value: InfoScalar | null): boolean;
   openPagePath(path: PagePath): boolean;
   loadMorePage(): Promise<void>;
-  /** Section historique de la page affichée (« Ancienne vue »), ou `null`. */
-  pageLegacySection(): string | null;
   /** Écran ou page suivant (1) ou précédent (-1) du menu. */
   cycle(step: number): void;
   /** Ouvre un site déjà ouvert, choisi dans le menu (`tv:…`, `rom:…`, `bm:…` ou un service). */
   openSite(id: string): void;
   back(): void;
-  nextSection(section: string, step: number): string;
-  webHome(): string;
-  revealSettings(blockId: string): void;
-  openPageSettings(tab?: string): void;
-  refreshPanel(): void;
-  isPanelOpen(): boolean;
+  /** Ouvre les Réglages ; `part` : la partie qui reçoit le focus (`sources`, `games`…). */
+  revealSettings(part: string | null): void;
+  /** Le rouage : les Réglages, sur la partie de la page affichée. */
+  openPageSettings(): void;
   confirm(title: string, help: string, yes: string): Promise<boolean>;
   // Fiches et éléments
-  selectedRef(): ItemRef | null;
-  firstItemRef(): ItemRef | null;
-  editRef(ref: ItemRef | null): void;
   /** Clé de l'élément du catalogue dont la carte a le focus (vue de page, accueil, Recherche), ou `null`. */
   selectedKey?(): string | null;
   /** Regroupement dont la carte a le focus (vue de page, accueil), désigné par sa page et son chemin, ou `null`. */
@@ -95,12 +80,8 @@ export interface LegacyUi {
   afterEdit?(): void;
   /** Relit les pages (P4-21) : le menu suit une page créée, modifiée ou supprimée. */
   reloadPages?(): Promise<void>;
-  editConsole(consoleId: unknown): void;
   /** Consoles changées par `mire-games` (P4-17) : nouvelle configuration, Centre et vues redessinés. */
   afterConsolesChange?(config: Data): void;
-  deletableGame(ref: ItemRef | null): boolean;
-  deleteGameRef(ref: ItemRef): void;
-  consoleName(consoleId: unknown): string | undefined;
   // Bibliothèque et sources
   openFileDialog(): void;
   scan(): void;
@@ -129,15 +110,9 @@ export interface LegacyUi {
   playChannel(channel: Data | undefined): void;
   loadChannels(): void;
   // Jeux
-  launchEntry(game: Data | undefined): void;
-  launchRom(rom: Data | undefined, consoleId?: unknown): void;
   downloadGameBookmark(id: string | undefined): void;
-  cleanupGames(): void;
   addGame(): Promise<void>;
-  openEmu(consoleId: unknown): void;
-  closeRoms(): void;
   openRomBrowser(consoleId: unknown, opts?: { site?: number; url?: string }): void;
-  loadLocalRoms(): void;
   // Sites
   openWeb(id: string, url?: string): void;
   openTvWeb(web: Data): void;

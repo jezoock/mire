@@ -6,10 +6,10 @@ import { Component, Element, Host, h } from '@stencil/core';
  * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
  * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
  *
- * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
- * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
- * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
- * ce que la page place dans ces hôtes n'est jamais touché.
+ * Les écrans s'affichent dans `#view`, où la page place l'hôte de l'écran affiché. Les lecteurs (`mire-video-player`,
+ * P4-14 ; `mire-mini-player` et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu ; le message bref
+ * (`#toast`, celui qui a un bouton d'action) et la zone de dépôt des fichiers (`#drop`) reçoivent leur texte de la
+ * page. La coquille ne se rend qu'une fois (aucun état) : ce que la page place dans ces éléments n'est jamais touché.
  */
 @Component({ tag: 'mire-app', shadow: false })
 export class MireApp {
@@ -26,16 +26,14 @@ export class MireApp {
         <div class="app">
           <mire-rail />
           <main class="main">
-            <div class="backdrop" id="backdrop" aria-hidden="true">
-              <div class="bd" />
-              <div class="bd" />
-            </div>
             <mire-header />
-            {/* Vues historiques, en français jusqu'à leur remplacement (docs/adr/0001-dot-stash.md § 9). */}
-            <mire-legacy-view class="view" id="view" lang="fr" />
+            <div class="view" id="view" />
           </main>
         </div>
-        <mire-legacy-view class="mire-legacy-view--layers" id="legacy-layers" lang="fr" />
+        <div class="toast" id="toast" role="status" aria-live="polite" />
+        <div class="drop" id="drop" hidden>
+          <span class="drop__text" />
+        </div>
         <mire-video-player id="video-layer" hidden />
         <mire-mini-player id="mini" hidden />
         <mire-image-viewer id="image-layer" hidden />

@@ -13,7 +13,7 @@ import { parsePluralLabels, pluralLabel } from '../../utils/plural.ts';
  *
  * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
  * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
- * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+ * `openElement`, `loadMore`, `playAll`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
  */
 @Component({ tag: 'mire-page-view', shadow: false })
 export class MirePageView {
@@ -131,11 +131,6 @@ export class MirePageView {
         {labels.playAll && keys.length > 0 && (
           <ds-trigger class="mire-page-view__play-all" mods="stl-2" target="mire-page" action={`playAll:${JSON.stringify([{ keys }])}`}>
             {labels.playAll}
-          </ds-trigger>
-        )}
-        {labels.legacy && (
-          <ds-trigger class="mire-page-view__legacy" mods="stl-3" target="mire-page" action="openLegacy">
-            {labels.legacy}
           </ds-trigger>
         )}
       </nav>

@@ -136,14 +136,9 @@ export const topDialogKey = (): string | undefined => stack.topId();
 /* Ouverture                                                            */
 /* ------------------------------------------------------------------ */
 
-// Une boîte historique (<dialog> modal) rend le reste de la page inerte : une boîte ouverte après elle y est placée.
+// Une boîte ouverte par-dessus une autre se place à côté d'elle (le reste de la page est inerte).
 function containerFor(): HTMLElement {
-  const legacy = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')]
-    .sort((a, b) => Number(a.dataset.opened || 0) - Number(b.dataset.opened || 0))
-    .pop();
-  const top = stack.top();
-  if (legacy && (!top || Number(legacy.dataset.opened || 0) > top.openedAt)) return legacy;
-  return top?.el.parentElement ?? (host as HTMLElement);
+  return stack.top()?.el.parentElement ?? (host as HTMLElement);
 }
 
 function mount(tag: string, props: Record<string, unknown>, entry: Omit<FormEntry, 'el'> | Omit<PickEntry<unknown>, 'el'>): DialogElement {

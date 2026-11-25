@@ -126,7 +126,7 @@ Règles communes à chaque extraction :
 | P5-04 | Profils de manettes Xbox, PlayStation, Nintendo | `pad-xbox`, `pad-ps`, `pad-nintendo` | inclus | P5-01, P4-03 | S | |
 | P5-07 | Sites de jeux légaux, jeux libres | `jeux-sites`, `jeux-libres` | à installer | P5-01 | S | |
 | P5-09 | Tags automatiques : séries, films, musique, consoles, photos, genres et années | `tagauto-*` | inclus | P5-01, P2-05, P2-06 | M | |
-| P5-10 | Thème Mire | `theme-mire` | inclus | P4-11, P4-24 | S | |
+| P5-10 | Thème Mire | `theme-mire` | inclus | P4-11, P4-24a2 | S | |
 | P5-11a | Socle des sources de fichiers (voir plus bas) | — | cœur | P5-01, P3-04 | M | |
 | P5-11b | Sous-titres | `src-subs` | inclus | P5-11a | S | |
 | P5-11c | Dossier local | `src-local` | inclus | P5-11a | M | |

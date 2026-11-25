@@ -133,40 +133,40 @@ deux secondes au plus.
 `src/renderer/index.html` charge le script de l'interface, `dist/renderer/main.js`, construit par esbuild à partir
 de `main.js` (format IIFE, sans script en ligne ni `eval`, à cause de la CSP). La page ne contient que `<mire-app>`, la
 coquille (P4-07) : `main.js` définit les composants `mire-*` de `@mire/ui`, attend le rendu de la coquille (menu,
-en-tête, hôtes des vues historiques), puis importe `app.js`, qui importe les modules. La page charge aussi, en module, le chargeur des
+en-tête, lecteurs), puis importe `app.js`, qui importe les modules. La page charge aussi, en module, le chargeur des
 composants `ds-*` de dot-stash (`vendor/dot-stash/`), et la feuille de `@mire/ui` (`ui/mire-ui.css`) : voir
 `docs/adr/0001-dot-stash.md`.
 
 | Dossier ou fichier | Rôle |
 | --- | --- |
-| `app.js` | Interface historique, en JavaScript : affichage des sections en chaînes HTML, boîtes de dialogue, réception des événements du processus principal. Ses `data-action` appellent les contrôleurs par le pont. Elle sera remplacée vue par vue pendant la phase 4. |
-| `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>` et des vues historiques (`mire-legacy-view`), entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une page s'affiche dans la vue de page (section `page`, P4-11), un écran du cœur sans vue à lui dans la vue historique qui en tient lieu. |
+| `app.js` | Racine de la page, en JavaScript : création des écrans, chargement des données, opérations que les contrôleurs demandent (`legacyUi`), réception des événements du processus principal. Les vues historiques, leur panneau et leurs boîtes en sont retirés (P4-24a1) ; elle deviendra une racine de composition en TypeScript (P4-24a2). |
+| `shell/` | Coquille (P4-07), côté page : montage de `<mire-app>`, entrées du menu (écrans du cœur et pages épinglées, `menu.ts`), en-tête, aide de la manette, zone de dépôt des fichiers, et routeur par état (cible de `@mire/shared` et chemin dans les regroupements, `router.ts`) ; une page s'affiche dans la vue de page (section `page`, P4-11), un écran du cœur dans la sienne. Le rouage de l'en-tête ouvre les Réglages sur la partie de la page affichée (`settingsPartOf`, P4-24a1). |
 | `pages/` | Vue de page (P4-11) : l'hôte `<mire-page>` et sa `mire-page-view`, remplis d'après la route (page et chemin) ; niveaux chargés par tranches (`catalog.page`), regroupements (« Autres », « Saison 1 »), chemin parcouru, rangées (`model.ts`, sans DOM). |
 | `explorer/` | Explorateur (P4-08) : l'hôte `<mire-explorer>` et sa `mire-explorer-view` ; colonnes Pages, Listes, Tags, Sources et Dossiers, puis les niveaux de `catalog.page` (page, `list:<id>`, `tag:<id>`) ou les dossiers de `catalog.folder` (source et chemin relatif) par tranches, et l'aperçu d'un élément (`model.ts`, sans DOM). Une ligne qui reçoit le focus montre ce qu'elle ouvre ; B revient à la colonne précédente. Affichage fixe : habillage du cœur, jamais le thème. Gérer ses fichiers (P4-09, `files.ts` sans DOM) : renommer, déplacer, mettre à la corbeille depuis l'aperçu, avec confirmation, désactivés hors des dossiers autorisés (`filesCheck`) ; sélection multiple (Ctrl + clic, Maj + clic pour une plage, Espace, Y à la manette) avec une barre : ajouter ou retirer un tag, ranger dans une liste, mettre à la corbeille. |
 | `home/` | Accueil (P4-12) : l'hôte `<mire-home>` et sa `mire-home-view`, remplis d'après `ui.home` (rangées : barres de la mire vers des cibles, sites épinglés, « Reprendre », pages et listes ; `model.ts`, sans DOM) ; réglages de l'accueil (rangées, barres, sites, ordre ; `settings.ts`, sans DOM). |
 | `centre/` | Centre (P4-18) : l'hôte `<mire-centre>` et sa `mire-centre-view` (onglets Téléchargements et Apps) ; lignes des téléchargements, mises à jour fines (`mire-download-row` : une ligne qui avance ne redessine qu'elle), cartes des émulateurs, consoles de RetroArch, rappels de BIOS, jeux libres, avancement des installations et annonces (« jeu ajouté »), rédigés par les catalogues (`centre.*`) à partir des données du processus principal (`model.ts`, sans DOM). Onglets Plugins et Dépôts (P4-19, `plugins.ts`, sans DOM) : plugins présents, proposés et mises à jour, fiche d'un plugin (apports, origine, niveau, permissions, dépendances), cartes des dépôts ; l'accord pour un plugin tiers de code sensible et l'ajout d'un dépôt en deux temps passent par des boîtes (`controllers/centre.ts`). Les listes des dépôts ne sont lues en ligne que sur « Rechercher des mises à jour ». |
 | `themes/` | Moteur de thèmes (P4-11) et thèmes intégrés (`<id>/theme.json` et leurs fichiers) : palette, polices et fond posés sur `<mire-page>` et `<mire-home>` (portée commune, P4-12), mise en page transmise à la vue de page et à l'accueil. Voir `docs/themes.md`. |
-| `controllers/` | Contrôleurs (P4-04) : un par écran (`mire-app`, `mire-page`…), dont les méthodes publiques sont les actions de Mire, appelées par `ds-trigger`, par la navigation et les lecteurs ; registre et pont des `data-action` historiques (`bridge.ts`). Voir `docs/adr/0001-dot-stash.md` § 8. |
+| `controllers/` | Contrôleurs (P4-04) : un par écran (`mire-app`, `mire-page`…), dont les méthodes publiques sont les actions de Mire, appelées par `ds-trigger`, par la navigation et les lecteurs ; registre des actions (`registry.ts`). Le pont des `data-action` historiques est retiré (P4-24a1). Voir `docs/adr/0001-dot-stash.md` § 8. |
 | `i18n/` | Traduction de l'interface : catalogues reçus du processus principal, `t()`, langue courante, `lang` du document. |
 | `core/` | Outils sans état : accès au DOM et échappement (`dom.ts`), mise en forme (`format.ts`), icônes (`icons.ts`), couleurs (`colors.ts`), adresse de lecture d'un média (`media.ts`). |
 | `state/` | État partagé par toutes les vues : `S` (section, données reçues, caches, choix en cours), `Q` (file de musique), `V` (lecteur vidéo), `I` (visionneuse d'images), et `PAGE` (nombre d'éléments affichés d'abord, puis à chaque « Afficher plus »). |
 | `api/` | Seul accès à `window.api` (`api`), typé par le contrat IPC. |
 | `domain/` | Logique sans DOM ni état : éléments, vidéos et séries, jeux, recherche, sites, états des téléchargements. Les fonctions reçoivent leurs données en paramètre ; elles sont testées sous Node. |
-| `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), service de focus sur les vues historiques et les composants `ds-*` / `mire-*` (`focus.ts`, règles sans DOM dans `targets.ts`, P4-03 ; voir l'ADR 0001, § 10), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
+| `nav/` | Navigation : choix du voisin à l'écran (`spatial.ts`, `pickNeighbor`), service de focus sur les composants `ds-*` / `mire-*` (`focus.ts`, règles sans DOM dans `targets.ts`, P4-03 ; voir l'ADR 0001, § 10), clavier et télécommande (`keyboard.ts`), manette (`gamepad.ts` et ses données `gamepad-data.ts`). |
 | `players/` | Lecteurs intégrés : vidéo (`video.ts`, qui pilote `mire-video-player` ; règles sans DOM dans `video-model.ts`, P4-14), musique (`audio.ts`, qui pilote `mire-mini-player` ; règles dans `music-model.ts`, P4-15), visionneuse d'images (`images.ts`, qui pilote `mire-image-viewer` ; règles dans `images-model.ts`, P4-15), volume commun (`volume.ts`). |
-| `ui/` | `toast.ts` : message bref en bas de l'écran. |
+| `ui/` | `toast.ts` : message bref en bas de l'écran (`#toast` de la coquille), avec un bouton d'action ; `dialogs.ts` : boîtes sur `ds-modal` (P4-06). |
 | `demo/` | Page de démonstration interne des composants, cachée (adresse `#demo`). |
-| `styles.css`, `fonts/` | Styles de l'interface historique et police Archivo. |
+| `fonts/` | Police Archivo. Les styles sont ceux de `@mire/ui` (`ui/mire-ui.css`) : la feuille historique `styles.css` est retirée (P4-24a1), ses règles encore employées sont dans les feuilles de la coquille, du menu, de l'en-tête et de l'aide de la manette. |
 | `palettes/` | Palettes du cœur (Écran éteint, Contraste élevé) : jetons de couleurs (`<id>/<id>.css`) et métadonnées (`palette.json`), choisies par `data-palette` sur `<html>` (voir `docs/themes.md`). Les autres palettes viennent des plugins (P5-02). |
 
 Les modules `nav/` et `players/` ne connaissent pas l'interface : ils reçoivent les contrôleurs à leur
 initialisation (`initKeyboard`, `initVideo`…) et appellent leurs méthodes (retour, modifier, ouvrir le lecteur
-externe…) ; `app.js` ne leur fournit plus que ce qu'ils doivent savoir de l'affichage (boîte de dialogue ouverte,
-lecteur ouvert).
+externe…) ; `app.js` ne leur fournit plus que ce qu'ils doivent savoir de l'affichage (lecteur ouvert, site
+affiché) ; la boîte au premier plan, un `ds-modal`, est trouvée par `nav/focus.ts`.
 
 Le service de traduction (`i18n/`) reçoit les catalogues au démarrage et suit les changements de langue ; la langue
-de l'interface est sur `<html lang>`. Les vues historiques restent en français, écrites en dur et marquées
-`lang="fr"`, jusqu'à leur remplacement.
+de l'interface est sur `<html lang>`. Les messages encore écrits en dur dans `app.js` (en français) passeront par
+les catalogues avec la racine de composition (P4-24a2).
 
 ## `@mire/shared`
 

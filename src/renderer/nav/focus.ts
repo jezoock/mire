@@ -273,20 +273,18 @@ function topModal(): ModalElement | null {
 }
 
 /**
- * Boîte de dialogue au premier plan : la dernière ouverte entre la boîte historique `legacy` (`dialog[open]`) et les
- * `ds-modal` affichés. Pour un `ds-modal`, c'est son cadre (`role="dialog"`), portée des flèches et de la manette.
+ * Boîte de dialogue au premier plan : le dernier `ds-modal` affiché, par son cadre (`role="dialog"`), portée des
+ * flèches et de la manette ; `null` s'il n'y en a pas.
  */
-export function activeDialog(legacy: HTMLElement | null): HTMLElement | null {
+export function activeDialog(): HTMLElement | null {
   const modal = topModal();
-  if (!modal || (legacy && openedAt(legacy) > openedAt(modal))) return legacy;
-  return modal.querySelector<HTMLElement>('[role="dialog"]') ?? modal;
+  return modal ? (modal.querySelector<HTMLElement>('[role="dialog"]') ?? modal) : null;
 }
 
-/** Ferme la boîte de dialogue `box` comme Échap : `ds-modal` masqué, boîte historique annulée (`cancel`). */
+/** Ferme la boîte de dialogue `box` comme Échap : son `ds-modal` est masqué. */
 export function closeDialog(box: HTMLElement): void {
   const modal = box.closest<ModalElement>('ds-modal');
   if (modal) modal.shown = false;
-  else box.dispatchEvent(new Event('cancel', { cancelable: true }));
 }
 
 /* ------------------------------------------------------------------ */

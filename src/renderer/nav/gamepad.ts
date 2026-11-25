@@ -35,8 +35,6 @@ import {
 export interface GamepadHooks {
   /** Contexte affiché : boîte de dialogue, lecteur vidéo, visionneuse, site ou listes. */
   context(): PadContext;
-  /** Boîte de dialogue au premier plan, ou `null`. */
-  dialog(): HTMLElement | null;
   /** Combinaison du mode secours (Affichage + Menu) : ouvrir l'explorateur (P4-10). */
   rescue?(): void;
   /** Profils de manettes des plugins actifs (P5-04) ; sans eux, le profil générique. */
@@ -58,7 +56,7 @@ const DIRS: Readonly<Record<string, Direction>> = { up: 'up', down: 'down', left
 /** Contexte de la manette : celui de l'interface, sauf un `ds-modal` au premier plan (dialogue) ou des colonnes. */
 function context(): PadContext {
   const ctx = hooks.context();
-  if (ctx !== 'dialog' && activeDialog(null)) return 'dialog';
+  if (ctx !== 'dialog' && activeDialog()) return 'dialog';
   if (ctx === 'list' && inColumns(document.activeElement)) return 'columns';
   return ctx;
 }
@@ -80,7 +78,7 @@ function padPress(k: string): void {
     return;
   }
   if (ctx === 'dialog') {
-    const box = activeDialog(hooks.dialog()) as HTMLElement;
+    const box = activeDialog() as HTMLElement;
     const key = padKey(LIST_PAD, k);
     // Un composant qui a le focus traite d'abord la touche (liste ouverte, onglets, Entrée d'un ds-trigger).
     if (key && relayPadKey(key)) return;

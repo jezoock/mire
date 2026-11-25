@@ -125,7 +125,7 @@ Une palette ne définit rien d'autre : ni règle sur un élément, ni jeton `--d
   de la palette, et ceux du moteur qui en dérivent, s'y appliquent.
 - L'habillage règle le moteur de dot-stash une fois pour toutes (`theme/_tokens.scss`) : ses couleurs
   (`$colors`, `--ds-color-…`) sont des références aux jetons des palettes (`var(--bg)`, `var(--text)`…) et à
-  l'accent de la section (`var(--ring)`, calculé par `styles.css`). Les jetons du moteur qui en dépendent sont
+  l'accent de la section (`var(--ring)`, calculé par la feuille de la coquille, `mire-app/_shell.scss`). Les jetons du moteur qui en dépendent sont
   redéclarés là où ces valeurs changent (`body`, mini-lecteur, lecteurs plein écran, blocs `[data-palette]`).
 
 Correspondance des couleurs du moteur :
@@ -152,7 +152,8 @@ Correspondance des couleurs du moteur :
 | `index.scss` | Assemble l'habillage, avec les habillages du thème `default` de dot-stash pour les autres composants `ds-*` utilisés : ils ne lisent que les jetons du moteur, qui sont ici ceux de Mire. |
 
 Les composants `mire-*` ont leur feuille à côté de leur code ; `packages/ui/src/styles/index.scss` assemble le tout.
-L'interface historique (`styles.css`) lit directement les jetons des palettes.
+La coquille (`mire-app/_shell.scss`), le menu, l'en-tête et l'aide de la manette, repris de l'ancienne feuille
+`styles.css` (P4-24a1), lisent directement les jetons des palettes.
 
 ## Contrastes
 

@@ -381,19 +381,48 @@ d'étape **G6**.
 
 ## P4-24 — Retrait de l'interface historique et audits
 
-- **Dépend de** : P4-08 à P4-23 · **Taille** : M · 🧑
-- **À faire** : suppression de `app.js` et de ce qui en reste, de `styles.css` monolithique, de `mire-legacy-view`,
-  du pont `data-action`, des méthodes IPC que le catalogue remplace et des fonctions de `src/renderer/domain/` qui ne
-  servent plus ; audit accessibilité (lecteur d'écran sur les parcours principaux, contrastes) ; performance
+Découpée (décisions de la session de pilotage) : P4-24a, en deux PR (P4-24a1 puis P4-24a2), puis P4-24b. L'inventaire de
+P4-24a a fait naître P4-29 (fonctions manquantes de la nouvelle interface), à faire avant le retrait.
+
+### P4-24a1 — Retrait de l'interface historique : vues, pont, panneau, boîtes, styles
+
+- **Dépend de** : P4-08 à P4-23, P4-29 · **Taille** : M · 🧑
+- **À faire** : inventaire d'abord (`docs/plan/inventaire-p4-24a.md` : chaque écran, panneau, boîte, raccourci et
+  action de l'interface historique, avec son remplaçant ; un manque arrête la tâche) ; puis retrait des sections
+  historiques et de leur « Ancienne vue », de `styles.css` monolithique (ce qu'un composant ou un thème utilise encore
+  va à sa place), de `mire-legacy-view` et `legacy-markup.ts`, du panneau « Réglages de la page » (le rouage de
+  l'en-tête ouvre les Réglages sur la partie de la page affichée), des boîtes historiques (rebranchées sur `ds-modal`
+  et `ds-toaster`) et du pont `data-action` (`check:actions` ne vérifie plus que les `ds-trigger`) ; test de fumée
+  par la nouvelle interface seulement.
+- **Fonctions retirées sans remplaçant sur place** (décision de la session de pilotage) : filtres et tri des
+  sections (remplacés par les pages, P4-21, et la Recherche, P4-13) ; récupération des infos d'un seul type et « tout
+  reprendre » (reste « tout récupérer ») ; recherche en cours sur un site de jeux d'une console.
+- **Critères d'acceptation** : l'application démarre et tous les parcours du test de fumée passent sans les vues
+  historiques ; `npm run check:actions` vert ; plus aucun `innerHTML` construit à partir de données dans les
+  composants et les vues ; tailles de `dist/` avant et après dans la PR ; 🧑 tour complet à la manette et au clavier.
+
+### P4-24a2 — Retrait de l'interface historique : racine de composition, méthodes IPC, `domain/`
+
+- **Dépend de** : P4-24a1 · **Taille** : M · 🧑
+- **À faire** : `app.js` remplacé par une racine de composition en TypeScript (création des écrans, chargement,
+  lecteurs, opérations que les contrôleurs demandent) ; retrait des méthodes IPC que le catalogue remplace (contrat,
+  préchargement, gestionnaires, tests) et des fonctions de `src/renderer/domain/` qui ne servent plus.
+- **Critères d'acceptation** : plus de `app.js` ; plus aucun `innerHTML` construit à partir de données dans
+  `src/renderer/` et `packages/ui/` ; tailles de `dist/` avant et après ; 🧑 tour complet à la manette et au clavier.
+
+### P4-24b — Audits
+
+- **Dépend de** : P4-24a2 · **Taille** : M
+- **À faire** : audit accessibilité (lecteur d'écran sur les parcours principaux, contrastes) ; performance
   (catalogue factice de 20 000 éléments : temps d'affichage, mémoire) ; comparaison visuelle automatique des
   captures (seuil de tolérance) ajoutée au test de bout en bout.
-- **Critères d'acceptation** : plus aucun `innerHTML` construit à partir de données ; mesures dans la PR.
+- **Critères d'acceptation** : mesures dans la PR.
 
 ---
 
 ## P4-25 — Guide « Créer un thème »
 
-- **Dépend de** : P4-11, P4-24 · **Taille** : S
+- **Dépend de** : P4-11, P4-24a2 · **Taille** : S
 - **À faire** : `docs/themes.md` complet (palettes et leurs jetons, `theme.json`, exemples) ; un thème d'exemple
   sans code, prêt à devenir un plugin ; captures.
 
@@ -401,7 +430,7 @@ d'étape **G6**.
 
 ## P4-26 — Sélecteur de langue et finitions de la localisation
 
-- **Dépend de** : P4-20, P4-24, P1-28, P1-29 · **Taille** : S
+- **Dépend de** : P4-20, P4-24a2, P1-28, P1-29 · **Taille** : S
 - **À faire** : choix de la langue dans Réglages (« Automatique », anglais, puis les packs installés) avec bascule
   immédiate, et de la langue des fiches (`search.language`) ; attribut `lang` du document vérifié pour les pluriels
   des composants dot-stash ; menu de macOS : libellés des rôles Electron (`appMenu`, `editMenu`, `windowMenu`) pris
@@ -414,7 +443,7 @@ d'étape **G6**.
 
 ## P4-27 — Thèmes avec leur propre code : cadre et API
 
-- **Dépend de** : P4-11, P4-24, P3-04 · **Taille** : L · 🧑
+- **Dépend de** : P4-11, P4-24a2, P3-04 · **Taille** : L · 🧑
 - **Objectif** : permettre un thème qui n'a rien à voir avec le thème Mire, en visuels comme en agencement, et qui
   accède à tous les contenus de la bibliothèque (D-23).
 - **À faire**

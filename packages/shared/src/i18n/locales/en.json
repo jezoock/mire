@@ -54,8 +54,7 @@
           "confirm": "Ask for a confirmation",
           "pick": "Choose a record",
           "tabs": "Tabbed panel",
-          "notify": "Show a notification",
-          "legacy": "From a legacy box"
+          "notify": "Show a notification"
         },
         "result": "Result: {result}",
         "cancelled": "closed without a choice",
@@ -93,12 +92,7 @@
           "auto": "Automatic",
           "high": "High"
         },
-        "notice": "Demonstration notification.",
-        "legacy": {
-          "title": "Legacy box",
-          "help": "This box belongs to the legacy interface; it opens a component box on top of it.",
-          "ask": "Ask with the components"
-        }
+        "notice": "Demonstration notification."
       }
     },
     "elements": {
@@ -832,9 +826,6 @@
         }
       },
       "header": {
-        "search": "Search",
-        "searchChannel": "Search for a channel",
-        "searchLabel": "Search this section",
         "gear": "Settings for this page",
         "gearScraping": "Getting info: {done} of {total}",
         "gearPreparing": "Getting info…"
@@ -861,7 +852,8 @@
           "select": "Select"
         },
         "pick": "Choose"
-      }
+      },
+      "drop": "Drop your files to play them"
     },
     "themes": {
       "setting": {
@@ -883,7 +875,6 @@
       "loading": "Loading…",
       "empty": "Nothing to show here yet.",
       "missing": "This page no longer exists.",
-      "legacy": "Previous view",
       "more": {
         "one": "Show more ({count} left)",
         "other": "Show more ({count} left)"

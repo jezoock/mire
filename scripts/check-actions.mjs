@@ -8,16 +8,13 @@
  *   composant) : leurs attributs `target` et `action` sont vérifiés de la même façon là où ils sont écrits ;
  * - les boîtes de dialogue (`mire-form`, `mire-pick`, P4-06) écrivent le nom de leur action tel quel suivi d'arguments
  *   calculés (`action={`act:${…}`}`) : seul ce nom est vérifié ;
- * - chaque `data-action` des vues historiques a une entrée dans le pont (controllers/bridge.ts), et chaque entrée du
- *   pont désigne une méthode existante d'un contrôleur.
+ * - plus aucun `data-action` (pont des vues historiques, retiré en P4-24a1) : toute action passe par un `ds-trigger`.
  * Usage : node scripts/check-actions.mjs — sort en erreur après avoir listé tous les problèmes.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
 import { CONTROLLER_CLASSES } from '../src/renderer/controllers/index.ts';
-import { LEGACY_ACTIONS } from '../src/renderer/controllers/bridge.ts';
 import { actionNames } from '../src/renderer/controllers/registry.ts';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -118,57 +115,32 @@ export function checkTriggers(triggers, methods) {
   return errors;
 }
 
-// Fonctions des vues historiques qui écrivent `data-action="${…}"` : position de l'argument qui donne l'action.
-const ACTION_PRODUCERS = { tile: 2, hdrMenu: 2, b: 0 };
+// Seule exception, jusqu'à la fusion de #117 (P5-12) qui en modifie une ligne : `sourcesHtml` d'app.js, code mort
+// (plus appelé depuis P4-24a1), retiré après cette fusion.
+const DEAD_UNTIL_P5_12 = { file: 'src/renderer/app.js', from: 'function sourcesHtml(' };
 
-/** Valeurs de `data-action` des gabarits historiques (écrites telles quelles, ou passées à un producteur connu). */
-export function findLegacyActions(root = ROOT) {
-  const found = new Map();
-  const errors = [];
-  const add = (name, where) => found.has(name) || found.set(name, where);
-  for (const file of filesOf(path.join(root, 'src', 'renderer'), ['.js', '.ts', '.html'])) {
-    if (file.includes(`${path.sep}controllers${path.sep}`)) continue;
-    const text = fs.readFileSync(file, 'utf8');
-    for (const m of text.matchAll(/data-action="([^"]*)"/g)) {
-      const where = `${rel(file)}:${lineOf(text, m.index)}`;
-      if (/^[a-z0-9-]+$/.test(m[1])) add(m[1], where);
-      else if (!/^\$\{action\}$/.test(m[1])) errors.push(`${where} : data-action="${m[1]}" n'est pas vérifiable`);
-    }
-    if (!file.endsWith('.js')) continue;
-    const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-    const visit = (node) => {
-      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && Object.hasOwn(ACTION_PRODUCERS, node.expression.text)) {
-        const arg = node.arguments[ACTION_PRODUCERS[node.expression.text]];
-        const where = `${rel(file)}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
-        const literals = [];
-        const collect = (n) => {
-          if (ts.isConditionalExpression(n)) {
-            collect(n.whenTrue);
-            collect(n.whenFalse);
-          } else if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) literals.push(n.text);
-          else if (ts.isParenthesizedExpression(n)) collect(n.expression);
-          else literals.push(null);
-        };
-        if (arg) collect(arg);
-        // Les producteurs se passent l'action entre eux (hdrMenu reçoit `action` de son appelant) : seuls les littéraux comptent.
-        for (const name of literals) if (name !== null) add(name, where);
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(source);
-  }
-  return { actions: found, errors };
+/** Lignes du code mort de `DEAD_UNTIL_P5_12` dans `text` (fonction entière), ou un ensemble vide. */
+function deadLines(file, text) {
+  if (rel(file) !== DEAD_UNTIL_P5_12.file) return new Set();
+  const lines = text.split('\n');
+  const start = lines.findIndex((l) => l.startsWith(DEAD_UNTIL_P5_12.from));
+  if (start < 0) return new Set();
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('}'));
+  return new Set(Array.from({ length: end - start + 1 }, (_, i) => start + 1 + i));
 }
 
-/** Problèmes du pont : `data-action` sans entrée, entrée vers une méthode inconnue, entrée inutilisée. */
-export function checkBridge(legacy, bridge, methods) {
+/** `data-action` encore écrits dans l'interface : il n'y en a plus (P4-24a1), chacun est une erreur. */
+export function findDataActions(root = ROOT) {
   const errors = [];
-  for (const [name, where] of legacy) {
-    if (!Object.hasOwn(bridge, name)) errors.push(`${where} : data-action="${name}" n'a pas d'entrée dans le pont (controllers/bridge.ts)`);
-  }
-  for (const [name, { tag, method }] of Object.entries(bridge)) {
-    if (!methods[tag]?.includes(method)) errors.push(`pont, « ${name} » : ${tag} n'a pas de méthode « ${method} »`);
-    if (!legacy.has(name)) errors.push(`pont, « ${name} » : aucune vue historique n'emploie cette action`);
+  const files = [
+    ...filesOf(path.join(root, 'src', 'renderer'), ['.js', '.ts', '.html']),
+    ...filesOf(path.join(root, 'packages', 'ui', 'src'), ['.tsx', '.ts']),
+  ];
+  for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+    const dead = deadLines(file, text);
+    for (const m of text.matchAll(/data-action=/g))
+      if (!dead.has(lineOf(text, m.index))) errors.push(`${rel(file)}:${lineOf(text, m.index)} : data-action n'existe plus, employez un ds-trigger`);
   }
   return errors;
 }
@@ -177,17 +149,16 @@ export function checkBridge(legacy, bridge, methods) {
 export function checkActions(root = ROOT) {
   const methods = targetMethods(root);
   const triggers = findTriggers(root);
-  const legacy = findLegacyActions(root);
-  const errors = [...checkTriggers(triggers, methods), ...legacy.errors, ...checkBridge(legacy.actions, LEGACY_ACTIONS, methods)];
-  return { errors, triggers: triggers.length, legacy: legacy.actions.size };
+  const errors = [...checkTriggers(triggers, methods), ...findDataActions(root)];
+  return { errors, triggers: triggers.length };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { errors, triggers, legacy } = checkActions();
+  const { errors, triggers } = checkActions();
   if (errors.length) {
     console.error(`Actions : ${errors.length} problème(s)`);
     for (const e of errors) console.error(`  - ${e}`);
     process.exit(1);
   }
-  console.log(`Actions : ${triggers} ds-trigger et ${legacy} data-action vérifiés, tous reliés à une méthode existante.`);
+  console.log(`Actions : ${triggers} ds-trigger vérifiés, tous reliés à une méthode existante.`);
 }

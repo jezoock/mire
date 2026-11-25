@@ -45,10 +45,10 @@ export namespace Components {
      * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
-     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
-     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
-     * ce que la page place dans ces hôtes n'est jamais touché.
+     * Les écrans s'affichent dans `#view`, où la page place l'hôte de l'écran affiché. Les lecteurs (`mire-video-player`,
+     * P4-14 ; `mire-mini-player` et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu ; le message bref
+     * (`#toast`, celui qui a un bouton d'action) et la zone de dépôt des fichiers (`#drop`) reçoivent leur texte de la
+     * page. La coquille ne se rend qu'une fois (aucun état) : ce que la page place dans ces éléments n'est jamais touché.
      */
     interface MireApp {
     }
@@ -517,9 +517,8 @@ export namespace Components {
         "variant": string;
     }
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface MireHeader {
         /**
@@ -553,19 +552,6 @@ export namespace Components {
           * @default ''
          */
         "heading": string;
-        /**
-          * @default ''
-         */
-        "searchLabel": string;
-        /**
-          * @default ''
-         */
-        "searchPlaceholder": string;
-        /**
-          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
-          * @default false
-         */
-        "searchable": boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
           * @default ''
@@ -694,14 +680,6 @@ export namespace Components {
         "subheading": string;
     }
     /**
-     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
-     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
-     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
-     * (P4-24).
-     */
-    interface MireLegacyView {
-    }
-    /**
      * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
      * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
      * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
@@ -786,7 +764,7 @@ export namespace Components {
      * à l'approche de la fin et par « Afficher la suite ».
      * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
      * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
-     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     * `openElement`, `loadMore`, `playAll`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
      */
     interface MirePageView {
         /**
@@ -1316,10 +1294,10 @@ declare global {
      * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
-     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
-     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
-     * ce que la page place dans ces hôtes n'est jamais touché.
+     * Les écrans s'affichent dans `#view`, où la page place l'hôte de l'écran affiché. Les lecteurs (`mire-video-player`,
+     * P4-14 ; `mire-mini-player` et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu ; le message bref
+     * (`#toast`, celui qui a un bouton d'action) et la zone de dépôt des fichiers (`#drop`) reçoivent leur texte de la
+     * page. La coquille ne se rend qu'une fois (aucun état) : ce que la page place dans ces éléments n'est jamais touché.
      */
     interface HTMLMireAppElement extends Components.MireApp, HTMLStencilElement {
     }
@@ -1567,9 +1545,8 @@ declare global {
         new (): HTMLMireGroupCardElement;
     };
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface HTMLMireHeaderElement extends Components.MireHeader, HTMLStencilElement {
     }
@@ -1630,18 +1607,6 @@ declare global {
         prototype: HTMLMireImageViewerElement;
         new (): HTMLMireImageViewerElement;
     };
-    /**
-     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
-     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
-     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
-     * (P4-24).
-     */
-    interface HTMLMireLegacyViewElement extends Components.MireLegacyView, HTMLStencilElement {
-    }
-    var HTMLMireLegacyViewElement: {
-        prototype: HTMLMireLegacyViewElement;
-        new (): HTMLMireLegacyViewElement;
-    };
     interface HTMLMireMiniPlayerElementEventMap {
         "mireMusicSeek": { ratio: number; commit: boolean };
         "mireMusicVolume": { value: number; commit: boolean };
@@ -1700,7 +1665,7 @@ declare global {
      * à l'approche de la fin et par « Afficher la suite ».
      * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
      * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
-     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     * `openElement`, `loadMore`, `playAll`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
      */
     interface HTMLMirePageViewElement extends Components.MirePageView, HTMLStencilElement {
     }
@@ -1979,7 +1944,6 @@ declare global {
         "mire-home": HTMLMireHomeElement;
         "mire-home-view": HTMLMireHomeViewElement;
         "mire-image-viewer": HTMLMireImageViewerElement;
-        "mire-legacy-view": HTMLMireLegacyViewElement;
         "mire-mini-player": HTMLMireMiniPlayerElement;
         "mire-padbar": HTMLMirePadbarElement;
         "mire-page": HTMLMirePageElement;
@@ -2005,10 +1969,10 @@ declare namespace LocalJSX {
      * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
      * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
      * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
-     * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-     * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
-     * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
-     * ce que la page place dans ces hôtes n'est jamais touché.
+     * Les écrans s'affichent dans `#view`, où la page place l'hôte de l'écran affiché. Les lecteurs (`mire-video-player`,
+     * P4-14 ; `mire-mini-player` et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu ; le message bref
+     * (`#toast`, celui qui a un bouton d'action) et la zone de dépôt des fichiers (`#drop`) reçoivent leur texte de la
+     * page. La coquille ne se rend qu'une fois (aucun état) : ce que la page place dans ces éléments n'est jamais touché.
      */
     interface MireApp {
     }
@@ -2476,9 +2440,8 @@ declare namespace LocalJSX {
         "variant"?: string;
     }
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface MireHeader {
         /**
@@ -2512,19 +2475,6 @@ declare namespace LocalJSX {
           * @default ''
          */
         "heading"?: string;
-        /**
-          * @default ''
-         */
-        "searchLabel"?: string;
-        /**
-          * @default ''
-         */
-        "searchPlaceholder"?: string;
-        /**
-          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
-          * @default false
-         */
-        "searchable"?: boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
           * @default ''
@@ -2657,14 +2607,6 @@ declare namespace LocalJSX {
         "subheading"?: string;
     }
     /**
-     * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
-     * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
-     * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
-     * (P4-24).
-     */
-    interface MireLegacyView {
-    }
-    /**
      * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
      * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
      * `mire-mini-player` : ses boutons sont des `ds-trigger` vers ses actions (morceau précédent, lecture, morceau suivant,
@@ -2757,7 +2699,7 @@ declare namespace LocalJSX {
      * à l'approche de la fin et par « Afficher la suite ».
      * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
      * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
-     * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+     * `openElement`, `loadMore`, `playAll`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
      */
     interface MirePageView {
         /**
@@ -3342,9 +3284,6 @@ declare namespace LocalJSX {
     }
     interface MireHeaderAttributes {
         "heading": string;
-        "searchable": boolean;
-        "searchPlaceholder": string;
-        "searchLabel": string;
         "gearLabel": string;
         "gearTitle": string;
         "gearBusy": boolean;
@@ -3512,7 +3451,6 @@ declare namespace LocalJSX {
         "mire-home": MireHome;
         "mire-home-view": Omit<MireHomeView, keyof MireHomeViewAttributes> & { [K in keyof MireHomeView & keyof MireHomeViewAttributes]?: MireHomeView[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `attr:${K}`]?: MireHomeViewAttributes[K] } & { [K in keyof MireHomeView & keyof MireHomeViewAttributes as `prop:${K}`]?: MireHomeView[K] };
         "mire-image-viewer": Omit<MireImageViewer, keyof MireImageViewerAttributes> & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes]?: MireImageViewer[K] } & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes as `attr:${K}`]?: MireImageViewerAttributes[K] } & { [K in keyof MireImageViewer & keyof MireImageViewerAttributes as `prop:${K}`]?: MireImageViewer[K] };
-        "mire-legacy-view": MireLegacyView;
         "mire-mini-player": Omit<MireMiniPlayer, keyof MireMiniPlayerAttributes> & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes]?: MireMiniPlayer[K] } & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes as `attr:${K}`]?: MireMiniPlayerAttributes[K] } & { [K in keyof MireMiniPlayer & keyof MireMiniPlayerAttributes as `prop:${K}`]?: MireMiniPlayer[K] };
         "mire-padbar": Omit<MirePadbar, keyof MirePadbarAttributes> & { [K in keyof MirePadbar & keyof MirePadbarAttributes]?: MirePadbar[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `attr:${K}`]?: MirePadbarAttributes[K] } & { [K in keyof MirePadbar & keyof MirePadbarAttributes as `prop:${K}`]?: MirePadbar[K] };
         "mire-page": MirePage;
@@ -3541,10 +3479,10 @@ declare module "@stencil/core" {
              * manette (`mire-padbar`) et l'hôte des boîtes de dialogue (`mire-dialogs`). Ses méthodes sont les actions du
              * contrôleur `mire-app` (écrans, menu, réglages de la page, notifications), qui vit avec l'état de l'interface
              * (`src/renderer/controllers/`) ; la page (`src/renderer/shell/`) donne au menu et à l'en-tête leurs entrées et textes.
-             * Les écrans pas encore remplacés s'affichent dans un `mire-legacy-view` : `#view` pour les sections, et un second
-             * pour les boîtes et messages de l'interface historique. Les lecteurs (`mire-video-player`, P4-14 ; `mire-mini-player`
-             * et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu. La coquille ne se rend qu'une fois (aucun état) :
-             * ce que la page place dans ces hôtes n'est jamais touché.
+             * Les écrans s'affichent dans `#view`, où la page place l'hôte de l'écran affiché. Les lecteurs (`mire-video-player`,
+             * P4-14 ; `mire-mini-player` et `mire-image-viewer`, P4-15) sont cachés tant que rien n'est lu ; le message bref
+             * (`#toast`, celui qui a un bouton d'action) et la zone de dépôt des fichiers (`#drop`) reçoivent leur texte de la
+             * page. La coquille ne se rend qu'une fois (aucun état) : ce que la page place dans ces éléments n'est jamais touché.
              */
             "mire-app": LocalJSX.IntrinsicElements["mire-app"] & JSXBase.HTMLAttributes<HTMLMireAppElement>;
             /**
@@ -3664,9 +3602,8 @@ declare module "@stencil/core" {
              */
             "mire-group-card": LocalJSX.IntrinsicElements["mire-group-card"] & JSXBase.HTMLAttributes<HTMLMireGroupCardElement>;
             /**
-             * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-             * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-             * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+             * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+             * heure viennent de la page.
              */
             "mire-header": LocalJSX.IntrinsicElements["mire-header"] & JSXBase.HTMLAttributes<HTMLMireHeaderElement>;
             /**
@@ -3696,13 +3633,6 @@ declare module "@stencil/core" {
              * pour que l'image suivante s'affiche sans attente, et signale une image illisible (`mireImageError`).
              */
             "mire-image-viewer": LocalJSX.IntrinsicElements["mire-image-viewer"] & JSXBase.HTMLAttributes<HTMLMireImageViewerElement>;
-            /**
-             * Hôte d'une vue historique non encore remplacée (P4-07) : la vue des sections (`#view`, remplie par `app.js`), les
-             * lecteurs, les boîtes et les messages de l'interface historique. Le composant ne rend rien lui-même et ne se rend
-             * qu'une fois : le contenu que la page y place n'est jamais touché. Il disparaîtra avec la dernière vue historique
-             * (P4-24).
-             */
-            "mire-legacy-view": LocalJSX.IntrinsicElements["mire-legacy-view"] & JSXBase.HTMLAttributes<HTMLMireLegacyViewElement>;
             /**
              * Mini-lecteur de musique (P4-15), en bas de l'écran : le morceau en cours (pochette, titre, dossier et place dans la
              * file d'attente), les commandes, la position et le volume, partagé avec le lecteur vidéo. Hôte du contrôleur
@@ -3734,7 +3664,7 @@ declare module "@stencil/core" {
              * à l'approche de la fin et par « Afficher la suite ».
              * Elle n'a ni état de la page ni accès au catalogue : la page (`src/renderer/pages/`) lui donne le niveau chargé, ses
              * textes et la mise en page du thème. Les actions vont au contrôleur `mire-page` (`openGroup`, `openPath`,
-             * `openElement`, `loadMore`, `openLegacy`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
+             * `openElement`, `loadMore`, `playAll`) ; les éléments sont désignés par leur clé, les regroupements par leur valeur.
              */
             "mire-page-view": LocalJSX.IntrinsicElements["mire-page-view"] & JSXBase.HTMLAttributes<HTMLMirePageViewElement>;
             /**
