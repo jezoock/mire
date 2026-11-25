@@ -115,6 +115,8 @@ export interface ConsoleCard {
   emulator: string;
   /** Console installée par les apps du Centre (et non créée à la main). */
   store: boolean;
+  /** La console a une source en ligne : ses jeux en ligne s'affichent et se téléchargent (P4-29). */
+  online?: boolean;
 }
 
 /** Textes du Centre (hors lignes et cartes, déjà rédigées). */
@@ -159,6 +161,9 @@ export interface CentreLabels {
   chooseEmulator?: string;
   openSites?: string;
   removeConsole?: string;
+  onlineGames?: string;
+  cleanupGames?: string;
+  cleanupHelp?: string;
   fromApps?: string;
   add?: string;
   torrent?: string;

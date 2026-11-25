@@ -451,3 +451,23 @@ d'étape **G6**.
   (performances, navigation à la manette, textes par les catalogues) ; modèle de départ utilisable avec ou sans
   bibliothèque d'interface.
 - **Critères d'acceptation** : le thème d'exemple parcourt toute la bibliothèque et lit un film, une musique, un jeu.
+
+---
+
+## P4-29 — Fonctions manquantes de la nouvelle interface
+
+- **Dépend de** : P4-17, P4-13, P4-21 · **Taille** : M
+- **Origine** : l'inventaire de P4-24a (`docs/plan/inventaire-p4-24a.md`) a trouvé des fonctions de l'interface
+  historique sans remplaçant ; elles sont reprises ici, avant le retrait.
+- **À faire** :
+  - jeux en ligne d'une console (Centre › Consoles, « Jeux en ligne ») : les lire (ils entrent dans la page Jeux),
+    choisir la source, les télécharger tous sur l'ordinateur ; un jeu en ligne se télécharge depuis sa boîte, désigné
+    par sa clé (méthodes IPC existantes `romListSource` et `romDownload`, aucune nouvelle). P5-14b fera lire les
+    sources en ligne par le plugin `mire.games.roms` ; le téléchargement, la copie locale et le cache restent au cœur ;
+  - « Nettoyer la base de jeux » : dans l'onglet Consoles du Centre (`mire-games.cleanup`) ;
+  - touche Suppr sur une carte de jeu du catalogue : même confirmation et même suppression que « Supprimer » de la
+    boîte du jeu ;
+  - « Tout lire » d'une page de musique (l'ancien « Lire l'album ») : les morceaux affichés, à la suite, dans l'ordre
+    de la page.
+- **Critères d'acceptation** : tests `node:test` de la logique ; un parcours au test de fumée.
+

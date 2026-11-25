@@ -151,6 +151,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-26 | Sélecteur de langue et finitions de la localisation | S | P4-20, P4-24, P1-28, P1-29 |  | à faire | |
 | P4-27 | Thèmes avec leur propre code : cadre et API | L | P4-11, P4-24, P3-04 | 🧑 | à faire | |
 | P4-28 | Thème d'exemple avec code et guide | M | P4-27, P4-25 |  | à faire | |
+| P4-29 | Fonctions manquantes de la nouvelle interface | M | P4-17, P4-13, P4-21 |  | faite | [#120](https://github.com/jezoock/mire/pull/120) |
 | **G6** | **Point d'étape : fin de la phase 4** | | P4-01…P4-28 | | | |
 
 ### Dans dot-stash (dépôt `jezoock/dot-stash`)
