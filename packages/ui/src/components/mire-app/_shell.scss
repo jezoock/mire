@@ -1,0 +1,387 @@
+// Coquille (P4-24a1) : jetons communs, base de la page, charpente (menu, en-tête, écran) dans les quatre positions du
+// menu, message bref et zone de dépôt des fichiers. Repris tels quels de l'ancienne feuille de l'interface
+// historique (styles.css), seules règles encore employées ; chargés avant l'habillage du cœur, à la place qu'avait
+// cette feuille dans la page.
+
+/* ------------------------------------------------------------------
+   Mire : jetons
+   Fond « écran cathodique éteint », et les sept barres de la mire de test :
+   chaque section prend une barre comme couleur d'accent.
+   ------------------------------------------------------------------ */
+/* Jetons communs à tous les thèmes */
+:root {
+  --font: 'Archivo Variable', 'Archivo', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --r-sm: 4px;
+  --r-md: 10px;
+  --rail-w: 248px;
+  --rail-h: 92px;
+  --header-h: 84px;
+  /* Décalage du contenu selon la place prise par le menu (mini-lecteur, messages, rappel manette) */
+  --cl: 0px;
+  --cr: 0px;
+  --ct: 0px;
+  --cb: 0px;
+  --pad-x: 48px;
+}
+
+/* Couleurs : les palettes (src/renderer/palettes/<id>/<id>.css, jetons décrits dans docs/themes.md), appliquées par
+   l'attribut data-palette de la page ; les valeurs par défaut des jetons facultatifs sont dans l'habillage du cœur
+   (packages/ui/src/theme/_palettes.scss). */
+/* Accent de la section ; --ring est la version lisible sur le fond de la palette (focus, textes accentués), ou la
+   couleur qu'impose la palette (--ring-from). Recalculé dans un bloc qui porte sa propre palette (aperçus). */
+body {
+  --accent: var(--bar-white);
+}
+
+body,
+body [data-palette] {
+  --ring: color-mix(in srgb, var(--ring-from, var(--accent)) var(--ring-mix), #000);
+}
+
+/* data-accent : la section, ou, dans la vue de page (P4-11), l'ancienne section de la page (Films → videos). */
+body[data-accent='videos'] {
+  --accent: var(--bar-yellow);
+}
+
+body[data-accent='music'] {
+  --accent: var(--bar-cyan);
+}
+
+body[data-accent='images'] {
+  --accent: var(--bar-green);
+}
+
+body[data-accent='streaming'],
+body[data-accent='web'] {
+  --accent: var(--bar-magenta);
+}
+
+body[data-accent='tv'] {
+  --accent: var(--bar-red);
+}
+
+body[data-accent='games'] {
+  --accent: var(--bar-blue);
+}
+
+/* ------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 18px;
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+img {
+  display: block;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.focusable {
+  scroll-margin: 28px;
+}
+
+/* Anneau de focus visible au clavier et à la manette, discret à la souris. */
+body:not(.mouse) :is(button, input, select, textarea):focus {
+  outline: var(--ring-w) solid var(--ring);
+  outline-offset: 2px;
+}
+
+body.mouse :is(button, input, select, textarea):focus {
+  outline: none;
+}
+
+body.mouse :is(input:not([type='range']):not([type='checkbox']), select, textarea):focus {
+  outline: 2px solid var(--line-strong);
+  outline-offset: 1px;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+  border: 3px solid var(--bg);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------
+   Charpente
+   ------------------------------------------------------------------ */
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  height: 100vh;
+}
+
+body.menu-left:not(.menu-auto) {
+  --cl: var(--rail-w);
+}
+
+body.menu-right .app {
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+}
+
+body.menu-right .main {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.menu-right:not(.menu-auto) {
+  --cr: var(--rail-w);
+}
+
+body.menu-top .app {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--rail-h) minmax(0, 1fr);
+}
+
+body.menu-bottom .app {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--rail-h);
+}
+
+body.menu-bottom .main {
+  grid-row: 1;
+}
+
+body.menu-top:not(.menu-auto) {
+  --ct: var(--rail-h);
+}
+
+body.menu-bottom:not(.menu-auto) {
+  --cb: var(--rail-h);
+}
+
+body.menu-top .main,
+body.menu-bottom .main {
+  height: calc(100vh - var(--rail-h));
+}
+
+/* ---------- Menu rétractable : il passe par-dessus le contenu et se replie sur une fine poignée ---------- */
+body.menu-auto .app {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+body.menu-auto .main {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  height: 100vh;
+}
+
+body.menu-auto.menu-left {
+  --cl: 8px;
+}
+
+body.menu-auto.menu-right {
+  --cr: 8px;
+}
+
+body.menu-auto.menu-top {
+  --ct: 8px;
+}
+
+body.menu-auto.menu-bottom {
+  --cb: 8px;
+}
+
+body.menu-auto .main {
+  padding: var(--ct) var(--cr) var(--cb) var(--cl);
+}
+
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+}
+
+.main > .view {
+  position: relative;
+  z-index: 1;
+}
+
+.view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px var(--pad-x) 56px;
+}
+
+body.has-mini .view {
+  padding-bottom: 140px;
+}
+
+/* ------------------------------------------------------------------
+   Vue web intégrée : la page du site est posée par Electron sur mire-web-slot (P4-16)
+   ------------------------------------------------------------------ */
+body[data-section='web'] .view {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+body.has-mini[data-section='web'] .view {
+  padding-bottom: 94px;
+}
+
+body[data-section='web'] .toast {
+  top: 12px;
+  bottom: auto;
+  transform: translate(-50%, -12px);
+}
+
+body[data-section='web'] .toast.show {
+  transform: translate(-50%, 0);
+}
+
+.toast {
+  margin-bottom: var(--cb);
+}
+
+body.has-pad .toast {
+  bottom: 80px;
+}
+
+body.has-pad.has-mini .toast {
+  bottom: 172px;
+}
+
+/* ------------------------------------------------------------------
+   Messages et dépôt de fichiers
+   ------------------------------------------------------------------ */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: min(760px, 90vw);
+  padding: 14px 16px 14px 20px;
+  border-radius: var(--r-sm);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 16px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+body.has-mini .toast {
+  bottom: 120px;
+}
+
+.toast-btn {
+  flex: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.drop {
+  position: fixed;
+  inset: 18px;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  border: 3px dashed var(--text);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  font-size: 40px;
+  font-weight: 800;
+  font-stretch: 118%;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+   Petites fenêtres
+   ------------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  :root {
+    --rail-w: 84px;
+    --pad-x: 30px;
+  }
+  body.menu-auto {
+    --rail-w: 248px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

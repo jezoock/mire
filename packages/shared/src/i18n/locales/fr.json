@@ -826,9 +826,6 @@
         }
       },
       "header": {
-        "search": "Rechercher",
-        "searchChannel": "Rechercher une chaîne",
-        "searchLabel": "Rechercher dans cette section",
         "gear": "Réglages de cette page",
         "gearScraping": "Récupération des infos : {done} sur {total}",
         "gearPreparing": "Récupération des infos…"

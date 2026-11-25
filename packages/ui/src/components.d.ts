@@ -517,9 +517,8 @@ export namespace Components {
         "variant": string;
     }
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface MireHeader {
         /**
@@ -553,19 +552,6 @@ export namespace Components {
           * @default ''
          */
         "heading": string;
-        /**
-          * @default ''
-         */
-        "searchLabel": string;
-        /**
-          * @default ''
-         */
-        "searchPlaceholder": string;
-        /**
-          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
-          * @default false
-         */
-        "searchable": boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
           * @default ''
@@ -1559,9 +1545,8 @@ declare global {
         new (): HTMLMireGroupCardElement;
     };
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface HTMLMireHeaderElement extends Components.MireHeader, HTMLStencilElement {
     }
@@ -2455,9 +2440,8 @@ declare namespace LocalJSX {
         "variant"?: string;
     }
     /**
-     * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-     * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-     * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+     * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+     * heure viennent de la page.
      */
     interface MireHeader {
         /**
@@ -2491,19 +2475,6 @@ declare namespace LocalJSX {
           * @default ''
          */
         "heading"?: string;
-        /**
-          * @default ''
-         */
-        "searchLabel"?: string;
-        /**
-          * @default ''
-         */
-        "searchPlaceholder"?: string;
-        /**
-          * Recherche dans l'écran : affichée ou non, texte indicatif et nom.
-          * @default false
-         */
-        "searchable"?: boolean;
         /**
           * Heure affichée (`20:45`) et sa valeur machine (`datetime`).
           * @default ''
@@ -3313,9 +3284,6 @@ declare namespace LocalJSX {
     }
     interface MireHeaderAttributes {
         "heading": string;
-        "searchable": boolean;
-        "searchPlaceholder": string;
-        "searchLabel": string;
         "gearLabel": string;
         "gearTitle": string;
         "gearBusy": boolean;
@@ -3634,9 +3602,8 @@ declare module "@stencil/core" {
              */
             "mire-group-card": LocalJSX.IntrinsicElements["mire-group-card"] & JSXBase.HTMLAttributes<HTMLMireGroupCardElement>;
             /**
-             * En-tête de l'écran (P4-07) : titre, outils de l'écran, recherche dans l'écran, rouage (réglages de la page, vers le
-             * contrôleur `mire-app`) et horloge. Les outils (`#header-tools`, `#header-tools-right`) sont remplis par la vue
-             * affichée ; le champ de recherche garde sa saisie (la vue la lit). Textes et heure viennent de la page.
+             * En-tête de l'écran (P4-07) : titre, rouage (réglages de la page, vers le contrôleur `mire-app`) et horloge. Textes et
+             * heure viennent de la page.
              */
             "mire-header": LocalJSX.IntrinsicElements["mire-header"] & JSXBase.HTMLAttributes<HTMLMireHeaderElement>;
             /**

@@ -4,11 +4,19 @@
 // Le moteur ne se configure qu'au premier chargement : ses réglages sont ceux de l'habillage du cœur
 // (theme/_tokens.scss), chargé en premier ; jamais un `with (…)` après coup, qui provoque une erreur de Sass.
 //
-// Ni les styles de base du thème default (body, titres, liens…), qui changeraient l'interface historique, ni la
-// feuille dot-stash/dist/css/default.css : l'habillage du cœur (theme/), puis les styles des composants mire-*.
+// Ni les styles de base du thème default (body, titres, liens…), ni la feuille dot-stash/dist/css/default.css : la
+// coquille, l'habillage du cœur (theme/), puis les styles des composants mire-*.
 // Les couleurs viennent des palettes (src/renderer/palettes/, docs/themes.md), chargées après cette feuille.
 
 @use '../theme/tokens' as *;
+
+// Coquille, menu, en-tête et aide de la manette : avant l'habillage du cœur, comme l'ancienne feuille styles.css qu'ils
+// remplacent (P4-24a1), pour garder l'ordre des règles.
+@use '../components/mire-app/shell';
+@use '../components/mire-rail/mire-rail';
+@use '../components/mire-header/mire-header';
+@use '../components/mire-padbar/mire-padbar';
+
 @use '../theme';
 
 @use '../components/mire-demo/mire-demo';

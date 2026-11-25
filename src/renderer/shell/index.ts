@@ -59,13 +59,10 @@ export interface ShellHost extends RouterHost {
   onLayout(): void;
 }
 
-/** En-tête demandé par la vue affichée : un titre tiré tel quel (nom d'une console) ou celui de la vue. */
+/** En-tête demandé par la vue affichée : un titre tiré tel quel (nom d'une page) ou celui de la vue. */
 export interface HeaderState {
   view: string;
   title?: string;
-  searchable?: boolean;
-  /** Ce que cherche le champ : la vue (`section`) ou une chaîne de télévision (`channel`). */
-  search?: 'section' | 'channel';
 }
 
 export interface ScrapeProgress {
@@ -114,8 +111,8 @@ type RailEl = HTMLElement & {
   icons: Record<string, string>;
 };
 type HeaderEl = HTMLElement &
-  Record<'heading' | 'searchPlaceholder' | 'searchLabel' | 'gearLabel' | 'gearTitle' | 'gearIcon' | 'time' | 'datetime', string> &
-  Record<'searchable' | 'gearBusy' | 'gearHidden', boolean>;
+  Record<'heading' | 'gearLabel' | 'gearTitle' | 'gearIcon' | 'time' | 'datetime', string> &
+  Record<'gearBusy' | 'gearHidden', boolean>;
 type PadbarEl = HTMLElement & { hints: PadHint[] };
 
 export function createShell(host: ShellHost, doc: Document = document): Shell {
@@ -160,9 +157,6 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
   function renderHeader() {
     const s = headerState;
     header.heading = s.title ?? t(`shell.views.${s.view}`);
-    header.searchable = !!s.searchable;
-    header.searchPlaceholder = t(s.search === 'channel' ? 'shell.header.searchChannel' : 'shell.header.search');
-    header.searchLabel = t('shell.header.searchLabel');
     header.gearLabel = t('shell.header.gear');
     header.gearBusy = !!scrape?.running;
     header.gearTitle = scrape?.running

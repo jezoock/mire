@@ -29,12 +29,13 @@ const paletteBackground = (id) =>
   CORE_PALETTES.includes(id)
     ? JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'palettes', id, 'palette.json'), 'utf8')).background
     : JSON.parse(fs.readFileSync(path.join(PALETTE_PLUGIN, 'palettes', `${id}.json`), 'utf8')).tokens.bg;
-// Ordre des entrées du menu principal, de haut en bas : on s'y déplace aux flèches.
-const RAIL = ['search', 'home', 'videos', 'music', 'images', 'streaming', 'tv', 'games', 'downloads', 'settings'];
-// Sections visitées par le test, avec leur titre.
+// Ordre des entrées du menu principal, de haut en bas : on s'y déplace aux flèches. Une page est désignée par sa clé
+// (`movies`), un écran du cœur par sa vue (`search`).
+const RAIL = ['search', 'home', 'movies', 'series', 'music', 'images', 'streaming', 'tv', 'games', 'downloads', 'settings'];
+// Écrans et pages visités par le test, avec leur titre.
 const SECTIONS = [
   ['search', 'Rechercher'],
-  ['videos', 'Vidéos'],
+  ['movies', 'Films'],
   ['music', 'Musique'],
   ['images', 'Images'],
   ['streaming', 'Streaming'],
@@ -43,12 +44,14 @@ const SECTIONS = [
   ['downloads', 'Centre'],
   ['settings', 'Réglages'],
 ];
-// Sections historiques des pages (P4-11) : le menu ouvre la vue de page, « Ancienne vue » la section historique.
-const LEGACY_PAGES = new Set(['videos', 'music', 'images', 'streaming', 'tv', 'games']);
+// Pages prêtes à l'emploi ouvertes par le menu (vue de page, P4-11) : le nom de la page, titre de l'en-tête.
+const PAGES = new Set(['movies', 'series', 'music', 'images', 'streaming', 'tv', 'games']);
+// Nom des captures : celui des anciennes sections pour les pages qui les remplacent (Films : section-videos).
+const SHOT_NAMES = { movies: 'videos' };
 // Contenu attendu dans chaque section : la capture ne doit pas montrer un état vide.
 const FILLED = {
   search: 'Amélie',
-  videos: 'Voyage dans la Lune',
+  movies: 'Voyage dans la Lune',
   music: 'Premier album',
   images: 'Vacances',
   streaming: 'Arte',
@@ -129,7 +132,12 @@ async function settle() {
   await page.waitForTimeout(400);
 }
 
-const focused = () => page.evaluate(() => document.activeElement?.dataset?.go || null);
+// Entrée du menu qui a le focus : la clé d'une page, la vue d'un écran du cœur.
+const focused = () =>
+  page.evaluate(() => {
+    const d = document.activeElement?.dataset;
+    return (d?.key && !d.key.startsWith('screen:') ? d.key : d?.go) || null;
+  });
 
 // Où est le focus : dans le menu, sur une barre de l'accueil, dans un champ de saisie, ailleurs.
 const focusPlace = () =>
@@ -154,21 +162,16 @@ async function goByKeyboard(section) {
   await page.keyboard.press('Enter');
 }
 
-// Depuis la vue de page qu'ouvre le menu, passe à la section historique de la page (« Ancienne vue »).
-async function openLegacy(section) {
-  if (!LEGACY_PAGES.has(section)) return;
-  await page.waitForFunction(() => document.body.dataset.section === 'page');
-  const link = page.locator('#view mire-page-view .mire-page-view__legacy.hydrated');
-  await link.waitFor();
-  await link.click();
-}
-
+// Écran affiché : une section du cœur, ou la vue de page (section `page`) pour une page prête à l'emploi.
 async function expectSection(section, title) {
-  await page.waitForFunction((s) => document.body.dataset.section === s, section);
+  const shown = PAGES.has(section) ? 'page' : section;
+  await page.waitForFunction((s) => document.body.dataset.section === s, shown);
   // Le titre est rendu par mire-header (P4-07), à l'image suivante : on l'attend un peu avant de le comparer.
   await page.waitForFunction((t) => document.getElementById('title')?.textContent === t, title, { timeout: 2000 }).catch(() => {});
   assert.equal(await page.locator('#title').textContent(), title);
-  await page.locator('#view').getByText(FILLED[section]).first().waitFor({ timeout: 15000 });
+  // Une page montre ses regroupements ou ses éléments (le contenu des pages est vérifié par les tests de P4-11).
+  if (PAGES.has(section)) await page.locator('#view mire-page-view :is(mire-card, mire-group-card) ds-trigger.hydrated').first().waitFor({ timeout: 15000 });
+  else await page.locator('#view').getByText(FILLED[section]).first().waitFor({ timeout: 15000 });
 }
 
 describe('Test de fumée de Mire', () => {
@@ -228,7 +231,6 @@ describe('Test de fumée de Mire', () => {
     await page.keyboard.press('ArrowLeft');
     for (const [section, title] of SECTIONS) {
       await goByKeyboard(section);
-      await openLegacy(section);
       if (section === 'search') {
         // La Recherche (P4-13) est rendue à son premier affichage : on tape une fois le champ prêt.
         await page.waitForFunction(() => document.activeElement?.classList.contains('mire-search-view__input'));
@@ -236,20 +238,21 @@ describe('Test de fumée de Mire', () => {
       }
       await expectSection(section, title);
       await settle();
-      await shot(`section-${section}`);
+      await shot(`section-${SHOT_NAMES[section] ?? section}`);
     }
   });
 
-  it("le rouage ouvre les réglages d'une page", async () => {
-    await goByKeyboard('videos');
-    await openLegacy('videos');
-    await expectSection('videos', 'Vidéos');
+  it('le rouage ouvre les Réglages sur la partie de la page (P4-24a1)', async () => {
+    await goByKeyboard('movies');
+    await expectSection('movies', 'Films');
     await page.locator('#page-gear').click();
-    await page.locator('#panel[open]').waitFor();
+    await page.waitForFunction(() => document.body.dataset.section === 'settings');
+    // Le focus va à la partie des sources, celle des pages de vidéos.
+    await page.waitForFunction(() => document.activeElement?.closest('[data-part="sources"], [data-key="sources"], #set-sources'));
     await settle();
     await shot('rouage-videos');
     await page.keyboard.press('Escape');
-    await page.locator('#panel:not([open])').waitFor({ state: 'attached' });
+    await page.waitForFunction(() => document.body.dataset.section === 'home');
     await settle();
   });
 
@@ -341,7 +344,8 @@ describe('Test de fumée de Mire', () => {
     try {
       const lang = await page.evaluate(async () => (await window.api.i18nGet()).language);
       await page.waitForFunction((l) => document.documentElement.lang === l, lang);
-      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('mire-legacy-view')].map((v) => v.lang)), ['fr', 'fr']);
+      // Plus de vue historique (P4-24a1) : rien n'est plus marqué en français à part.
+      assert.equal(await page.evaluate(() => document.querySelectorAll('mire-legacy-view, #view[lang]').length), 0);
 
       await page.evaluate(() => {
         const t = document.createElement('ds-trigger');
@@ -1062,24 +1066,6 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(errors, []);
     });
 
-    it('cohabitation : une boîte historique ouvre une boîte sur les composants, qui se ferme seule', async () => {
-      await demoButton('legacy');
-      await press('Enter');
-      await page.locator('#dlg[open]').waitFor();
-      await page.locator('#dlg [data-dlg="ask"]').click();
-      await boxOpen('mire-form');
-      assert.equal(await page.evaluate(() => !!document.querySelector('#dlg mire-form')), true, 'placée dans la boîte historique');
-      assert.ok(await inBox(), 'le focus est dans la boîte sur les composants');
-      await press('Escape');
-      await page.waitForFunction(() => !document.querySelector('mire-form'));
-      assert.equal(await page.evaluate(() => document.getElementById('dlg').open), true, 'la boîte historique reste ouverte');
-      assert.deepEqual(await result(), { legacy: false });
-      assert.equal(await page.evaluate(() => document.activeElement?.dataset.dlg), 'ask');
-      await press('Escape');
-      await page.waitForFunction(() => !document.getElementById('dlg').open);
-      assert.deepEqual(errors, []);
-    });
-
     it('notification : ds-toaster, durée de toast', async () => {
       await demoButton('notify');
       await press('Enter');
@@ -1458,14 +1444,6 @@ describe('Test de fumée de Mire', () => {
       await page.waitForFunction(() => !document.getElementById('image-layer').hidden);
       await padPress('b');
       await page.waitForFunction(() => document.getElementById('image-layer').hidden);
-      assert.deepEqual(errors, []);
-    });
-
-    it('« Ancienne vue » ouvre la section historique ; le menu garde la page', async () => {
-      await openPage('series', 'Séries');
-      await openLegacy('videos');
-      await page.waitForFunction(() => document.body.dataset.section === 'videos');
-      assert.equal(await page.locator('#rail .rail-item[aria-current="page"]').getAttribute('data-key'), 'series');
       assert.deepEqual(errors, []);
     });
   });
@@ -3431,9 +3409,9 @@ describe('Test de fumée de Mire', () => {
       const location = path.join(os.tmpdir(), 'mire-e2e', 'fixtures', 'bibliotheque');
       const before = (await config()).library.sources.filter((x) => x.kind === 'image').length;
       await group('sources:image').locator('ds-trigger[action^="addSourceAddress"]').click();
-      // Boîte « Ajouter une adresse » (encore celle de l'interface historique).
-      await page.locator('#dlg[open] #dlgf-location').fill(location);
-      await page.locator('#dlg[open] [data-dlg="ok"]').click();
+      // Boîte « Ajouter une adresse » (sur les composants depuis P4-24a1).
+      await page.locator('mire-dialogs mire-form input[name="location"]').fill(location);
+      await page.locator('mire-dialogs mire-form .mire-form__actions ds-trigger', { hasText: 'Ajouter' }).click();
       await waitConfig((c, a) => c.library.sources.some((x) => x.kind === 'image' && x.location === a), location);
       const added = (await config()).library.sources.find((x) => x.kind === 'image' && x.location === location);
       const row = group('sources:image').locator(`li.mire-settings-view__entry[data-key="${added.id}"]`);
@@ -3811,13 +3789,15 @@ describe('Test de fumée de Mire', () => {
     const tab = (i) => page.locator('mire-form [role="tab"]').nth(i);
     const help = () => page.locator('mire-form .mire-form__help');
     const overview = () => page.evaluate(() => window.api.pagesOverview());
-    // Confirmation : la boîte oui / non de l'interface (encore celle de l'interface historique, comme dans le Centre).
+    // Confirmation : la boîte oui / non sur les composants (P4-24a1).
     const confirmYes = async (re) => {
-      const yes = page.locator('#dlg[open] [data-dlg="yes"]');
+      // La boîte oui / non est la dernière ouverte ; « oui » est son premier bouton.
+      const yes = page.locator('mire-dialogs mire-form').last().locator('.mire-form__actions ds-trigger.hydrated').first();
       await yes.waitFor();
       assert.match(await yes.textContent(), re);
+      const open = await page.locator('mire-dialogs mire-form').count();
       await yes.click();
-      await page.waitForFunction(() => !document.querySelector('#dlg[open]'));
+      await page.waitForFunction((n) => document.querySelectorAll('mire-dialogs mire-form').length < n, open);
     };
 
     before(() => {
@@ -3969,11 +3949,13 @@ describe('Test de fumée de Mire', () => {
     const boxClosed = () => page.waitForFunction(() => !document.querySelector('mire-form'));
     const button = (re) => page.locator('mire-form ds-trigger', { hasText: re });
     const confirmYes = async (re) => {
-      const yes = page.locator('#dlg[open] [data-dlg="yes"]');
+      // La boîte oui / non est la dernière ouverte ; « oui » est son premier bouton.
+      const yes = page.locator('mire-dialogs mire-form').last().locator('.mire-form__actions ds-trigger.hydrated').first();
       await yes.waitFor();
       assert.match(await yes.textContent(), re);
+      const open = await page.locator('mire-dialogs mire-form').count();
       await yes.click();
-      await page.waitForFunction(() => !document.querySelector('#dlg[open]'));
+      await page.waitForFunction((n) => document.querySelectorAll('mire-dialogs mire-form').length < n, open);
     };
     const tags = () => page.evaluate(() => window.api.tagsOverview());
     const tag = async (id) => (await tags()).find((x) => x.id === id);

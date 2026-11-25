@@ -826,9 +826,6 @@
         }
       },
       "header": {
-        "search": "Search",
-        "searchChannel": "Search for a channel",
-        "searchLabel": "Search this section",
         "gear": "Settings for this page",
         "gearScraping": "Getting info: {done} of {total}",
         "gearPreparing": "Getting info…"

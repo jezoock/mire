@@ -1,0 +1,54 @@
+// Aide de la manette (P4-07). Reprise de l'ancienne feuille de l'interface historique (P4-24a1), chargée avant
+// l'habillage du cœur comme elle.
+
+/* Rappel des boutons de la manette */
+.padbar {
+  position: fixed;
+  right: calc(24px + var(--cr));
+  bottom: calc(20px + var(--cb));
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  max-width: calc(100vw - var(--cl) - var(--cr) - 48px);
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+body.has-mini .padbar {
+  bottom: calc(112px + var(--cb));
+}
+
+.ph {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.pb {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pb.long {
+  border-radius: 6px;
+}
+
+.ph .pb + .pb {
+  margin-left: -2px;
+}
