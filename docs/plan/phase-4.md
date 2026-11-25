@@ -381,19 +381,34 @@ d'étape **G6**.
 
 ## P4-24 — Retrait de l'interface historique et audits
 
+Découpée en deux PR (décision de la session de pilotage) : P4-24a, puis P4-24b.
+
+### P4-24a — Retrait de l'interface historique
+
 - **Dépend de** : P4-08 à P4-23 · **Taille** : M · 🧑
-- **À faire** : suppression de `app.js` et de ce qui en reste, de `styles.css` monolithique, de `mire-legacy-view`,
-  du pont `data-action`, des méthodes IPC que le catalogue remplace et des fonctions de `src/renderer/domain/` qui ne
-  servent plus ; audit accessibilité (lecteur d'écran sur les parcours principaux, contrastes) ; performance
+- **À faire** : inventaire d'abord (`docs/plan/inventaire-p4-24a.md` : chaque écran, panneau, boîte, raccourci et
+  action de l'interface historique, avec son remplaçant ; un manque arrête la tâche) ; puis suppression de `app.js` et
+  de ce qui en reste, de `styles.css` monolithique (ce qu'un composant ou un thème utilise encore va à sa place), de
+  `mire-legacy-view` et `legacy-markup.ts`, du pont `data-action` (`check:actions` ne vérifie plus que les
+  `ds-trigger`), des méthodes IPC que le catalogue remplace (contrat, préchargement, gestionnaires, tests) et des
+  fonctions de `src/renderer/domain/` qui ne servent plus ; test de fumée par la nouvelle interface seulement.
+- **Critères d'acceptation** : l'application démarre et tous les parcours du test de fumée passent sans l'interface
+  historique ; `npm run check:actions` vert ; plus aucun `innerHTML` construit à partir de données ; tailles de
+  `dist/` avant et après dans la PR ; 🧑 tour complet de l'application à la manette et au clavier.
+
+### P4-24b — Audits
+
+- **Dépend de** : P4-24a · **Taille** : M
+- **À faire** : audit accessibilité (lecteur d'écran sur les parcours principaux, contrastes) ; performance
   (catalogue factice de 20 000 éléments : temps d'affichage, mémoire) ; comparaison visuelle automatique des
   captures (seuil de tolérance) ajoutée au test de bout en bout.
-- **Critères d'acceptation** : plus aucun `innerHTML` construit à partir de données ; mesures dans la PR.
+- **Critères d'acceptation** : mesures dans la PR.
 
 ---
 
 ## P4-25 — Guide « Créer un thème »
 
-- **Dépend de** : P4-11, P4-24 · **Taille** : S
+- **Dépend de** : P4-11, P4-24a · **Taille** : S
 - **À faire** : `docs/themes.md` complet (palettes et leurs jetons, `theme.json`, exemples) ; un thème d'exemple
   sans code, prêt à devenir un plugin ; captures.
 
@@ -401,7 +416,7 @@ d'étape **G6**.
 
 ## P4-26 — Sélecteur de langue et finitions de la localisation
 
-- **Dépend de** : P4-20, P4-24, P1-28, P1-29 · **Taille** : S
+- **Dépend de** : P4-20, P4-24a, P1-28, P1-29 · **Taille** : S
 - **À faire** : choix de la langue dans Réglages (« Automatique », anglais, puis les packs installés) avec bascule
   immédiate, et de la langue des fiches (`search.language`) ; attribut `lang` du document vérifié pour les pluriels
   des composants dot-stash ; menu de macOS : libellés des rôles Electron (`appMenu`, `editMenu`, `windowMenu`) pris
@@ -414,7 +429,7 @@ d'étape **G6**.
 
 ## P4-27 — Thèmes avec leur propre code : cadre et API
 
-- **Dépend de** : P4-11, P4-24, P3-04 · **Taille** : L · 🧑
+- **Dépend de** : P4-11, P4-24a, P3-04 · **Taille** : L · 🧑
 - **Objectif** : permettre un thème qui n'a rien à voir avec le thème Mire, en visuels comme en agencement, et qui
   accède à tous les contenus de la bibliothèque (D-23).
 - **À faire**
