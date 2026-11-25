@@ -451,6 +451,59 @@
           },
           "emulator": "Émulateur : {name}",
           "emulatorOf": "Émulateur : {name}, celui de la console {console}"
+        },
+        "online": {
+          "title": "Jeux en ligne de {name}",
+          "help": "Mire lit la liste des jeux de vos sources en ligne. Ils apparaissent dans la page Jeux : chacun se lance tel quel, ou se télécharge sur l’ordinateur depuis sa boîte.",
+          "source": "Source",
+          "allSources": "Toutes les sources",
+          "show": "Afficher dans la page Jeux",
+          "downloadAll": "Tout télécharger",
+          "listed": {
+            "one": "{count} jeu en ligne dans la page Jeux",
+            "other": "{count} jeux en ligne dans la page Jeux"
+          },
+          "none": "Aucun jeu trouvé dans les sources en ligne de cette console.",
+          "unreadable": "Impossible de lire la source en ligne.",
+          "allLocal": "Tous les jeux en ligne de cette console sont déjà sur l’ordinateur.",
+          "confirmTitle": {
+            "one": "Télécharger {count} jeu dans le dossier de {console} ?",
+            "other": "Télécharger {count} jeux dans le dossier de {console} ?"
+          },
+          "confirmHelp": "Selon leur taille, cela peut prendre de la place et du temps. Vous pourrez suivre et mettre en pause chaque téléchargement dans le Centre.",
+          "added": {
+            "one": "{count} téléchargement ajouté. Suivez-le dans le Centre.",
+            "other": "{count} téléchargements ajoutés. Suivez-les dans le Centre."
+          }
+        },
+        "download": {
+          "action": "Télécharger sur cet ordinateur",
+          "notOnline": "Ce jeu n’est pas en ligne : il est déjà sur l’ordinateur.",
+          "failed": "Téléchargement impossible.",
+          "allThere": "Tous les fichiers de ce jeu sont déjà sur l’ordinateur.",
+          "files": {
+            "one": "{count} fichier à télécharger pour ce jeu, dans un dossier à son nom. Suivez-le dans le Centre.",
+            "other": "{count} fichiers à télécharger pour ce jeu (l’index et ses pistes), dans un dossier à son nom. Suivez-les dans le Centre."
+          },
+          "added": "Téléchargement ajouté : il ira dans le dossier de la console. Suivez-le dans le Centre."
+        },
+        "cleanup": {
+          "title": "Nettoyer la base de jeux",
+          "help": "Mire vérifie que chaque jeu est toujours là : les jeux PC dont le fichier a disparu sont retirés de la liste. Vérifier aussi que les sources en ligne répondent prend plus de temps.",
+          "check": "Vérifier",
+          "online": "Vérifier aussi en ligne",
+          "running": "Vérification des jeux…",
+          "failed": "Nettoyage impossible.",
+          "removed": {
+            "one": "{count} jeu PC retiré (fichier absent)",
+            "other": "{count} jeux PC retirés (fichier absent)"
+          },
+          "unreachable": {
+            "one": "{count} source en ligne injoignable",
+            "other": "{count} sources en ligne injoignables"
+          },
+          "done": "Nettoyage terminé : {details}.",
+          "clean": "Nettoyage terminé : tous les jeux sont disponibles."
         }
       }
     },
@@ -834,7 +887,8 @@
       "more": {
         "one": "Afficher la suite ({count} restant)",
         "other": "Afficher la suite ({count} restants)"
-      }
+      },
+      "playAll": "Tout lire"
     },
     "home": {
       "bars": {
@@ -1102,7 +1156,10 @@
         "emulator": "Émulateur",
         "sites": "Sites de jeux",
         "remove": "Retirer",
-        "fromApps": "Installée par les apps"
+        "fromApps": "Installée par les apps",
+        "online": "Jeux en ligne",
+        "cleanup": "Nettoyer la base de jeux",
+        "cleanupHelp": "Vérifie que chaque jeu est toujours disponible, et retire de la liste les jeux PC dont le fichier a disparu."
       },
       "plugins": {
         "intro": "Les plugins ajoutent des fonctions à Mire : sources, infos, palettes, sites… Ouvrez la fiche d’un plugin pour voir ce qu’il apporte et ce qu’il demande, avant de l’installer.",

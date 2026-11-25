@@ -3,7 +3,7 @@ import { plural } from '../core/format.ts';
 import { Controller, findBy, indexBy } from './base.ts';
 import type { ControllerContext, Data, ItemRef } from './types.ts';
 import type { Element as CatalogElement, InfoScalar, PagePath } from '@mire/shared';
-import { isGameBookmarkKey } from '../games/model.ts';
+import { isGameBookmarkKey, isGameKey } from '../games/model.ts';
 import { callAction } from './registry.ts';
 
 /**
@@ -138,6 +138,12 @@ export class PageController extends Controller {
   /** Supprime le jeu sélectionné (touche Suppr) ; faux si la sélection n'est pas un jeu qu'on peut supprimer. */
   deleteSelection(): boolean {
     const { ui } = this.ctx;
+    // Carte d'un jeu du catalogue (P4-29) : même confirmation et même suppression que « Supprimer » de sa boîte.
+    const key = ui.selectedKey?.();
+    if (isGameKey(key)) {
+      void callAction('mire-games', 'deleteGame', { key });
+      return true;
+    }
     const ref = ui.selectedRef();
     if (!ui.deletableGame(ref)) return false;
     ui.deleteGameRef(ref as ItemRef);
@@ -377,6 +383,23 @@ export class PageController extends Controller {
   openLegacy(): void {
     const section = this.ctx.ui.pageLegacySection();
     if (section) this.ctx.ui.go(section, { focus: 'content' });
+  }
+
+  /**
+   * « Tout lire » (P4-29) : lit à la suite les fichiers affichés (les morceaux d'un album), désignés par leur clé, dans
+   * l'ordre de la page ; rend le nombre de fichiers lus.
+   */
+  async playAll({ keys }: { keys: string[] }): Promise<number> {
+    const { S, api, ui } = this.ctx;
+    const els = (await Promise.all((Array.isArray(keys) ? keys : []).map((k) => api.catalogElement(String(k))))) as (CatalogElement | null)[];
+    const files = els.flatMap((el) => (el?.open.kind === 'file' ? [{ el, path: el.open.path }] : []));
+    // Fichiers que la bibliothèque n'a pas encore lus : décrits par le processus principal (lisibles par Mire ou non).
+    const known = new Set([...S.videos, ...S.tracks, ...S.images].map((x) => x.path));
+    const missing = files.filter((f) => !known.has(f.path) && !/^https?:/i.test(f.path)).map((f) => f.path);
+    const fresh = new Map(missing.length ? ((await api.fromPaths(missing)) as Data[]).map((x) => [x.path, x]) : []);
+    const items = files.map((f) => fresh.get(f.path) ?? mediaItemOf(S, f.el, f.path));
+    if (items.length) ui.playQueue(items, 0);
+    return items.length;
   }
 
   /** Ouvre, lit ou lance un élément du catalogue, désigné par sa clé, selon sa façon de s'ouvrir. */

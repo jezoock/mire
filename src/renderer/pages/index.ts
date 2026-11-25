@@ -100,6 +100,8 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
       loading: t('pageView.loading'),
       empty: t(model.current()?.missing ? 'pageView.missing' : 'pageView.empty'),
       ...(legacy ? { legacy: t('pageView.legacy') } : {}),
+      // Une page de musique lit ses morceaux à la suite (« Lire l'album », P4-29).
+      ...(p?.require?.includes('audio') ? { playAll: t('pageView.playAll') } : {}),
     };
   }
 
