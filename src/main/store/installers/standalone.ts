@@ -45,6 +45,6 @@ export async function installStandalone(ctx: InstallContext, emu: StoreEmulator)
   const exe = pattern ? await findFile(dir, pattern) : null;
   if (!exe) throw new Error(t('store.errors.programNotFound', { name: emu.name }));
   if (ctx.platform !== 'win32') await fsp.chmod(exe, 0o755);
-  ctx.registerConsoles(emu, emu.systems, exe, () => emu.args || []);
+  ctx.registerConsoles(emu, emu.systems, exe, (sys) => sys.args || emu.args || []);
   ctx.meta[emu.id] = { version: src.version, exe, at: Date.now() };
 }

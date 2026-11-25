@@ -150,6 +150,12 @@ const hasWebLocation =
     Array.isArray((c.library as Loose).sources) &&
     ((c.library as Loose).sources as unknown[]).some((s) => isRecord(s) && webLocation(s.location)?.playlist === playlist);
 
+/** Une console installée par la boutique avec l'émulateur `id` (`store` = `<émulateur>:<console>`) ; P5-19. */
+const hasStoreConsole =
+  (id: string) =>
+  (c: Loose): boolean =>
+    Array.isArray(c.emulators) && c.emulators.some((e) => isRecord(e) && typeof e.store === 'string' && e.store.startsWith(`${id}:`));
+
 /** Table des règles (P5-02 à P5-20 ajoutent la leur, voir plus haut). */
 export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   // P5-04 : profils de manettes, plugins inclus ; tout le monde avait ces profils, aucun réglage à déplacer.
@@ -266,6 +272,11 @@ export const CONTINUITY_RULES: readonly ContinuityRule[] = [
   { id: 'P5-09-music', plugin: 'mire.tags.music', mode: 'bundled', applies: always },
   { id: 'P5-09-consoles', plugin: 'mire.tags.consoles', mode: 'bundled', applies: always },
   { id: 'P5-09-photos', plugin: 'mire.tags.photos', mode: 'bundled', applies: always },
+  // P5-19a : émulateurs de la boutique, un plugin à installer par émulateur, pour une configuration qui a une console
+  // installée avec lui. Les consoles restent dans `emulators` avec leur programme et leurs arguments : elles se lancent
+  // sans le plugin, qui sert à les proposer, les installer et les mettre à jour. Rien à déplacer.
+  { id: 'P5-19-retroarch', plugin: 'mire.emulator.retroarch', mode: 'install', applies: hasStoreConsole('retroarch') },
+  { id: 'P5-19-duckstation', plugin: 'mire.emulator.duckstation', mode: 'install', applies: hasStoreConsole('duckstation') },
 ];
 
 /**

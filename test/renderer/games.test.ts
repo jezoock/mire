@@ -9,7 +9,19 @@ import { normalizeField, CENTRE_TABS, centreTab } from '@mire/ui/utils';
 import { GamesController } from '../../src/renderer/controllers/games.ts';
 import type { ControllerContext } from '../../src/renderer/controllers/types.ts';
 import type { FormOptions } from '../../src/renderer/ui/dialogs.ts';
-import { consoleCards, consoleFields, consoleInput, emulatorOptions, isGameBookmarkKey, isGameKey, programName } from '../../src/renderer/games/model.ts';
+import {
+  consoleCards,
+  consoleFields,
+  consoleInput,
+  emulatorOptions,
+  isGameBookmarkKey,
+  isGameKey,
+  onlineSources,
+  onlineToDownload,
+  programName,
+} from '../../src/renderer/games/model.ts';
+import { PageController } from '../../src/renderer/controllers/page.ts';
+import { registerController } from '../../src/renderer/controllers/registry.ts';
 import fr from '../../packages/shared/src/i18n/locales/fr.json' with { type: 'json' };
 import en from '../../packages/shared/src/i18n/locales/en.json' with { type: 'json' };
 
@@ -273,5 +285,172 @@ describe('Jeux : contrôleur mire-games (P4-17)', () => {
     h.ctrl.openSites({ id: 'duck' });
     h.ctrl.openSites({ id: 'inconnue' });
     assert.deepEqual(h.calls, [['openRomBrowser', 'duck']]);
+  });
+});
+
+// P4-29 : jeux en ligne d'une console, téléchargement d'un jeu en ligne par sa clé, nettoyage de la base, touche Suppr
+// sur une carte de jeu et « Tout lire » d'une page de musique.
+describe('Jeux : fonctions reprises de l’interface historique (P4-29)', () => {
+  const online: Emulator = {
+    id: 'snes',
+    name: 'Super Nintendo',
+    path: '/emu/snes',
+    sources: ['/jeux/snes', 'https://a.test/snes/', 'http://b.test/'],
+  } as Emulator;
+  const remote: Element = {
+    key: 'rom:snes|https://a.test/snes/Jeu%20Un.sfc',
+    name: 'Jeu Un',
+    open: { kind: 'game', console: 'snes', path: 'https://a.test/snes/Jeu%20Un.sfc' },
+    tags: [],
+    infos: {},
+    images: {},
+  } as unknown as Element;
+  const listing = {
+    ok: true,
+    errors: [],
+    roms: [
+      { path: '/jeux/snes/Jeu Un.sfc', remote: false },
+      { path: 'https://a.test/snes/Jeu%20Un.sfc', remote: true },
+      { path: 'https://a.test/snes/Jeu%20Deux.sfc?x=1', remote: true },
+    ],
+  };
+
+  it('trouve les sources en ligne d’une console et les jeux en ligne qui ne sont pas déjà sur l’ordinateur', () => {
+    assert.deepEqual(onlineSources(online), ['https://a.test/snes/', 'http://b.test/']);
+    assert.deepEqual(onlineSources(null), []);
+    assert.deepEqual(
+      onlineToDownload(listing.roms).map((r) => r.path),
+      ['https://a.test/snes/Jeu%20Deux.sfc?x=1'],
+    );
+    // Une seule source lue : les jeux locaux viennent de la liste des dossiers.
+    assert.deepEqual(
+      onlineToDownload(listing.roms.slice(1), [{ path: 'C:\\Jeux\\JEU DEUX.sfc' }]).map((r) => r.path),
+      ['https://a.test/snes/Jeu%20Un.sfc'],
+    );
+    assert.equal(consoleCards([online], tFr)[0].online, true);
+    assert.equal('online' in consoleCards(consoles(), tFr)[0], false);
+  });
+
+  function harness(clicks: string[], api: Record<string, unknown> = {}, values: Record<string, unknown> = {}) {
+    const calls: unknown[][] = [];
+    const toasts: string[] = [];
+    const forms: FormOptions[] = [];
+    const ctx = {
+      S: { config: { emulators: [online] } },
+      api: {
+        catalogElement: async (key: string) => (key === remote.key ? remote : null),
+        romListSource: async (id: string, only?: string) => (calls.push(['romListSource', id, only]), listing),
+        listRoms: async (id: string) => (calls.push(['listRoms', id]), { ok: true, roms: [] }),
+        romDownload: async (id: string, url: string) => (calls.push(['romDownload', id, url]), { ok: true, count: 1 }),
+        gamesCleanup: async (o: boolean) => (calls.push(['gamesCleanup', o]), { ok: true, removedManual: 2, missingRemote: ['x'], config: { emulators: [] } }),
+        gameEmulators: async () => ({ ok: true, console: 'snes', choices: [], consoleDefault: null, game: null }),
+        ...api,
+      },
+      t: tFr,
+      toast: (m: string) => toasts.push(m),
+      ui: {
+        open: (target: string) => calls.push(['open', target]),
+        afterConsolesChange: () => calls.push(['afterConsolesChange']),
+      },
+      dialogs: {
+        async form(opts: FormOptions) {
+          forms.push(opts);
+          return { action: clicks.shift() ?? 'cancel', values };
+        },
+      },
+    } as unknown as ControllerContext;
+    return { ctrl: new GamesController(ctx), calls, toasts, forms };
+  }
+
+  it('lit les jeux en ligne d’une console, puis ouvre la page Jeux', async () => {
+    const h = harness(['show'], {}, { source: 'http://b.test/' });
+    assert.equal(await h.ctrl.onlineGames({ id: 'snes' }), 'show');
+    assert.equal(h.forms[0].title, 'Jeux en ligne de Super Nintendo');
+    assert.deepEqual(h.forms[0].fields?.[0].options?.[0], ['', 'Toutes les sources']);
+    assert.deepEqual(h.calls, [
+      ['romListSource', 'snes', 'http://b.test/'],
+      ['open', 'games'],
+    ]);
+    assert.equal(h.toasts.at(-1), '2 jeux en ligne dans la page Jeux');
+    assert.equal(await harness([]).ctrl.onlineGames({ id: 'inconnue' }), null);
+  });
+
+  it('« Tout télécharger » : confirmation, puis seulement les jeux absents de l’ordinateur', async () => {
+    const h = harness(['downloadAll', 'yes']);
+    assert.equal(await h.ctrl.onlineGames({ id: 'snes' }), 'downloadAll');
+    assert.equal(h.forms[1].title, 'Télécharger 1 jeu dans le dossier de Super Nintendo ?');
+    assert.deepEqual(h.calls, [
+      ['romListSource', 'snes', undefined],
+      ['romDownload', 'snes', 'https://a.test/snes/Jeu%20Deux.sfc?x=1'],
+    ]);
+    assert.equal(h.toasts.at(-1), '1 téléchargement ajouté. Suivez-le dans le Centre.');
+    const none = harness(['downloadAll'], { romListSource: async () => ({ ok: true, roms: listing.roms.slice(0, 2) }) });
+    await none.ctrl.onlineGames({ id: 'snes' });
+    assert.equal(none.toasts.at(-1), 'Tous les jeux en ligne de cette console sont déjà sur l’ordinateur.');
+  });
+
+  it('télécharge un jeu en ligne désigné par sa clé ; la boîte du jeu le propose', async () => {
+    const h = harness(['download']);
+    assert.equal(await h.ctrl.gameOptions({ key: remote.key }), 'download');
+    assert.ok(h.forms[0].actions?.some((a) => a.id === 'download' && a.label === 'Télécharger sur cet ordinateur'));
+    assert.deepEqual(h.calls, [['romDownload', 'snes', 'https://a.test/snes/Jeu%20Un.sfc']]);
+    assert.match(h.toasts.at(-1)!, /Téléchargement ajouté/);
+    assert.equal(await h.ctrl.downloadGame({ key: 'rom:snes|/jeux/snes/a.sfc' }), false);
+  });
+
+  it('nettoie la base de jeux, en ligne si on le demande, et résume ce qui a changé', async () => {
+    const h = harness(['online']);
+    assert.equal(await h.ctrl.cleanup(), true);
+    assert.deepEqual(h.calls, [['gamesCleanup', true], ['afterConsolesChange']]);
+    assert.equal(h.toasts.at(-1), 'Nettoyage terminé : 2 jeux PC retirés (fichier absent), 1 source en ligne injoignable.');
+    const cancel = harness([]);
+    assert.equal(await cancel.ctrl.cleanup(), false);
+    assert.deepEqual(cancel.calls, []);
+    const en = harness(['check'], { gamesCleanup: async () => ({ ok: true, removedManual: 0, missingRemote: [] }) });
+    await en.ctrl.cleanup();
+    assert.equal(en.toasts.at(-1), 'Nettoyage terminé : tous les jeux sont disponibles.');
+  });
+
+  it('touche Suppr sur une carte de jeu : la suppression de la boîte du jeu, par sa clé', async () => {
+    const called: unknown[] = [];
+    class FakeGames {
+      async deleteGame(args: unknown) {
+        called.push(args);
+      }
+    }
+    registerController('mire-games', new FakeGames());
+    const page = new PageController({
+      ui: { selectedKey: () => remote.key, selectedRef: () => null, deletableGame: () => false },
+    } as unknown as ControllerContext);
+    assert.equal(page.deleteSelection(), true);
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual(called, [{ key: remote.key }]);
+    const other = new PageController({
+      ui: { selectedKey: () => 'local:/films/a.mkv', selectedRef: () => null, deletableGame: () => false },
+    } as unknown as ControllerContext);
+    assert.equal(other.deleteSelection(), false);
+  });
+
+  it('« Tout lire » lit à la suite les fichiers affichés, dans l’ordre de la page', async () => {
+    const track = (n: number) => ({ key: `local:/m/${n}.mp3`, name: `Piste ${n}`, open: { kind: 'file', path: `/m/${n}.mp3` }, tags: ['audio'] });
+    const queued: unknown[][] = [];
+    const page = new PageController({
+      S: { videos: [], tracks: [], images: [] },
+      api: {
+        catalogElement: async (k: string) => (k.startsWith('local:') ? track(Number(k.slice(9, -4))) : null),
+        fromPaths: async (paths: string[]) => paths.filter((p) => p === '/m/1.mp3').map((p) => ({ path: p, name: 'Un', kind: 'audio', native: true })),
+      },
+      ui: { playQueue: (list: unknown[], i: number) => queued.push([list, i]) },
+    } as unknown as ControllerContext);
+    assert.equal(await page.playAll({ keys: ['local:/m/2.mp3', 'site:x', 'local:/m/1.mp3'] }), 2);
+    assert.deepEqual(queued, [
+      [
+        [
+          { path: '/m/2.mp3', name: 'Piste 2', kind: 'audio' },
+          { path: '/m/1.mp3', name: 'Un', kind: 'audio', native: true },
+        ],
+        0,
+      ],
+    ]);
   });
 });

@@ -88,7 +88,7 @@ import { createAccessPolicy } from './security/access-policy.ts';
 import { allowedFiles, allowedRoots } from './security/allowed.ts';
 import { flushWithin } from './storage/json-store.ts';
 import { dataPaths } from './storage/paths.ts';
-import { createStore } from './store/index.ts';
+import { createStore, EMULATORS } from './store/index.ts';
 import { createTv } from './tv/index.ts';
 import { tvConfigFeed } from './tv/element-sources.ts';
 import { siteConfigFeed } from './web/element-sources.ts';
@@ -467,6 +467,8 @@ function start(pending: PendingFiles): Running {
     saveConfig: config.replace,
     onProgress: (p) => toUi('store-progress', p),
     extract: archive.extract,
+    // Émulateurs des plugins (P5-19) d'abord, puis ceux encore dans le cœur (P5-19b) ; un identifiant du cœur l'emporte.
+    emulators: () => [...plugins.emulators(EMULATORS), ...EMULATORS],
     freeGames: () => plugins.freeGames(),
     paths: { home: app.getPath('home'), documents: app.getPath('documents'), appData: app.getPath('appData') },
   });

@@ -151,6 +151,7 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-26 | Sélecteur de langue et finitions de la localisation | S | P4-20, P4-24, P1-28, P1-29 |  | à faire | |
 | P4-27 | Thèmes avec leur propre code : cadre et API | L | P4-11, P4-24, P3-04 | 🧑 | à faire | |
 | P4-28 | Thème d'exemple avec code et guide | M | P4-27, P4-25 |  | à faire | |
+| P4-29 | Fonctions manquantes de la nouvelle interface | M | P4-17, P4-13, P4-21 |  | faite | [#120](https://github.com/jezoock/mire/pull/120) |
 | **G6** | **Point d'étape : fin de la phase 4** | | P4-01…P4-28 | | | |
 
 ### Dans dot-stash (dépôt `jezoock/dot-stash`)
@@ -201,7 +202,8 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | faite | [#112](https://github.com/jezoock/mire/pull/112) |
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
-| P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
+| P5-19a | Émulateurs : socle, RetroArch, DuckStation | M | P5-01, P4-17 | 🧑 | faite | [#118](https://github.com/jezoock/mire/pull/118) |
+| P5-19b | Émulateurs : PCSX2, PPSSPP, Dolphin, melonDS, Azahar, Cemu | M | P5-19a | 🧑 | à faire | |
 | P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | faite | |
 | P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
 | **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |

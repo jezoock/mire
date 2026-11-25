@@ -104,7 +104,9 @@ export class MirePageView {
     return labels ? pluralLabel(labels, count, lang) : '';
   }
 
-  private renderPath(crumbs: PageCrumb[], labels: PageViewLabels) {
+  private renderPath(crumbs: PageCrumb[], labels: PageViewLabels, elements: CardElement[]) {
+    // « Tout lire » (P4-29) : les éléments affichés, désignés par leur clé, dans l'ordre de la page (un album).
+    const keys = this.kind === 'elements' ? elements.map((e) => e.key) : [];
     return (
       <nav class="mire-page-view__path" aria-label={labels.path || undefined} data-focus-last>
         {/* À la racine de la page, le chemin se réduit à son nom, déjà dans l'en-tête. */}
@@ -126,6 +128,11 @@ export class MirePageView {
             );
           })}
         </ol>
+        {labels.playAll && keys.length > 0 && (
+          <ds-trigger class="mire-page-view__play-all" mods="stl-2" target="mire-page" action={`playAll:${JSON.stringify([{ keys }])}`}>
+            {labels.playAll}
+          </ds-trigger>
+        )}
         {labels.legacy && (
           <ds-trigger class="mire-page-view__legacy" mods="stl-3" target="mire-page" action="openLegacy">
             {labels.legacy}
@@ -204,7 +211,7 @@ export class MirePageView {
         }}
       >
         {this.background === 'backdrop' && <mire-backdrop class="mire-page-view__backdrop" src={this.backdrop} />}
-        {crumbs.length > 0 && this.renderPath(crumbs, labels)}
+        {crumbs.length > 0 && this.renderPath(crumbs, labels, elements)}
         {this.kind === 'groups' ? (
           this.renderGroups(groups, rows, variant, labels, progress)
         ) : (

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { parseReleaseAssets, tagFromLocation } from '../../src/main/store/installers/github-release.ts';
 import { findDownloadLink } from '../../src/main/store/installers/download-page.ts';
 import { coreUrl, retroarchUrl } from '../../src/main/store/installers/retroarch.ts';
-import { EMULATORS } from '../../src/main/store/catalog/index.ts';
+import { allEmulators } from './emulator-fixtures.ts';
 
 // Aucun accès réseau pendant les tests : le moindre appel à fetch fait échouer le test.
 globalThis.fetch = () => {
@@ -14,6 +14,7 @@ globalThis.fetch = () => {
 };
 
 const fixture = (name: string) => fs.readFileSync(path.join(import.meta.dirname, '..', 'fixtures', 'store', name), 'utf8');
+const EMULATORS = allEmulators();
 const emulator = (id: string) => EMULATORS.find((e) => e.id === id)!;
 
 test('GitHub : étiquette lue dans la redirection de releases/latest', () => {

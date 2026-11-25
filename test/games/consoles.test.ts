@@ -47,16 +47,26 @@ const ok = (r: Any) => {
 describe('Consoles (P4-17)', () => {
   it('nomme l’émulateur d’après la boutique, sinon d’après son programme', () => {
     const [duck, , snes] = consoles();
+    const names = (id: string) => ({ duckstation: 'DuckStation' })[id];
+    assert.equal(emulatorName(duck, names), 'DuckStation');
+    // Plugin de l'émulateur retiré : le nom du programme.
     assert.equal(emulatorName(duck), 'DuckStation');
+    assert.equal(emulatorName({ ...duck, path: '/emu/duckstation/duckstation-qt-x64-ReleaseLTCG.exe' }), 'duckstation-qt-x64-ReleaseLTCG');
     assert.equal(emulatorName(snes), 'snes9x');
     assert.equal(emulatorName({ path: 'C:\\Jeux\\mesen\\Mesen.exe' } as Emulator), 'Mesen');
   });
 
   it('propose l’émulateur de la console puis ceux des consoles du même système', () => {
-    assert.deepEqual(emulatorChoices(consoles(), 'retroarch:ps1'), [
+    const names = (id: string) => ({ duckstation: 'DuckStation', retroarch: 'RetroArch' })[id];
+    assert.deepEqual(emulatorChoices(consoles(), 'retroarch:ps1', names), [
       { id: 'retroarch:ps1', emulator: 'RetroArch', console: 'PlayStation (RetroArch)' },
       { id: 'duckstation:ps1', emulator: 'DuckStation', console: 'PlayStation' },
     ]);
+    // Sans les plugins : le nom des programmes.
+    assert.deepEqual(
+      emulatorChoices(consoles(), 'retroarch:ps1').map((c) => c.emulator),
+      ['retroarch', 'DuckStation'],
+    );
     assert.deepEqual(
       emulatorChoices(consoles(), 'snes-1').map((c) => c.id),
       ['snes-1'],

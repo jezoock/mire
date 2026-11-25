@@ -453,6 +453,59 @@
           },
           "emulator": "Emulator: {name}",
           "emulatorOf": "Emulator: {name}, from the {console} console"
+        },
+        "online": {
+          "title": "Online games of {name}",
+          "help": "Mire reads the list of games in your online sources. They appear in the Games page: each one starts as is, or can be downloaded to this computer from its box.",
+          "source": "Source",
+          "allSources": "All sources",
+          "show": "Show in the Games page",
+          "downloadAll": "Download all",
+          "listed": {
+            "one": "{count} online game in the Games page",
+            "other": "{count} online games in the Games page"
+          },
+          "none": "No game found in this console’s online sources.",
+          "unreadable": "Couldn’t read the online source.",
+          "allLocal": "All of this console’s online games are already on this computer.",
+          "confirmTitle": {
+            "one": "Download {count} game to the {console} folder?",
+            "other": "Download {count} games to the {console} folder?"
+          },
+          "confirmHelp": "Depending on their size, this can take space and time. You can follow and pause each download in the Centre.",
+          "added": {
+            "one": "{count} download added. Follow it in the Centre.",
+            "other": "{count} downloads added. Follow them in the Centre."
+          }
+        },
+        "download": {
+          "action": "Download to this computer",
+          "notOnline": "This game isn’t online: it’s already on this computer.",
+          "failed": "Couldn’t download.",
+          "allThere": "All of this game’s files are already on this computer.",
+          "files": {
+            "one": "{count} file to download for this game, in a folder named after it. Follow it in the Centre.",
+            "other": "{count} files to download for this game (the index and its tracks), in a folder named after it. Follow them in the Centre."
+          },
+          "added": "Download added: it will go to the console’s folder. Follow it in the Centre."
+        },
+        "cleanup": {
+          "title": "Clean up the games list",
+          "help": "Mire checks that each game is still there: PC games whose file has disappeared are removed from the list. Also checking that online sources respond takes longer.",
+          "check": "Check",
+          "online": "Also check online",
+          "running": "Checking games…",
+          "failed": "Couldn’t clean up.",
+          "removed": {
+            "one": "{count} PC game removed (file missing)",
+            "other": "{count} PC games removed (file missing)"
+          },
+          "unreachable": {
+            "one": "{count} online source unreachable",
+            "other": "{count} online sources unreachable"
+          },
+          "done": "Clean-up done: {details}.",
+          "clean": "Clean-up done: all games are available."
         }
       }
     },
@@ -526,8 +579,6 @@
     },
     "store": {
       "emulators": {
-        "retroarch": "One program for 8-bit and 16-bit consoles, the Game Boy family and the Nintendo 64. Choose the consoles to add.",
-        "duckstation": "PlayStation. Needs the BIOS from your console, placed in its \"bios\" folder.",
         "pcsx2": "PlayStation 2. Needs the BIOS from your console.",
         "ppsspp": "PlayStation Portable.",
         "dolphin": "GameCube and Wii. On Windows, needs the Microsoft \"Visual C++ Redistributable\".",
@@ -536,8 +587,6 @@
         "cemu": "Wii U."
       },
       "bios": {
-        "retroarch": "Depending on the console: gba_bios.bin (Game Boy Advance), bios_CD_E.bin, bios_CD_U.bin, bios_CD_J.bin (Mega-CD), syscard3.pce (PC Engine CD)…",
-        "duckstation": "The BIOS from your PlayStation: scph1001.bin, scph5501.bin, scph7001.bin… (required).",
         "pcsx2": "The BIOS from your PlayStation 2, for example SCPH-70004.bin (required).",
         "melonds": "bios7.bin, bios9.bin and firmware.bin (optional: melonDS has a free built-in BIOS). Then set them in melonDS, Config, Emu settings.",
         "dolphin": "IPL.bin from your GameCube (optional), placed in the subfolder for its region (EUR, USA, JAP).",
@@ -840,7 +889,8 @@
       "more": {
         "one": "Show more ({count} left)",
         "other": "Show more ({count} left)"
-      }
+      },
+      "playAll": "Play all"
     },
     "home": {
       "bars": {
@@ -1108,7 +1158,10 @@
         "emulator": "Emulator",
         "sites": "Game sites",
         "remove": "Remove",
-        "fromApps": "Installed from apps"
+        "fromApps": "Installed from apps",
+        "online": "Online games",
+        "cleanup": "Clean up the games list",
+        "cleanupHelp": "Checks that each game is still available, and removes PC games whose file has disappeared from the list."
       },
       "plugins": {
         "intro": "Plugins add features to Mire: sources, details, palettes, sites… Open a plugin’s page to see what it brings and what it asks for, before installing it.",
@@ -1213,7 +1266,8 @@
           "dependencyInstalled": "{name} ({range}), already there",
           "warning": "This plugin comes from a third-party repository and asks for extended access to your computer. Mire cannot check what it does: only install it if you trust this repository. You will be asked for your consent.",
           "warningInstalled": "This plugin comes from a third-party repository and has, with your consent, extended access to your computer.",
-          "conflict": "This plugin is already installed from another repository: this one can neither install nor update it."
+          "conflict": "This plugin is already installed from another repository: this one can neither install nor update it.",
+          "appsIgnored": "Its programs (players, emulators) are not used: only plugins that come with Mire or from the official repository can have a program installed or started."
         },
         "consent": {
           "title": "Extended access: your consent",

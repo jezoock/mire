@@ -1,12 +1,22 @@
 import { Controller } from './base.ts';
 import type { Data } from './types.ts';
+import { isHttpUrl } from '@mire/shared';
 import type { Emulator, Element as CatalogElement } from '@mire/shared';
 import type { EmulatorChoice, GameEmulators } from '@mire/shared/ipc';
-import { consoleFields, consoleInput, emulatorOptions, isGameBookmarkKey, isRomKey } from '../games/model.ts';
+import { consoleFields, consoleInput, emulatorOptions, isGameBookmarkKey, isRomKey, onlineSources, onlineToDownload } from '../games/model.ts';
+import type { ListedRom } from '../games/model.ts';
 import { openEditor } from '../editors/editor.ts';
 import type { Site } from '../domain/sites.ts';
 
 type Outcome<T = object> = ({ ok: true } & T) | { ok: false; error?: string };
+type Listing = Outcome<{ roms?: ListedRom[]; errors?: string[] }>;
+type CleanupResult = Outcome<{ missingRemote?: string[]; removedManual?: number; config?: unknown }>;
+
+/** Jeu de console en ligne désigné par sa clé : sa console et son adresse, tirées du catalogue. */
+const onlineRom = (el: CatalogElement | null): { console: string; url: string } | null => {
+  const o = el?.open as { kind?: string; console?: string; path?: string } | undefined;
+  return o?.kind === 'game' && o.console && isHttpUrl(o.path) ? { console: o.console, url: String(o.path) } : null;
+};
 
 /**
  * `mire-games` (P4-17) : consoles créées à la main (dossiers, émulateur, arguments, sites de jeux), émulateur choisi
@@ -139,6 +149,136 @@ export class GamesController extends Controller {
     if (this.consoleOf(id)) this.ctx.ui.openRomBrowser(id);
   }
 
+  // ---------- Jeux en ligne d'une console (P4-29) ----------
+
+  /**
+   * Jeux des sources en ligne d'une console : les lire (ils entrent dans la page Jeux, où chacun se lance ou se
+   * télécharge depuis sa boîte), ou les télécharger tous sur l'ordinateur. Rend le bouton choisi, ou `null`.
+   */
+  async onlineGames({ id }: { id: string }): Promise<string | null> {
+    const emu = this.consoleOf(id);
+    const sources = onlineSources(emu);
+    if (!emu || !sources.length) return null;
+    const res = await this.ctx.dialogs.form({
+      title: this.k('online.title', { name: String(emu.name || id) }),
+      help: this.k('online.help'),
+      fields:
+        sources.length > 1
+          ? [
+              {
+                id: 'source',
+                type: 'select' as const,
+                label: this.k('online.source'),
+                value: '',
+                options: [['', this.k('online.allSources')], ...sources.map((s): [string, string] => [s, s])],
+                full: true,
+              },
+            ]
+          : [],
+      actions: [
+        { id: 'show', label: this.k('online.show'), kind: 'primary' },
+        { id: 'downloadAll', label: this.k('online.downloadAll') },
+        { id: 'cancel', label: this.k('form.cancel'), kind: 'ghost' },
+      ],
+    });
+    const only = String(res.values?.source ?? '') || undefined;
+    if (res.action === 'show') await this.showOnline(id, only);
+    else if (res.action === 'downloadAll') await this.downloadOnline(id, only);
+    return res.action;
+  }
+
+  /** Lit les jeux en ligne d'une console (le processus principal les range au catalogue), puis ouvre la page Jeux. */
+  private async showOnline(id: string, only?: string): Promise<void> {
+    const { api, ui, toast } = this.ctx;
+    const r = (await api.romListSource(id, only)) as Listing | null;
+    if (!r?.ok) {
+      toast(r?.error || this.k('online.unreadable'), { duration: 7000 });
+      return;
+    }
+    const count = (r.roms ?? []).filter((x) => x.remote).length;
+    if (!count) {
+      toast(r.errors?.[0] || this.k('online.none'), { duration: 7000 });
+      return;
+    }
+    toast(this.k('online.listed', { count }), { duration: 6000 });
+    ui.open('games', { focus: 'content' });
+  }
+
+  /** Télécharge sur l'ordinateur les jeux en ligne d'une console qui n'y sont pas déjà, après confirmation. */
+  private async downloadOnline(id: string, only?: string): Promise<number> {
+    const { api, toast } = this.ctx;
+    const emu = this.consoleOf(id);
+    if (!emu) return 0;
+    const r = (await api.romListSource(id, only)) as Listing | null;
+    if (!r?.ok) {
+      toast(r?.error || this.k('online.unreadable'), { duration: 7000 });
+      return 0;
+    }
+    // Une seule source lue : les jeux déjà sur l'ordinateur viennent de la liste des dossiers de la console.
+    const local = only ? ((await api.listRoms(id)) as Listing | null) : null;
+    const todo = onlineToDownload(r.roms ?? [], local?.ok ? (local.roms ?? []) : []);
+    if (!todo.length) {
+      toast(this.k('online.allLocal'));
+      return 0;
+    }
+    const name = String(emu.name || id);
+    if (!(await this.confirm(this.k('online.confirmTitle', { count: todo.length, console: name }), this.k('online.confirmHelp'), this.k('online.downloadAll'))))
+      return 0;
+    let n = 0;
+    for (const rom of todo) if (((await api.romDownload(id, rom.path)) as Outcome | null)?.ok) n++;
+    toast(this.k('online.added', { count: n }), { duration: 6000 });
+    return n;
+  }
+
+  /** Télécharge sur l'ordinateur un jeu en ligne, désigné par sa clé (son adresse vient du catalogue). */
+  async downloadGame({ key }: { key: string }): Promise<boolean> {
+    const { api, toast } = this.ctx;
+    const rom = onlineRom((await api.catalogElement(key)) as CatalogElement | null);
+    if (!rom) {
+      toast(this.k('download.notOnline'));
+      return false;
+    }
+    const r = (await api.romDownload(rom.console, rom.url)) as Outcome<{ count: number; total?: number }> | null;
+    if (!r?.ok) toast(r?.error || this.k('download.failed'), { duration: 6000 });
+    else if ((r.total ?? 0) > 1 && !r.count) toast(this.k('download.allThere'));
+    else toast((r.total ?? 0) > 1 ? this.k('download.files', { count: r.count }) : this.k('download.added'), { duration: 7000 });
+    return !!r?.ok;
+  }
+
+  // ---------- Nettoyage (P4-29) ----------
+
+  /**
+   * « Nettoyer la base de jeux » : le processus principal vérifie que chaque jeu est toujours là (et, si on le
+   * demande, que les sources en ligne répondent) ; les jeux PC dont le fichier a disparu sont retirés.
+   */
+  async cleanup(): Promise<boolean> {
+    const { api, dialogs, toast } = this.ctx;
+    const res = await dialogs.form({
+      title: this.k('cleanup.title'),
+      help: this.k('cleanup.help'),
+      fields: [],
+      actions: [
+        { id: 'check', label: this.k('cleanup.check'), kind: 'primary' },
+        { id: 'online', label: this.k('cleanup.online') },
+        { id: 'cancel', label: this.k('form.cancel'), kind: 'ghost' },
+      ],
+    });
+    if (res.action !== 'check' && res.action !== 'online') return false;
+    toast(this.k('cleanup.running'), { duration: 3000 });
+    const r = (await api.gamesCleanup(res.action === 'online')) as CleanupResult | null;
+    if (!r?.ok) {
+      toast(this.k('cleanup.failed'), { duration: 6000 });
+      return false;
+    }
+    if (r.config) this.ctx.ui.afterConsolesChange?.(r.config as Data);
+    const parts = [
+      ...(r.removedManual ? [this.k('cleanup.removed', { count: r.removedManual })] : []),
+      ...(r.missingRemote?.length ? [this.k('cleanup.unreachable', { count: r.missingRemote.length })] : []),
+    ];
+    toast(parts.length ? this.k('cleanup.done', { details: parts.join(', ') }) : this.k('cleanup.clean'), { duration: 7000 });
+    return true;
+  }
+
   // ---------- Un jeu ----------
 
   /**
@@ -168,6 +308,7 @@ export class GamesController extends Controller {
             },
           ]
         : [];
+    const online = !!onlineRom(el);
     const res = await dialogs.form({
       title: el.name,
       help: emus?.ok ? (many ? this.k('game.help') : this.k('game.alone')) : '',
@@ -175,6 +316,8 @@ export class GamesController extends Controller {
       actions: [
         { id: 'launch', label: this.k('game.launch'), kind: 'primary' },
         ...(many ? [{ id: 'save', label: this.k('game.save') }] : []),
+        // Jeu d'une source en ligne (P4-29) : copie sur l'ordinateur, dans le dossier principal de la console.
+        ...(online ? [{ id: 'download', label: this.k('download.action') }] : []),
         { id: 'edit', label: this.k('game.edit') },
         { id: 'delete', label: this.k('game.delete'), kind: 'ghost' as const },
         { id: 'cancel', label: this.k('form.cancel'), kind: 'ghost' as const },
@@ -186,6 +329,7 @@ export class GamesController extends Controller {
       if (res.action === 'save') this.ctx.toast(this.k('emulators.saved'));
     }
     if (res.action === 'launch') await this.launch({ key });
+    else if (res.action === 'download') await this.downloadGame({ key });
     else if (res.action === 'edit') await openEditor(this.ctx, key);
     else if (res.action === 'delete') await this.deleteGame({ key, name: el.name });
     return res.action;

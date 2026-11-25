@@ -307,6 +307,11 @@ export class MireCentreView {
           <ds-trigger type="button" mods="stl-2,sm" target="mire-games" action={`openSites:${id}`}>
             {l.openSites}
           </ds-trigger>
+          {c.online && (
+            <ds-trigger class="mire-centre-view__online" type="button" mods="stl-2,sm" target="mire-games" action={`onlineGames:${id}`}>
+              {l.onlineGames}
+            </ds-trigger>
+          )}
           <ds-trigger type="button" mods="stl-3,sm" target="mire-games" action={`removeConsole:${id}`}>
             {l.removeConsole}
           </ds-trigger>
@@ -323,8 +328,12 @@ export class MireCentreView {
           <ds-trigger class="mire-centre-view__new-console" type="button" mods="stl-1" target="mire-games" action="newConsole">
             {l.newConsole}
           </ds-trigger>
+          <ds-trigger class="mire-centre-view__cleanup" type="button" mods="stl-3" target="mire-games" action="cleanup">
+            {l.cleanupGames}
+          </ds-trigger>
         </div>
         <p class="mire-centre-view__hint">{l.consolesHelp}</p>
+        <p class="mire-centre-view__hint">{l.cleanupHelp}</p>
       </section>,
       <section class="mire-centre-view__group" data-group="consoles">
         {list.length ? (

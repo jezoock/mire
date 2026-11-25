@@ -288,6 +288,16 @@ describe('Centre (P4-19) : fiche d’un plugin', () => {
     assert.equal(pluginSheet('inconnu', state(), fr), null);
     assert.equal(pluginSheet(null, state(), fr), null);
   });
+
+  it('programmes (lecteurs, émulateurs) d’un plugin ni livré avec Mire ni officiel : la fiche dit qu’ils ne servent pas (P5-19)', () => {
+    const apps = [{ kind: 'apps', id: 'alpha' }];
+    const sheet = (over: Partial<PluginSummary>) =>
+      pluginSheet('org.essai.emu', state({ installed: [summary({ id: 'org.essai.emu', origin: 'installed', contributions: apps, ...over })] }), fr)!.message;
+    for (const trust of ['third-party', 'local'] as const) assert.match(sheet({ trust }), /ne sont pas utilisés/, trust);
+    for (const trust of ['bundled', 'official'] as const) assert.equal(sheet({ trust }), '', trust);
+    assert.equal(sheet({ trust: 'local', contributions: [{ kind: 'packs', id: 'x' }] }), '');
+    assert.match(sheet({ trust: 'local', message: 'Désactivé.' }), /^Désactivé\. Ses programmes/);
+  });
 });
 
 describe('Centre (P4-19) : récapitulatif de la continuité (P5-01)', () => {

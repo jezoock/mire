@@ -17,15 +17,35 @@ export interface StoreSystem {
   ext: string[];
   /** Cœur RetroArch (systèmes de RetroArch seulement). */
   core?: string;
+  /** Arguments de lancement propres à la console (sinon ceux de l'émulateur). */
+  args?: string[];
 }
 
-/** D'où vient l'émulateur : dernière version d'un dépôt GitHub, ou lien trouvé sur une page de téléchargement. */
+/**
+ * D'où vient l'émulateur : dernière version d'un dépôt GitHub (fichier choisi par son nom), ou lien trouvé sur une
+ * page de téléchargement. Les motifs viennent de données (`*` et `?` seulement), transformés par le cœur.
+ */
 export type EmulatorSource = { github: string; win32?: RegExp; linux?: RegExp } | { page: string; win32?: RegExp; linux?: RegExp };
+
+/** Point de départ d'un chemin de BIOS. */
+export type BiosBase = 'emulators' | 'install' | 'documents' | 'appData' | 'xdgConfig' | 'xdgData';
+export type BiosPath = readonly [BiosBase, ...string[]];
+
+/** Dossier où un émulateur cherche ses BIOS. */
+export interface BiosLocation {
+  /** Mode portable : un de ces fichiers ou dossiers dans le dossier du programme. */
+  portable?: { markers: readonly string[]; dir: readonly string[] };
+  win32: BiosPath;
+  linux: BiosPath;
+}
 
 export interface StoreEmulator {
   id: string;
+  /** Nom affiché (déjà traduit pour un émulateur de plugin). */
   name: string;
   site: string;
+  /** Plugin qui apporte l'émulateur ; absent pour ceux encore dans le cœur (`EMULATORS`). */
+  plugin?: string;
   /** RetroArch : installé depuis le buildbot, avec un cœur par console choisie. */
   retroarch?: boolean;
   source?: EmulatorSource;
@@ -34,6 +54,10 @@ export interface StoreEmulator {
   /** Arguments de lancement (`{rom}` : le jeu). */
   args?: string[];
   systems: StoreSystem[];
+  /** Dossier des BIOS ; absent : l'émulateur n'en demande pas. */
+  bios?: BiosLocation;
+  /** Clés des textes : présentation, rappel des BIOS. */
+  texts: { desc: string; bios: string };
 }
 
 /** Jeu homebrew publié librement par son auteur. */
