@@ -101,6 +101,19 @@ Règles communes à chaque extraction :
   déjà installé est reconnu et son plugin installé par P5-01.
 - **Critères d'acceptation** : 🧑 installation réelle de deux émulateurs depuis le Centre et lancement d'un jeu
   libre avec chacun.
+- **Découpage** (décision de la session de pilotage, 25/11/2026) :
+  - **P5-19a — Socle, RetroArch, DuckStation** (fait) : le cœur lit les contributions `apps` de genre `emulator`
+    (`src/main/store/catalog/read.ts`, `src/main/plugins/emulators.ts`) des seuls plugins inclus ou du dépôt officiel :
+    site, source (dernière version d'un dépôt GitHub et nom du fichier, lien d'une page de téléchargement, ou
+    installateur RetroArch du cœur), programme, arguments (`{rom}` seulement), consoles, dossier des BIOS ; noms de
+    fichiers et de liens en motifs simples (`*`, `?`), jamais en expression régulière. Le cœur garde les
+    installateurs, la ligne de commande et la lecture des BIOS. Plugins à installer `mire.emulator.retroarch` (avec
+    ses consoles, `emu-consoles-ra`) et `mire.emulator.duckstation`, de niveau `data`. Une console installée garde son
+    programme et ses arguments dans la configuration et se lance sans le plugin. Continuité : `P5-19-retroarch`,
+    `P5-19-duckstation` (mode `install`, si une console a été installée avec l'émulateur).
+  - **P5-19b — PCSX2, PPSSPP, Dolphin, melonDS, Azahar, Cemu** : même modèle ; leurs données sont déjà dans la forme
+    d'une contribution (`BUILTIN_EMULATOR_DATA`, `src/main/store/catalog/emulators.ts`) et leurs textes dans les
+    catalogues (`store.emulators.<id>`, `store.bios.<id>`).
 
 ---
 

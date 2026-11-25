@@ -4,7 +4,9 @@
  * et range vos propres copies de jeux dans le bon dossier.
  *
  * Aucun jeu du commerce n'est proposé : pour ceux-là, utilisez vos propres copies (« Importer »).
- * Le catalogue (`catalog/`) ne contient que des données ; les installateurs (`installers/`) sont le code.
+ * Le catalogue (`catalog/`) ne contient que des données ; les installateurs (`installers/`) sont le code. Les
+ * émulateurs viennent des plugins (contributions `apps` de genre `emulator`, P5-19) et, jusqu'à P5-19b, du cœur.
+ * Une console déjà installée garde son programme et ses arguments dans la configuration : elle se lance sans eux.
  */
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -13,14 +15,14 @@ import path from 'node:path';
 import { createJsonStore } from '../storage/json-store.ts';
 import { dataPaths } from '../storage/paths.ts';
 import { biosDir as locateBios } from './bios.ts';
-import { BIOS_HINTS, EMULATORS, RETROARCH_SYSTEMS, type FreeGame, type StorePlatform } from './catalog/index.ts';
+import { EMULATORS, type FreeGame, type StoreEmulator, type StorePlatform } from './catalog/index.ts';
 import { registerConsoles, removeConsoles } from './consoles.ts';
 import { download, type InstallContext } from './installers/files.ts';
 import { installRetroArch } from './installers/retroarch.ts';
 import { installStandalone } from './installers/standalone.ts';
 import { t } from '../i18n/current.ts';
 
-export { EMULATORS, RETROARCH_SYSTEMS } from './catalog/index.ts';
+export { EMULATORS } from './catalog/index.ts';
 export { githubLatest } from './installers/github-release.ts';
 
 const PLATFORM: StorePlatform = process.platform === 'win32' ? 'win32' : process.platform === 'linux' ? 'linux' : 'other';
@@ -33,13 +35,25 @@ export interface StoreOptions {
   onProgress: (p: Record<string, unknown>) => void;
   /** Décompression (service d'archives). */
   extract: (archive: string, dest: string) => Promise<void>;
+  /** Émulateurs proposés : ceux du cœur puis ceux des plugins actifs (P5-19) ; par défaut, ceux du cœur seuls. */
+  emulators?: () => readonly StoreEmulator[];
   /** Jeux libres des plugins actifs (packs `freeGames`, P5-07) ; la boutique n'en a pas d'autres. */
   freeGames?: () => readonly FreeGame[];
   /** Dossiers de l'utilisateur, pour trouver les BIOS. */
   paths?: { home?: string; documents?: string; appData?: string };
 }
 
-export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, onProgress, extract, freeGames = () => [], paths = {} }: StoreOptions) {
+export function createStore({
+  dataDir,
+  defaultRomsRoot,
+  getConfig,
+  saveConfig,
+  onProgress,
+  extract,
+  emulators = () => EMULATORS,
+  freeGames = () => [],
+  paths = {},
+}: StoreOptions) {
   const dataFiles = dataPaths(dataDir);
   const emuRoot = dataFiles.emulatorsDir;
   const tmpRoot = path.join(os.tmpdir(), 'mire-store');
@@ -66,7 +80,7 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
   };
 
   async function install(id: string, systemIds: string[] = []) {
-    const emu = EMULATORS.find((e) => e.id === id);
+    const emu = emulators().find((e) => e.id === id);
     if (!emu) return { ok: false, error: t('store.errors.unknownEmulator') };
     if (PLATFORM === 'other') return { ok: false, error: t('store.errors.unsupportedPlatform') };
     if (busy.has(id)) return { ok: false, error: t('store.errors.alreadyInstalling') };
@@ -101,13 +115,14 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
 
   /* ---------- BIOS : dossier où chaque émulateur les cherche ---------- */
 
+  // Dossier des BIOS d'un émulateur proposé ; celui d'un émulateur dont le plugin est parti n'est plus connu.
   function biosDir(id: string): string | null {
-    return locateBios(id, { platform: PLATFORM, emuRoot, exe: meta[id]?.exe, paths });
+    return locateBios(id, emulators().find((e) => e.id === id)?.bios, { platform: PLATFORM, emuRoot, exe: meta[id]?.exe, paths });
   }
 
-  function biosInfo(id: string) {
-    const dir = biosDir(id);
-    if (!dir || !BIOS_HINTS.has(id)) return null;
+  function biosInfo(id: string, emu = emulators().find((e) => e.id === id)) {
+    const dir = emu?.bios ? locateBios(id, emu.bios, { platform: PLATFORM, emuRoot, exe: meta[id]?.exe, paths }) : null;
+    if (!emu || !dir) return null;
     let files: string[] = [];
     try {
       files = fs
@@ -119,7 +134,7 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
     } catch {
       /* dossier pas encore créé */
     }
-    return { dir, hint: t(`store.bios.${id}`), files };
+    return { dir, hint: t(emu.texts.bios), files };
   }
 
   // Copie les fichiers choisis dans le dossier des BIOS de l'émulateur.
@@ -141,31 +156,33 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
   function catalog() {
     const cfg = getConfig();
     const installedStore = new Set(cfg.emulators.map((e: any) => e.store).filter(Boolean));
+    const list = emulators();
+    const systems = list.flatMap((e) => e.systems);
     return {
       platform: PLATFORM,
       romsRoot: romsRoot(),
-      emulators: EMULATORS.map((e) => {
+      emulators: list.map((e) => {
         const m = meta[e.id];
         return {
           id: e.id,
           name: e.name,
-          desc: t(`store.emulators.${e.id}`),
+          desc: t(e.texts.desc),
           site: e.site,
           retroarch: !!e.retroarch,
           available: PLATFORM !== 'other' && (!!e.retroarch || !!e.source?.[PLATFORM]),
           installed: !!m,
           version: m?.version || '',
           busy: busy.has(e.id),
-          bios: m ? biosInfo(e.id) : null,
+          bios: m ? biosInfo(e.id, e) : null,
           systems: e.systems.map((s) => ({ id: s.id, name: s.name, installed: installedStore.has(`${e.id}:${s.id}`) })),
         };
       }),
       games: freeGames().map(({ basedOn, descKey, ...g }) => {
         const target = consoleFor(g.system);
-        const sys = RETROARCH_SYSTEMS.find((s) => s.id === g.system);
+        const sys = systems.find((s) => s.id === g.system);
         const installed = target ? fs.existsSync(path.join(target.romsDir, g.file)) : false;
         const author = basedOn ? t('store.basedOn', { author: g.author, original: basedOn }) : g.author;
-        return { ...g, author, desc: descKey ? t(descKey) : '', systemName: sys ? sys.name : g.system, ready: !!target, installed };
+        return { ...g, author, desc: descKey ? t(descKey) : '', systemName: sys?.name ?? target?.name ?? g.system, ready: !!target, installed };
       }),
     };
   }
@@ -205,5 +222,8 @@ export function createStore({ dataDir, defaultRomsRoot, getConfig, saveConfig, o
     return { ok: true, count: n, console: emu.name };
   }
 
-  return { catalog, install, uninstall, getGame, importFiles, romsRoot, emuRoot, biosDir, biosInfo, addBios };
+  /** Nom de l'émulateur `id` s'il est proposé (consoles de la boutique, choix de l'émulateur d'une console). */
+  const emulatorName = (id: string): string | undefined => emulators().find((e) => e.id === id)?.name;
+
+  return { catalog, install, uninstall, getGame, importFiles, romsRoot, emuRoot, biosDir, biosInfo, addBios, emulatorName };
 }

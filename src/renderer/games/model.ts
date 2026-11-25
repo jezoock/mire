@@ -3,6 +3,7 @@
  * console créée à la main (dossiers, émulateur, arguments, sites de jeux), choix d'un émulateur pour une console ou
  * pour un jeu (D-21). Les textes viennent des catalogues (`games.ui.*`).
  */
+import { isHttpUrl } from '@mire/shared';
 import type { Emulator, LinkSite } from '@mire/shared';
 import type { ConsoleInput, EmulatorChoice } from '@mire/shared/ipc';
 import type { ConsoleCard, FieldSpec, FormValues } from '@mire/ui/utils';
@@ -15,6 +16,36 @@ export const isRomKey = (key: unknown): key is string => typeof key === 'string'
 export const isPcKey = (key: unknown): key is string => typeof key === 'string' && key.startsWith('pc:');
 export const isGameBookmarkKey = (key: unknown): key is string => typeof key === 'string' && key.startsWith('gamebm:');
 export const isGameKey = (key: unknown): key is string => isRomKey(key) || isPcKey(key);
+
+/**
+ * Sources en ligne d'une console (pages web qui listent des fichiers) : les seules que le cœur lit lui-même
+ * (`src/main/games/roms/list.ts`), et dont les jeux se téléchargent sur l'ordinateur (P4-29).
+ */
+export function onlineSources(emu: Emulator | null | undefined): string[] {
+  return (emu?.sources ?? []).filter((s): s is string => typeof s === 'string' && isHttpUrl(s));
+}
+
+/** Jeu d'une liste de la console (`roms:listSource`) : son chemin ou son adresse, et s'il est en ligne. */
+export interface ListedRom {
+  path: string;
+  remote?: boolean;
+}
+
+const fileName = (p: string, remote: boolean): string => {
+  const last = (remote ? p.split('?')[0]!.split('/') : p.split(/[\\/]/)).pop() ?? '';
+  if (!remote) return last.toLowerCase();
+  try {
+    return decodeURIComponent(last).toLowerCase();
+  } catch {
+    return last.toLowerCase();
+  }
+};
+
+/** « Tout télécharger » : jeux en ligne dont aucun fichier du même nom n'est déjà sur l'ordinateur. */
+export function onlineToDownload(listed: readonly ListedRom[], local: readonly ListedRom[] = []): ListedRom[] {
+  const have = new Set([...listed, ...local].filter((r) => !r.remote).map((r) => fileName(String(r.path), false)));
+  return listed.filter((r) => r.remote && !have.has(fileName(String(r.path), true)));
+}
 
 /** Nom du programme d'un émulateur, sans dossier ni extension. */
 export function programName(file: unknown): string {
@@ -45,6 +76,8 @@ export function consoleCards(list: readonly Emulator[] | null | undefined, t: Tr
       emulator:
         runner === emu ? t('games.ui.consoles.emulator', { name }) : t('games.ui.consoles.emulatorOf', { name, console: String(runner.name || runner.id) }),
       store: !!emu.store,
+      // Jeux en ligne (P4-29) : proposés seulement pour une console qui a une source en ligne.
+      ...(onlineSources(emu).length ? { online: true } : {}),
     };
   });
 }

@@ -3,7 +3,7 @@ import * as http from '../../net/http.ts';
 import type { ResolvedSource } from './files.ts';
 import { t } from '../../i18n/current.ts';
 
-/** Premier lien du HTML qui correspond au motif ; la version est le dossier qui suit `releases/`. */
+/** Premier lien du HTML qui correspond au motif (transformé par `linkPattern`) ; la version est le dossier qui suit `releases/`. */
 export function findDownloadLink(html: string, pattern: RegExp): ResolvedSource | null {
   const m = pattern.exec(html);
   if (!m) return null;

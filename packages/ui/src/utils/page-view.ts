@@ -33,6 +33,8 @@ export interface PageViewLabels {
   loading?: string;
   empty?: string;
   legacy?: string;
+  /** « Tout lire » : proposé pour une page de musique (P4-29). */
+  playAll?: string;
 }
 
 /** Carte des éléments : celle que le thème impose, sinon celle qu'indique la page (`display`). */
