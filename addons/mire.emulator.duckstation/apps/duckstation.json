@@ -1,0 +1,32 @@
+{
+  "kind": "emulator",
+  "site": "https://www.duckstation.org",
+  "source": {
+    "github": "stenzek/duckstation",
+    "files": {
+      "windows": "duckstation-windows-x64-release.zip",
+      "linux": "DuckStation-x64.AppImage"
+    }
+  },
+  "program": {
+    "windows": "duckstation-qt-x64-ReleaseLTCG.exe",
+    "linux": "DuckStation-x64.AppImage"
+  },
+  "args": ["-batch", "-fullscreen", "{rom}"],
+  "consoles": [
+    {
+      "id": "ps1",
+      "libretro": "Sony - PlayStation",
+      "folder": "PlayStation",
+      "extensions": [".cue", ".chd", ".m3u", ".pbp", ".iso"]
+    }
+  ],
+  "bios": {
+    "portable": {
+      "markers": ["portable.txt"],
+      "dir": ["bios"]
+    },
+    "windows": ["documents", "DuckStation", "bios"],
+    "linux": ["xdgData", "duckstation", "bios"]
+  }
+}

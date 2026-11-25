@@ -1,11 +1,12 @@
-// Caractérisation des dossiers de BIOS : les données de store/bios.ts donnent, pour chaque émulateur et chaque
-// plateforme, le même dossier que l'ancien `switch` de store.js (copié ci-dessous).
+// Caractérisation des dossiers de BIOS : les données des émulateurs (`bios`, du cœur et des plugins RetroArch et
+// DuckStation, P5-19a) donnent, pour chaque émulateur et chaque plateforme, le même dossier que l'ancien `switch` de
+// store.js (copié ci-dessous).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import { biosDir } from '../../src/main/store/bios.ts';
-import { EMULATORS } from '../../src/main/store/catalog/index.ts';
+import { allEmulators } from './emulator-fixtures.ts';
 
 interface Case {
   id: string;
@@ -56,10 +57,20 @@ function oldBiosDir({ id, platform: PLATFORM, emuRoot, exe, paths, env, exists }
   }
 }
 
-const ids = [...EMULATORS.map((e) => e.id), 'inconnu'];
+const EMUS = allEmulators();
+const ids = [...EMUS.map((e) => e.id), 'inconnu'];
+const loc = (id: string) => EMUS.find((e) => e.id === id)?.bios;
 const markers = [null, 'portable.txt', 'portable.ini', 'user', 'portable'];
 const pathSets = [{}, { home: '/home/moi', documents: '/home/moi/Docs', appData: '/home/moi/AppData/Roaming' }];
 const envs = [{}, { XDG_CONFIG_HOME: '/cfg', XDG_DATA_HOME: '/data' }];
+
+test('BIOS : les huit émulateurs sont là, et seul PPSSPP n’a pas de dossier de BIOS', () => {
+  assert.deepEqual(EMUS.map((e) => e.id).sort(), ['azahar', 'cemu', 'dolphin', 'duckstation', 'melonds', 'pcsx2', 'ppsspp', 'retroarch']);
+  assert.deepEqual(
+    EMUS.filter((e) => !e.bios).map((e) => e.id),
+    ['ppsspp'],
+  );
+});
 
 test('BIOS : même dossier que l’ancien switch pour chaque émulateur, plateforme et cas', () => {
   let n = 0;
@@ -72,7 +83,7 @@ test('BIOS : même dossier que l’ancien switch pour chaque émulateur, platefo
               const exists = (f: string) => marker !== null && path.basename(f) === marker;
               const c: Case = { id, platform, emuRoot: '/donnees/emulators', exe, paths, env, exists };
               const label = JSON.stringify({ id, platform, exe, marker, paths, env });
-              assert.equal(biosDir(id, c), oldBiosDir(c), label);
+              assert.equal(biosDir(id, loc(id), c), oldBiosDir(c), label);
               n += 1;
             }
   assert.equal(n, ids.length * 3 * 2 * markers.length * pathSets.length * envs.length);
@@ -80,11 +91,11 @@ test('BIOS : même dossier que l’ancien switch pour chaque émulateur, platefo
 
 test('BIOS : quelques dossiers attendus', () => {
   const base = { emuRoot: '/d/emulators', paths: { home: '/home/moi' }, env: {}, exists: () => false };
-  assert.equal(biosDir('duckstation', { ...base, platform: 'linux' }), path.join('/home/moi', '.local', 'share', 'duckstation', 'bios'));
-  assert.equal(biosDir('retroarch', { ...base, platform: 'win32' }), path.join('/d/emulators', 'retroarch', 'system'));
+  assert.equal(biosDir('duckstation', loc('duckstation'), { ...base, platform: 'linux' }), path.join('/home/moi', '.local', 'share', 'duckstation', 'bios'));
+  assert.equal(biosDir('retroarch', loc('retroarch'), { ...base, platform: 'win32' }), path.join('/d/emulators', 'retroarch', 'system'));
   assert.equal(
-    biosDir('dolphin', { ...base, platform: 'win32', exe: '/x/Dolphin.exe', exists: (f) => f.endsWith('portable.txt') }),
+    biosDir('dolphin', loc('dolphin'), { ...base, platform: 'win32', exe: '/x/Dolphin.exe', exists: (f) => f.endsWith('portable.txt') }),
     path.join('/x', 'User', 'GC'),
   );
-  assert.equal(biosDir('inconnu', { ...base, platform: 'linux' }), null);
+  assert.equal(biosDir('inconnu', loc('inconnu'), { ...base, platform: 'linux' }), null);
 });

@@ -97,6 +97,11 @@ function prepareData() {
   fs.cpSync(PALETTE_PLUGIN, path.join(data, 'plugins', 'org.exemple.palettes', '1.0.0'), { recursive: true });
   fs.cpSync(SERVICE_PLUGIN, path.join(data, 'plugins', 'org.exemple.service', '1.0.0'), { recursive: true });
   fs.cpSync(INFOS_PLUGIN, path.join(data, 'plugins', 'org.exemple.infos', '1.0.0'), { recursive: true });
+  // Émulateurs de la boutique (P5-19a) : plugins du dépôt officiel, posés comme Mire les installe (`origin.json`).
+  for (const id of ['mire.emulator.retroarch', 'mire.emulator.duckstation']) {
+    fs.cpSync(path.join(__dirname, '..', 'fixtures', 'plugins', id), path.join(data, 'plugins', id, '1.0.0'), { recursive: true });
+    fs.writeFileSync(path.join(data, 'plugins', id, 'origin.json'), JSON.stringify({ repository: 'official', version: '1.0.0' }));
+  }
   return data;
 }
 

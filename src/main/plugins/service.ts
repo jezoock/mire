@@ -17,6 +17,8 @@ import { readGamepadProfiles } from './gamepads.ts';
 import { freeGamesOf, romSitesFor } from './packs.ts';
 import { readPluginPages } from './pages.ts';
 import { readExternalPlayers } from './apps.ts';
+import { readPluginEmulators } from './emulators.ts';
+import type { StoreEmulator } from '../store/catalog/index.ts';
 import { readWebApps, type WebApp } from './web-apps.ts';
 import type { ExternalPlayerSpec } from '../platform/types.ts';
 import { readPluginPalettes } from './palettes.ts';
@@ -219,6 +221,11 @@ export function createPluginService(opts: PluginServiceOptions) {
 
   function fault(id: string, err: unknown): void {
     setFault(id, faultCode(err), String((err as Error)?.message ?? err));
+  }
+
+  /** Contributions `apps` des plugins inclus ou du dépôt officiel : les seules qui peuvent faire lancer un programme. */
+  function trustedApps() {
+    return registry.list('apps').filter((e) => ['bundled', 'official'].includes(trustOf(known.get(e.pluginId) ?? { origin: 'installed', repository: null })));
   }
 
   function setFault(id: string, code: FaultCode, details: string): void {
@@ -672,10 +679,14 @@ export function createPluginService(opts: PluginServiceOptions) {
      * Lecteurs externes des plugins actifs (contributions `apps` de genre `player`, P5-20), vérifiés, dans l'ordre de
      * préférence. Ils font lancer un programme : seuls ceux des plugins inclus ou du dépôt officiel signé comptent.
      */
-    externalPlayers: (): ExternalPlayerSpec[] =>
-      readExternalPlayers(
-        registry.list('apps').filter((e) => ['bundled', 'official'].includes(trustOf(known.get(e.pluginId) ?? { origin: 'installed', repository: null }))),
-      ),
+    externalPlayers: (): ExternalPlayerSpec[] => readExternalPlayers(trustedApps()),
+
+    /**
+     * Émulateurs des plugins actifs (contributions `apps` de genre `emulator`, P5-19), vérifiés, après ceux encore
+     * dans le cœur (`before`). Ils font télécharger et lancer un programme : seuls ceux des plugins inclus ou du dépôt
+     * officiel signé comptent.
+     */
+    emulators: (before: readonly StoreEmulator[] = []): StoreEmulator[] => readPluginEmulators(trustedApps(), before),
 
     /**
      * Palettes des plugins actifs (contributions `palettes`, P5-02), vérifiées. `ready` : les plugins ont démarré ;

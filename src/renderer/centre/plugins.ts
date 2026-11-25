@@ -138,6 +138,11 @@ export const nameFinder =
 export const ownOffer = (s: Pick<PluginsState, 'available'>, id: string): AvailablePlugin | undefined =>
   s.available.find((o) => o.id === id && o.installed !== null && !o.conflict);
 
+/**
+ * Programmes d'un plugin (lecteurs, émulateurs : contributions `apps`) que Mire n'utilise pas : seuls ceux des plugins
+ * livrés avec Mire ou du dépôt officiel font télécharger ou lancer un programme (P5-19, P5-20).
+ */
+const ignoresApps = (p: PluginSummary) => p.trust !== 'bundled' && p.trust !== 'official' && p.contributions.some((c) => c.kind === 'apps');
 const isThirdSensitive = (p: { trust: string; level: Level }) => p.trust === 'third-party' && p.level === 'privileged';
 
 function badgesOf(p: { trust: PluginSummary['trust'] | AvailablePlugin['trust']; level: Level }, t: Translate): string[] {
@@ -257,7 +262,7 @@ function installedSheet(p: PluginSummary, s: PluginsState, w: Writer): PluginShe
     permissions: permissionLines(p.permissions, t),
     dependencies: dependencyLines(p.dependencies ?? {}, s, t),
     warning: isThirdSensitive(p) ? k(t, 'sheet.warningInstalled') : '',
-    message: p.message ?? '',
+    message: [p.message ?? '', ignoresApps(p) ? k(t, 'sheet.appsIgnored') : ''].filter(Boolean).join(' '),
     progress,
     buttons,
   };
