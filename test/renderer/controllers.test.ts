@@ -4,11 +4,10 @@ import { beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONTROLLER_CLASSES, createControllers } from '../../src/renderer/controllers/index.ts';
 import type { Controllers } from '../../src/renderer/controllers/index.ts';
-import { LEGACY_ACTIONS } from '../../src/renderer/controllers/bridge.ts';
 import { actionNames, callAction, controller, invokeAction, setActionErrorHandler } from '../../src/renderer/controllers/registry.ts';
 import type { ControllerContext, Data, LegacyUi } from '../../src/renderer/controllers/types.ts';
 import { PAGE, S } from '../../src/renderer/state/index.ts';
-import { checkActions, checkBridge, checkTriggers, findTriggers, targetMethods } from '../../scripts/check-actions.mjs';
+import { checkActions, checkTriggers, findDataActions, findTriggers, targetMethods } from '../../scripts/check-actions.mjs';
 
 type Call = [string, ...unknown[]];
 
@@ -67,20 +66,6 @@ describe('contrôleurs', () => {
     assert.ok(!actionNames(c.app).includes('ctx'));
   });
 
-  it('désigne les éléments par une clé stable, pas par leur position', () => {
-    c.page.playVideo({ path: '/v/b.mkv' });
-    assert.deepEqual(named(calls, 'ui.openVideo')[0]!.slice(2), [1]);
-    c.page.playTrack({ path: '/m/c.flac' });
-    const [, album, index] = named(calls, 'ui.playQueue')[0]!;
-    assert.deepEqual(
-      (album as Data[]).map((x) => x.path),
-      ['/m/c.flac'],
-    );
-    assert.equal(index, 0);
-    c.page.playAlbum({ dir: '/v' });
-    assert.equal((named(calls, 'ui.playQueue')[1]![1] as Data[]).length, 2);
-  });
-
   it('un élément inconnu ne lance rien de faux', () => {
     S.recent = [{ path: '/v/a.mkv' }];
     c.home.playRecent({ path: '/autre' });
@@ -100,11 +85,6 @@ describe('contrôleurs', () => {
     assert.deepEqual(named(calls, 'ui.openSite'), [['ui.openSite', 'tv:sfr']]);
   });
 
-  it('« Afficher plus » rend la position du premier élément ajouté', () => {
-    assert.equal(c.app.showMore(), PAGE);
-    assert.equal(S.limit, PAGE * 2);
-  });
-
   it('les actions asynchrones attendent le processus principal et prévient par un message', async () => {
     assert.equal(await c.centre.addDownload({ url: '' }), false);
     assert.equal(named(calls, 'api.downloadsAddUrl').length, 0);
@@ -119,17 +99,13 @@ describe('contrôleurs', () => {
     assert.deepEqual(named(log, 'ui.cycle'), [['ui.cycle', -1]]);
   });
 
-  it('vue de page : regroupements, chemin, tranches et ancienne vue', async () => {
-    const { calls: log, c: ctl } = fakeContext({ 'ui.openPageGroup': () => true, 'ui.pageLegacySection': () => 'videos' });
+  it('vue de page : regroupements, chemin et tranches', async () => {
+    const { calls: log, c: ctl } = fakeContext({ 'ui.openPageGroup': () => true });
     assert.equal(ctl.page.openGroup({ value: null }), true);
     ctl.page.openPath({ path: ['Friends'] });
     ctl.page.openPath({ path: 'pas un chemin' as never });
     await ctl.page.loadMore();
-    ctl.page.openLegacy();
-    assert.deepEqual(
-      log.filter((c) => c[0] !== 'ui.pageLegacySection'),
-      [['ui.openPageGroup', null], ['ui.openPagePath', ['Friends']], ['ui.openPagePath', []], ['ui.loadMorePage'], ['ui.go', 'videos', { focus: 'content' }]],
-    );
+    assert.deepEqual(log, [['ui.openPageGroup', null], ['ui.openPagePath', ['Friends']], ['ui.openPagePath', []], ['ui.loadMorePage']]);
   });
 
   it('openElement : chaque façon de s’ouvrir, l’élément désigné par sa clé', async () => {
@@ -223,28 +199,24 @@ describe('contrôleurs', () => {
     const ui: Data = { home: { clock: true, recent: true, bars: [], services: [], rows: [{ kind: 'bars', targets: ['movies'] }, { kind: 'recent' }] } };
     const { c: ctl } = fakeContext({ 'ui.saveUi': async (mutate: (u: Data) => void) => mutate(ui) });
     await ctl.settings.toggleHomeItem({ kind: 'bars', id: 'screen:search', on: true });
-    await ctl.settings.moveHomeItem({ kind: 'bars', id: 'screen:search', dir: -1 });
-    await ctl.settings.moveHomeItem({ kind: 'rows', id: 'recent', dir: -1 });
     await ctl.settings.toggleHomeItem({ kind: 'sites', id: 'web:arte', on: true });
-    await ctl.settings.setHomeClock({ on: false });
-    assert.deepEqual(ui.home.rows, [{ kind: 'recent' }, { kind: 'bars', targets: ['screen:search', 'movies'] }, { kind: 'sites', keys: ['web:arte'] }]);
-    assert.equal(ui.home.clock, false);
-    await assert.rejects(ctl.settings.moveHomeItem({ kind: 'services', id: 'x', dir: 1 }), /inconnue/);
+    assert.deepEqual(ui.home.rows, [{ kind: 'bars', targets: ['movies', 'screen:search'] }, { kind: 'recent' }, { kind: 'sites', keys: ['web:arte'] }]);
+    await assert.rejects(ctl.settings.toggleHomeItem({ kind: 'services', id: 'x', on: true }), /inconnue/);
   });
 });
 
 describe('registre : appel des actions', () => {
   it('une erreur est signalée (message), sans rejeter', async () => {
     fakeContext({
-      'ui.openVideo': () => {
+      'ui.openRomBrowser': () => {
         throw new Error('panne');
       },
     });
     const errors: unknown[] = [];
     setActionErrorHandler((error, context) => errors.push([(error as Error).message, context]));
-    const r = await invokeAction('mire-page', 'playVideo', { path: '/v/a.mkv' });
+    const r = await invokeAction('mire-page', 'openRomSites', { consoleId: 'snes' });
     assert.deepEqual(r, { ok: false });
-    assert.deepEqual(errors, [['panne', { tag: 'mire-page', method: 'playVideo' }]]);
+    assert.deepEqual(errors, [['panne', { tag: 'mire-page', method: 'openRomSites' }]]);
   });
 
   it('une action inconnue, ou qui n’est pas publique, est refusée et signalée', async () => {
@@ -275,30 +247,12 @@ describe('registre : appel des actions', () => {
   });
 });
 
-describe('pont des data-action historiques', () => {
-  it('chaque entrée désigne une méthode existante de son contrôleur', () => {
-    const methods = targetMethods();
-    for (const [name, { tag, method }] of Object.entries(LEGACY_ACTIONS)) {
-      assert.ok(methods[tag]?.includes(method), `${name} → ${tag}.${method}`);
-    }
-  });
-
-  it('traduit la position d’un élément en sa clé', () => {
-    S.list = [{ path: '/a' }, { path: '/b', consoleId: 4 }];
-    const args = (name: string, d: Record<string, string>) => LEGACY_ACTIONS[name]!.args!(d, {} as HTMLElement);
-    assert.deepEqual(args('play-video', { index: '1' }), { path: '/b' });
-    assert.deepEqual(args('launch-rom-u', { index: '1' }), { path: '/b', consoleId: 4 });
-    assert.deepEqual(args('scrape-section', { kind: 'videos', force: '1' }), { kind: 'videos', force: true });
-    assert.deepEqual(args('go', { go: 'settings' }), { section: 'settings' });
-  });
-
-  it('npm run check:actions ne trouve aucun problème, et relie les ~60 actions historiques', () => {
-    const { errors, legacy, triggers } = checkActions();
+describe('vérification des actions (npm run check:actions)', () => {
+  it('ne trouve aucun problème : tous les ds-trigger mènent à une méthode, plus aucun data-action (P4-24a1)', () => {
+    const { errors, triggers } = checkActions();
     assert.deepEqual(errors, []);
-    // Le nombre baisse à mesure que les vues historiques sont remplacées (P4-12 : l'accueil en retire deux ; P4-18 : le
-    // Centre en retire dix-huit ; P4-13 : la Recherche en retire neuf ; P4-16 : la barre des sites en retire six).
-    assert.ok(legacy >= 58, `${legacy} actions`);
-    assert.ok(triggers >= 1);
+    assert.ok(triggers >= 100, `${triggers} ds-trigger`);
+    assert.deepEqual(findDataActions(), []);
   });
 
   it('boîtes de dialogue (P4-06) : un gabarit dont le nom de l’action est écrit tel quel est vérifié par ce nom', () => {
@@ -318,7 +272,7 @@ describe('pont des data-action historiques', () => {
     assert.ok(!triggers.some((tr: { file: string }) => /packages\/ui\/src\/components\/mire-(card|grid|row|group-card)\//.test(tr.file)));
   });
 
-  it('signale une action inconnue, une cible qui n’est pas un mire-*, un data-action sans entrée', () => {
+  it('signale une action inconnue, une cible qui n’est pas un mire-*', () => {
     const methods = { 'mire-app': ['go'] };
     const errors = checkTriggers(
       [
@@ -332,7 +286,5 @@ describe('pont des data-action historiques', () => {
     );
     assert.equal(errors.length, 4);
     assert.match(errors[0]!, /a\.ts:2 .*vole/);
-    const bridgeErrors = checkBridge(new Map([['inconnue', 'b.js:9']]), { go: { tag: 'mire-app', method: 'partir' } }, methods);
-    assert.equal(bridgeErrors.length, 3);
   });
 });

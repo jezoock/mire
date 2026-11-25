@@ -106,8 +106,6 @@ export function activatesOnEnter(el: FieldLike | null | undefined, fromPad: bool
 
 /** Ce que l'interface fournit au clavier. */
 export interface KeyboardHooks {
-  /** Boîte de dialogue au premier plan, ou `null`. */
-  dialog(): HTMLElement | null;
   /** Touche pour le lecteur vidéo ou la visionneuse s'il est ouvert (`true` : touche traitée) ; `null` si aucun ne l'est. */
   overlayKey(key: string, fromPad: boolean): boolean | null;
   /** Flèche bas depuis la barre d'un site : donne le clavier au site. `false` si l'élément n'est pas dans cette barre. */
@@ -122,7 +120,7 @@ let ctrl: KeyboardControllers;
 
 /** Traite une touche (du clavier, ou traduite depuis la manette) ; `true` si elle a été utilisée. */
 export function handleKey(key: string, fromPad = false): boolean {
-  const dlg = activeDialog(hooks.dialog());
+  const dlg = activeDialog();
   if (dlg) {
     const inField = (document.activeElement as Element | null)?.matches?.('input, textarea, select');
     const dir = keyAction(ARROW_KEYS, key);

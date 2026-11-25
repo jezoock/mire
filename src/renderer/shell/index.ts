@@ -1,6 +1,6 @@
 /**
- * Coquille de l'application, côté page (P4-07) : monte `<mire-app>` et y place les vues historiques, puis donne au
- * menu (`mire-rail`), à l'en-tête (`mire-header`) et à l'aide de la manette (`mire-padbar`) leurs entrées et leurs
+ * Coquille de l'application, côté page (P4-07) : monte `<mire-app>`, puis donne au menu (`mire-rail`), à l'en-tête
+ * (`mire-header`), à l'aide de la manette (`mire-padbar`) et à la zone de dépôt des fichiers leurs entrées et leurs
  * textes, tirés des catalogues. Tient le routeur (`router.ts`) et les classes du document qui règlent la mise en page
  * du menu (`menu-left`… `menu-auto`, `menu-open`, lues par styles.css et par le placement de la vue web).
  */
@@ -8,7 +8,6 @@ import type { PageDefinition, PagePath } from '@mire/shared';
 import { menuPosition } from '@mire/ui/utils';
 import type { MenuPosition, PadHint, RailEntry, RailLabels, RailSession } from '@mire/ui/utils';
 import { ICON } from '../core/icons.ts';
-import { LEGACY_LAYERS } from './legacy-markup.ts';
 import { currentEntry, cycleTargets, nextTarget, railEntries, railSessions } from './menu.ts';
 import type { WebSession } from './menu.ts';
 import { createRouter } from './router.ts';
@@ -23,6 +22,7 @@ export {
   SETTINGS_VIEW,
   legacySectionOf,
   routeOf,
+  settingsPartOf,
   targetOfLegacyView,
   viewOf,
 } from './router.ts';
@@ -37,10 +37,7 @@ async function whenRendered(el: Rendered): Promise<void> {
   while (!el.classList.contains('hydrated')) await new Promise((r) => requestAnimationFrame(r));
 }
 
-/**
- * Monte la coquille : attend le rendu de `<mire-app>` (menu, en-tête, hôtes des vues), puis place les lecteurs,
- * boîtes et messages historiques dans leur hôte. L'interface historique (`app.js`) ne démarre qu'après.
- */
+/** Monte la coquille : attend le rendu de `<mire-app>` (menu, en-tête, lecteurs). La page (`app.js`) ne démarre qu'après. */
 export async function mountShell(doc: Document = document): Promise<void> {
   const app = doc.querySelector('mire-app') as Rendered;
   await whenRendered(app);
@@ -48,7 +45,6 @@ export async function mountShell(doc: Document = document): Promise<void> {
   await whenRendered(doc.querySelector('mire-video-player') as Rendered);
   // Les lecteurs de musique et d'images (P4-15) reçoivent leurs textes et le volume au démarrage.
   await Promise.all(['mire-mini-player', 'mire-image-viewer'].map((tag) => whenRendered(doc.querySelector(tag) as Rendered)));
-  (doc.getElementById('legacy-layers') as HTMLElement).innerHTML = LEGACY_LAYERS;
 }
 
 type Translate = (key: string, vars?: Record<string, string | number>) => string;
@@ -176,6 +172,12 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
       : '';
   }
 
+  // Zone de dépôt des fichiers (glisser-déposer) : son texte suit la langue.
+  const renderDrop = () => {
+    const text = doc.querySelector('#drop .drop__text');
+    if (text) text.textContent = t('shell.drop');
+  };
+
   function tick(now: Date) {
     lastTime = now;
     header.time = now.toLocaleTimeString(host.language() || 'fr', { hour: '2-digit', minute: '2-digit' });
@@ -190,10 +192,12 @@ export function createShell(host: ShellHost, doc: Document = document): Shell {
   host.onLanguageChange(() => {
     renderRail();
     renderHeader();
+    renderDrop();
     if (lastTime) tick(lastTime);
   });
 
   renderRail();
+  renderDrop();
 
   return {
     router,

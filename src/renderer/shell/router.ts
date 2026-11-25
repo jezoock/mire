@@ -89,6 +89,25 @@ export function legacySectionOf(page: string): string | null {
   return LEGACY_PAGE_SECTIONS.find(([p]) => p === page)?.[1] ?? null;
 }
 
+/**
+ * Partie des Réglages qu'ouvre le rouage de l'en-tête (P4-24a1), selon la section affichée (celle d'une page prête à
+ * l'emploi pour une page) : là où se règlent ses sources, ses sites, sa télévision, ses jeux ; `null` : le début.
+ */
+const SETTINGS_PARTS: Readonly<Record<string, string>> = {
+  home: 'home',
+  videos: 'sources',
+  music: 'sources',
+  images: 'sources',
+  streaming: 'streaming',
+  tv: 'tv',
+  games: 'games',
+  downloads: 'downloads',
+};
+
+export function settingsPartOf(section: string): string | null {
+  return Object.hasOwn(SETTINGS_PARTS, section) ? SETTINGS_PARTS[section]! : null;
+}
+
 /** Vue qui affiche une cible : la vue de page pour une page, celle d'un écran du cœur ; `null` sinon. */
 export function viewOf(target: string): string | null {
   const t = parseTarget(target);

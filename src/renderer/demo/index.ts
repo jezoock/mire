@@ -10,7 +10,6 @@ import { esc } from '../core/dom.ts';
 import { i18n, t } from '../i18n/index.ts';
 import { S } from '../state/index.ts';
 import { confirmDialog, notify, openForm, pickCandidate } from '../ui/dialogs.ts';
-import type { FormOptions } from '../ui/dialogs.ts';
 
 export const DEMO_SECTION = 'demo';
 
@@ -140,15 +139,8 @@ function elementsDemo(): string {
 /* Boîtes de dialogue (P4-06)                                           */
 /* ------------------------------------------------------------------ */
 
-const DIALOG_KINDS = ['form', 'confirm', 'pick', 'tabs', 'notify', 'legacy'] as const;
+const DIALOG_KINDS = ['form', 'confirm', 'pick', 'tabs', 'notify'] as const;
 type DialogKind = (typeof DIALOG_KINDS)[number];
-
-/** Ce que l'interface historique prête à la démonstration : son `openForm` (boîte `#dlg`), pour la cohabitation. */
-export interface DemoLegacy {
-  openForm(opts: Omit<FormOptions, 'onAction'> & { onAction?(action: string): unknown }): Promise<unknown>;
-}
-
-let legacy: DemoLegacy | null = null;
 
 function showResult(result: unknown): void {
   const el = document.querySelector('.mire-ui-demo__result');
@@ -243,37 +235,16 @@ function demoPick(): Promise<unknown> {
   );
 }
 
-function demoLegacy(): Promise<unknown> {
-  return (
-    legacy?.openForm({
-      title: d('legacy.title'),
-      help: d('legacy.help'),
-      fields: [],
-      actions: [
-        { id: 'ask', label: d('legacy.ask'), kind: 'primary' },
-        { id: 'cancel', label: t('common.close'), kind: 'ghost' },
-      ],
-      async onAction(action) {
-        if (action !== 'ask') return false;
-        showResult({ legacy: await confirmDialog(d('confirm.title'), d('confirm.help'), d('confirm.yes')) });
-        return true;
-      },
-    }) ?? Promise.resolve(null)
-  );
-}
-
 const OPENERS: Record<DialogKind, () => Promise<unknown>> = {
   form: demoForm,
   confirm: () => confirmDialog(d('confirm.title'), d('confirm.help'), d('confirm.yes')),
   pick: demoPick,
   tabs: demoTabs,
   notify: () => notify(d('notice')).then(() => ({ notice: true })),
-  legacy: demoLegacy,
 };
 
 /** Branche les boutons de la démonstration des boîtes (`mireDemoDialog` de `mire-demo`). */
-export function initDemoDialogs(lent: DemoLegacy): void {
-  legacy = lent;
+export function initDemoDialogs(): void {
   document.addEventListener('mireDemoDialog', (e) => {
     const kind = (e as CustomEvent<{ kind: string }>).detail?.kind as DialogKind;
     if ((DIALOG_KINDS as readonly string[]).includes(kind)) void OPENERS[kind]().then(showResult);

@@ -54,8 +54,7 @@
           "confirm": "Demander une confirmation",
           "pick": "Choisir une fiche",
           "tabs": "Panneau à onglets",
-          "notify": "Afficher une notification",
-          "legacy": "Depuis une boîte historique"
+          "notify": "Afficher une notification"
         },
         "result": "Résultat : {result}",
         "cancelled": "fermée sans choix",
@@ -93,12 +92,7 @@
           "auto": "Automatique",
           "high": "Haute"
         },
-        "notice": "Notification de démonstration.",
-        "legacy": {
-          "title": "Boîte historique",
-          "help": "Cette boîte est celle de l’interface historique ; elle ouvre une boîte sur les composants par-dessus.",
-          "ask": "Demander avec les composants"
-        }
+        "notice": "Notification de démonstration."
       }
     },
     "elements": {
@@ -861,7 +855,8 @@
           "select": "Select"
         },
         "pick": "Choisir"
-      }
+      },
+      "drop": "Déposez vos fichiers pour les lire"
     },
     "themes": {
       "setting": {
@@ -883,7 +878,6 @@
       "loading": "Chargement…",
       "empty": "Rien à afficher ici pour le moment.",
       "missing": "Cette page n’existe plus.",
-      "legacy": "Ancienne vue",
       "more": {
         "one": "Afficher la suite ({count} restant)",
         "other": "Afficher la suite ({count} restants)"

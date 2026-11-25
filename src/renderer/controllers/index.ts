@@ -1,6 +1,6 @@
 /**
  * Contrôleurs de l'interface (P4-04) : un par écran, désigné par la balise du composant qui l'expose. Leurs méthodes
- * publiques sont les actions de Mire, appelées par `ds-trigger`, par le pont des vues historiques (`bridge.ts`), par la
+ * publiques sont les actions de Mire, appelées par `ds-trigger`, par la
  * navigation (`nav/`) et par les lecteurs (`players/`). Conventions : `registry.ts` et docs/adr/0001-dot-stash.md § 8.
  */
 import { AppController } from './app.ts';

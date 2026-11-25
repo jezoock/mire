@@ -54,7 +54,7 @@ export interface Pages {
   loadMore(): Promise<void>;
   /** Nom de la page affichée (titre de l'en-tête). */
   title(): string;
-  /** Section historique de la page affichée (« Ancienne vue »), ou `null`. */
+  /** Section d'une page prête à l'emploi affichée (sa partie des Réglages, sa couleur), ou `null`. */
   legacySection(): string | null;
   current(): PageViewData | null;
   /** Page et chemin affichés (éditeurs des regroupements, P4-22), ou `null`. */
@@ -92,14 +92,12 @@ export function createPages(opts: PagesOptions, doc: Document = document): Pages
 
   function labels() {
     const p = model.route()?.page;
-    const legacy = p && legacySectionOf(p.id);
     return {
       path: t('pageView.path'),
       count: json('elements.group.count'),
       more: json('pageView.more'),
       loading: t('pageView.loading'),
       empty: t(model.current()?.missing ? 'pageView.missing' : 'pageView.empty'),
-      ...(legacy ? { legacy: t('pageView.legacy') } : {}),
       // Une page de musique lit ses morceaux à la suite (« Lire l'album », P4-29).
       ...(p?.require?.includes('audio') ? { playAll: t('pageView.playAll') } : {}),
     };
