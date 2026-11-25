@@ -146,11 +146,12 @@ Fiches dans `phase-4.md`. P4-01 à P4-04 ne dépendent pas des phases 2 et 3.
 | P4-21 | Administration des tags, des pages et des listes | M | P4-20, P2-07, P2-08 |  | faite ([#91](https://github.com/jezoock/mire/pull/91), [#93](https://github.com/jezoock/mire/pull/93)) | |
 | P4-22 | Éditeurs | M | P4-06, P4-11 |  | faite | [#78](https://github.com/jezoock/mire/pull/78), [#81](https://github.com/jezoock/mire/pull/81) |
 | P4-23 | Assistant du premier lancement | M | P4-19, P4-20 | 🧑 | faite | [#106](https://github.com/jezoock/mire/pull/106) |
-| P4-24a | Retrait de l'interface historique | M | P4-08…P4-23 | 🧑 | en cours | |
-| P4-24b | Audits : accessibilité, performance, comparaison des captures | M | P4-24a |  | à faire | |
-| P4-25 | Guide « Créer un thème » | S | P4-11, P4-24a |  | à faire | |
-| P4-26 | Sélecteur de langue et finitions de la localisation | S | P4-20, P4-24a, P1-28, P1-29 |  | à faire | |
-| P4-27 | Thèmes avec leur propre code : cadre et API | L | P4-11, P4-24a, P3-04 | 🧑 | à faire | |
+| P4-24a1 | Retrait de l'interface historique : vues, pont, panneau, boîtes, styles | M | P4-08…P4-23, P4-29 | 🧑 | en cours | |
+| P4-24a2 | Retrait de l'interface historique : racine de composition, méthodes IPC, `domain/` | M | P4-24a1 | 🧑 | à faire | |
+| P4-24b | Audits : accessibilité, performance, comparaison des captures | M | P4-24a2 |  | à faire | |
+| P4-25 | Guide « Créer un thème » | S | P4-11, P4-24a2 |  | à faire | |
+| P4-26 | Sélecteur de langue et finitions de la localisation | S | P4-20, P4-24a2, P1-28, P1-29 |  | à faire | |
+| P4-27 | Thèmes avec leur propre code : cadre et API | L | P4-11, P4-24a2, P3-04 | 🧑 | à faire | |
 | P4-28 | Thème d'exemple avec code et guide | M | P4-27, P4-25 |  | à faire | |
 | **G6** | **Point d'étape : fin de la phase 4** | | P4-01…P4-28 | | | |
 
@@ -187,7 +188,7 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-07 | Sites de jeux légaux, jeux libres | S | P5-01 |  | faite | |
 | P5-08 | Langue française et packs de langue | M | P5-01, P4-26 |  | à faire | |
 | P5-09 | Tags automatiques | M | P5-01, P2-05, P2-06 |  | faite | [#108](https://github.com/jezoock/mire/pull/108) |
-| P5-10 | Thème Mire | S | P4-11, P4-24a |  | à faire | |
+| P5-10 | Thème Mire | S | P4-11, P4-24a2 |  | à faire | |
 | P5-11a | Socle des sources de fichiers | M | P5-01, P3-04 |  | faite | [#107](https://github.com/jezoock/mire/pull/107) |
 | P5-11b | Sous-titres | S | P5-11a |  | faite | |
 | P5-11c | Dossier local | M | P5-11a |  | faite | |
