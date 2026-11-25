@@ -115,20 +115,6 @@ export function checkTriggers(triggers, methods) {
   return errors;
 }
 
-// Seule exception, jusqu'à la fusion de #117 (P5-12) qui en modifie une ligne : `sourcesHtml` d'app.js, code mort
-// (plus appelé depuis P4-24a1), retiré après cette fusion.
-const DEAD_UNTIL_P5_12 = { file: 'src/renderer/app.js', from: 'function sourcesHtml(' };
-
-/** Lignes du code mort de `DEAD_UNTIL_P5_12` dans `text` (fonction entière), ou un ensemble vide. */
-function deadLines(file, text) {
-  if (rel(file) !== DEAD_UNTIL_P5_12.file) return new Set();
-  const lines = text.split('\n');
-  const start = lines.findIndex((l) => l.startsWith(DEAD_UNTIL_P5_12.from));
-  if (start < 0) return new Set();
-  const end = lines.findIndex((l, i) => i > start && l.startsWith('}'));
-  return new Set(Array.from({ length: end - start + 1 }, (_, i) => start + 1 + i));
-}
-
 /** `data-action` encore écrits dans l'interface : il n'y en a plus (P4-24a1), chacun est une erreur. */
 export function findDataActions(root = ROOT) {
   const errors = [];
@@ -138,9 +124,7 @@ export function findDataActions(root = ROOT) {
   ];
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8');
-    const dead = deadLines(file, text);
-    for (const m of text.matchAll(/data-action=/g))
-      if (!dead.has(lineOf(text, m.index))) errors.push(`${rel(file)}:${lineOf(text, m.index)} : data-action n'existe plus, employez un ds-trigger`);
+    for (const m of text.matchAll(/data-action=/g)) errors.push(`${rel(file)}:${lineOf(text, m.index)} : data-action n'existe plus, employez un ds-trigger`);
   }
   return errors;
 }
