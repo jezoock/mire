@@ -392,7 +392,12 @@ export class PageController extends Controller {
   async playAll({ keys }: { keys: string[] }): Promise<number> {
     const { S, api, ui } = this.ctx;
     const els = (await Promise.all((Array.isArray(keys) ? keys : []).map((k) => api.catalogElement(String(k))))) as (CatalogElement | null)[];
-    const items = els.flatMap((el) => (el?.open.kind === 'file' ? [mediaItemOf(S, el, el.open.path)] : []));
+    const files = els.flatMap((el) => (el?.open.kind === 'file' ? [{ el, path: el.open.path }] : []));
+    // Fichiers que la bibliothèque n'a pas encore lus : décrits par le processus principal (lisibles par Mire ou non).
+    const known = new Set([...S.videos, ...S.tracks, ...S.images].map((x) => x.path));
+    const missing = files.filter((f) => !known.has(f.path) && !/^https?:/i.test(f.path)).map((f) => f.path);
+    const fresh = new Map(missing.length ? ((await api.fromPaths(missing)) as Data[]).map((x) => [x.path, x]) : []);
+    const items = files.map((f) => fresh.get(f.path) ?? mediaItemOf(S, f.el, f.path));
     if (items.length) ui.playQueue(items, 0);
     return items.length;
   }

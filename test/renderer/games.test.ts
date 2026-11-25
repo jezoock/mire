@@ -436,7 +436,10 @@ describe('Jeux : fonctions reprises de l’interface historique (P4-29)', () => 
     const queued: unknown[][] = [];
     const page = new PageController({
       S: { videos: [], tracks: [], images: [] },
-      api: { catalogElement: async (k: string) => (k.startsWith('local:') ? track(Number(k.slice(9, -4))) : null) },
+      api: {
+        catalogElement: async (k: string) => (k.startsWith('local:') ? track(Number(k.slice(9, -4))) : null),
+        fromPaths: async (paths: string[]) => paths.filter((p) => p === '/m/1.mp3').map((p) => ({ path: p, name: 'Un', kind: 'audio', native: true })),
+      },
       ui: { playQueue: (list: unknown[], i: number) => queued.push([list, i]) },
     } as unknown as ControllerContext);
     assert.equal(await page.playAll({ keys: ['local:/m/2.mp3', 'site:x', 'local:/m/1.mp3'] }), 2);
@@ -444,7 +447,7 @@ describe('Jeux : fonctions reprises de l’interface historique (P4-29)', () => 
       [
         [
           { path: '/m/2.mp3', name: 'Piste 2', kind: 'audio' },
-          { path: '/m/1.mp3', name: 'Piste 1', kind: 'audio' },
+          { path: '/m/1.mp3', name: 'Un', kind: 'audio', native: true },
         ],
         0,
       ],

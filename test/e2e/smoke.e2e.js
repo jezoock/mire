@@ -4650,8 +4650,14 @@ describe('Test de fumée de Mire', () => {
     };
     const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
     const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
-    const toastSays = (text) =>
-      page.waitForFunction((t) => [...document.querySelectorAll('ds-toaster, #toast')].some((el) => el.textContent.includes(t)), text);
+    const toasts = () => page.evaluate(() => [...document.querySelectorAll('ds-toaster, #toast')].map((el) => el.textContent).join(' | '));
+    const toastSays = async (text) => {
+      await page
+        .waitForFunction((t) => [...document.querySelectorAll('ds-toaster, #toast')].some((el) => el.textContent.includes(t)), text, { timeout: 10000 })
+        .catch(async () => {
+          assert.fail(`message attendu : ${text} ; affiché : ${await toasts()}`);
+        });
+    };
     const openConsoles = async () => {
       await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
       await page.waitForFunction((sel) => document.body.dataset.section === 'downloads' && document.querySelector(sel)?.classList.contains('hydrated'), CENTRE);
@@ -4709,10 +4715,9 @@ describe('Test de fumée de Mire', () => {
       assert.equal(await formOpen(), 'Télécharger 1 jeu dans le dossier de Super Nintendo ?');
       await button('Tout télécharger').click();
       await formClosed();
-      await toastSays('1 téléchargement ajouté');
-      await until(() =>
-        page.evaluate(() => window.api.downloadsList().then((l) => l.items.some((d) => /Jeu%20en%20ligne\.sfc|Jeu en ligne\.sfc/.test(`${d.url} ${d.name}`)))),
-      );
+      // Le jeu arrive dans le dossier principal de la console (son annonce remplace celle de l'ajout).
+      const file = path.join(tmp, 'fixtures', 'bibliotheque', 'Jeux', 'Super Nintendo', 'Jeu en ligne.sfc');
+      await until(() => fs.existsSync(file));
       // Nettoyer la base de jeux (sans les sources en ligne).
       await page.locator(`${CENTRE} .mire-centre-view__cleanup`).click();
       assert.equal(await formOpen(), 'Nettoyer la base de jeux');
@@ -4761,7 +4766,9 @@ describe('Test de fumée de Mire', () => {
       await playAll.click();
       await page.waitForFunction((s) => !document.querySelector(s).hidden && document.querySelector(s).playing, MINI);
       const sub = await page.evaluate((s) => document.querySelector(`${s} .${s}__sub`)?.textContent ?? '', MINI);
-      assert.match(sub, /1 sur \d+/);
+      // Toute la liste affichée est dans la file du mini-lecteur.
+      const shown = await page.locator('#view mire-page-view mire-card').count();
+      assert.match(sub, new RegExp(`\\d+ sur ${shown}$`), sub);
       await page.locator(`${MINI} ds-trigger[action="stop"] button`).click();
       await page.waitForFunction((s) => document.querySelector(s).hidden, MINI);
       assert.deepEqual(errors, []);
