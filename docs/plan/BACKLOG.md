@@ -201,7 +201,8 @@ Fiches dans `phase-5.md`. Chaque tâche publie un ou plusieurs plugins dans `jez
 | P5-16 | Infos en ligne MusicBrainz, libretro, Steam | M | P5-01, P2-06 |  | faite | [#112](https://github.com/jezoock/mire/pull/112) |
 | P5-17 | Bloqueur de publicités, connexion Google | M | P5-01 | 🧑 | à faire | |
 | P5-18 | Torrents | L | P5-01 | 🧑 | à faire | |
-| P5-19 | Émulateurs existants | L | P5-01, P4-17 | 🧑 | à faire | |
+| P5-19a | Émulateurs : socle, RetroArch, DuckStation | M | P5-01, P4-17 | 🧑 | faite | [#118](https://github.com/jezoock/mire/pull/118) |
+| P5-19b | Émulateurs : PCSX2, PPSSPP, Dolphin, melonDS, Azahar, Cemu | M | P5-19a | 🧑 | à faire | |
 | P5-20 | Lecteurs externes mpv et VLC | S | P5-01 |  | faite | |
 | P5-21 | Bilan du cœur | S | P5-02…P5-20 |  | à faire | |
 | **G7** | **Point d'étape : fin de la phase 5, bilan du cœur** | | P5-01…P5-21 | | | |

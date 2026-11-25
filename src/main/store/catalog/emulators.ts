@@ -113,6 +113,6 @@ export const BUILTIN_EMULATOR_DATA: readonly { id: string; name: string; data: R
 
 export const EMULATORS: readonly StoreEmulator[] = BUILTIN_EMULATOR_DATA.flatMap(({ id, name, data }) => {
   const emu = readEmulatorData({ id, name, texts: { desc: `store.emulators.${id}`, bios: `store.bios.${id}` } }, data);
-  if (!emu) throw new Error(`Émulateur du cœur mal décrit : ${id}`);
+  if (!emu) throw new Error(`Invalid built-in emulator data: ${id}`);
   return [emu];
 });
