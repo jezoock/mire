@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ContributionEntry } from '../../src/main/plugins/registry.ts';
 import { readPluginEmulator, readPluginEmulators } from '../../src/main/plugins/emulators.ts';
-import { filePattern, linkPattern, readArgs, readEmulatorData } from '../../src/main/store/catalog/read.ts';
+import { filePattern, linkPattern, readArgs } from '../../src/main/store/catalog/read.ts';
 import { EMULATORS } from '../../src/main/store/catalog/index.ts';
 import { createStore } from '../../src/main/store/index.ts';
 import { findDownloadLink } from '../../src/main/store/installers/download-page.ts';
