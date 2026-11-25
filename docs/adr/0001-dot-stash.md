@@ -153,18 +153,17 @@ utilisés par Mire dans les cinq palettes : chaque cadre porte le `data-palette`
 - **Navigation et lecteurs** : `nav/` et `players/` reçoivent les contrôleurs à leur initialisation et appellent leurs
   méthodes (retour, rechercher, modifier, écran suivant, lecteur externe, « Reprendre », vue web) ; `app.js` ne leur
   fournit plus que ce qu'ils doivent savoir de l'affichage (boîte de dialogue ouverte, lecteur ouvert, contexte).
-- **Pont temporaire** (`controllers/bridge.ts`, jusqu'à P4-24) : chaque `data-action` des vues historiques a une
-  entrée qui appelle la même méthode, en traduisant `data-index` en clé stable ; ce qui ne regarde que la vue
-  historique (focus après l'action, champ à vider) reste dans le pont. `npm run check:actions` vérifie que chaque
-  `data-action` des gabarits a une entrée et que chaque entrée désigne une méthode existante.
+- **Pont temporaire** (`controllers/bridge.ts`, de P4-04 à P4-24a1) : chaque `data-action` des vues historiques
+  appelait la même méthode qu'un `ds-trigger`. Il est retiré avec les vues historiques (P4-24a1) ; `npm run
+  check:actions` ne vérifie plus que les `ds-trigger`, et signale tout `data-action` restant.
 
 ### 9. Traduction de l'interface (P4-04)
 
 `src/renderer/i18n/` : au démarrage, `api.i18nGet()` donne la langue retenue et les catalogues ; le moteur de
 `@mire/shared/i18n` fournit `t()` aux contrôleurs (et aux pages qui tirent des catalogues les textes des
 composants). Le service suit `api.onLanguageChange` et tient à jour `lang` sur `<html>`. Les vues historiques, en
-français jusqu'à leur remplacement, sont marquées `lang="fr"` (sur leurs hôtes `mire-legacy-view` depuis P4-07, sur `<body>` avant) : un lecteur d'écran les lit en
-français quelle que soit la langue de l'interface, et leur rendu ne change pas.
+français, étaient marquées `lang="fr"` (sur leurs hôtes `mire-legacy-view` de P4-07 à P4-24a1, sur `<body>` avant) ;
+elles sont retirées (P4-24a1).
 
 ### 10. Navigation clavier et manette sur les composants (P4-03)
 
