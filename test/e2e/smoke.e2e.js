@@ -4626,4 +4626,145 @@ describe('Test de fumée de Mire', () => {
       assert.deepEqual(await local(), before);
     });
   });
+
+  describe('fonctions reprises de l’interface historique (P4-29)', () => {
+    const CENTRE = '#view mire-centre mire-centre-view';
+    const SEARCH = '#view mire-search mire-search-view';
+    const FORM = 'mire-dialogs mire-form';
+    const MINI = 'mire-mini-player';
+    const errors = [];
+    const onError = (e) => errors.push(e.message);
+    const onConsole = (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text());
+    let server;
+    let base;
+    const formOpen = async () => {
+      await page.waitForFunction((sel) => {
+        const f = document.querySelector(sel);
+        return (
+          f?.classList.contains('hydrated') &&
+          f.querySelector('ds-modal.hydrated') &&
+          [...f.querySelectorAll('ds-trigger')].every((t) => t.classList.contains('hydrated'))
+        );
+      }, FORM);
+      return page.locator(`${FORM} .mire-form__title`).textContent();
+    };
+    const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
+    const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
+    const toastSays = (text) =>
+      page.waitForFunction((t) => [...document.querySelectorAll('ds-toaster, #toast')].some((el) => el.textContent.includes(t)), text);
+    const openConsoles = async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:center' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'downloads' && document.querySelector(sel)?.classList.contains('hydrated'), CENTRE);
+      await page.locator(`${CENTRE} .mire-centre-view__tab.hydrated[data-tab="consoles"]`).click();
+      await page.waitForFunction((sel) => document.querySelector(sel)?.tab === 'consoles', CENTRE);
+      await page.locator(`${CENTRE} .mire-centre-view__cleanup.hydrated`).waitFor();
+    };
+
+    before(async () => {
+      page.on('pageerror', onError);
+      page.on('console', onConsole);
+      // Source en ligne de démonstration sur la boucle locale : une page qui liste un jeu, et le jeu lui-même.
+      server = http.createServer((req, res) => {
+        if (req.url.endsWith('.sfc')) res.writeHead(200, { 'content-type': 'application/octet-stream' }).end(Buffer.alloc(16));
+        else res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end('<!doctype html><a href="Jeu%20en%20ligne.sfc">Jeu en ligne.sfc</a>');
+      });
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      base = `http://127.0.0.1:${server.address().port}/snes/`;
+    });
+    after(async () => {
+      await page.keyboard.press('Escape').catch(() => {});
+      server?.close();
+      page.off('pageerror', onError);
+      page.off('console', onConsole);
+    });
+    // Source en ligne ajoutée (ou retirée) par « Modifier » de la console de démonstration.
+    const editSources = async (change) => {
+      await openConsoles();
+      await page.locator(`${CENTRE} .mire-centre-view__console .mire-centre-view__edit`).first().click();
+      assert.equal(await formOpen(), 'Modifier la console Super Nintendo');
+      await change(page.locator(`${FORM} .mire-form__list`));
+      await button('Enregistrer').click();
+      await formClosed();
+    };
+
+    it('jeux en ligne d’une console : les lire dans la page Jeux, puis tout télécharger ; nettoyer la base de jeux', async () => {
+      await editSources(async (list) => {
+        await list.locator('input[name="sources-new"]').fill(base);
+        await list.locator('.mire-form__row ds-trigger').first().click();
+        await list.locator('.mire-form__value', { hasText: base }).waitFor();
+      });
+      const online = page.locator(`${CENTRE} .mire-centre-view__online.hydrated`);
+      await online.waitFor();
+      await online.click();
+      assert.equal(await formOpen(), 'Jeux en ligne de Super Nintendo');
+      await button('Afficher dans la page Jeux').click();
+      await formClosed();
+      await toastSays('1 jeu en ligne dans la page Jeux');
+      await page.waitForFunction(() => document.body.dataset.section === 'page');
+      // Tout télécharger : confirmation, puis le jeu entre dans les téléchargements.
+      await openConsoles();
+      await online.click();
+      await formOpen();
+      await button('Tout télécharger').click();
+      assert.equal(await formOpen(), 'Télécharger 1 jeu dans le dossier de Super Nintendo ?');
+      await button('Tout télécharger').click();
+      await formClosed();
+      await toastSays('1 téléchargement ajouté');
+      await until(() =>
+        page.evaluate(() => window.api.downloadsList().then((l) => l.items.some((d) => /Jeu%20en%20ligne\.sfc|Jeu en ligne\.sfc/.test(`${d.url} ${d.name}`)))),
+      );
+      // Nettoyer la base de jeux (sans les sources en ligne).
+      await page.locator(`${CENTRE} .mire-centre-view__cleanup`).click();
+      assert.equal(await formOpen(), 'Nettoyer la base de jeux');
+      await button('Vérifier').first().click();
+      await formClosed();
+      await toastSays('Nettoyage terminé');
+      // La configuration de démonstration est remise comme avant.
+      await editSources(async (list) => {
+        await list.locator('.mire-form__entry', { hasText: base }).locator('ds-trigger').click();
+        await list.locator('.mire-form__value', { hasText: base }).waitFor({ state: 'detached' });
+      });
+      assert.equal(await page.evaluate(async () => (await window.api.getConfig()).config.emulators[0].sources?.length ?? 0), 0);
+      assert.deepEqual(errors, []);
+    });
+
+    it('touche Suppr sur une carte de jeu : la confirmation de « Supprimer » ; Non ne supprime rien', async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'screen:search' }));
+      await page.waitForFunction((sel) => document.body.dataset.section === 'search' && document.querySelector(sel)?.classList.contains('hydrated'), SEARCH);
+      await page.locator(`${SEARCH} .mire-search-view__input`).fill('Course de karts');
+      const card = page.locator(`${SEARCH} mire-card ds-trigger.hydrated[data-key^="rom:"]`).first();
+      await card.waitFor();
+      const key = await card.getAttribute('data-key');
+      await card.focus();
+      await page.keyboard.press('Delete');
+      assert.match(await formOpen(), /^Supprimer « Course de karts/);
+      await button('Non').click();
+      await formClosed();
+      assert.ok(await page.evaluate((k) => window.api.catalogElement(k), key), 'le jeu est toujours là');
+      assert.deepEqual(errors, []);
+    });
+
+    it('« Tout lire » : les morceaux d’un album de la page Musique, à la suite', async () => {
+      await page.evaluate(() => document.querySelector('mire-app').open({ target: 'music' }));
+      // Artiste, puis album : on ouvre le premier regroupement de chaque niveau.
+      for (let i = 0; i < 2; i++) {
+        const group = page.locator('#view mire-page-view mire-group-card ds-trigger.hydrated').first();
+        await group.waitFor();
+        await group.click();
+        await page.waitForFunction(
+          (d) => document.querySelector('#view mire-page-view')?.depth === d && !document.querySelector('#view mire-page-view').loading,
+          i + 1,
+        );
+      }
+      await page.waitForFunction(() => document.querySelector('#view mire-page-view')?.kind === 'elements');
+      const playAll = page.locator('#view mire-page-view .mire-page-view__play-all.hydrated');
+      await playAll.click();
+      await page.waitForFunction((s) => !document.querySelector(s).hidden && document.querySelector(s).playing, MINI);
+      const sub = await page.evaluate((s) => document.querySelector(`${s} .${s}__sub`)?.textContent ?? '', MINI);
+      assert.match(sub, /1 sur \d+/);
+      await page.locator(`${MINI} ds-trigger[action="stop"] button`).click();
+      await page.waitForFunction((s) => document.querySelector(s).hidden, MINI);
+      assert.deepEqual(errors, []);
+    });
+  });
 });
