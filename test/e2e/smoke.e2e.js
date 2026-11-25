@@ -4648,6 +4648,19 @@ describe('Test de fumée de Mire', () => {
       }, FORM);
       return page.locator(`${FORM} .mire-form__title`).textContent();
     };
+    // Une seule boîte ouverte, avec ce titre (la boîte précédente a fini de se fermer).
+    const onlyForm = (title) =>
+      page.waitForFunction(
+        ([sel, t]) => {
+          const forms = document.querySelectorAll(sel);
+          return (
+            forms.length === 1 &&
+            forms[0].querySelector('.mire-form__title')?.textContent === t &&
+            [...forms[0].querySelectorAll('ds-trigger')].every((x) => x.classList.contains('hydrated'))
+          );
+        },
+        [FORM, title],
+      );
     const formClosed = () => page.waitForFunction((sel) => !document.querySelector(sel), FORM);
     const button = (label) => page.locator(`${FORM} .mire-form__actions ds-trigger`, { hasText: label });
     const toasts = () => page.evaluate(() => [...document.querySelectorAll('ds-toaster, #toast')].map((el) => el.textContent).join(' | '));
@@ -4712,7 +4725,7 @@ describe('Test de fumée de Mire', () => {
       await online.click();
       await formOpen();
       await button('Tout télécharger').click();
-      assert.equal(await formOpen(), 'Télécharger 1 jeu dans le dossier de Super Nintendo ?');
+      await onlyForm('Télécharger 1 jeu dans le dossier de Super Nintendo ?');
       await button('Tout télécharger').click();
       await formClosed();
       // Le jeu arrive dans le dossier principal de la console (son annonce remplace celle de l'ajout).
